@@ -1,0 +1,42 @@
+{
+  "cli": {
+    "version": ">= 20.1.0",
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "channel": "development",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://rltygdzldplkmwuqfadm.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_2JfQZp49VDHRRO9ZjM9T6g_lz5E3BOb",
+        "EXPO_PUBLIC_API_BASE_URL": "https://coreflow-one.vercel.app",
+        "OAUTH_SERVER_URL": "https://coreflow-one.vercel.app"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://rltygdzldplkmwuqfadm.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_2JfQZp49VDHRRO9ZjM9T6g_lz5E3BOb",
+        "EXPO_PUBLIC_API_BASE_URL": "https://coreflow-one.vercel.app",
+        "OAUTH_SERVER_URL": "https://coreflow-one.vercel.app"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://rltygdzldplkmwuqfadm.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_2JfQZp49VDHRRO9ZjM9T6g_lz5E3BOb",
+        "EXPO_PUBLIC_API_BASE_URL": "https://coreflow-one.vercel.app",
+        "OAUTH_SERVER_URL": "https://coreflow-one.vercel.app"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

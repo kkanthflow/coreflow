@@ -1,0 +1,192 @@
+import React, { useState } from 'react';
+import { View, Text, Switch, Pressable, ScrollView } from 'react-native';
+import { ScreenContainer } from '@/components/screen-container';
+import { useColors } from '@/hooks/use-colors';
+import { useThemeContext } from '@/lib/theme-provider';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/use-auth';
+
+import * as SecureStore from 'expo-secure-store';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { Alert, Platform } from 'react-native';
+
+export default function SettingsScreen() {
+  const colors = useColors();
+  const router = useRouter();
+  const { colorScheme, setColorScheme } = useThemeContext();
+  const { user, updatePreferences } = useAuth();
+  
+  const hapticsEnabled = user?.preferences?.hapticFeedback ?? true;
+  const biometricsEnabled = user?.preferences?.biometricLogin ?? false;
+
+  const toggleTheme = async () => {
+    const nextScheme = colorScheme === 'dark' ? 'light' : 'dark';
+    setColorScheme(nextScheme);
+    await updatePreferences({ theme: nextScheme });
+  };
+
+  const toggleHaptics = async (value: boolean) => {
+    await updatePreferences({ hapticFeedback: value });
+  };
+
+  const toggleBiometrics = async (value: boolean) => {
+    if (Platform.OS === 'web') {
+      Alert.alert("Not Supported", "Biometric login is not supported in web browsers.");
+      return;
+    }
+
+    try {
+      if (value) {
+        const compatible = await LocalAuthentication.hasHardwareAsync();
+        const enrolled = await LocalAuthentication.isEnrolledAsync();
+
+        if (!compatible || !enrolled) {
+          Alert.alert("Biometrics Not Available", "Your device does not support or have biometrics configured.");
+          return;
+        }
+
+        const result = await LocalAuthentication.authenticateAsync({
+          promptMessage: 'Confirm biometric setup',
+          fallbackLabel: 'Cancel',
+        });
+
+        if (result.success) {
+          await SecureStore.setItemAsync('biometric_enabled', 'true');
+          await updatePreferences({ biometricLogin: true });
+          Alert.alert("Success", "Biometric login enabled successfully.");
+        }
+      } else {
+        await SecureStore.setItemAsync('biometric_enabled', 'false');
+        await updatePreferences({ biometricLogin: false });
+        Alert.alert("Disabled", "Biometric login disabled.");
+      }
+    } catch (e) {
+      console.error('Biometric toggle error:', e);
+      Alert.alert("Error", "An error occurred during biometric setup.");
+    }
+  };
+
+  return (
+    <ScreenContainer>
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Header */}
+        <View className="px-6 pt-6 pb-4 flex-row items-center">
+          <Pressable 
+            onPress={() => router.back()}
+            className="w-10 h-10 rounded-full items-center justify-center mr-3"
+            style={{ backgroundColor: colors.surface }}
+          >
+            <Ionicons name="arrow-back" size={20} color={colors.foreground} />
+          </Pressable>
+          <Text className="text-xl font-bold text-foreground">App Settings</Text>
+        </View>
+
+        {/* Display Settings */}
+        <View className="px-6 mb-6">
+          <Text className="text-xs font-bold text-muted mb-3 uppercase tracking-wider ml-1">Display</Text>
+          <View className="rounded-2xl border border-border overflow-hidden" style={{ backgroundColor: colors.surface }}>
+            <View className="flex-row items-center justify-between p-4 border-b border-border">
+              <View className="flex-row items-center flex-1 mr-4">
+                <View className="w-8 h-8 rounded-full items-center justify-center mr-3 bg-primary/10">
+                  <Ionicons name="moon-outline" size={18} color={colors.primary} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-foreground">Dark Mode</Text>
+                  <Text className="text-xs text-muted">Use dark theme across the app</Text>
+                </View>
+              </View>
+              <Switch 
+                value={colorScheme === 'dark'} 
+                onValueChange={toggleTheme}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor="#fff"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Preferences Settings */}
+        <View className="px-6 mb-6">
+          <Text className="text-xs font-bold text-muted mb-3 uppercase tracking-wider ml-1">Preferences</Text>
+          <View className="rounded-2xl border border-border overflow-hidden" style={{ backgroundColor: colors.surface }}>
+            <View className="flex-row items-center justify-between p-4 border-b border-border">
+              <View className="flex-row items-center flex-1 mr-4">
+                <View className="w-8 h-8 rounded-full items-center justify-center mr-3 bg-primary/10">
+                  <Ionicons name="phone-portrait-outline" size={18} color={colors.primary} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-foreground">Haptic Feedback</Text>
+                  <Text className="text-xs text-muted">Vibrate on button presses</Text>
+                </View>
+              </View>
+              <Switch 
+                value={hapticsEnabled} 
+                onValueChange={toggleHaptics}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor="#fff"
+              />
+            </View>
+
+            <View className="flex-row items-center justify-between p-4">
+              <View className="flex-row items-center flex-1 mr-4">
+                <View className="w-8 h-8 rounded-full items-center justify-center mr-3 bg-primary/10">
+                  <Ionicons name="finger-print-outline" size={18} color={colors.primary} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-foreground">Biometric Login</Text>
+                  <Text className="text-xs text-muted">Unlock app with FaceID or Fingerprint</Text>
+                </View>
+              </View>
+              <Switch 
+                value={biometricsEnabled} 
+                onValueChange={toggleBiometrics}
+                trackColor={{ false: colors.border, true: colors.primary }}
+                thumbColor="#fff"
+              />
+            </View>
+          </View>
+        </View>
+
+        {/* Security / Session */}
+        <View className="px-6 mb-6">
+          <Text className="text-xs font-bold text-muted mb-3 uppercase tracking-wider ml-1">Security</Text>
+          <View className="rounded-2xl border border-border overflow-hidden" style={{ backgroundColor: colors.surface }}>
+            <Pressable 
+              onPress={() => router.push('/forgot-password' as any)}
+              className="flex-row items-center justify-between p-4"
+            >
+              <View className="flex-row items-center">
+                <View className="w-8 h-8 rounded-full items-center justify-center mr-3 bg-primary/10">
+                  <Ionicons name="lock-closed-outline" size={18} color={colors.primary} />
+                </View>
+                <Text className="text-base font-semibold text-foreground">Change Password</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            </Pressable>
+          </View>
+        </View>
+
+        {/* Info */}
+        <View className="px-6 mb-12">
+          <Text className="text-xs font-bold text-muted mb-3 uppercase tracking-wider ml-1">About</Text>
+          <View className="p-4 rounded-2xl border border-border" style={{ backgroundColor: colors.surface }}>
+            <View className="flex-row justify-between mb-2">
+              <Text className="text-sm text-muted">App Version</Text>
+              <Text className="text-sm font-semibold text-foreground">1.0.0 (Production)</Text>
+            </View>
+            <View className="flex-row justify-between mb-2">
+              <Text className="text-sm text-muted">Supabase Environment</Text>
+              <Text className="text-sm font-semibold text-foreground">Connected</Text>
+            </View>
+            <View className="flex-row justify-between">
+              <Text className="text-sm text-muted">Signed In As</Text>
+              <Text className="text-sm font-semibold text-foreground">{user?.email}</Text>
+            </View>
+          </View>
+        </View>
+      </ScrollView>
+    </ScreenContainer>
+  );
+}

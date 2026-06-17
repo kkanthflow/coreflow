@@ -1,0 +1,8 @@
+{
+  "version": 2,
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.ts" }
+  ],
+  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "echo 'Building static assets...'"
+}

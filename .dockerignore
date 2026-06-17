@@ -1,0 +1,11 @@
+node_modules
+.npmrc
+.git
+.gitignore
+.expo
+dist
+dist-server
+README.md
+SUPABASE_SETUP.md
+design.md
+todo.md
