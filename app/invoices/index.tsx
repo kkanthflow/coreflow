@@ -55,10 +55,10 @@ export default function InvoiceDashboard() {
       // 1. Resolve user organization / freelancer context
       const { data: myOrgs } = await supabase
         .from('user_organizations')
-        .select('organization_id')
+        .select('org_id')
         .eq('user_id', user!.id);
 
-      const orgId = myOrgs && myOrgs.length > 0 ? myOrgs[0].organization_id : null;
+      const orgId = myOrgs && myOrgs.length > 0 ? myOrgs[0].org_id : null;
 
       // 2. Fetch Invoices
       let invQuery = supabase

@@ -3,7 +3,7 @@ import "@/global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
 import { Platform, View, ActivityIndicator } from "react-native";
@@ -23,6 +23,7 @@ import { initManusRuntime, subscribeSafeAreaInsets } from '@/lib/_core/manus-run
 import { AuthProvider, useAuth } from '@/lib/auth-context';
 import * as Notifications from 'expo-notifications';
 import { ErrorBoundary } from "@/components/error-boundary";
+import { useOTAUpdates } from '@/hooks/use-ota-updates';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -41,15 +42,42 @@ export const unstable_settings = {
   initialRouteName: "index",
 };
 
+import { useColors } from "@/hooks/use-colors";
+
 // ─────────────────────────────────────────────────────────────────────────
 // AuthGate: Lives inside the navigation tree so useRouter() works correctly.
 // Watches auth state and handles ALL navigation decisions centrally.
 // This eliminates the black-screen race condition from login screen redirects.
 // ─────────────────────────────────────────────────────────────────────────
 function AuthGate() {
-  const { isAuthenticated, isLoading, user } = useAuth();
+  const { isAuthenticated, isLoading, user, logout } = useAuth();
   const router = useRouter();
   const segments = useSegments();
+  const stuckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Check for OTA updates silently — notifies user if one is available
+  useOTAUpdates();
+
+  // Fallback: if authenticated but profile never loads, sign out after 15s
+  // to avoid freezing on a black/white screen forever.
+  // Note: We check (isAuthenticated && !user) regardless of isLoading, because
+  // isLoading remains true during the profile retry loops (up to 12s total).
+  useEffect(() => {
+    if (isAuthenticated && !user) {
+      stuckTimerRef.current = setTimeout(async () => {
+        console.warn('[AuthGate] Profile failed to load after 15s, signing out to recover');
+        await logout();
+      }, 15000);
+    } else {
+      if (stuckTimerRef.current) {
+        clearTimeout(stuckTimerRef.current);
+        stuckTimerRef.current = null;
+      }
+    }
+    return () => {
+      if (stuckTimerRef.current) clearTimeout(stuckTimerRef.current);
+    };
+  }, [isAuthenticated, user]);
 
   useEffect(() => {
     if (isLoading) return;
@@ -59,7 +87,8 @@ function AuthGate() {
     const onAuthScreens =
       currentSegment === 'login' ||
       currentSegment === 'register' ||
-      currentSegment === 'forgot-password';
+      currentSegment === 'forgot-password' ||
+      currentSegment === 'oauth';
     const onIndex = currentSegment === 'index' || currentSegment === undefined;
 
     if (isAuthenticated && user) {
@@ -72,12 +101,12 @@ function AuthGate() {
         return;
       }
 
-      // Regular users: go to tabs if not already there
-      if (!inTabsGroup) {
+      // Regular users: only redirect to tabs if on public auth screens or index
+      if (onAuthScreens || onIndex) {
         router.replace('/(tabs)');
       }
     } else if (isAuthenticated && !user) {
-      // Session exists but profile not yet fetched — stay on index spinner
+      // Profile still loading — the 15s timeout above handles the stuck case
     } else {
       // Not authenticated — send to login
       if (!onAuthScreens) {
@@ -87,6 +116,21 @@ function AuthGate() {
   }, [isAuthenticated, isLoading, user, segments]);
 
   return null;
+}
+
+function AppNavigator() {
+  const colors = useColors();
+  return (
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="oauth/callback" />
+      <Stack.Screen name="login" options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="register" options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="forgot-password" options={{ presentation: 'fullScreenModal' }} />
+      <Stack.Screen name="meetings/new" options={{ presentation: 'modal', headerShown: false }} />
+    </Stack>
+  );
 }
 
 export default function RootLayout() {
@@ -169,15 +213,7 @@ export default function RootLayout() {
             {/* AuthGate: centrally handles auth → navigation decisions.
                 Must be inside Stack (navigation tree) to use useRouter/useSegments */}
             <AuthGate />
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="index" />
-              <Stack.Screen name="(tabs)" />
-              <Stack.Screen name="oauth/callback" />
-              <Stack.Screen name="login" options={{ presentation: 'fullScreenModal' }} />
-              <Stack.Screen name="register" options={{ presentation: 'fullScreenModal' }} />
-              <Stack.Screen name="forgot-password" options={{ presentation: 'fullScreenModal' }} />
-              <Stack.Screen name="meetings/new" options={{ presentation: 'fullScreenModal' }} />
-            </Stack>
+            <AppNavigator />
             <StatusBar style="auto" />
             </QueryClientProvider>
           </trpc.Provider>

@@ -3,6 +3,7 @@ import { View, Text, ActivityIndicator, Pressable, ScrollView } from 'react-nati
 import { ScreenContainer } from '@/components/screen-container';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { RoleBadge } from '@/components/ui/role-badge';
@@ -21,6 +22,7 @@ interface Member {
 export default function HierarchyScreen() {
   const colors = useColors();
   const { colorScheme } = useThemeContext();
+  const { user } = useAuth();
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,19 +39,31 @@ export default function HierarchyScreen() {
   const fetchOrganizationMembers = useCallback(async () => {
     setIsLoading(true);
     try {
+      if (!user?.organizationId) {
+        // Fallback: load all users
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, full_name, email, role, department, avatar_url');
+        if (data && !error) setMembers(data as Member[]);
+        return;
+      }
+
+      // Load only members in the same org
       const { data, error } = await supabase
-        .from('users')
-        .select('id, full_name, email, role, department, avatar_url');
-      
+        .from('user_organizations')
+        .select('users!inner(id, full_name, email, role, department, avatar_url)')
+        .eq('org_id', user.organizationId);
+
       if (data && !error) {
-        setMembers(data as Member[]);
+        const list = data.map((d: any) => d.users).filter(Boolean);
+        setMembers(list as Member[]);
       }
     } catch (e) {
       console.error('Error fetching org hierarchy:', e);
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [user?.organizationId]);
 
   useEffect(() => {
     const frameId = requestAnimationFrame(() => {
@@ -65,58 +79,41 @@ export default function HierarchyScreen() {
     }));
   };
 
-  // Grouping logic by department
   const getDepartmentGroups = () => {
     const groups: Record<string, Member[]> = {
-      'Executive': [],
-      'Technology': [],
-      'Product Management': [],
-      'Human Resources': [],
-      'Unassigned': [],
+      'Leadership': [],
+      'Management': [],
+      'Team Leads': [],
+      'Staff': [],
+      'External': [],
     };
 
     members.forEach(member => {
-      const dept = member.department?.trim();
       const role = member.role;
 
-      if (role === 'managing_director' || role === 'ceo') {
-        groups['Executive'].push(member);
-      } else if (dept && dept.toLowerCase().includes('tech') || dept && dept.toLowerCase().includes('engineer') || role === 'cto' || role === 'developer') {
-        groups['Technology'].push(member);
-      } else if (dept && dept.toLowerCase().includes('product') || dept && dept.toLowerCase().includes('project') || role === 'project_manager') {
-        groups['Product Management'].push(member);
-      } else if (dept && dept.toLowerCase().includes('hr') || dept && dept.toLowerCase().includes('human') || role === 'hr') {
-        groups['Human Resources'].push(member);
+      if (role === 'owner' || role === 'administrator' || role === 'director'
+        || role === 'managing_director' || role === 'ceo' || role === 'cto') {
+        groups['Leadership'].push(member);
+      } else if (role === 'senior_manager' || role === 'manager' || role === 'project_manager' || role === 'hr') {
+        groups['Management'].push(member);
+      } else if (role === 'team_lead') {
+        groups['Team Leads'].push(member);
+      } else if (role === 'senior_employee' || role === 'employee' || role === 'intern'
+        || role === 'developer' || role === 'general_member') {
+        groups['Staff'].push(member);
       } else {
-        groups['Unassigned'].push(member);
+        groups['External'].push(member);
       }
     });
 
     // Remove empty groups
     Object.keys(groups).forEach(key => {
-      if (groups[key].length === 0) {
-        delete groups[key];
-      }
+      if (groups[key].length === 0) delete groups[key];
     });
 
-    // Sort within groups by role rank
-    const rolePriority: Record<string, number> = {
-      managing_director: 1,
-      ceo: 2,
-      cto: 3,
-      project_manager: 4,
-      hr: 5,
-      developer: 6,
-      general_member: 7,
-      freelancer: 8,
-    };
-
+    // Sort within groups by name
     Object.keys(groups).forEach(key => {
-      groups[key].sort((a, b) => {
-        const priorityA = rolePriority[a.role] || 99;
-        const priorityB = rolePriority[b.role] || 99;
-        return priorityA - priorityB;
-      });
+      groups[key].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
     });
 
     return groups;

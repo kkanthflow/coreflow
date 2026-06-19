@@ -239,6 +239,8 @@ const ROLE_PERMISSIONS: Record<string, AppPermission[]> = {
     'manage_tasks',
     // Files (project-scoped)
     'upload_files', 'download_files',
+    // Meetings
+    'schedule_meetings',
     // NO send_messages org-wide — project chat only via channel membership
     // Legacy invoice (they may submit invoices)
     'view_invoices', 'create_invoices', 'edit_invoices',

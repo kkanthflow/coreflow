@@ -1,113 +1,149 @@
-import React, { useState, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
-import { ScreenContainer } from '@/components/screen-container';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import {
+  View, Text, FlatList, Pressable, StyleSheet,
+  Animated, StatusBar, TextInput,
+} from 'react-native';
 import { useAuth } from '@/hooks/use-auth';
-import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import { ChannelListItem } from '@/components/ui/channel-list-item';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { canAccessOrgChat } from '@/lib/permissions';
+import { GlassCard } from '@/components/ui/glass-card';
+import { ShimmerCard, ShimmerLoader } from '@/components/ui/shimmer-loader';
+
+const C = {
+  bg: '#07070B', card: '#181822', border: '#2A2A3A',
+  primary: '#FF6B4A', text: '#F5F5FA', textSec: '#B4B4C7',
+  muted: '#7A7A92', error: '#F87171', info: '#60A5FA',
+};
 
 export default function ChatScreen() {
   const { user } = useAuth();
-  const colors = useColors();
-  const router = useRouter();
+  const router   = useRouter();
 
   const [channels, setChannels] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading]   = useState(true);
+  const [search, setSearch]     = useState('');
+  const headerFade  = useRef(new Animated.Value(0)).current;
+  const headerSlide = useRef(new Animated.Value(-16)).current;
 
   const isFreelancer = user?.role === 'freelancer';
 
-  const fetchChannels = useCallback(async () => {
-    if (!user?.organizationId || isFreelancer) {
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerFade,  { toValue: 1, duration: 500, useNativeDriver: true }),
+      Animated.timing(headerSlide, { toValue: 0, duration: 500, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
+  const fetchChannels = useCallback(async () => {
+    if (!user?.organizationId || isFreelancer) { setLoading(false); return; }
+    setLoading(true);
     try {
-      // Query channels matching RLS rules:
-      // 1. Org General/Announcements for org
-      // 2. Project channels where user is a project member or general org member
-      // 3. Direct Message channels where user is explicit member
       const { data, error } = await supabase
         .from('chat_channels')
-        .select(`
-          *,
-          channel_members(user_id)
-        `)
+        .select('*, channel_members(user_id)')
         .eq('org_id', user.organizationId)
         .order('created_at', { ascending: false });
-
       if (error) throw error;
 
-      // Filter channels where we have permission or membership
       const filtered = (data || []).filter((ch: any) => {
-        if (ch.type === 'org_general' || ch.type === 'org_announcement') {
-          return true;
-        }
-        if (ch.type === 'project') {
-          return true;
-        }
-        // DM: must be a member
-        const members = ch.channel_members || [];
-        return members.some((m: any) => m.user_id === user.id);
+        if (['org_general', 'org_announcement', 'project'].includes(ch.type)) return true;
+        return (ch.channel_members || []).some((m: any) => m.user_id === user.id);
       });
 
       setChannels(filtered);
     } catch (e) {
-      console.error('Error fetching chat channels:', e);
+      console.error('Chat channels error:', e);
     } finally {
       setLoading(false);
     }
   }, [user?.organizationId, user?.id, isFreelancer]);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchChannels();
-    }, [fetchChannels])
-  );
+  useFocusEffect(useCallback(() => { fetchChannels(); }, [fetchChannels]));
 
   if (isFreelancer) {
     return (
-      <ScreenContainer style={styles.lockedContainer}>
-        <Ionicons name="lock-closed" size={64} color={colors.error} style={{ marginBottom: 16 }} />
-        <Text style={[styles.lockedTitle, { color: colors.foreground }]}>Access Gated</Text>
-        <Text style={[styles.lockedSubtitle, { color: colors.muted }]}>
-          Freelancers do not have access to company-wide channels or general chat. You can communicate directly through project discussion pages.
+      <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
+        <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+        <View style={{ width: 72, height: 72, borderRadius: 22, backgroundColor: `${C.error}15`, alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: `${C.error}30` }}>
+          <Ionicons name="lock-closed" size={32} color={C.error} />
+        </View>
+        <Text style={{ color: C.text, fontSize: 20, fontWeight: '800', marginBottom: 10 }}>Access Restricted</Text>
+        <Text style={{ color: C.muted, fontSize: 14, textAlign: 'center', lineHeight: 20 }}>
+          Freelancers don't have access to company-wide channels. Communicate through project discussion pages.
         </Text>
-      </ScreenContainer>
+      </View>
     );
   }
 
+  const filtered = channels.filter(ch =>
+    !search || ch.name?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  const channelTypeIcon = (type: string) => {
+    switch (type) {
+      case 'org_general':      return 'grid-outline';
+      case 'org_announcement': return 'megaphone-outline';
+      case 'project':          return 'briefcase-outline';
+      default:                 return 'chatbubble-outline';
+    }
+  };
+
   return (
-    <ScreenContainer>
-      <View style={styles.header}>
-        <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Messages</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.muted }]}>
-            Slack-style threads & direct messaging
-          </Text>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+
+      {/* Header */}
+      <Animated.View style={[styles.header, { opacity: headerFade, transform: [{ translateY: headerSlide }] }]}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+          <View>
+            <Text style={styles.title}>Messages</Text>
+            <Text style={styles.subtitle}>{channels.length} channel{channels.length !== 1 ? 's' : ''}</Text>
+          </View>
+          <Pressable
+            onPress={() => router.push('/chat/new-dm' as any)}
+            style={({ pressed }) => ({
+              width: 44, height: 44, borderRadius: 14,
+              backgroundColor: pressed ? '#FF6B4A30' : '#FF6B4A20',
+              borderWidth: 1, borderColor: '#FF6B4A40',
+              alignItems: 'center', justifyContent: 'center',
+            })}
+          >
+            <Ionicons name="create-outline" size={20} color={C.primary} />
+          </Pressable>
         </View>
 
-        <Pressable
-          onPress={() => router.push('/chat/new-dm' as any)}
-          style={[styles.addBtn, { backgroundColor: colors.primary }]}
-        >
-          <Ionicons name="create-outline" size={20} color="#FFFFFF" />
-        </Pressable>
-      </View>
+        {/* Search */}
+        <View style={styles.searchBar}>
+          <Ionicons name="search-outline" size={16} color={C.muted} />
+          <TextInput
+            placeholder="Search channels..."
+            placeholderTextColor={C.muted}
+            value={search}
+            onChangeText={setSearch}
+            style={{ flex: 1, color: C.text, fontSize: 14, marginLeft: 8 }}
+          />
+          {search.length > 0 && (
+            <Pressable onPress={() => setSearch('')}>
+              <Ionicons name="close-circle" size={16} color={C.muted} />
+            </Pressable>
+          )}
+        </View>
+      </Animated.View>
 
       {loading ? (
-        <View style={styles.loader}>
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={{ paddingHorizontal: 20 }}>
+          <ShimmerCard />
+          <ShimmerCard />
+          <ShimmerCard />
         </View>
       ) : (
         <FlatList
-          data={channels}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.listContainer}
+          data={filtered}
+          keyExtractor={i => i.id}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+          showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <ChannelListItem
               channel={item}
@@ -115,85 +151,33 @@ export default function ChatScreen() {
             />
           )}
           ListEmptyComponent={
-            <View style={styles.emptyContainer}>
-              <Ionicons name="chatbubbles-outline" size={64} color={colors.muted} style={{ marginBottom: 16 }} />
-              <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No conversations</Text>
-              <Text style={[styles.emptySubtitle, { color: colors.muted }]}>
-                Start a direct message or join organization project threads.
+            <View style={styles.emptyState}>
+              <View style={styles.emptyIcon}>
+                <Ionicons name="chatbubbles-outline" size={36} color={C.muted} />
+              </View>
+              <Text style={styles.emptyTitle}>{search ? 'No channels found' : 'No conversations'}</Text>
+              <Text style={styles.emptySub}>
+                {search ? 'Try a different search term' : 'Start a direct message or join a project thread.'}
               </Text>
             </View>
           }
         />
       )}
-    </ScreenContainer>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
+  header: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12 },
+  title: { color: '#F5F5FA', fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
+  subtitle: { color: '#7A7A92', fontSize: 14, marginTop: 4 },
+  searchBar: {
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#181822',
+    borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12,
+    borderWidth: 1, borderColor: '#2A2A3A',
   },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  addBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  loader: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  listContainer: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-    paddingHorizontal: 32,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  lockedContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  lockedTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  lockedSubtitle: {
-    fontSize: 14,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+  emptyState: { alignItems: 'center', paddingVertical: 80 },
+  emptyIcon: { width: 80, height: 80, borderRadius: 24, backgroundColor: '#181822', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#2A2A3A' },
+  emptyTitle: { color: '#F5F5FA', fontSize: 18, fontWeight: '700', marginBottom: 8 },
+  emptySub: { color: '#7A7A92', fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });

@@ -69,44 +69,57 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    console.log('[AuthContext] fetchProfile starting for user:', userId);
+  const fetchProfile = async (userId: string, attempt = 1): Promise<boolean> => {
+    console.log(`[AuthContext] fetchProfile attempt ${attempt} for user:`, userId);
     try {
-      // Fetch user profile
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      // Fire all 3 queries in parallel instead of sequentially
+      const [profileResult, orgResult, prefResult] = await Promise.all([
+        supabase.from('users').select('*').eq('id', userId).single(),
+        supabase
+          .from('user_organizations')
+          .select('org_id, role, organizations (id, name)')
+          .eq('user_id', userId)
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from('user_preferences')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle(),
+      ]);
 
+      const { data, error } = profileResult;
       console.log('[AuthContext] fetchProfile result:', { data: !!data, error });
 
       if (!data || error) {
-        console.warn('[AuthContext] fetchProfile returned no data:', error);
-        return;
+        // Retry up to 8 times (over 12 seconds) — the DB trigger may not have created the user row yet
+        if (attempt < 8) {
+          console.warn(`[AuthContext] Profile not ready, retrying in 1.5s... (attempt ${attempt})`);
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          return fetchProfile(userId, attempt + 1);
+        }
+        console.warn('[AuthContext] fetchProfile gave up after 8 attempts:', error);
+        // Force logout if profile cannot be fetched to prevent a black screen freeze
+        await supabase.auth.signOut();
+        return false;
       }
 
-      // Fetch org membership + org name in one query
-      const { data: orgMembership } = await supabase
-        .from('user_organizations')
-        .select(`
-          org_id,
-          role,
-          organizations (
-            id,
-            name
-          )
-        `)
-        .eq('user_id', userId)
-        .limit(1)
-        .maybeSingle();
+      const orgMembership = orgResult.data;
 
-      // Fetch preferences
-      const { data: prefData } = await supabase
-        .from('user_preferences')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      // Race condition guard: for brand-new accounts (created < 15s ago),
+      // if org membership is missing retry — register.tsx may still be writing to DB.
+      // This is the key fix for the black/white screen after sign-up.
+      // Note: Freelancers do not have organization memberships, so skip retrying for them.
+      const isFreelancer = data.role === 'freelancer';
+      const isNewAccount = data.created_at &&
+        (Date.now() - new Date(data.created_at).getTime()) < 15000;
+      if (!orgMembership && !isFreelancer && isNewAccount && attempt < 8) {
+        console.warn(`[AuthContext] New account with no org yet, retrying in 1.5s... (attempt ${attempt})`);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        return fetchProfile(userId, attempt + 1);
+      }
+
+      const prefData = prefResult.data;
 
       const preferences: UserPreferences = prefData ? {
         theme: prefData.theme as 'light' | 'dark',
@@ -131,24 +144,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
         fullName: data.full_name,
         role: data.role,
         avatarUrl: data.avatar_url,
-        // Enterprise fields
         organizationId: orgData?.id,
         organizationName: orgData?.name,
         jobTitle: data.job_title,
         bio: data.bio,
         phone: data.phone,
         location: data.location,
-        // Legacy
         department: data.department,
         lastLogin: data.last_login,
         preferences,
       });
 
-      console.log('[AuthContext] User state set:', data.email, '| Org:', orgData?.name);
+      console.log('[AuthContext] User state set:', data.email, '| Org:', orgData?.name ?? '(freelancer/pending)');
+      return true;
     } catch (e) {
       console.error('[AuthContext] Error fetching profile:', e);
+      return false;
     }
   };
+
 
   const refreshUser = async () => {
     const { data } = await supabase.auth.getSession();
@@ -213,19 +227,42 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   useEffect(() => {
+    let initialSessionHandled = false;
+
     supabase.auth.getSession().then(({ data: { session } }) => {
+      initialSessionHandled = true;
       setSession(session);
       if (session?.user?.id) {
         fetchProfile(session.user.id).finally(() => setIsLoading(false));
       } else {
         setIsLoading(false);
       }
-    }).catch(() => setIsLoading(false));
+    }).catch(() => {
+      initialSessionHandled = true;
+      setIsLoading(false);
+    });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // INITIAL_SESSION fires immediately — skip it if getSession() already handled it.
+      // This prevents the double-fetch that causes startup lag.
+      if (event === 'INITIAL_SESSION') {
+        if (!initialSessionHandled) {
+          // getSession() hasn't resolved yet — let this one handle it
+          initialSessionHandled = true;
+          setSession(session);
+          if (session?.user?.id) {
+            fetchProfile(session.user.id).finally(() => setIsLoading(false));
+          } else {
+            setIsLoading(false);
+          }
+        }
+        return;
+      }
+
       setSession(session);
       if (session?.user?.id) {
-        setIsLoading(true);
+        // Only show loading spinner on actual sign-in (not token refresh)
+        if (event === 'SIGNED_IN') setIsLoading(true);
         fetchProfile(session.user.id).finally(() => setIsLoading(false));
       } else {
         setUser(null);

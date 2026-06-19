@@ -203,6 +203,16 @@ export default function FreelancerPortalScreen() {
     );
   };
 
+  const tasksByProject = tasks.reduce((groups: Record<string, { projectTitle: string; tasks: any[] }>, task) => {
+    const projectId = task.project_id || 'general';
+    const projectTitle = task.project?.title || 'General Tasks';
+    if (!groups[projectId]) {
+      groups[projectId] = { projectTitle, tasks: [] };
+    }
+    groups[projectId].tasks.push(task);
+    return groups;
+  }, {});
+
   const projectOptions = projects.map(p => ({
     label: p.title,
     value: p.id,
@@ -223,6 +233,22 @@ export default function FreelancerPortalScreen() {
           <Text style={[styles.headerSubtitle, { color: colors.muted }]}>
             Your assigned tasks, projects, and deliverables
           </Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 8 }}>
+          <Pressable
+            onPress={() => router.push('/invoices')}
+            style={[styles.scheduleBtn, { backgroundColor: `${colors.success}18`, borderColor: `${colors.success}40`, borderWidth: 1 }]}
+          >
+            <Ionicons name="receipt" size={16} color={colors.success} style={{ marginRight: 6 }} />
+            <Text style={{ color: colors.success, fontSize: 12, fontWeight: '700' }}>Invoices</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => router.push('/meetings/new')}
+            style={[styles.scheduleBtn, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}40`, borderWidth: 1 }]}
+          >
+            <Ionicons name="calendar" size={16} color={colors.primary} style={{ marginRight: 6 }} />
+            <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>Schedule</Text>
+          </Pressable>
         </View>
       </View>
 
@@ -262,9 +288,9 @@ export default function FreelancerPortalScreen() {
             )}
           </View>
 
-          {/* Section 2: Task Sheet */}
+          {/* Section 2: Project Task List */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Task Sheet ({tasks.length})</Text>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Project Task List ({tasks.length})</Text>
             {tasks.length === 0 ? (
               <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Ionicons name="checkbox-outline" size={32} color={colors.muted} />
@@ -273,61 +299,70 @@ export default function FreelancerPortalScreen() {
                 </Text>
               </View>
             ) : (
-              tasks.map((task) => {
-                let statusColor = colors.muted;
-                if (task.status === 'done') statusColor = colors.success;
-                if (task.status === 'in_progress') statusColor = colors.primary;
-                if (task.status === 'review') statusColor = colors.warning;
-                if (task.status === 'blocked') statusColor = colors.error;
-
-                return (
-                  <View key={task.id} style={[styles.taskCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                    <View style={styles.taskHeader}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.taskTitle, { color: colors.foreground }]}>{task.title}</Text>
-                        <Text style={[styles.taskProject, { color: colors.muted }]}>
-                          Project: {task.project?.title || 'General'}
-                        </Text>
-                      </View>
-                      <Pressable
-                        onPress={() => handleUpdateStatus(task.id, task.status)}
-                        disabled={updatingTaskId === task.id}
-                        style={[styles.statusBadge, { backgroundColor: `${statusColor}15` }]}
-                      >
-                        {updatingTaskId === task.id ? (
-                          <ActivityIndicator size="small" color={statusColor} />
-                        ) : (
-                          <>
-                            <Text style={[styles.statusText, { color: statusColor }]}>
-                              {task.status.replace('_', ' ')}
-                            </Text>
-                            <Ionicons name="chevron-down" size={12} color={statusColor} style={{ marginLeft: 4 }} />
-                          </>
-                        )}
-                      </Pressable>
-                    </View>
-                    
-                    {task.description ? (
-                      <Text style={[styles.taskDesc, { color: colors.muted }]}>{task.description}</Text>
-                    ) : null}
-
-                    <View style={styles.taskFooter}>
-                      <View style={styles.metaItem}>
-                        <Ionicons name="flag-outline" size={14} color={colors.muted} />
-                        <Text style={[styles.metaText, { color: colors.muted, textTransform: 'uppercase' }]}>
-                          {task.priority}
-                        </Text>
-                      </View>
-                      <View style={styles.metaItem}>
-                        <Ionicons name="calendar-outline" size={14} color={colors.muted} />
-                        <Text style={[styles.metaText, { color: colors.muted }]}>
-                          Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
-                        </Text>
-                      </View>
+              Object.entries(tasksByProject).map(([projId, group]: any) => (
+                <View key={projId} style={styles.projectGroup}>
+                  <View style={styles.projectGroupHeader}>
+                    <Ionicons name="folder-open-outline" size={16} color={colors.primary} />
+                    <Text style={[styles.projectGroupTitle, { color: colors.foreground }]}>{group.projectTitle}</Text>
+                    <View style={[styles.projectBadge, { backgroundColor: `${colors.primary}15` }]}>
+                      <Text style={[styles.projectBadgeText, { color: colors.primary }]}>{group.tasks.length}</Text>
                     </View>
                   </View>
-                );
-              })
+
+                  {group.tasks.map((task: any) => {
+                    let statusColor = colors.muted;
+                    if (task.status === 'done') statusColor = colors.success;
+                    if (task.status === 'in_progress') statusColor = colors.primary;
+                    if (task.status === 'review') statusColor = colors.warning;
+                    if (task.status === 'blocked') statusColor = colors.error;
+
+                    return (
+                      <View key={task.id} style={[styles.taskCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                        <View style={styles.taskHeader}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={[styles.taskTitle, { color: colors.foreground }]}>{task.title}</Text>
+                          </View>
+                          <Pressable
+                            onPress={() => handleUpdateStatus(task.id, task.status)}
+                            disabled={updatingTaskId === task.id}
+                            style={[styles.statusBadge, { backgroundColor: `${statusColor}15` }]}
+                          >
+                            {updatingTaskId === task.id ? (
+                              <ActivityIndicator size="small" color={statusColor} />
+                            ) : (
+                              <>
+                                <Text style={[styles.statusText, { color: statusColor }]}>
+                                  {task.status.replace('_', ' ')}
+                                </Text>
+                                <Ionicons name="chevron-down" size={12} color={statusColor} style={{ marginLeft: 4 }} />
+                              </>
+                            )}
+                          </Pressable>
+                        </View>
+                        
+                        {task.description ? (
+                          <Text style={[styles.taskDesc, { color: colors.muted }]}>{task.description}</Text>
+                        ) : null}
+
+                        <View style={styles.taskFooter}>
+                          <View style={styles.metaItem}>
+                            <Ionicons name="flag-outline" size={14} color={colors.muted} />
+                            <Text style={[styles.metaText, { color: colors.muted, textTransform: 'uppercase' }]}>
+                              {task.priority}
+                            </Text>
+                          </View>
+                          <View style={styles.metaItem}>
+                            <Ionicons name="calendar-outline" size={14} color={colors.muted} />
+                            <Text style={[styles.metaText, { color: colors.muted }]}>
+                              Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    );
+                  })}
+                </View>
+              ))
             )}
           </View>
 
@@ -528,5 +563,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontStyle: 'italic',
     paddingVertical: 12,
+  },
+  scheduleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  projectGroup: {
+    marginBottom: 20,
+  },
+  projectGroupHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 8,
+  },
+  projectGroupTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  projectBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  projectBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
   },
 });

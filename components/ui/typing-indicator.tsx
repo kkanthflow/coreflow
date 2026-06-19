@@ -39,19 +39,27 @@ export function TypingIndicator() {
     startAnim(dot3, 300);
   }, []);
 
-  const getStyle = (val: SharedValue<number>) => {
-    return useAnimatedStyle(() => {
-      return {
-        transform: [{ translateY: val.value }],
-      };
-    });
-  };
+  const style1 = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: dot1.value }],
+    };
+  });
+  const style2 = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: dot2.value }],
+    };
+  });
+  const style3 = useAnimatedStyle(() => {
+    return {
+      transform: [{ translateY: dot3.value }],
+    };
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: colors.border }]}>
-      <Animated.View style={[styles.dot, { backgroundColor: colors.muted }, getStyle(dot1)]} />
-      <Animated.View style={[styles.dot, { backgroundColor: colors.muted }, getStyle(dot2)]} />
-      <Animated.View style={[styles.dot, { backgroundColor: colors.muted }, getStyle(dot3)]} />
+      <Animated.View style={[styles.dot, { backgroundColor: colors.muted }, style1]} />
+      <Animated.View style={[styles.dot, { backgroundColor: colors.muted }, style2]} />
+      <Animated.View style={[styles.dot, { backgroundColor: colors.muted }, style3]} />
     </View>
   );
 }

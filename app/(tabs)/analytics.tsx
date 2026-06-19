@@ -1,350 +1,328 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, ActivityIndicator, StyleSheet, Pressable } from 'react-native';
-import { ScreenContainer } from '@/components/screen-container';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import {
+  View, Text, ScrollView, StyleSheet, Pressable,
+  Animated, StatusBar, RefreshControl,
+} from 'react-native';
 import { useAuth } from '@/hooks/use-auth';
-import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
-import { Ionicons } from '@expo/vector-icons';
-import { ProgressBar } from '@/components/ui/progress-bar';
 import { useFocusEffect } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import { HealthRing } from '@/components/ui/health-ring';
+import { GlassCard } from '@/components/ui/glass-card';
+import { ShimmerCard, ShimmerLoader } from '@/components/ui/shimmer-loader';
+
+const C = {
+  bg: '#07070B', surface: '#111118', card: '#181822', border: '#2A2A3A',
+  primary: '#FF6B4A', secondary: '#FFA86B', text: '#F5F5FA',
+  textSec: '#B4B4C7', muted: '#7A7A92', success: '#34D399',
+  warning: '#FBBF24', error: '#F87171', info: '#60A5FA', purple: '#8B5CF6',
+};
+
+type Period = 'week' | 'month' | 'all';
+
+function AnimatedBar({ value, total, color, label }: { value: number; total: number; color: string; label: string }) {
+  const widthAnim = useRef(new Animated.Value(0)).current;
+  const pct = total > 0 ? (value / total) * 100 : 0;
+
+  useEffect(() => {
+    Animated.timing(widthAnim, { toValue: pct, duration: 1000, useNativeDriver: false }).start();
+  }, [pct]);
+
+  const width = widthAnim.interpolate({ inputRange: [0, 100], outputRange: ['0%', '100%'] });
+
+  return (
+    <View style={{ marginBottom: 16 }}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+        <Text style={{ color: C.textSec, fontSize: 13, fontWeight: '600' }}>{label}</Text>
+        <Text style={{ color: color, fontSize: 13, fontWeight: '800' }}>
+          {value} / {total} <Text style={{ color: C.muted, fontSize: 11 }}>({Math.round(pct)}%)</Text>
+        </Text>
+      </View>
+      <View style={{ height: 8, borderRadius: 4, backgroundColor: C.border, overflow: 'hidden' }}>
+        <Animated.View
+          style={{
+            height: 8, borderRadius: 4, backgroundColor: color,
+            width,
+            shadowColor: color,
+            shadowOffset: { width: 0, height: 0 },
+            shadowOpacity: 0.6,
+            shadowRadius: 4,
+          }}
+        />
+      </View>
+    </View>
+  );
+}
+
+function StatCard({ label, value, icon, color, sub }: { label: string; value: string | number; icon: string; color: string; sub?: string }) {
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scaleAnim, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
+      Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ flex: 1, transform: [{ scale: scaleAnim }], opacity: fadeAnim }}>
+      <GlassCard glowColor={color} padding={16} radius={18} style={{ alignItems: 'flex-start' }}>
+        <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: `${color}25`, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
+          <Ionicons name={icon as any} size={18} color={color} />
+        </View>
+        <Text style={{ color: C.text, fontSize: 22, fontWeight: '800', letterSpacing: -0.5 }}>{value}</Text>
+        <Text style={{ color: C.muted, fontSize: 11, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, marginTop: 4 }}>{label}</Text>
+        {sub && <Text style={{ color: color, fontSize: 11, fontWeight: '700', marginTop: 2 }}>{sub}</Text>}
+      </GlassCard>
+    </Animated.View>
+  );
+}
 
 export default function AnalyticsScreen() {
   const { user } = useAuth();
-  const colors = useColors();
+  const [loading, setLoading]   = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [period, setPeriod]     = useState<Period>('month');
+  const headerAnim = useRef(new Animated.Value(-16)).current;
+  const headerFade = useRef(new Animated.Value(0)).current;
 
-  const [loading, setLoading] = useState(true);
   const [orgStats, setOrgStats] = useState({
-    totalProjects: 0,
-    completedProjects: 0,
-    totalTasks: 0,
-    doneTasks: 0,
-    totalInvoices: 0,
-    paidInvoicesValue: 0,
-    pendingInvoicesValue: 0,
+    totalProjects: 0, completedProjects: 0,
+    totalTasks: 0, doneTasks: 0, inProgressTasks: 0,
+    totalInvoices: 0, paidValue: 0, pendingValue: 0,
   });
-
   const [personalStats, setPersonalStats] = useState({
-    myTotalTasks: 0,
-    myDoneTasks: 0,
-    myInProgressTasks: 0,
-    myReviewTasks: 0,
-    myTodoTasks: 0,
+    total: 0, done: 0, inProgress: 0, review: 0, todo: 0,
   });
 
   const isManagement = ['owner', 'administrator', 'director', 'senior_manager', 'manager'].includes(user?.role || '');
 
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
+      Animated.timing(headerFade, { toValue: 1, duration: 500, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
   const fetchAnalytics = useCallback(async () => {
     if (!user?.organizationId) return;
     setLoading(true);
-
     try {
       if (isManagement) {
-        // 1. Fetch organization wide projects
-        const { data: projectsData } = await supabase
-          .from('projects')
-          .select('id, status')
-          .eq('org_id', user.organizationId);
+        const [projRes, taskRes, invRes] = await Promise.all([
+          supabase.from('projects').select('id, status').eq('org_id', user.organizationId),
+          supabase.from('tasks').select('id, status').eq('org_id', user.organizationId),
+          supabase.from('invoices').select('id, status, total_amount').eq('organization_id', user.organizationId),
+        ]);
 
-        // 2. Fetch organization wide tasks
-        const { data: tasksData } = await supabase
-          .from('tasks')
-          .select('id, status')
-          .eq('org_id', user.organizationId);
-
-        // 3. Fetch organization wide invoices (for revenue calculations)
-        const { data: invoicesData } = await supabase
-          .from('invoices')
-          .select('id, status, total_amount')
-          .eq('organization_id', user.organizationId);
-
-        const totalProjects = projectsData?.length || 0;
-        const completedProjects = projectsData?.filter(p => p.status === 'completed').length || 0;
-        const totalTasks = tasksData?.length || 0;
-        const doneTasks = tasksData?.filter(t => t.status === 'done').length || 0;
-
-        let paidInvoicesValue = 0;
-        let pendingInvoicesValue = 0;
-        (invoicesData || []).forEach((inv: any) => {
+        let paid = 0, pending = 0;
+        (invRes.data || []).forEach((inv: any) => {
           const val = Number(inv.total_amount) || 0;
-          if (inv.status === 'paid') {
-            paidInvoicesValue += val;
-          } else if (inv.status === 'pending' || inv.status === 'sent') {
-            pendingInvoicesValue += val;
-          }
+          if (inv.status === 'paid') paid += val;
+          else if (inv.status === 'pending' || inv.status === 'sent') pending += val;
         });
 
         setOrgStats({
-          totalProjects,
-          completedProjects,
-          totalTasks,
-          doneTasks,
-          totalInvoices: invoicesData?.length || 0,
-          paidInvoicesValue,
-          pendingInvoicesValue,
+          totalProjects: projRes.data?.length || 0,
+          completedProjects: projRes.data?.filter((p: any) => p.status === 'completed').length || 0,
+          totalTasks: taskRes.data?.length || 0,
+          doneTasks: taskRes.data?.filter((t: any) => t.status === 'done').length || 0,
+          inProgressTasks: taskRes.data?.filter((t: any) => t.status === 'in_progress').length || 0,
+          totalInvoices: invRes.data?.length || 0,
+          paidValue: paid, pendingValue: pending,
         });
       } else {
-        // Fetch personal stats for employee/intern
-        const { data: myTasks } = await supabase
-          .from('tasks')
-          .select('id, status')
-          .eq('assignee_id', user.id);
-
-        const total = myTasks?.length || 0;
-        const done = myTasks?.filter(t => t.status === 'done').length || 0;
-        const inProgress = myTasks?.filter(t => t.status === 'in_progress').length || 0;
-        const review = myTasks?.filter(t => t.status === 'review').length || 0;
-        const todo = myTasks?.filter(t => t.status === 'todo').length || 0;
-
+        const { data } = await supabase.from('tasks').select('id, status').eq('assignee_id', user.id);
+        const tasks = data || [];
         setPersonalStats({
-          myTotalTasks: total,
-          myDoneTasks: done,
-          myInProgressTasks: inProgress,
-          myReviewTasks: review,
-          myTodoTasks: todo,
+          total: tasks.length,
+          done:  tasks.filter((t: any) => t.status === 'done').length,
+          inProgress: tasks.filter((t: any) => t.status === 'in_progress').length,
+          review: tasks.filter((t: any) => t.status === 'review').length,
+          todo:   tasks.filter((t: any) => t.status === 'todo').length,
         });
       }
     } catch (e) {
-      console.error('Error fetching analytics:', e);
+      console.error('Analytics error:', e);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [user?.organizationId, user?.id, isManagement]);
 
-  useFocusEffect(
-    useCallback(() => {
-      fetchAnalytics();
-    }, [fetchAnalytics])
-  );
+  useFocusEffect(useCallback(() => { fetchAnalytics(); }, [fetchAnalytics]));
+
+  const onRefresh = () => { setRefreshing(true); fetchAnalytics(); };
 
   if (loading) {
     return (
-      <ScreenContainer style={styles.center}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </ScreenContainer>
+      <View style={{ flex: 1, backgroundColor: C.bg }}>
+        <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+        <View style={{ paddingHorizontal: 24, paddingTop: 64 }}>
+          <ShimmerLoader height={36} width="50%" borderRadius={10} style={{ marginBottom: 8 }} />
+          <ShimmerLoader height={14} width="70%" borderRadius={6} style={{ marginBottom: 32 }} />
+          <ShimmerCard />
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            <ShimmerCard style={{ flex: 1 }} />
+            <ShimmerCard style={{ flex: 1 }} />
+          </View>
+        </View>
+      </View>
     );
   }
 
-  const renderManagementView = () => {
-    const taskRate = orgStats.totalTasks > 0 ? (orgStats.doneTasks / orgStats.totalTasks) * 100 : 0;
-    const projectRate = orgStats.totalProjects > 0 ? (orgStats.completedProjects / orgStats.totalProjects) * 100 : 0;
-
-    return (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Workspace Health</Text>
-        
-        {/* Project & Task Metrics */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={styles.metricRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.cardMeta, { color: colors.muted }]}>Project Completion</Text>
-              <Text style={[styles.cardVal, { color: colors.foreground }]}>
-                {orgStats.completedProjects} / {orgStats.totalProjects}
-              </Text>
-            </View>
-            <Text style={[styles.percent, { color: colors.primary }]}>{Math.round(projectRate)}%</Text>
-          </View>
-          <ProgressBar progress={projectRate} showLabel={false} height={8} />
-
-          <View style={[styles.metricRow, { marginTop: 24 }]}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.cardMeta, { color: colors.muted }]}>Tasks Finished</Text>
-              <Text style={[styles.cardVal, { color: colors.foreground }]}>
-                {orgStats.doneTasks} / {orgStats.totalTasks}
-              </Text>
-            </View>
-            <Text style={[styles.percent, { color: colors.secondary }]}>{Math.round(taskRate)}%</Text>
-          </View>
-          <ProgressBar progress={taskRate} showLabel={false} height={8} color={colors.secondary} />
-        </View>
-
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Finance & Billing</Text>
-
-        {/* Financial metrics */}
-        <View style={styles.row}>
-          <View style={[styles.smallCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={[styles.iconBox, { backgroundColor: `${colors.success}15` }]}>
-              <Ionicons name="cash-outline" size={20} color={colors.success} />
-            </View>
-            <Text style={[styles.smallCardVal, { color: colors.foreground }]}>
-              ${orgStats.paidInvoicesValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </Text>
-            <Text style={[styles.smallCardMeta, { color: colors.muted }]}>Received Revenue</Text>
-          </View>
-
-          <View style={[styles.smallCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <View style={[styles.iconBox, { backgroundColor: `${colors.warning}15` }]}>
-              <Ionicons name="hourglass-outline" size={20} color={colors.warning} />
-            </View>
-            <Text style={[styles.smallCardVal, { color: colors.foreground }]}>
-              ${orgStats.pendingInvoicesValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </Text>
-            <Text style={[styles.smallCardMeta, { color: colors.muted }]}>Outstanding Invoices</Text>
-          </View>
-        </View>
-      </ScrollView>
-    );
-  };
-
-  const renderPersonalView = () => {
-    const taskRate = personalStats.myTotalTasks > 0 ? (personalStats.myDoneTasks / personalStats.myTotalTasks) * 100 : 0;
-
-    return (
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>My Task Performance</Text>
-        
-        {/* Progress tracker */}
-        <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <View style={styles.metricRow}>
-            <View style={{ flex: 1 }}>
-              <Text style={[styles.cardMeta, { color: colors.muted }]}>Tasks Completed</Text>
-              <Text style={[styles.cardVal, { color: colors.foreground }]}>
-                {personalStats.myDoneTasks} / {personalStats.myTotalTasks}
-              </Text>
-            </View>
-            <Text style={[styles.percent, { color: colors.primary }]}>{Math.round(taskRate)}%</Text>
-          </View>
-          <ProgressBar progress={taskRate} showLabel={false} height={8} />
-        </View>
-
-        <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Status Breakdown</Text>
-
-        <View style={styles.grid}>
-          {[
-            { label: 'To Do', value: personalStats.myTodoTasks, icon: 'list-outline', color: colors.primary },
-            { label: 'In Progress', value: personalStats.myInProgressTasks, icon: 'play-outline', color: colors.secondary },
-            { label: 'Under Review', value: personalStats.myReviewTasks, icon: 'eye-outline', color: colors.warning },
-            { label: 'Done', value: personalStats.myDoneTasks, icon: 'checkmark-circle-outline', color: colors.success },
-          ].map((item, idx) => (
-            <View key={idx} style={[styles.gridCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <View style={[styles.iconBox, { backgroundColor: `${item.color}15` }]}>
-                <Ionicons name={item.icon as any} size={18} color={item.color} />
-              </View>
-              <Text style={[styles.gridVal, { color: colors.foreground }]}>{item.value}</Text>
-              <Text style={[styles.gridMeta, { color: colors.muted }]}>{item.label}</Text>
-            </View>
-          ))}
-        </View>
-      </ScrollView>
-    );
-  };
+  const PERIODS: { key: Period; label: string }[] = [
+    { key: 'week', label: 'Week' },
+    { key: 'month', label: 'Month' },
+    { key: 'all', label: 'All Time' },
+  ];
 
   return (
-    <ScreenContainer>
-      <View style={styles.header}>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Analytics</Text>
-        <Text style={[styles.headerSubtitle, { color: colors.muted }]}>
-          {isManagement ? 'Organization-wide business metrics' : 'Personal task completions & targets'}
-        </Text>
-      </View>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
 
-      {isManagement ? renderManagementView() : renderPersonalView()}
-    </ScreenContainer>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
+      >
+        {/* Header */}
+        <Animated.View style={[styles.header, { transform: [{ translateY: headerAnim }], opacity: headerFade }]}>
+          <View>
+            <Text style={styles.title}>Analytics</Text>
+            <Text style={styles.subtitle}>
+              {isManagement ? 'Organization-wide business metrics' : 'Personal performance & targets'}
+            </Text>
+          </View>
+          {/* Period chips */}
+          <View style={{ flexDirection: 'row', gap: 6, marginTop: 16 }}>
+            {PERIODS.map(p => (
+              <Pressable
+                key={p.key}
+                onPress={() => setPeriod(p.key)}
+                style={{
+                  paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
+                  backgroundColor: period === p.key ? C.primary : C.card,
+                  borderWidth: 1,
+                  borderColor: period === p.key ? C.primary : C.border,
+                }}
+              >
+                <Text style={{ color: period === p.key ? '#FFF' : C.muted, fontSize: 12, fontWeight: '700' }}>
+                  {p.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </Animated.View>
+
+        <View style={{ paddingHorizontal: 20 }}>
+          {isManagement ? (
+            <>
+              {/* Org KPIs */}
+              <Text style={styles.sectionTitle}>Workspace Health</Text>
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                <StatCard label="Projects" value={orgStats.totalProjects} icon="folder" color={C.primary} sub={`${orgStats.completedProjects} done`} />
+                <StatCard label="Tasks" value={orgStats.totalTasks} icon="checkmark-circle" color={C.info} sub={`${orgStats.doneTasks} done`} />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
+                <StatCard label="Revenue" value={`$${Math.round(orgStats.paidValue).toLocaleString()}`} icon="cash" color={C.success} />
+                <StatCard label="Outstanding" value={`$${Math.round(orgStats.pendingValue).toLocaleString()}`} icon="hourglass" color={C.warning} />
+              </View>
+
+              {/* Progress bars */}
+              <Text style={styles.sectionTitle}>Completion Rates</Text>
+              <GlassCard padding={20} radius={20} style={{ marginBottom: 24 }}>
+                <AnimatedBar value={orgStats.completedProjects} total={orgStats.totalProjects} color={C.primary} label="Project Completion" />
+                <AnimatedBar value={orgStats.doneTasks} total={orgStats.totalTasks} color={C.info} label="Task Completion" />
+                <AnimatedBar value={orgStats.inProgressTasks} total={orgStats.totalTasks} color={C.warning} label="In Progress" />
+              </GlassCard>
+
+              {/* Health rings */}
+              <Text style={styles.sectionTitle}>Visual Health</Text>
+              <GlassCard padding={20} radius={20} style={{ marginBottom: 24 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' }}>
+                  <HealthRing
+                    progress={orgStats.totalProjects > 0 ? (orgStats.completedProjects / orgStats.totalProjects) * 100 : 0}
+                    size={90} strokeWidth={7} label="Projects"
+                  />
+                  <HealthRing
+                    progress={orgStats.totalTasks > 0 ? (orgStats.doneTasks / orgStats.totalTasks) * 100 : 0}
+                    size={90} strokeWidth={7} label="Tasks"
+                  />
+                  <HealthRing
+                    progress={orgStats.paidValue > 0 ? (orgStats.paidValue / (orgStats.paidValue + orgStats.pendingValue)) * 100 : 0}
+                    size={90} strokeWidth={7} label="Revenue"
+                  />
+                </View>
+              </GlassCard>
+
+              {/* Finance breakdown */}
+              <Text style={styles.sectionTitle}>Finance & Billing</Text>
+              <GlassCard glowColor={C.success} padding={20} radius={20} style={{ marginBottom: 24 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <Text style={{ color: C.textSec, fontSize: 13, fontWeight: '600' }}>Total Invoices</Text>
+                  <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>{orgStats.totalInvoices}</Text>
+                </View>
+                <View style={styles.financeRow}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.success }} />
+                    <Text style={{ color: C.textSec, fontSize: 13 }}>Received Revenue</Text>
+                  </View>
+                  <Text style={{ color: C.success, fontSize: 15, fontWeight: '800' }}>
+                    ${orgStats.paidValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
+                </View>
+                <View style={styles.financeRow}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: C.warning }} />
+                    <Text style={{ color: C.textSec, fontSize: 13 }}>Outstanding</Text>
+                  </View>
+                  <Text style={{ color: C.warning, fontSize: 15, fontWeight: '800' }}>
+                    ${orgStats.pendingValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
+                </View>
+              </GlassCard>
+            </>
+          ) : (
+            <>
+              {/* Personal stats */}
+              <Text style={styles.sectionTitle}>My Performance</Text>
+              <View style={{ alignItems: 'center', marginBottom: 24 }}>
+                <HealthRing
+                  progress={personalStats.total > 0 ? (personalStats.done / personalStats.total) * 100 : 0}
+                  size={120} strokeWidth={9} label="Overall Completion"
+                />
+              </View>
+
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
+                <StatCard label="Total" value={personalStats.total} icon="list" color={C.info} />
+                <StatCard label="Done" value={personalStats.done} icon="checkmark-circle" color={C.success} />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
+                <StatCard label="In Progress" value={personalStats.inProgress} icon="play" color={C.warning} />
+                <StatCard label="Review" value={personalStats.review} icon="eye" color={C.purple} />
+              </View>
+
+              <Text style={styles.sectionTitle}>Task Breakdown</Text>
+              <GlassCard padding={20} radius={20} style={{ marginBottom: 24 }}>
+                <AnimatedBar value={personalStats.done}       total={personalStats.total} color={C.success} label="Completed" />
+                <AnimatedBar value={personalStats.inProgress} total={personalStats.total} color={C.warning} label="In Progress" />
+                <AnimatedBar value={personalStats.review}     total={personalStats.total} color={C.purple}  label="Under Review" />
+                <AnimatedBar value={personalStats.todo}       total={personalStats.total} color={C.info}    label="To Do" />
+              </GlassCard>
+            </>
+          )}
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
-  },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: '800',
-    letterSpacing: -0.5,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    marginTop: 4,
-  },
-  scroll: {
-    paddingHorizontal: 24,
-    paddingBottom: 40,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 24,
-    marginBottom: 12,
-  },
-  card: {
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 20,
-    marginBottom: 16,
-  },
-  metricRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  cardMeta: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  cardVal: {
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  percent: {
-    fontSize: 24,
-    fontWeight: '800',
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  smallCard: {
-    flex: 1,
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 16,
-    alignItems: 'flex-start',
-  },
-  iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 12,
-  },
-  smallCardVal: {
-    fontSize: 16,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  smallCardMeta: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  gridCard: {
-    width: '48%',
-    borderRadius: 20,
-    borderWidth: 1,
-    padding: 16,
-    alignItems: 'flex-start',
-  },
-  gridVal: {
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  gridMeta: {
-    fontSize: 12,
-    fontWeight: '600',
-  },
+  header: { paddingHorizontal: 24, paddingTop: 56, paddingBottom: 20 },
+  title: { color: '#F5F5FA', fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
+  subtitle: { color: '#7A7A92', fontSize: 14, marginTop: 4 },
+  sectionTitle: { color: '#F5F5FA', fontSize: 18, fontWeight: '800', letterSpacing: -0.3, marginBottom: 14 },
+  financeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#2A2A3A' },
 });

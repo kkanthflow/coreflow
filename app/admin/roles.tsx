@@ -58,10 +58,10 @@ export default function RoleManagementScreen() {
 
       const { data: myOrgs } = await supabase
         .from('user_organizations')
-        .select('organization_id')
+        .select('org_id')
         .eq('user_id', user!.id);
 
-      const orgIds = myOrgs?.map((o) => o.organization_id) || [];
+      const orgIds = myOrgs?.map((o) => o.org_id) || [];
 
       if (orgIds.length === 0) {
         const { data, error } = await supabase
@@ -74,7 +74,7 @@ export default function RoleManagementScreen() {
         const { data, error } = await supabase
           .from('user_organizations')
           .select('user_id, users!inner(id, full_name, email, role, avatar_url)')
-          .in('organization_id', orgIds);
+          .in('org_id', orgIds);
 
         if (data && !error) {
           const uniqueUsers = new Map<string, any>();

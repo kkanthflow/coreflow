@@ -48,10 +48,10 @@ export function AttendeePicker({
       // 1. Get current user's organizations
       const { data: myOrgs } = await supabase
         .from('user_organizations')
-        .select('organization_id')
+        .select('org_id')
         .eq('user_id', user.id);
         
-      const orgIds = myOrgs?.map(o => o.organization_id) || [];
+      const orgIds = myOrgs?.map(o => o.org_id) || [];
       
       if (orgIds.length === 0) {
         setUsers([]);
@@ -63,7 +63,7 @@ export function AttendeePicker({
       let query = supabase
         .from('user_organizations')
         .select('user_id, users!inner(id, full_name, email, role, avatar_url)')
-        .in('organization_id', orgIds);
+        .in('org_id', orgIds);
       
       if (searchQuery) {
         query = query.ilike('users.full_name', `%${searchQuery}%`);

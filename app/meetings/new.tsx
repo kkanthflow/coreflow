@@ -244,23 +244,23 @@ export default function NewMeetingScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={{ flex: 1, backgroundColor: colors.background }}
     >
-      <View className="flex-row items-center justify-between px-4 pb-4 border-b border-border" style={{ paddingTop: insets.top || 16 }}>
-        <View className="flex-row items-center">
-          <Pressable onPress={() => router.back()} className="mr-3 p-2 -ml-2">
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: insets.top || 16, backgroundColor: colors.background }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <Pressable onPress={() => router.back()} style={{ marginRight: 12, padding: 8, marginLeft: -8 }}>
             <Ionicons name="close" size={24} color={colors.foreground} />
           </Pressable>
-          <Text className="text-xl font-bold text-foreground">{editId ? 'Edit Meeting' : 'New Meeting'}</Text>
+          <Text style={{ fontSize: 20, fontWeight: '700', color: colors.foreground }}>{editId ? 'Edit Meeting' : 'New Meeting'}</Text>
         </View>
-        <Pressable 
-          onPress={handleCreateMeeting} 
+        <Pressable
+          onPress={handleCreateMeeting}
           disabled={isSubmitting || !title.trim()}
-          className={!title.trim() ? 'opacity-50' : ''}
+          style={{ opacity: isSubmitting || !title.trim() ? 0.5 : 1 }}
         >
-          <Text className="text-base font-bold text-primary">{editId ? 'Save' : 'Schedule'}</Text>
+          <Text style={{ fontSize: 16, fontWeight: '700', color: colors.primary || '#FF6B4A' }}>{isSubmitting ? 'Saving...' : editId ? 'Save' : 'Schedule'}</Text>
         </Pressable>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 16 }} style={{ backgroundColor: colors.background }}>
         <PremiumInput
           label="Meeting Title"
           placeholder="e.g. Weekly Sync"

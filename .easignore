@@ -1,0 +1,10 @@
+# Ignore local large assets and development files from EAS bundle upload
+node_modules/
+.git/
+.expo/
+dist/
+web-build/
+app.apk
+*.apk
+combined_migrations.sql
+.vercel/

@@ -26,10 +26,10 @@ export default function TeamDirectoryScreen() {
       // 1. Get current user's organizations
       const { data: myOrgs } = await supabase
         .from('user_organizations')
-        .select('organization_id')
+        .select('org_id')
         .eq('user_id', user!.id);
         
-      const orgIds = myOrgs?.map(o => o.organization_id) || [];
+      const orgIds = myOrgs?.map(o => o.org_id) || [];
       
       if (orgIds.length === 0) {
         // Fallback: Fetch all users in the system if no organization links exist
@@ -45,7 +45,7 @@ export default function TeamDirectoryScreen() {
         const { data, error } = await supabase
           .from('user_organizations')
           .select('user_id, users!inner(id, full_name, email, role, avatar_url, department)')
-          .in('organization_id', orgIds);
+          .in('org_id', orgIds);
         
         if (data && !error) {
           // Deduplicate

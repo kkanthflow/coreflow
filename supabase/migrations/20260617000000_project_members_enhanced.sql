@@ -45,7 +45,7 @@ CREATE POLICY "Org members can view project members"
   USING (
     EXISTS (
       SELECT 1 FROM public.projects p
-      JOIN public.user_organizations uo ON uo.organization_id = p.org_id
+      JOIN public.user_organizations uo ON uo.org_id = p.org_id
       WHERE p.id = project_members.project_id
         AND uo.user_id = auth.uid()
     )
@@ -58,7 +58,7 @@ CREATE POLICY "Managers can assign project members"
   WITH CHECK (
     EXISTS (
       SELECT 1 FROM public.projects p
-      JOIN public.user_organizations uo ON uo.organization_id = p.org_id
+      JOIN public.user_organizations uo ON uo.org_id = p.org_id
       JOIN public.users u ON u.id = uo.user_id
       WHERE p.id = project_members.project_id
         AND uo.user_id = auth.uid()
@@ -73,7 +73,7 @@ CREATE POLICY "Managers can update project members"
   USING (
     EXISTS (
       SELECT 1 FROM public.projects p
-      JOIN public.user_organizations uo ON uo.organization_id = p.org_id
+      JOIN public.user_organizations uo ON uo.org_id = p.org_id
       JOIN public.users u ON u.id = uo.user_id
       WHERE p.id = project_members.project_id
         AND uo.user_id = auth.uid()

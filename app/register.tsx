@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, ScrollView, KeyboardAvoidingView, Platform, Pressable } from 'react-native';
+import { View, Text, ScrollView, KeyboardAvoidingView, Platform, Pressable, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ScreenContainer } from '@/components/screen-container';
@@ -7,9 +7,11 @@ import { PremiumButton } from '@/components/ui/premium-button';
 import { PremiumInput } from '@/components/ui/premium-input';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
+import { useColors } from '@/hooks/use-colors';
 
 export default function RegisterScreen() {
   const router = useRouter();
+  const colors = useColors();
   const { refreshUser } = useAuth();
 
   const [fullName, setFullName] = useState('');
@@ -101,13 +103,17 @@ export default function RegisterScreen() {
 
       // 2. Sign up the user
       let userId = null;
+      const metaRole = accountType === 'freelancer'
+        ? 'freelancer'
+        : (accountType === 'create' ? 'owner' : role);
+
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName,
-            role: accountType === 'freelancer' ? 'freelancer' : undefined,
+            role: metaRole,
           }
         }
       });
@@ -134,9 +140,16 @@ export default function RegisterScreen() {
           const { error: linkError } = await supabase
             .from('user_organizations')
             .insert({ user_id: userId, org_id: orgId, role: assignedRole });
-          if (linkError) throw linkError;
+          if (linkError) {
+            await supabase.auth.signOut();
+            throw linkError;
+          }
 
-          await supabase.from('users').update({ role: assignedRole }).eq('id', userId);
+          const { error: updateError } = await supabase.from('users').update({ role: assignedRole }).eq('id', userId);
+          if (updateError) {
+            await supabase.auth.signOut();
+            throw updateError;
+          }
         } else if (accountType === 'create') {
           const { data: newOrg, error: createOrgError } = await supabase
             .from('organizations')
@@ -144,22 +157,37 @@ export default function RegisterScreen() {
             .select('id')
             .single();
             
-          if (createOrgError) throw createOrgError;
+          if (createOrgError) {
+            await supabase.auth.signOut();
+            throw createOrgError;
+          }
           orgId = newOrg.id;
           
           const { error: linkError } = await supabase
             .from('user_organizations')
             .insert({ user_id: userId, org_id: orgId, role: 'owner' });
-          if (linkError) throw linkError;
+          if (linkError) {
+            await supabase.auth.signOut();
+            throw linkError;
+          }
 
-          await supabase.from('users').update({ role: 'owner' }).eq('id', userId);
+          const { error: updateError } = await supabase.from('users').update({ role: 'owner' }).eq('id', userId);
+          if (updateError) {
+            await supabase.auth.signOut();
+            throw updateError;
+          }
         }
       }
 
+      // Refresh the user profile in AuthContext so that it fetches the newly created org/role
       await refreshUser();
-      router.replace('/(tabs)' as any);
+
+      // Do NOT manually navigate — AuthGate in _layout.tsx watches auth state
+      // and will redirect to /(tabs) once profile is loaded. Manual navigation
+      // here races with onAuthStateChange and causes black screen.
+
     } catch (err: any) {
-      console.error(err);
+      console.error('[RegisterScreen] Registration error:', err);
       
       let errorMessage = 'Registration failed. Please try again.';
       if (err instanceof Error || err?.message) {
@@ -176,7 +204,6 @@ export default function RegisterScreen() {
       }
       
       setError(errorMessage);
-    } finally {
       setLoading(false);
     }
   };
@@ -188,9 +215,33 @@ export default function RegisterScreen() {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1"
+      style={{ flex: 1, backgroundColor: colors.background }}
     >
+      {/* Full-screen dark loading overlay — shown while creating account + during auth transition */}
+      {loading && (
+        <View style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: colors.background, zIndex: 999,
+          alignItems: 'center', justifyContent: 'center', gap: 16,
+        }}>
+          <View style={{
+            width: 72, height: 72, borderRadius: 22,
+            backgroundColor: '#FF6B4A18', borderWidth: 1, borderColor: '#FF6B4A40',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Ionicons name="flash" size={32} color="#FF6B4A" />
+          </View>
+          <ActivityIndicator size="large" color="#FF6B4A" />
+          <Text style={{ color: colors.foreground, fontSize: 17, fontWeight: '700', marginTop: 4 }}>
+            Setting up your workspace...
+          </Text>
+          <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', paddingHorizontal: 40 }}>
+            Creating your account and organization
+          </Text>
+        </View>
+      )}
       <ScreenContainer className="justify-between p-6">
+
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
           {/* Header */}
           <View className="mt-12 mb-8">

@@ -129,10 +129,10 @@ export default function BillUploadScreen() {
       // Resolve user organization context for default assignment
       const { data: myOrgs } = await supabase
         .from('user_organizations')
-        .select('organization_id')
+        .select('org_id')
         .eq('user_id', user!.id);
 
-      const orgId = myOrgs && myOrgs.length > 0 ? myOrgs[0].organization_id : null;
+      const orgId = myOrgs && myOrgs.length > 0 ? myOrgs[0].org_id : null;
 
       // Mock Extracted Data matching the OCR specifications
       const mockExtractedData = {

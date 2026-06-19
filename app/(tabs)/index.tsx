@@ -1,606 +1,540 @@
-import { ScrollView, Text, View, Pressable, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  ScrollView, Text, View, Pressable, StyleSheet,
+  Animated, StatusBar, RefreshControl,
+} from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
-import { RoleBadge } from '@/components/ui/role-badge';
-import { PremiumButton } from '@/components/ui/premium-button';
-import { ActivityFeed } from '@/components/ui/activity-feed';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
-import { useEffect, useState, useCallback } from 'react';
 import { hasPermission } from '@/lib/permissions';
 import { Ionicons } from '@expo/vector-icons';
-import { ProgressBar } from '@/components/ui/progress-bar';
+import { AnimatedStat } from '@/components/ui/animated-stat';
+import { AIInsightBanner } from '@/components/ui/ai-insight-banner';
+import { GlassCard } from '@/components/ui/glass-card';
+import { HealthRing } from '@/components/ui/health-ring';
+import { ShimmerCard, ShimmerLoader } from '@/components/ui/shimmer-loader';
+import { RoleBadge } from '@/components/ui/role-badge';
+
+const COLORS = {
+  bg:       '#07070B',
+  surface:  '#111118',
+  card:     '#181822',
+  border:   '#2A2A3A',
+  primary:  '#FF6B4A',
+  secondary:'#FFA86B',
+  text:     '#F5F5FA',
+  textSec:  '#B4B4C7',
+  muted:    '#7A7A92',
+  success:  '#34D399',
+  warning:  '#FBBF24',
+  error:    '#F87171',
+  info:     '#60A5FA',
+};
+
+const QUICK_ACTIONS = (perms: Record<string, boolean>, router: any, colors: any) => [
+  perms.meetings && {
+    id: 'schedule', label: 'Schedule', sub: 'Meeting', icon: 'calendar' as const,
+    color: colors.primary, onPress: () => router.push('/meetings/new'),
+  },
+  perms.meetings && {
+    id: 'meetings', label: 'Meetings', sub: 'View All', icon: 'calendar-outline' as const,
+    color: colors.secondary, onPress: () => router.push('/(tabs)/meetings'),
+  },
+  perms.directory && {
+    id: 'team', label: 'Team', sub: 'Directory', icon: 'people' as const,
+    color: colors.info || '#60A5FA', onPress: () => router.push('/team/directory'),
+  },
+  perms.departments && {
+    id: 'departments', label: 'Departments', sub: 'Browse', icon: 'business' as const,
+    color: '#8B5CF6', onPress: () => router.push('/departments'),
+  },
+  perms.reports && {
+    id: 'reports', label: 'Reports', sub: 'Analytics', icon: 'bar-chart' as const,
+    color: colors.info || '#60A5FA', onPress: () => router.push('/(tabs)/analytics'),
+  },
+  perms.invoices && {
+    id: 'invoices', label: 'Invoices', sub: 'Billing', icon: 'receipt' as const,
+    color: colors.success, onPress: () => router.push('/invoices'),
+  },
+  perms.roles && {
+    id: 'roles', label: 'Roles', sub: 'Access Ctrl', icon: 'shield-checkmark' as const,
+    color: colors.error, onPress: () => router.push('/admin/roles'),
+  },
+].filter(Boolean) as any[];
+
 
 export default function HomeScreen() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const colors = useColors();
   const router = useRouter();
 
-  // Redirect freelancer immediately to their portal via AuthGate in _layout.tsx
-  // No local redirect needed here — prevents double navigation
+  const headerAnim = useRef(new Animated.Value(-20)).current;
+  const headerFade = useRef(new Animated.Value(0)).current;
 
   const [unreadCount, setUnreadCount] = useState(0);
-  const [stats, setStats] = useState({
-    upcoming: 0,
-    teamMembers: 0,
-    pending: 0,
-  });
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [stats, setStats] = useState({ upcoming: 0, teamMembers: 0, pending: 0 });
   const [projects, setProjects] = useState<any[]>([]);
   const [todoTasks, setTodoTasks] = useState<any[]>([]);
 
-  const fetchUnreadCount = useCallback(async () => {
-    if (!user) return;
-    try {
-      const { count, error } = await supabase
-        .from('notifications')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('is_read', false);
-      
-      if (!error) {
-        setUnreadCount(count || 0);
-      }
-    } catch (e) {
-      console.error('Error fetching unread notification count:', e);
-    }
-  }, [user]);
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
+      Animated.timing(headerFade, { toValue: 1, duration: 600, useNativeDriver: true }),
+    ]).start();
+  }, []);
 
-  const fetchDashboardStats = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     if (!user) return;
-    
     try {
       const now = new Date().toISOString();
 
-      // Get upcoming accepted meetings
-      const { count: upcomingCount } = await supabase
-        .from('meeting_attendees')
-        .select(`meeting_id, meetings!inner(start_time)`, { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('rsvp_status', 'accepted')
-        .gt('meetings.start_time', now);
+      const [{ count: upcoming }, { count: pending }, unreadRes] = await Promise.all([
+        supabase.from('meeting_attendees')
+          .select('meeting_id, meetings!inner(start_time)', { count: 'exact', head: true })
+          .eq('user_id', user.id).eq('rsvp_status', 'accepted').gt('meetings.start_time', now),
+        supabase.from('meeting_attendees')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id).eq('rsvp_status', 'pending'),
+        supabase.from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id).eq('is_read', false),
+      ]);
 
-      // Get pending meetings
-      const { count: pendingCount } = await supabase
-        .from('meeting_attendees')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', user.id)
-        .eq('rsvp_status', 'pending');
+      setUnreadCount(unreadRes.count || 0);
 
-      // Get team members count
+      // Get team members count — single query using org membership
       let teamMembersCount = 0;
-      const { data: myOrgs } = await supabase
-        .from('user_organizations')
-        .select('organization_id')
-        .eq('user_id', user.id);
-        
-      if (myOrgs && myOrgs.length > 0) {
-        const orgIds = myOrgs.map(o => o.organization_id);
-        // Count unique users in those orgs
-        const { data: teamMembersData } = await supabase
-          .from('user_organizations')
-          .select('user_id')
-          .in('organization_id', orgIds);
-          
-        if (teamMembersData) {
-          const uniqueIds = new Set(teamMembersData.map(t => t.user_id));
-          teamMembersCount = uniqueIds.size;
-        }
-      }
-
-      setStats({
-        upcoming: upcomingCount || 0,
-        pending: pendingCount || 0,
-        teamMembers: teamMembersCount,
-      });
-
-      // Fetch projects for progress tracker
       if (user.organizationId) {
-        const { data: projData } = await supabase
-          .from('projects')
-          .select(`
-            id,
-            title,
-            cover_color,
-            tasks (id, status)
-          `)
-          .eq('org_id', user.organizationId)
-          .limit(3);
-
-        const formatted = (projData || []).map((p: any) => {
-          const tList = p.tasks || [];
-          const total = tList.length;
-          const done = tList.filter((t: any) => t.status === 'done').length;
-          return {
-            id: p.id,
-            title: p.title,
-            cover_color: p.cover_color,
-            progress: total > 0 ? (done / total) * 100 : 0
-          };
-        });
-        setProjects(formatted);
+        const { count: memberCount } = await supabase
+          .from('user_organizations')
+          .select('user_id', { count: 'exact', head: true })
+          .eq('org_id', user.organizationId);
+        teamMembersCount = memberCount || 0;
       }
 
-      // Fetch assigned to-do tasks
-      const { data: taskData } = await supabase
-        .from('tasks')
-        .select(`
-          id,
-          title,
-          status,
-          priority,
-          due_date
-        `)
-        .eq('assignee_id', user.id)
-        .neq('status', 'done')
-        .order('due_date', { ascending: true })
-        .limit(5);
+      setStats({ upcoming: upcoming || 0, pending: pending || 0, teamMembers: teamMembersCount });
 
-      setTodoTasks(taskData || []);
+      if (user.organizationId) {
+        const [projRes, taskRes] = await Promise.all([
+          supabase.from('projects').select('id, title, cover_color, tasks(id, status)')
+            .eq('org_id', user.organizationId).is('deleted_at', null).limit(4),
+          supabase.from('tasks').select('id, title, status, priority, due_date')
+            .eq('assignee_id', user.id).neq('status', 'done')
+            .order('due_date', { ascending: true }).limit(5),
+        ]);
+
+        setProjects((projRes.data || []).map((p: any) => {
+          const tasks = p.tasks || [];
+          const done = tasks.filter((t: any) => t.status === 'done').length;
+          return { ...p, progress: tasks.length > 0 ? (done / tasks.length) * 100 : 0 };
+        }));
+
+        setTodoTasks(taskRes.data || []);
+      }
     } catch (e) {
-      console.error('Error fetching stats:', e);
+      console.error('Dashboard fetch error:', e);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   }, [user]);
 
-  useFocusEffect(
-    useCallback(() => {
-      if (isAuthenticated && user) {
-        fetchDashboardStats();
-        fetchUnreadCount();
-      }
-    }, [isAuthenticated, user?.id, fetchDashboardStats, fetchUnreadCount])
-  );
+  useFocusEffect(useCallback(() => { if (isAuthenticated && user) fetchAll(); }, [isAuthenticated, user?.id, fetchAll]));
 
-  useEffect(() => {
-    let frameId: number;
-    let channel: ReturnType<typeof supabase.channel> | null = null;
+  const onRefresh = () => { setRefreshing(true); fetchAll(); };
 
-    if (isAuthenticated && user) {
-      frameId = requestAnimationFrame(() => {
-        fetchDashboardStats();
-        fetchUnreadCount();
-      });
-
-      // Remove any existing channel with this name before creating a new one
-      // to avoid "cannot add postgres_changes callbacks after subscribe()" error
-      const channelName = `notifications:count:${user.id}`;
-      const existing = supabase.getChannels().find(
-        (ch: any) => ch.topic === `realtime:${channelName}`
-      );
-      if (existing) {
-        supabase.removeChannel(existing);
-      }
-
-      // Subscribe to real-time notifications count
-      channel = supabase
-        .channel(channelName)
-        .on(
-          'postgres_changes',
-          {
-            event: '*',
-            schema: 'public',
-            table: 'notifications',
-            filter: `user_id=eq.${user.id}`,
-          },
-          () => {
-            fetchUnreadCount();
-          }
-        )
-        .subscribe((status: string) => {
-          if (status === 'CHANNEL_ERROR') {
-            console.warn('[HomeScreen] Realtime channel error for notifications count');
-          }
-        });
-    }
-
-    return () => {
-      if (frameId) cancelAnimationFrame(frameId);
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, [isAuthenticated, user?.id, fetchDashboardStats, fetchUnreadCount]);
-
-
-  if (isLoading) {
+  if (isLoading || loading) {
     return (
-      <ScreenContainer className="justify-center items-center p-6">
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text className="text-sm text-muted mt-3">Loading your workspace...</Text>
-      </ScreenContainer>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        <View style={{ paddingHorizontal: 24, paddingTop: 64 }}>
+          <ShimmerLoader height={32} width="60%" borderRadius={10} style={{ marginBottom: 8 }} />
+          <ShimmerLoader height={16} width="40%" borderRadius={6} style={{ marginBottom: 32 }} />
+          <ShimmerCard />
+          <ShimmerCard />
+          <ShimmerCard />
+        </View>
+      </View>
     );
   }
 
-  // Handle case where user is authenticated but has no profile (orphan account)
-  if (isAuthenticated && !user) {
+  if (!isAuthenticated) return null;
+  if (!user) {
     return (
-      <ScreenContainer className="justify-center items-center p-6">
-        <Text className="text-2xl font-bold text-error mb-4">Profile Missing</Text>
-        <Text className="text-base text-muted text-center mb-8">
-          Your account exists but your profile could not be found. This can happen if an error occurred during registration.
-        </Text>
-        <PremiumButton
-          variant="outline"
-          size="lg"
-          onPress={async () => {
-            await supabase.auth.signOut();
-            router.replace('/login');
-          }}
-        >
-          Sign Out
-        </PremiumButton>
-      </ScreenContainer>
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        <View style={{ paddingHorizontal: 24, paddingTop: 64 }}>
+          <ShimmerLoader height={32} width="60%" borderRadius={10} style={{ marginBottom: 8 }} />
+          <ShimmerLoader height={16} width="40%" borderRadius={6} style={{ marginBottom: 32 }} />
+          <ShimmerCard />
+          <ShimmerCard />
+          <ShimmerCard />
+        </View>
+      </View>
     );
   }
 
-  if (!isAuthenticated || !user) {
-    return (
-      <ScreenContainer className="justify-center items-center p-6">
-        <Text className="text-2xl font-bold text-foreground mb-4">Welcome to CoreFlow</Text>
-        <Text className="text-base text-muted text-center mb-8">
-          Please sign in to continue
-        </Text>
-        <PremiumButton
-          variant="primary"
-          size="lg"
-          onPress={() => router.push('/login')}
-        >
-          Sign In
-        </PremiumButton>
-      </ScreenContainer>
-    );
-  }
-
-  const getRoleGreeting = () => {
-    switch (user.role) {
-      case 'managing_director':
-        return 'Managing Director Dashboard';
-      case 'ceo':
-        return 'Executive Dashboard';
-      case 'cto':
-        return 'Technology Dashboard';
-      case 'project_manager':
-        return 'Project Dashboard';
-      case 'hr':
-        return 'HR Dashboard';
-      case 'developer':
-        return 'Developer Dashboard';
-      default:
-        return 'Dashboard';
-    }
+  const canScheduleMeetings = hasPermission(user.role, 'schedule_meetings');
+  const perms = {
+    meetings: canScheduleMeetings,
+    directory: hasPermission(user.role, 'view_team_directory'),
+    departments: user.role !== 'freelancer',
+    reports: hasPermission(user.role, 'view_reports'),
+    invoices: hasPermission(user.role, 'view_invoices'),
+    roles: hasPermission(user.role, 'manage_roles'),
   };
 
-  const canManageRoles = hasPermission(user?.role, 'manage_roles');
-  const canScheduleMeetings = hasPermission(user?.role, 'schedule_meetings');
-  const canViewDirectory = hasPermission(user?.role, 'view_team_directory');
-  const canViewInvoices = hasPermission(user?.role, 'view_invoices');
-  const canViewReports = hasPermission(user?.role, 'view_reports');
-  const canViewDepartments = user?.role !== 'freelancer';
+  const quickActions = QUICK_ACTIONS(perms, router, colors);
+
+  const greeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return 'Good morning';
+    if (h < 17) return 'Good afternoon';
+    return 'Good evening';
+  };
+
+  const firstName = user.fullName?.split(' ')[0] || 'there';
+
+  // AI-generated insight based on real data
+  const workspaceScore = Math.min(100, Math.round(
+    (stats.upcoming > 0 ? 20 : 0) +
+    (stats.teamMembers > 1 ? 30 : 0) +
+    (projects.length > 0 ? 30 : 0) +
+    (todoTasks.length < 3 ? 20 : 10)
+  ));
+
+  const aiInsight =
+    projects.length === 0
+      ? 'Your workspace is set up. Start by creating your first project to track team progress.'
+      : todoTasks.length === 0
+      ? `Excellent! No pending tasks. Your team has ${projects.length} active project${projects.length > 1 ? 's' : ''} running smoothly.`
+      : `You have ${todoTasks.length} pending task${todoTasks.length > 1 ? 's' : ''} across ${projects.length} project${projects.length > 1 ? 's' : ''}. Prioritize your critical items first.`;
 
   return (
-    <ScreenContainer className="p-6">
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <View className="flex-row items-center justify-between mb-5">
-          <View className="flex-1 pr-4">
-            <Text className="text-3xl font-bold text-foreground mb-1">
-              {getRoleGreeting()}
-            </Text>
-            <Text className="text-sm text-muted">
-              Welcome back, {user.fullName}
-            </Text>
-          </View>
-          
-          <Pressable
-            onPress={() => router.push('/notifications' as any)}
-            className="w-11 h-11 rounded-full items-center justify-center border border-border"
-            style={{ backgroundColor: colors.surface }}
-          >
-            <Ionicons name="notifications-outline" size={22} color={colors.foreground} />
-            {unreadCount > 0 && (
-              <View className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] rounded-full bg-primary border-2 border-background items-center justify-center px-1">
-                <Text className="text-[9px] text-white font-bold">{unreadCount}</Text>
-              </View>
-            )}
-          </Pressable>
-        </View>
-
-        {/* User Info Card */}
-        <View
-          className="p-6 rounded-2xl mb-5 border border-border"
-          style={{ backgroundColor: colors.surface }}
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 100 }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
+      >
+        {/* ── HEADER ── */}
+        <Animated.View
+          style={[
+            styles.header,
+            { transform: [{ translateY: headerAnim }], opacity: headerFade },
+          ]}
         >
-          <View className="flex-row items-center justify-between mb-4">
-            <View>
-              <Text className="text-lg font-semibold text-foreground">
-                {user.fullName}
-              </Text>
-              {user.organizationName ? (
-                <Text className="text-sm text-primary font-semibold mt-1">
-                  🏢 {user.organizationName}
-                </Text>
-              ) : null}
-              <Text className="text-xs text-muted mt-0.5">
-                {user.email}
-              </Text>
-            </View>
-            <RoleBadge role={user.role as any} size="md" />
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.greeting, { color: colors.muted }]}>{greeting()},</Text>
+            <Text style={[styles.name, { color: colors.foreground }]}>{firstName} 👋</Text>
+            {user.organizationName ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary }} />
+                <Text style={[styles.orgName, { color: colors.muted }]}>{user.organizationName}</Text>
+              </View>
+            ) : null}
           </View>
 
-          {user.department && (
-            <Text className="text-sm text-muted">
-              Department: {user.department}
-            </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+            <RoleBadge role={user.role as any} size="sm" />
+            <Pressable
+              onPress={() => router.push('/notifications' as any)}
+              style={[styles.notifBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            >
+              <Ionicons name="notifications-outline" size={20} color={colors.foreground} />
+              {unreadCount > 0 && (
+                <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                  <Text style={styles.badgeText}>{unreadCount > 9 ? '9+' : unreadCount}</Text>
+                </View>
+              )}
+            </Pressable>
+          </View>
+        </Animated.View>
+
+        <View style={styles.content}>
+          {/* ── AI INSIGHT ── */}
+          <AIInsightBanner
+            insight={aiInsight}
+            score={workspaceScore}
+            onPress={() => router.push('/(tabs)/analytics' as any)}
+          />
+
+          {/* ── STATS ── */}
+          <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Overview</Text>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 28 }}>
+            <AnimatedStat value={stats.upcoming}    label="Upcoming"     icon="calendar"  color={colors.primary} />
+            <AnimatedStat value={stats.teamMembers} label="Team Members" icon="people"    color={colors.info || '#60A5FA'} />
+            <AnimatedStat value={stats.pending}     label="Pending"      icon="hourglass" color={colors.warning} />
+          </View>
+
+          {/* ── QUICK ACTIONS ── */}
+          {quickActions.length > 0 && (
+            <>
+              <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quick Actions</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 28 }}>
+                {quickActions.map((action, i) => (
+                  <QuickActionCard key={action.id} action={action} index={i} />
+                ))}
+              </View>
+            </>
           )}
-        </View>
 
-        {/* Quick Actions — 2×2 Premium Grid */}
-        <View className="mb-5">
-          <Text className="text-lg font-bold text-foreground mb-4">
-            Quick Actions
-          </Text>
-
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-            {canScheduleMeetings && (
-              <Pressable
-                onPress={() => router.push('/meetings/new')}
-                style={[quickActionStyles.card, { backgroundColor: colors.surface, borderColor: colors.border, width: '47%' }]}
-              >
-                <View style={[quickActionStyles.iconRing, { backgroundColor: `${colors.primary}18` }]}>
-                  <Ionicons name="calendar" size={22} color={colors.primary} />
-                </View>
-                <Text style={[quickActionStyles.cardTitle, { color: colors.foreground }]}>Schedule</Text>
-                <Text style={[quickActionStyles.cardSub, { color: colors.muted }]}>New Meeting</Text>
-              </Pressable>
-            )}
-
-            {canScheduleMeetings && (
-              <Pressable
-                onPress={() => router.push('/meetings')}
-                style={[quickActionStyles.card, { backgroundColor: colors.surface, borderColor: colors.border, width: '47%' }]}
-              >
-                <View style={[quickActionStyles.iconRing, { backgroundColor: `${colors.secondary}18` }]}>
-                  <Ionicons name="calendar-outline" size={22} color={colors.secondary} />
-                </View>
-                <Text style={[quickActionStyles.cardTitle, { color: colors.foreground }]}>Meetings</Text>
-                <Text style={[quickActionStyles.cardSub, { color: colors.muted }]}>View All</Text>
-              </Pressable>
-            )}
-
-            {canViewDirectory && (
-              <Pressable
-                onPress={() => router.push('/team/directory' as any)}
-                style={[quickActionStyles.card, { backgroundColor: colors.surface, borderColor: colors.border, width: '47%' }]}
-              >
-                <View style={[quickActionStyles.iconRing, { backgroundColor: `${colors.tertiary || colors.primary}18` }]}>
-                  <Ionicons name="people" size={22} color={colors.tertiary || colors.primary} />
-                </View>
-                <Text style={[quickActionStyles.cardTitle, { color: colors.foreground }]}>Team</Text>
-                <Text style={[quickActionStyles.cardSub, { color: colors.muted }]}>Directory</Text>
-              </Pressable>
-            )}
-
-            {canViewDepartments && (
-              <Pressable
-                onPress={() => router.push('/departments' as any)}
-                style={[quickActionStyles.card, { backgroundColor: colors.surface, borderColor: colors.border, width: '47%' }]}
-              >
-                <View style={[quickActionStyles.iconRing, { backgroundColor: `${colors.primary}18` }]}>
-                  <Ionicons name="business" size={22} color={colors.primary} />
-                </View>
-                <Text style={[quickActionStyles.cardTitle, { color: colors.foreground }]}>Departments</Text>
-                <Text style={[quickActionStyles.cardSub, { color: colors.muted }]}>Browse</Text>
-              </Pressable>
-            )}
-
-            {canViewReports && (
-              <Pressable
-                onPress={() => router.push('/reports' as any)}
-                style={[quickActionStyles.card, { backgroundColor: colors.surface, borderColor: colors.border, width: '47%' }]}
-              >
-                <View style={[quickActionStyles.iconRing, { backgroundColor: `${colors.secondary}18` }]}>
-                  <Ionicons name="bar-chart" size={22} color={colors.secondary} />
-                </View>
-                <Text style={[quickActionStyles.cardTitle, { color: colors.foreground }]}>Reports</Text>
-                <Text style={[quickActionStyles.cardSub, { color: colors.muted }]}>Analytics Hub</Text>
-              </Pressable>
-            )}
-
-            {canViewInvoices && (
-              <Pressable
-                onPress={() => router.push('/invoices' as any)}
-                style={[quickActionStyles.card, { backgroundColor: colors.surface, borderColor: colors.border, width: '47%' }]}
-              >
-                <View style={[quickActionStyles.iconRing, { backgroundColor: `${colors.success || '#22c55e'}18` }]}>
-                  <Ionicons name="receipt" size={22} color={colors.success || '#22c55e'} />
-                </View>
-                <Text style={[quickActionStyles.cardTitle, { color: colors.foreground }]}>Invoices</Text>
-                <Text style={[quickActionStyles.cardSub, { color: colors.muted }]}>Billing</Text>
-              </Pressable>
-            )}
-
-            {canManageRoles && (
-              <Pressable
-                onPress={() => router.push('/admin/roles' as any)}
-                style={[quickActionStyles.card, { backgroundColor: `${colors.error}08`, borderColor: `${colors.error}25`, width: '47%' }]}
-              >
-                <View style={[quickActionStyles.iconRing, { backgroundColor: `${colors.error}18` }]}>
-                  <Ionicons name="shield-checkmark" size={22} color={colors.error} />
-                </View>
-                <Text style={[quickActionStyles.cardTitle, { color: colors.foreground }]}>Roles</Text>
-                <Text style={[quickActionStyles.cardSub, { color: colors.muted }]}>Manage Access</Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-
-        {/* Stats */}
-        <View className="mb-5">
-          <Text className="text-lg font-bold text-foreground mb-4">
-            Overview
-          </Text>
-
-          <View className="flex-row gap-3">
-            <View
-              className="flex-1 p-4 rounded-xl items-center"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <Text className="text-2xl font-bold text-primary">{stats.upcoming}</Text>
-              <Text className="text-xs text-muted mt-2">Upcoming</Text>
-            </View>
-
-            <View
-              className="flex-1 p-4 rounded-xl items-center"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <Text className="text-2xl font-bold text-secondary">{stats.teamMembers}</Text>
-              <Text className="text-xs text-muted mt-2">Team Members</Text>
-            </View>
-
-            <View
-              className="flex-1 p-4 rounded-xl items-center"
-              style={{ backgroundColor: colors.surface }}
-            >
-              <Text className="text-2xl font-bold text-tertiary">{stats.pending}</Text>
-              <Text className="text-xs text-muted mt-2">Pending</Text>
-            </View>
-          </View>
-        </View>
-
-        {/* Projects Progress Tracker */}
-        {projects.length > 0 && (
-          <View className="mb-6">
-            <Text className="text-lg font-bold text-foreground mb-4">
-              Project Progress
-            </Text>
-            <View 
-              className="p-4 rounded-2xl border border-border"
-              style={{ backgroundColor: colors.surface }}
-            >
-              {projects.map((proj, idx) => (
-                <Pressable
-                  key={proj.id}
-                  onPress={() => router.push(`/projects/${proj.id}` as any)}
-                  style={{
-                    marginBottom: idx < projects.length - 1 ? 16 : 0,
-                  }}
-                >
-                  <View className="flex-row justify-between items-center mb-1">
-                    <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
-                      {proj.title}
-                    </Text>
-                    <Text className="text-xs font-bold text-primary">
-                      {Math.round(proj.progress)}%
-                    </Text>
-                  </View>
-                  <ProgressBar progress={proj.progress} showLabel={false} height={6} color={proj.cover_color} />
+          {/* ── PROJECT HEALTH ── */}
+          {projects.length > 0 && (
+            <>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+                <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Project Health</Text>
+                <Pressable onPress={() => router.push('/(tabs)/projects' as any)}>
+                  <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>See all →</Text>
                 </Pressable>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* My To-Do Tasks */}
-        <View className="mb-6">
-          <Text className="text-lg font-bold text-foreground mb-4">
-            My To-Do Tasks
-          </Text>
-          <View 
-            className="p-4 rounded-2xl border border-border"
-            style={{ backgroundColor: colors.surface }}
-          >
-            {todoTasks.map((t, idx) => (
-              <Pressable
-                key={t.id}
-                onPress={() => router.push(`/tasks/${t.id}` as any)}
-                className="flex-row justify-between items-center py-2"
-                style={{
-                  borderBottomWidth: idx < todoTasks.length - 1 ? StyleSheet.hairlineWidth : 0,
-                  borderBottomColor: colors.border,
-                }}
-              >
-                <View className="flex-1 pr-4">
-                  <Text className="text-sm font-semibold text-foreground" numberOfLines={1}>
-                    {t.title}
-                  </Text>
-                  {t.due_date ? (
-                    <Text className="text-xs text-muted mt-1">
-                      📅 Due: {new Date(t.due_date).toLocaleDateString()}
-                    </Text>
-                  ) : null}
-                </View>
-                <View 
-                  className="px-2 py-1 rounded bg-muted/10"
-                  style={{ backgroundColor: `${t.priority === 'critical' ? colors.error : t.priority === 'high' ? colors.warning : colors.primary}15` }}
-                >
-                  <Text 
-                    className="text-[10px] font-bold uppercase"
-                    style={{ color: t.priority === 'critical' ? colors.error : t.priority === 'high' ? colors.warning : colors.primary }}
-                  >
-                    {t.priority}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-
-            {todoTasks.length === 0 && (
-              <View className="py-4 items-center">
-                <Text className="text-sm text-muted">🎉 You have no pending tasks!</Text>
               </View>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 28 }}>
+                {projects.map((proj, i) => (
+                  <ProjectHealthCard
+                    key={proj.id}
+                    project={proj}
+                    index={i}
+                    onPress={() => router.push(`/projects/${proj.id}` as any)}
+                  />
+                ))}
+              </View>
+            </>
+          )}
+
+          {/* ── MY TASKS ── */}
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>My Tasks</Text>
+            <Pressable onPress={() => router.push('/(tabs)/projects' as any)}>
+              <Text style={{ color: colors.primary, fontSize: 13, fontWeight: '600' }}>View all →</Text>
+            </Pressable>
+          </View>
+          <GlassCard padding={0} radius={20} style={{ marginBottom: 28, overflow: 'hidden' }}>
+            {todoTasks.length === 0 ? (
+              <View style={{ padding: 24, alignItems: 'center', gap: 8 }}>
+                <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: `${colors.success}20`, alignItems: 'center', justifyContent: 'center' }}>
+                  <Ionicons name="checkmark-circle" size={26} color={colors.success} />
+                </View>
+                <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: '700' }}>All caught up!</Text>
+                <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center' }}>No pending tasks. Great work! 🎉</Text>
+              </View>
+            ) : (
+              todoTasks.map((task, idx) => (
+                <TaskRow key={task.id} task={task} isLast={idx === todoTasks.length - 1} onPress={() => router.push(`/tasks/${task.id}` as any)} />
+              ))
             )}
-          </View>
-        </View>
+          </GlassCard>
 
-        {/* Activity Feed */}
-        <View className="mb-5">
-          <Text className="text-lg font-bold text-foreground mb-4">
-            Recent Activity
-          </Text>
-          <ActivityFeed />
-        </View>
-
-        {/* Status */}
-        <View
-          className="p-4 rounded-xl border border-border mb-5"
-          style={{ backgroundColor: colors.surface }}
-        >
-          <View className="flex-row items-center gap-2 mb-2">
-            <View className="w-2 h-2 rounded-full bg-success" />
-            <Text className="text-sm font-semibold text-foreground">
-              Status: Active
-            </Text>
-          </View>
-          <Text className="text-xs text-muted">
-            Last login: {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Today'}
-          </Text>
+          {/* ── STATUS CARD ── */}
+          <GlassCard glowColor={colors.success} padding={16} radius={16}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.success, shadowColor: colors.success, shadowOpacity: 0.8, shadowRadius: 6 }} />
+              <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: '600', flex: 1 }}>
+                Workspace Active
+              </Text>
+              <Text style={{ color: colors.muted, fontSize: 12 }}>
+                Last login: {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Today'}
+              </Text>
+            </View>
+          </GlassCard>
         </View>
       </ScrollView>
-    </ScreenContainer>
+    </View>
   );
 }
 
-const quickActionStyles = StyleSheet.create({
-  card: {
-    borderWidth: 1,
-    borderRadius: 18,
-    padding: 16,
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function QuickActionCard({ action, index }: { action: any; index: number }) {
+  const colors = useColors();
+  const slideAnim = useRef(new Animated.Value(30)).current;
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(slideAnim, { toValue: 0, duration: 400, delay: index * 60, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 400, delay: index * 60, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ width: '47%', transform: [{ translateY: slideAnim }], opacity: fadeAnim }}>
+      <Pressable
+        onPress={action.onPress}
+        style={({ pressed }) => ({
+          backgroundColor: colors.card,
+          borderRadius: 18,
+          padding: 16,
+          borderWidth: 1,
+          borderColor: pressed ? `${action.color}50` : colors.border,
+          minHeight: 110,
+          justifyContent: 'space-between',
+          shadowColor: action.color,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: pressed ? 0.3 : 0.1,
+          shadowRadius: pressed ? 12 : 6,
+          elevation: pressed ? 6 : 2,
+          transform: [{ scale: pressed ? 0.97 : 1 }],
+        })}
+      >
+        <View style={{ width: 42, height: 42, borderRadius: 13, backgroundColor: `${action.color}20`, alignItems: 'center', justifyContent: 'center' }}>
+          <Ionicons name={action.icon} size={20} color={action.color} />
+        </View>
+        <View>
+          <Text style={{ color: colors.foreground, fontSize: 15, fontWeight: '800' }}>{action.label}</Text>
+          <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '500', marginTop: 2 }}>{action.sub}</Text>
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function ProjectHealthCard({ project, index, onPress }: { project: any; index: number; onPress: () => void }) {
+  const colors = useColors();
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(slideAnim, { toValue: 0, duration: 400, delay: index * 80, useNativeDriver: true }),
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 400, delay: index * 80, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
+  return (
+    <Animated.View style={{ width: '47%', transform: [{ translateY: slideAnim }], opacity: fadeAnim }}>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => ({
+          backgroundColor: colors.card,
+          borderRadius: 18,
+          padding: 14,
+          borderWidth: 1,
+          borderColor: colors.border,
+          alignItems: 'center',
+          opacity: pressed ? 0.85 : 1,
+          transform: [{ scale: pressed ? 0.96 : 1 }],
+        })}
+      >
+        <HealthRing progress={project.progress} size={64} strokeWidth={5} />
+        <Text
+          style={{ color: colors.foreground, fontSize: 12, fontWeight: '700', marginTop: 10, textAlign: 'center' }}
+          numberOfLines={2}
+        >
+          {project.title}
+        </Text>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+function TaskRow({ task, isLast, onPress }: { task: any; isLast: boolean; onPress: () => void }) {
+  const colors = useColors();
+  const priorityColors: Record<string, string> = {
+    critical: colors.error,
+    high:     colors.warning,
+    medium:   colors.info || '#60A5FA',
+    low:      colors.success,
+  };
+  const color = priorityColors[task.priority] || colors.muted;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingHorizontal: 16,
+        paddingVertical: 14,
+        borderBottomWidth: isLast ? 0 : 1,
+        borderBottomColor: colors.border,
+        backgroundColor: pressed ? '#FFFFFF06' : 'transparent',
+        gap: 12,
+      })}
+    >
+      {/* Priority indicator */}
+      <View style={{ width: 3, height: 36, borderRadius: 2, backgroundColor: color }} />
+
+      <View style={{ flex: 1 }}>
+        <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: '600' }} numberOfLines={1}>
+          {task.title}
+        </Text>
+        {task.due_date && (
+          <Text style={{ color: colors.muted, fontSize: 11, marginTop: 3 }}>
+            Due {new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+          </Text>
+        )}
+      </View>
+
+      <View style={{ paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8, backgroundColor: `${color}20` }}>
+        <Text style={{ color, fontSize: 10, fontWeight: '800', textTransform: 'uppercase' }}>
+          {task.priority}
+        </Text>
+      </View>
+      <Ionicons name="chevron-forward" size={14} color={colors.muted} />
+    </Pressable>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
     alignItems: 'flex-start',
-    minHeight: 110,
     justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingTop: 56,
+    paddingBottom: 24,
   },
-  iconRing: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
+  greeting: {
+    color: '#7A7A92',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  name: {
+    color: '#F5F5FA',
+    fontSize: 30,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+    marginTop: 2,
+  },
+  orgName: {
+    color: '#B4B4C7',
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  notifBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    backgroundColor: '#181822',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#2A2A3A',
   },
-  cardTitle: {
-    fontSize: 15,
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -4,
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#FF6B4A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: { color: '#FFF', fontSize: 9, fontWeight: '800' },
+  content: { paddingHorizontal: 20 },
+  sectionTitle: {
+    color: '#F5F5FA',
+    fontSize: 18,
     fontWeight: '800',
-    marginBottom: 2,
-  },
-  cardSub: {
-    fontSize: 12,
-    fontWeight: '500',
+    letterSpacing: -0.3,
+    marginBottom: 14,
   },
 });
