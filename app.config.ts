@@ -145,7 +145,9 @@ const config: ExpoConfig = {
     reactCompiler: false,
   },
   extra: {
-    eas: {}
+    eas: {
+      projectId: "71ae3170-4442-4b03-a226-6b6c8d6073c7"
+    }
   }
 };
 
