@@ -50,9 +50,7 @@ const config: ExpoConfig = {
   updates: {
     url: "https://u.expo.dev/37b85719-7377-4428-8e3f-1da74745a19c"
   },
-  runtimeVersion: {
-    policy: "appVersion"
-  },
+  runtimeVersion: "1.0.0",
   ios: {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
