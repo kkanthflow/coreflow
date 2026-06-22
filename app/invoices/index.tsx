@@ -209,7 +209,7 @@ export default function InvoiceDashboard() {
       <View className="px-6 pt-6 pb-4 flex-row items-center justify-between">
         <View className="flex-row items-center">
           <Pressable 
-            onPress={() => router.replace('/(tabs)/menu')}
+            onPress={() => router.push('/(tabs)/menu')}
             className="w-10 h-10 rounded-full items-center justify-center mr-3"
             style={{ backgroundColor: colors.surface }}
           >

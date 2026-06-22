@@ -19,7 +19,7 @@ export default function AuditLogScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchAuditLogs = useCallback(async () => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) { setIsLoading(false); return; }
     setIsLoading(true);
     try {
       let query = supabase
@@ -310,3 +310,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+

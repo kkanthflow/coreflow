@@ -12,7 +12,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { hasPermission } from '@/lib/permissions';
 import { PremiumButton } from '@/components/ui/premium-button';
@@ -93,7 +93,7 @@ export default function NewProjectScreen() {
       Alert.alert('Validation Error', 'Project title is required.');
       return;
     }
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) { setLoading(false); return; }
 
     setLoading(true);
 
@@ -147,6 +147,7 @@ export default function NewProjectScreen() {
 
   return (
     <ScreenContainer>
+      <Stack.Screen options={{ presentation: 'modal', headerShown: false }} />
       <View style={styles.header}>
         <Pressable 
           onPress={() => router.back()}
@@ -350,3 +351,4 @@ const styles = StyleSheet.create({
     textTransform: 'capitalize',
   },
 });
+

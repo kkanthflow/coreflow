@@ -135,7 +135,8 @@ CREATE INDEX IF NOT EXISTS idx_departments_org_id ON public.departments(org_id);
 ALTER TABLE public.departments ENABLE ROW LEVEL SECURITY;
 
 -- Members of the org can view departments
-CREATE POLICY IF NOT EXISTS "Org members can view departments"
+DROP POLICY IF EXISTS "Org members can view departments" ON public.departments;
+CREATE POLICY "Org members can view departments"
   ON public.departments FOR SELECT
   TO authenticated
   USING (
@@ -147,7 +148,8 @@ CREATE POLICY IF NOT EXISTS "Org members can view departments"
   );
 
 -- Only owner/administrator can create departments
-CREATE POLICY IF NOT EXISTS "Admins can create departments"
+DROP POLICY IF EXISTS "Admins can create departments" ON public.departments;
+CREATE POLICY "Admins can create departments"
   ON public.departments FOR INSERT
   TO authenticated
   WITH CHECK (
@@ -160,7 +162,8 @@ CREATE POLICY IF NOT EXISTS "Admins can create departments"
   );
 
 -- Only owner/administrator can update departments
-CREATE POLICY IF NOT EXISTS "Admins can update departments"
+DROP POLICY IF EXISTS "Admins can update departments" ON public.departments;
+CREATE POLICY "Admins can update departments"
   ON public.departments FOR UPDATE
   TO authenticated
   USING (
@@ -188,7 +191,8 @@ CREATE INDEX IF NOT EXISTS idx_role_permissions_user ON public.role_permissions(
 
 ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY IF NOT EXISTS "Owners can manage custom permissions"
+DROP POLICY IF EXISTS "Owners can manage custom permissions" ON public.role_permissions;
+CREATE POLICY "Owners can manage custom permissions"
   ON public.role_permissions FOR ALL
   TO authenticated
   USING (
@@ -200,7 +204,8 @@ CREATE POLICY IF NOT EXISTS "Owners can manage custom permissions"
     )
   );
 
-CREATE POLICY IF NOT EXISTS "Users can view own permissions"
+DROP POLICY IF EXISTS "Users can view own permissions" ON public.role_permissions;
+CREATE POLICY "Users can view own permissions"
   ON public.role_permissions FOR SELECT
   TO authenticated
   USING (user_id = (select auth.uid())::uuid);
@@ -220,7 +225,8 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage RLS: users can upload to their own folder
-CREATE POLICY IF NOT EXISTS "Users can upload own avatar"
+DROP POLICY IF EXISTS "Users can upload own avatar" ON storage.objects;
+CREATE POLICY "Users can upload own avatar"
   ON storage.objects FOR INSERT
   TO authenticated
   WITH CHECK (
@@ -228,7 +234,8 @@ CREATE POLICY IF NOT EXISTS "Users can upload own avatar"
     AND (storage.foldername(name))[1] = (select auth.uid())::text
   );
 
-CREATE POLICY IF NOT EXISTS "Users can update own avatar"
+DROP POLICY IF EXISTS "Users can update own avatar" ON storage.objects;
+CREATE POLICY "Users can update own avatar"
   ON storage.objects FOR UPDATE
   TO authenticated
   USING (
@@ -236,7 +243,8 @@ CREATE POLICY IF NOT EXISTS "Users can update own avatar"
     AND (storage.foldername(name))[1] = (select auth.uid())::text
   );
 
-CREATE POLICY IF NOT EXISTS "Anyone can view avatars"
+DROP POLICY IF EXISTS "Anyone can view avatars" ON storage.objects;
+CREATE POLICY "Anyone can view avatars"
   ON storage.objects FOR SELECT
   TO public
   USING (bucket_id = 'avatars');

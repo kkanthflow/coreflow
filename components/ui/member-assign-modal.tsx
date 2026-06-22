@@ -68,7 +68,7 @@ export function MemberAssignModal({
         .from('user_organizations')
         .select(`
           user_id,
-          users!inner(
+          users:users!user_organizations_user_id_fkey!inner(
             id, full_name, email, role, avatar_url
           )
         `)

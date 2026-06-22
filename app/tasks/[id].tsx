@@ -38,7 +38,7 @@ export default function TaskDetailScreen() {
   const canManageTask = hasPermission(user?.role, 'manage_tasks');
 
   const fetchTaskDetails = useCallback(async () => {
-    if (!id) return;
+    if (!id) { setLoading(false); return; }
     setLoading(true);
     try {
       // Fetch task details

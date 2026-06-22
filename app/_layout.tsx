@@ -1,12 +1,12 @@
 import "../lib/preboot";
 import "@/global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, useRouter, useSegments } from "expo-router";
+import { Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
-import { Platform, View, ActivityIndicator } from "react-native";
+import { Platform, View, ActivityIndicator, StyleSheet } from "react-native";
 
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider } from "@/lib/theme-provider";
@@ -53,19 +53,17 @@ function AuthGate() {
   const { isAuthenticated, isLoading, user, logout } = useAuth();
   const router = useRouter();
   const segments = useSegments();
+  const rootNavigationState = useRootNavigationState();
   const stuckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Check for OTA updates silently — notifies user if one is available
   useOTAUpdates();
 
-  // Fallback: if authenticated but profile never loads, sign out after 15s
-  // to avoid freezing on a black/white screen forever.
-  // Note: We check (isAuthenticated && !user) regardless of isLoading, because
-  // isLoading remains true during the profile retry loops (up to 12s total).
+  // Fallback timeout for stuck profile loading
   useEffect(() => {
     if (isAuthenticated && !user) {
       stuckTimerRef.current = setTimeout(async () => {
-        console.warn('[AuthGate] Profile failed to load after 15s, signing out to recover');
+        console.warn('[AuthGate] Profile failed to load after 15s, signing out');
         await logout();
       }, 15000);
     } else {
@@ -81,55 +79,41 @@ function AuthGate() {
 
   useEffect(() => {
     if (isLoading) return;
+    if (!rootNavigationState?.key) return;
 
     const currentSegment = segments[0] as string | undefined;
-    const inTabsGroup = currentSegment === '(tabs)';
-    const onAuthScreens =
-      currentSegment === 'login' ||
-      currentSegment === 'register' ||
-      currentSegment === 'forgot-password' ||
-      currentSegment === 'oauth';
-    const onIndex = currentSegment === 'index' || currentSegment === undefined;
+    const isIndex = currentSegment === 'index' || currentSegment === undefined || currentSegment === '';
+    const onAuthScreens = ['login', 'register', 'forgot-password', 'oauth'].includes(currentSegment ?? '');
+    const onFreelancerPortal = currentSegment === 'freelancer';
 
-    if (isAuthenticated && user) {
-      // Freelancers get their own portal
-      if (user.role === 'freelancer') {
-        const onFreelancerPortal = currentSegment === 'freelancer';
+    // Handle fine-grained redirects WITHIN the authenticated stack
+    if (isAuthenticated) {
+      if (user?.role === 'freelancer') {
         if (!onFreelancerPortal) {
           router.replace('/freelancer/portal' as any);
         }
-        return;
+      } else {
+        // If they are on the splash screen, auth screens, or freelancer portal, send them home
+        if (isIndex || onAuthScreens || onFreelancerPortal) {
+          router.replace('/(tabs)/home' as any);
+        }
+        // Otherwise, let them navigate freely to tabs, projects, departments, etc.
       }
-
-      // Regular users: only redirect to tabs if on public auth screens or index
-      if (onAuthScreens || onIndex) {
-        router.replace('/(tabs)');
-      }
-    } else if (isAuthenticated && !user) {
-      // Profile still loading — the 15s timeout above handles the stuck case
     } else {
-      // Not authenticated — send to login
       if (!onAuthScreens) {
         router.replace('/login');
       }
     }
-  }, [isAuthenticated, isLoading, user, segments]);
+  }, [isAuthenticated, isLoading, user, segments, rootNavigationState?.key]);
 
   return null;
 }
 
 function AppNavigator() {
   const colors = useColors();
+
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="oauth/callback" />
-      <Stack.Screen name="login" options={{ presentation: 'fullScreenModal' }} />
-      <Stack.Screen name="register" options={{ presentation: 'fullScreenModal' }} />
-      <Stack.Screen name="forgot-password" options={{ presentation: 'fullScreenModal' }} />
-      <Stack.Screen name="meetings/new" options={{ presentation: 'modal', headerShown: false }} />
-    </Stack>
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />
   );
 }
 
@@ -240,7 +224,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider>
-      <SafeAreaProvider initialMetrics={providerInitialMetrics}>{content}</SafeAreaProvider>
+      <SafeAreaProvider>{content}</SafeAreaProvider>
     </ThemeProvider>
   );
 }

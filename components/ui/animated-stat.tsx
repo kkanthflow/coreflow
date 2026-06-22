@@ -40,12 +40,13 @@ export function AnimatedStat({
     Animated.parallel([
       Animated.spring(scaleAnim, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
       Animated.timing(opacityAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-      Animated.timing(animValue, {
-        toValue: value,
-        duration: 1200,
-        useNativeDriver: false,
-      }),
     ]).start();
+
+    Animated.timing(animValue, {
+      toValue: value,
+      duration: 1200,
+      useNativeDriver: false,
+    }).start();
 
     const listener = animValue.addListener(({ value: v }) => {
       const rounded = Math.round(v);

@@ -8,7 +8,7 @@ import { TimePicker } from '@/components/ui/time-picker';
 import { PremiumSelect } from '@/components/ui/premium-select';
 import { AttendeePicker } from '@/components/ui/attendee-picker';
 import { useColors } from '@/hooks/use-colors';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
 import { Ionicons } from '@expo/vector-icons';
@@ -244,6 +244,7 @@ export default function NewMeetingScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={{ flex: 1, backgroundColor: colors.background }}
     >
+      <Stack.Screen options={{ presentation: 'modal', headerShown: false }} />
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border, paddingTop: insets.top || 16, backgroundColor: colors.background }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <Pressable onPress={() => router.back()} style={{ marginRight: 12, padding: 8, marginLeft: -8 }}>

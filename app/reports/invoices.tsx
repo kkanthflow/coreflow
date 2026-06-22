@@ -28,7 +28,7 @@ export default function InvoicesReportScreen() {
   });
 
   const fetchReportData = useCallback(async () => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -434,3 +434,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
   },
 });
+

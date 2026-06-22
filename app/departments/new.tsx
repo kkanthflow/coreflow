@@ -26,7 +26,7 @@ export default function NewDepartmentScreen() {
   // Fetch all users in organization to select lead
   useEffect(() => {
     const fetchOrgUsers = async () => {
-      if (!user?.organizationId) return;
+      if (!user?.organizationId) { return; }
       try {
         const { data, error } = await supabase
           .from('user_organizations')
@@ -253,3 +253,4 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 });
+

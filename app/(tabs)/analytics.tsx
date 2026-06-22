@@ -106,7 +106,7 @@ export default function AnalyticsScreen() {
   }, []);
 
   const fetchAnalytics = useCallback(async () => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) { setLoading(false); return; }
     setLoading(true);
     try {
       if (isManagement) {
@@ -326,3 +326,4 @@ const styles = StyleSheet.create({
   sectionTitle: { color: '#F5F5FA', fontSize: 18, fontWeight: '800', letterSpacing: -0.3, marginBottom: 14 },
   financeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#2A2A3A' },
 });
+

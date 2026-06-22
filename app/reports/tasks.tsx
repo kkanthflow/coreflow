@@ -18,7 +18,7 @@ export default function TasksReportScreen() {
   const [exporting, setExporting] = useState(false);
 
   const fetchReportData = useCallback(async () => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -226,3 +226,4 @@ const styles = StyleSheet.create({
     borderTopColor: '#E2E8F0',
   },
 });
+

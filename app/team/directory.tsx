@@ -44,7 +44,7 @@ export default function TeamDirectoryScreen() {
         // 2. Fetch users in those organizations
         const { data, error } = await supabase
           .from('user_organizations')
-          .select('user_id, users!inner(id, full_name, email, role, avatar_url, department)')
+          .select('user_id, users:users!user_organizations_user_id_fkey!inner(id, full_name, email, role, avatar_url, department)')
           .in('org_id', orgIds);
         
         if (data && !error) {

@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -195,6 +195,7 @@ export default function BillUploadScreen() {
 
   return (
     <ScreenContainer>
+      <Stack.Screen options={{ presentation: 'modal', headerShown: false }} />
       {/* Header */}
       <View className="px-6 pt-6 pb-4 flex-row items-center">
         <Pressable 

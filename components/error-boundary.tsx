@@ -1,6 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { PremiumButton } from './ui/premium-button';
+import { View, Text, StyleSheet, Button, ScrollView } from 'react-native';
 
 interface Props {
   children: ReactNode;
@@ -33,13 +32,18 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return (
         <View style={styles.container}>
-          <Text style={styles.title}>Something went wrong</Text>
-          <Text style={styles.message}>
-            {this.state.error?.message || "An unexpected error occurred."}
-          </Text>
-          <PremiumButton variant="primary" size="md" onPress={this.handleReset}>
-            Retry
-          </PremiumButton>
+          <Text style={styles.title}>Application Error Detected</Text>
+          <ScrollView style={styles.scroll}>
+            <Text style={styles.message}>
+              {this.state.error?.message || "An unexpected error occurred."}
+            </Text>
+            {this.state.error?.stack ? (
+              <Text style={styles.stack}>{this.state.error.stack}</Text>
+            ) : null}
+          </ScrollView>
+          <View style={{ marginTop: 24, width: '100%' }}>
+            <Button title="Retry / Reload" color="#FF6B4A" onPress={this.handleReset} />
+          </View>
         </View>
       );
     }
@@ -54,18 +58,34 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 24,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#07070B',
   },
   title: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#1e293b',
+    marginBottom: 16,
+    color: '#FF6B4A',
+    textAlign: 'center',
+  },
+  scroll: {
+    maxHeight: 400,
+    width: '100%',
+    backgroundColor: '#111118',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#2A2A3A',
   },
   message: {
-    fontSize: 14,
-    color: '#64748b',
-    textAlign: 'center',
-    marginBottom: 24,
+    fontSize: 15,
+    color: '#F5F5FA',
+    fontWeight: '700',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
+  stack: {
+    fontSize: 11,
+    color: '#7A7A92',
+    lineHeight: 16,
   },
 });

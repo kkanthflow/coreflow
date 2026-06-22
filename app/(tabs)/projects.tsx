@@ -154,7 +154,7 @@ export default function ProjectsScreen() {
   }, []);
 
   const fetchProjects = useCallback(async () => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) { setLoading(false); return; }
     setLoading(true);
     try {
       const { data } = await supabase
@@ -290,3 +290,4 @@ const styles = StyleSheet.create({
   emptyTitle: { color: '#F5F5FA', fontSize: 18, fontWeight: '700', marginBottom: 8 },
   emptySub: { color: '#7A7A92', fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });
+

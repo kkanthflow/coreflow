@@ -24,7 +24,7 @@ export default function FileBrowserScreen() {
 
   // Fetch projects list for filter dropdown
   const fetchFilterProjects = useCallback(async () => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) { setLoading(false); return; }
     try {
       const { data, error } = await supabase
         .from('projects')
@@ -50,7 +50,7 @@ export default function FileBrowserScreen() {
 
   // Fetch files list matching current filters
   const fetchFiles = useCallback(async () => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) { setLoading(false); return; }
     setLoading(true);
     try {
       let query = supabase
@@ -310,3 +310,4 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
 });
+

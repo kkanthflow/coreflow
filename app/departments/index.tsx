@@ -17,7 +17,7 @@ export default function DepartmentsScreen() {
   const [loading, setLoading] = useState(true);
 
   const fetchDepartments = useCallback(async () => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) { setLoading(false); return; }
     setLoading(true);
 
     try {
@@ -254,3 +254,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+

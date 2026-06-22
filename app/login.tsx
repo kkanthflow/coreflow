@@ -3,7 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import {
   View, Text, ScrollView, KeyboardAvoidingView, Platform,
-  Alert, Pressable, Animated, StatusBar, StyleSheet,
+  Alert, Pressable, Animated, StatusBar, StyleSheet, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,6 +12,7 @@ import { GradientButton } from '@/components/ui/gradient-button';
 import { supabase } from '@/lib/supabase';
 
 import { useColors } from '@/hooks/use-colors';
+import { useAuth } from '@/hooks/use-auth';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -37,6 +38,15 @@ export default function LoginScreen() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [biometricsAvailable,  setBiometricsAvailable]  = useState(false);
   const [biometricsConfigured, setBiometricsConfigured] = useState(false);
+
+  const { isAuthenticated } = useAuth();
+
+  // Reset loading state if authentication state changes or gets reset on failure
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setLoading(false);
+    }
+  }, [isAuthenticated]);
 
   // Entrance animations
   const logoScale  = useRef(new Animated.Value(0.7)).current;
@@ -108,7 +118,9 @@ export default function LoginScreen() {
       if (enabled === 'true' && se && sp && compatible && enrolled) {
         setBiometricsConfigured(true);
         setEmail(se);
-        setTimeout(() => triggerBiometricAuth(se, sp), 500);
+        // Do NOT automatically trigger biometric authentication on mount, 
+        // as this blocks/freezes the native rendering thread on many Android devices/emulators.
+        // Let the user tap the biometric icon when they are ready.
       }
     } catch (e) { /* silent */ }
   }, [triggerBiometricAuth]);
@@ -135,9 +147,13 @@ export default function LoginScreen() {
       const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
       if (signInError) throw signInError;
       if (Platform.OS !== 'web') {
-        await SecureStore.setItemAsync('biometric_email', email);
-        await SecureStore.setItemAsync('biometric_password', password);
-        await SecureStore.setItemAsync('biometric_enabled', 'true');
+        // ONLY write credentials to SecureStore if biometrics was explicitly enabled in Settings.
+        // This prevents native Android Keystore initialization exceptions from crashing and closing the app.
+        const isBiometricEnabled = await SecureStore.getItemAsync('biometric_enabled');
+        if (isBiometricEnabled === 'true') {
+          await SecureStore.setItemAsync('biometric_email', email);
+          await SecureStore.setItemAsync('biometric_password', password);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed. Please try again.');
@@ -148,6 +164,31 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+      
+      {/* Full-screen dark loading overlay — shown during auth transition to protect native layout engine */}
+      {loading && (
+        <View style={{
+          position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: colors.background, zIndex: 999,
+          alignItems: 'center', justifyContent: 'center', gap: 16,
+        }}>
+          <View style={{
+            width: 72, height: 72, borderRadius: 22,
+            backgroundColor: '#FF6B4A18', borderWidth: 1, borderColor: '#FF6B4A40',
+            alignItems: 'center', justifyContent: 'center',
+          }}>
+            <Ionicons name="flash" size={32} color="#FF6B4A" />
+          </View>
+          <ActivityIndicator size="large" color="#FF6B4A" />
+          <Text style={{ color: colors.foreground, fontSize: 17, fontWeight: '700', marginTop: 4 }}>
+            Preparing your workspace...
+          </Text>
+          <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', paddingHorizontal: 40 }}>
+            Securely syncing your profile and data
+          </Text>
+        </View>
+      )}
+
       <View style={{ flex: 1, backgroundColor: C.bg }}>
         {/* Background glow blobs */}
         <Animated.View

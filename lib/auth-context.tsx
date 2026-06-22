@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
+import { Alert, Platform } from 'react-native';
 import { supabase } from './supabase';
 import { Session } from '@supabase/supabase-js';
 
@@ -69,7 +70,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchProfile = async (userId: string, attempt = 1): Promise<boolean> => {
+  const activeFetchRef = useRef<string | null>(null);
+
+  const fetchProfile = async (userId: string, attempt = 1, force = false): Promise<boolean> => {
+    if (!force && attempt === 1 && activeFetchRef.current === userId && user?.id === userId) {
+      console.log('[AuthContext] Profile already loaded or loading for user:', userId);
+      return true;
+    }
+    activeFetchRef.current = userId;
     console.log(`[AuthContext] fetchProfile attempt ${attempt} for user:`, userId);
     try {
       // Fire all 3 queries in parallel instead of sequentially
@@ -92,15 +100,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.log('[AuthContext] fetchProfile result:', { data: !!data, error });
 
       if (!data || error) {
-        // Retry up to 8 times (over 12 seconds) — the DB trigger may not have created the user row yet
-        if (attempt < 8) {
-          console.warn(`[AuthContext] Profile not ready, retrying in 1.5s... (attempt ${attempt})`);
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          return fetchProfile(userId, attempt + 1);
+        // Retry up to 15 times with a 100ms delay (1.5 seconds total)
+        // This makes retries extremely fast (under 1s) while still resolving temporary DB trigger delay
+        if (attempt < 15) {
+          console.warn(`[AuthContext] Profile not ready, retrying in 100ms... (attempt ${attempt})`);
+          await new Promise(resolve => setTimeout(resolve, 100));
+          return fetchProfile(userId, attempt + 1, force);
         }
-        console.warn('[AuthContext] fetchProfile gave up after 8 attempts:', error);
+        console.warn('[AuthContext] fetchProfile gave up after 15 attempts:', error);
+        if (Platform.OS !== 'web') {
+          Alert.alert(
+            'Profile Load Error',
+            `Could not load user profile. Error: ${error?.message || 'User row not found in users table.'}`
+          );
+        }
         // Force logout if profile cannot be fetched to prevent a black screen freeze
         await supabase.auth.signOut();
+        activeFetchRef.current = null;
         return false;
       }
 
@@ -111,12 +127,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
       // This is the key fix for the black/white screen after sign-up.
       // Note: Freelancers do not have organization memberships, so skip retrying for them.
       const isFreelancer = data.role === 'freelancer';
-      const isNewAccount = data.created_at &&
-        (Date.now() - new Date(data.created_at).getTime()) < 15000;
-      if (!orgMembership && !isFreelancer && isNewAccount && attempt < 8) {
-        console.warn(`[AuthContext] New account with no org yet, retrying in 1.5s... (attempt ${attempt})`);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        return fetchProfile(userId, attempt + 1);
+      const diff = Date.now() - new Date(data.created_at).getTime();
+      const isNewAccount = data.created_at && diff > -10000 && diff < 15000;
+      
+      if (!orgMembership && !isFreelancer && isNewAccount && attempt < 20) {
+        console.warn(`[AuthContext] New account with no org yet, retrying in 100ms... (attempt ${attempt})`);
+        await new Promise(resolve => setTimeout(resolve, 100));
+        return fetchProfile(userId, attempt + 1, force);
       }
 
       const prefData = prefResult.data;
@@ -157,8 +174,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       console.log('[AuthContext] User state set:', data.email, '| Org:', orgData?.name ?? '(freelancer/pending)');
       return true;
-    } catch (e) {
+    } catch (e: any) {
       console.error('[AuthContext] Error fetching profile:', e);
+      if (Platform.OS !== 'web') {
+        Alert.alert('Profile Fetch Exception', e?.message || String(e));
+      }
+      activeFetchRef.current = null;
       return false;
     }
   };
@@ -167,7 +188,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const refreshUser = async () => {
     const { data } = await supabase.auth.getSession();
     if (data.session?.user?.id) {
-      await fetchProfile(data.session.user.id);
+      await fetchProfile(data.session.user.id, 1, true);
     }
   };
 

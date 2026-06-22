@@ -6,7 +6,7 @@ import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { RoleBadge } from '@/components/ui/role-badge';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
 import { Image } from 'expo-image';
 import { hasPermission, UserRole, getRoleLevel, isHigherRole } from '@/lib/permissions';
 
@@ -73,7 +73,7 @@ export default function RoleManagementScreen() {
       } else {
         const { data, error } = await supabase
           .from('user_organizations')
-          .select('user_id, users!inner(id, full_name, email, role, avatar_url)')
+          .select('user_id, users:users!user_organizations_user_id_fkey!inner(id, full_name, email, role, avatar_url)')
           .in('org_id', orgIds);
 
         if (data && !error) {
@@ -211,6 +211,7 @@ export default function RoleManagementScreen() {
 
   return (
     <ScreenContainer>
+      <Stack.Screen options={{ presentation: 'modal', headerShown: false }} />
       {/* Header */}
       <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 24, paddingTop: 24, paddingBottom: 16 }}>
         <Pressable

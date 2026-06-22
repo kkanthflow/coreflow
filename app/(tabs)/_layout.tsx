@@ -21,13 +21,9 @@ import { useColors } from "@/hooks/use-colors";
 function TabIcon({ name, focused, label }: { name: keyof typeof Ionicons.glyphMap; focused: boolean; label: string }) {
   const colors = useColors();
   const scaleAnim = useRef(new Animated.Value(1)).current;
-  const glowAnim  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: focused ? 1.15 : 1, useNativeDriver: true, tension: 300, friction: 10 }),
-      Animated.timing(glowAnim,  { toValue: focused ? 1 : 0, duration: 200, useNativeDriver: false }),
-    ]).start();
+    Animated.spring(scaleAnim, { toValue: focused ? 1.15 : 1, useNativeDriver: true, tension: 300, friction: 10 }).start();
   }, [focused]);
 
   return (
@@ -95,7 +91,7 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="home"
         options={{
           tabBarIcon: ({ focused }) => <TabIcon name={focused ? "home" : "home-outline"} focused={focused} label="Home" />,
         }}

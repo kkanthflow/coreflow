@@ -5,7 +5,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface Client {
@@ -431,6 +431,7 @@ export default function NewInvoiceScreen() {
 
   return (
     <ScreenContainer>
+      <Stack.Screen options={{ presentation: 'modal', headerShown: false }} />
       {/* Header */}
       <View className="px-6 pt-6 pb-4 flex-row items-center justify-between">
         <View className="flex-row items-center">

@@ -48,7 +48,7 @@ const config: ExpoConfig = {
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   updates: {
-    url: "https://u.expo.dev/71f1132c-4ded-4fd7-9a81-429b42255b35"
+    url: "https://u.expo.dev/37b85719-7377-4428-8e3f-1da74745a19c"
   },
   runtimeVersion: {
     policy: "appVersion"
@@ -148,7 +148,7 @@ const config: ExpoConfig = {
   },
   extra: {
     eas: {
-      projectId: "71f1132c-4ded-4fd7-9a81-429b42255b35"
+      projectId: "37b85719-7377-4428-8e3f-1da74745a19c"
     }
   }
 };

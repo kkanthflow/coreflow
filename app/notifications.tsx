@@ -32,7 +32,7 @@ export default function NotificationsScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchNotifications = useCallback(async () => {
-    if (!user) return;
+    if (!user) { setIsLoading(false); return; }
     try {
       let query = supabase
         .from('notifications')
@@ -451,3 +451,4 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
 });
+

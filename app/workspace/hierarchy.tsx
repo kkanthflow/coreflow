@@ -51,7 +51,7 @@ export default function HierarchyScreen() {
       // Load only members in the same org
       const { data, error } = await supabase
         .from('user_organizations')
-        .select('users!inner(id, full_name, email, role, department, avatar_url)')
+        .select('users:users!user_organizations_user_id_fkey!inner(id, full_name, email, role, department, avatar_url)')
         .eq('org_id', user.organizationId);
 
       if (data && !error) {

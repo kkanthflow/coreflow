@@ -4,7 +4,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'expo-router';
+import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 export default function NewDMScreen() {
@@ -16,14 +16,20 @@ export default function NewDMScreen() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.organizationId) return;
+    if (!user?.organizationId) {
+      console.log('[NewDM] No organization ID for user:', user);
+      setLoading(false); 
+      return; 
+    }
+
+    console.log('[NewDM] Fetching members for org:', user.organizationId);
 
     // Fetch members of the same organization
     supabase
       .from('user_organizations')
       .select(`
         user_id,
-        users (
+        users:users!user_organizations_user_id_fkey (
           id,
           full_name,
           email
@@ -31,10 +37,18 @@ export default function NewDMScreen() {
       `)
       .eq('org_id', user.organizationId)
       .then(({ data, error }) => {
+        if (error) {
+          console.error('[NewDM] Error fetching members:', error);
+        }
+        console.log('[NewDM] Raw query data:', data);
         if (data && !error) {
           const list = data
-            .map((d: any) => d.users)
+            .map((d: any) => {
+              const u = d.users;
+              return Array.isArray(u) ? u[0] : u;
+            })
             .filter((u: any) => u && u.id !== user.id);
+          console.log('[NewDM] Processed user list:', list);
           setUsers(list);
         }
         setLoading(false);
@@ -223,3 +237,4 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
 });
+

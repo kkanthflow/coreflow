@@ -77,27 +77,27 @@ export default function RegisterScreen() {
     setError(null);
 
     try {
-      // 1. Check if organization exists (skip for freelancers)
       let orgId = null;
       let existingOrg = null;
+      const cleanOrgName = organization.trim();
       
       if (accountType !== 'freelancer') {
         const { data: orgData, error: orgSearchError } = await supabase
           .from('organizations')
           .select('id')
-          .eq('name', organization)
-          .single();
+          .ilike('name', cleanOrgName)
+          .maybeSingle();
 
-        if (orgSearchError && orgSearchError.code !== 'PGRST116') { // PGRST116 is not found
+        if (orgSearchError) {
           throw orgSearchError;
         }
         existingOrg = orgData;
 
         if (accountType === 'join' && !existingOrg) {
-          throw new Error('Organization not found. Please check the name or create a new one.');
+          throw new Error(`Organization "${cleanOrgName}" not found. Please check the spelling or create a new one.`);
         }
         if (accountType === 'create' && existingOrg) {
-          throw new Error('Organization already exists. Please join it or choose a different name.');
+          throw new Error(`Organization "${cleanOrgName}" already exists. Please join it instead.`);
         }
       }
 
@@ -153,7 +153,7 @@ export default function RegisterScreen() {
         } else if (accountType === 'create') {
           const { data: newOrg, error: createOrgError } = await supabase
             .from('organizations')
-            .insert({ name: organization })
+            .insert({ name: cleanOrgName })
             .select('id')
             .single();
             

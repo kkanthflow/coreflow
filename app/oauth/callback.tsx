@@ -16,7 +16,7 @@ export default function OAuthCallback() {
         // For now, just redirect to home after a delay
         setStatus('success');
         setTimeout(() => {
-          router.replace('/(tabs)');
+          router.replace('/(tabs)/home' as any);
         }, 1000);
       } catch (error) {
         console.error('[OAuth] Callback error:', error);

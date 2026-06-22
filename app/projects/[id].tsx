@@ -89,7 +89,7 @@ export default function ProjectDetailScreen() {
 
   // ── Fetch ────────────────────────────────────────────────────────────────────
   const fetchProjectData = useCallback(async () => {
-    if (!id) return;
+    if (!id) { setLoading(false); return; }
     setLoading(true);
     try {
       // Project
@@ -124,7 +124,7 @@ export default function ProjectDetailScreen() {
           role,
           assigned_at,
           added_at,
-          users!inner(id, full_name, email, role, avatar_url)
+          users:users!project_members_user_id_fkey!inner(id, full_name, email, role, avatar_url)
         `)
         .eq('project_id', id)
         .eq('is_active', true);

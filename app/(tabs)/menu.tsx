@@ -118,7 +118,6 @@ export default function MenuScreen() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    router.replace('/login');
   };
 
   return (

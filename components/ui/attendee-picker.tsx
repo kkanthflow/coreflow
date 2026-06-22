@@ -62,7 +62,7 @@ export function AttendeePicker({
       // 2. Fetch users in those organizations
       let query = supabase
         .from('user_organizations')
-        .select('user_id, users!inner(id, full_name, email, role, avatar_url)')
+        .select('user_id, users:users!user_organizations_user_id_fkey!inner(id, full_name, email, role, avatar_url)')
         .in('org_id', orgIds);
       
       if (searchQuery) {

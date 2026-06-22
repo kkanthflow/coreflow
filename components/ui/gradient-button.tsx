@@ -38,14 +38,14 @@ export function GradientButton({
 
   const handlePressIn = () => {
     Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: true, tension: 300, friction: 10 }),
+      Animated.spring(scaleAnim, { toValue: 0.96, useNativeDriver: false, tension: 300, friction: 10 }),
       Animated.timing(glowAnim, { toValue: 1, duration: 150, useNativeDriver: false }),
     ]).start();
   };
 
   const handlePressOut = () => {
     Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, tension: 300, friction: 10 }),
+      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: false, tension: 300, friction: 10 }),
       Animated.timing(glowAnim, { toValue: 0, duration: 200, useNativeDriver: false }),
     ]).start();
   };

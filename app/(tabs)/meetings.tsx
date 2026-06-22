@@ -155,7 +155,7 @@ export default function MeetingsScreen() {
   }, []);
 
   const fetchMeetings = useCallback(async () => {
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     try {
       let query = supabase
         .from('meetings')
@@ -282,3 +282,4 @@ const styles = StyleSheet.create({
   emptyTitle: { color: '#F5F5FA', fontSize: 18, fontWeight: '700', marginBottom: 8 },
   emptySub: { color: '#7A7A92', fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });
+

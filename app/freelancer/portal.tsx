@@ -25,7 +25,7 @@ export default function FreelancerPortalScreen() {
   const [updatingTaskId, setUpdatingTaskId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
+    if (!user) { setLoading(false); return; }
     setLoading(true);
     try {
       // 1. Fetch assigned projects via project_members
@@ -594,3 +594,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+
