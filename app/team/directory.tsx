@@ -20,51 +20,73 @@ export default function TeamDirectoryScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
 
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const fetchTeamMembers = useCallback(async () => {
+    if (!user) return;
     setIsLoading(true);
+    setFetchError(null);
     try {
       // 1. Get current user's organizations
-      const { data: myOrgs } = await supabase
+      const { data: myOrgs, error: orgsError } = await supabase
         .from('user_organizations')
         .select('org_id')
-        .eq('user_id', user!.id);
+        .eq('user_id', user.id);
+        
+      if (orgsError) {
+        throw new Error(`Failed to fetch orgs: ${orgsError.message}`);
+      }
         
       const orgIds = myOrgs?.map(o => o.org_id) || [];
+      console.log('[TeamDirectory] Current user orgIds:', orgIds);
       
       if (orgIds.length === 0) {
         // Fallback: Fetch all users in the system if no organization links exist
         const { data, error } = await supabase
           .from('users')
           .select('id, full_name, email, role, avatar_url, department');
-        if (data && !error) {
-          data.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
-          setMembers(data);
+        if (error) {
+          throw new Error(`Failed to fetch fallback users: ${error.message}`);
+        }
+        if (data) {
+          const sorted = [...data].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+          setMembers(sorted);
         }
       } else {
-        // 2. Fetch users in those organizations
-        const { data, error } = await supabase
+        // 2. Fetch user IDs in those organizations
+        const { data: orgUsers, error: orgUsersError } = await supabase
           .from('user_organizations')
-          .select('user_id, users:users!user_organizations_user_id_fkey!inner(id, full_name, email, role, avatar_url, department)')
+          .select('user_id')
           .in('org_id', orgIds);
         
-        if (data && !error) {
-          // Deduplicate
-          const uniqueUsers = new Map<string, any>();
-          data.forEach((d: any) => {
-            if (d.users && !uniqueUsers.has(d.users.id)) {
-              uniqueUsers.set(d.users.id, d.users);
-            }
-          });
+        if (orgUsersError) {
+          throw new Error(`Failed to fetch org user IDs: ${orgUsersError.message}`);
+        }
+        
+        const userIds = orgUsers?.map(u => u.user_id) || [];
+        
+        if (userIds.length > 0) {
+          // 3. Fetch user profiles for those IDs
+          const { data: profiles, error: profilesError } = await supabase
+            .from('users')
+            .select('id, full_name, email, role, avatar_url, department')
+            .in('id', userIds);
+            
+          if (profilesError) {
+            throw new Error(`Failed to fetch user profiles: ${profilesError.message}`);
+          }
           
-          let allMembers = Array.from(uniqueUsers.values());
-          
-          // Sort alphabetically
-          allMembers.sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
-          setMembers(allMembers);
+          if (profiles) {
+            const sorted = [...profiles].sort((a, b) => (a.full_name || '').localeCompare(b.full_name || ''));
+            setMembers(sorted);
+          }
+        } else {
+          setMembers([]);
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('[TeamDirectory] Error fetching members:', e);
+      setFetchError(e.message || String(e));
     } finally {
       setIsLoading(false);
     }
@@ -213,10 +235,22 @@ export default function TeamDirectoryScreen() {
             </Pressable>
           )}
           ListEmptyComponent={
-            <View className="py-12 items-center">
+            <View className="py-12 items-center px-4">
               <Ionicons name="people-outline" size={48} color={colors.muted} className="mb-4" />
               <Text className="text-lg text-foreground font-medium text-center">No members found</Text>
-              <Text className="text-sm text-muted text-center mt-2">Try adjusting your search filters.</Text>
+              <Text className="text-sm text-muted text-center mt-2 mb-6">Try adjusting your search filters.</Text>
+              
+              <View className="p-4 rounded-xl border border-border w-full mt-4 bg-surface" style={{ backgroundColor: colors.surface }}>
+                <Text className="text-xs font-bold text-primary mb-2 uppercase tracking-wider">Diagnostic Info:</Text>
+                <Text className="text-xs text-foreground mb-1">Email: {user?.email || 'N/A'}</Text>
+                <Text className="text-xs text-foreground mb-1">User ID: {user?.id || 'N/A'}</Text>
+                <Text className="text-xs text-foreground mb-1">Role: {user?.role || 'N/A'}</Text>
+                <Text className="text-xs text-foreground mb-1">Org ID: {user?.organizationId || 'N/A'}</Text>
+                <Text className="text-xs text-foreground mb-1">Org Name: {user?.organizationName || 'N/A'}</Text>
+                {fetchError && (
+                  <Text className="text-xs text-error mt-2 font-semibold">Error: {fetchError}</Text>
+                )}
+              </View>
             </View>
           }
         />

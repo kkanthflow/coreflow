@@ -66,6 +66,14 @@
       color: #93c5fd;
     }
     
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      color: #60a5fa;
+    }
+    
     p, li {
       color: var(--text-main);
       font-weight: 300;
@@ -101,42 +109,73 @@
   <div class="container">
     <div class="card">
       <h1>Privacy Policy</h1>
-      <div class="subtitle">Last Updated: June 14, 2026</div>
+      <div class="subtitle">Last Updated: June 25, 2026</div>
       
-      <p>Welcome to CoreFlow. We are committed to protecting your personal data and your privacy. This Privacy Policy explains how we collect, use, store, and share your information when you use our mobile application (CoreFlow) and the associated backend APIs hosted on Vercel.</p>
+      <p>Welcome to CoreFlow. We are committed to protecting your personal and organizational data. This Privacy Policy explains how we collect, use, store, and share your information when you use our mobile application (CoreFlow) and the associated backend APIs and systems (collectively, the "Services").</p>
       
       <h2>1. Information We Collect</h2>
-      <p>We collect information to provide a secure and functional experience for managing meetings, organizational operations, and invoices. This includes:</p>
+      <p>To provide a secure and functional experience for enterprise operations, we collect several types of data depending on your interactions with the Services:</p>
       <ul>
-        <li><strong>Personal Authentication Data:</strong> Email address, full name, and avatar images provided during the login/registration process via Supabase Auth and Manus OAuth.</li>
-        <li><strong>Application Activity Data:</strong> Meeting schedules, descriptions, organization structure, invoice details (including client name, tax details, and payment receipts).</li>
-        <li><strong>System & Device Information:</strong> Standard request logs, including IP address, operating system, request headers, and device IDs to ensure app security and prevent unauthorized access.</li>
+        <li><strong>User Profile Information:</strong> Email address, full name, phone number, bio, job title, location, LinkedIn URL, and avatar images provided during auth and profile setup.</li>
+        <li><strong>Organization Information:</strong> Organization name, description, industry, website, size category, and logo URL.</li>
+        <li><strong>Financial & Invoice Data:</strong> Client details, invoices, items, rates, taxes, currencies, payments, and receipts.</li>
+        <li><strong>Department & Employee Records:</strong> Department name, description, color indicator, department lead assignments, employee links, and historical department reassignments.</li>
+        <li><strong>File Uploads:</strong> Documents and files uploaded by users to organization workspaces or specific projects.</li>
+        <li><strong>Chat Metadata:</strong> Timestamped records of chat channels, membership listings, mute preferences, message reads, and end-to-end encryption keys (excluding the actual message content).</li>
+        <li><strong>Workspace Audit Logs:</strong> Action records tracking workspace events (e.g., role changes, department deletions, invoice creations, file uploads) with actor IDs, entity types, and state diffs.</li>
+        <li><strong>Device & Usage Information:</strong> Device IDs, operating system, request headers, IP address, and standard application access logs.</li>
       </ul>
       
       <h2>2. How We Use Your Information</h2>
       <p>CoreFlow uses your data for the following essential business purposes:</p>
       <ul>
-        <li>To authenticate your identity and maintain secure user sessions.</li>
-        <li>To synchronize your meetings, schedules, and invoice data across multiple devices.</li>
-        <li>To enforce Row-Level Security (RLS) policies, ensuring users only access data they are authorized to view.</li>
-        <li>To diagnose system errors and improve app performance.</li>
+        <li><strong>Service Operation:</strong> Managing accounts, processing payments, facilitating project management, and coordinating multi-currency invoicing.</li>
+        <li><strong>Security Monitoring:</strong> Preventing unauthorized access, verifying database Row-Level Security (RLS), and tracking authentication attempts.</li>
+        <li><strong>Performance Improvements:</strong> Diagnosing serverless middleware latencies and resolving database schema execution bottlenecks.</li>
+        <li><strong>Compliance Requirements:</strong> Retaining financial logs, processing tax details, and fulfilling business audit obligations.</li>
+        <li><strong>Customer Support:</strong> Assisting workspace owners with access troubleshooting and administrative recovery requests.</li>
       </ul>
       
-      <h2>3. Data Sharing & Third-Party Services</h2>
-      <p>We do not sell, rent, or trade your personal data. We only share information with trusted infrastructure providers required to operate the application:</p>
+      <h2>3. Data Ownership</h2>
+      <p>All organization-owned data (including employee records, invoices, projects, files, and chat records) remains the exclusive property of the corresponding organization. CoreFlow acts solely as a service provider and data processor, operating under the direction of the Organization Owner and administrators.</p>
+      
+      <h2>4. End-to-End Encryption (E2EE)</h2>
+      <p>Chat messages within organization channels are protected using end-to-end encryption (E2EE). Because these messages are encrypted on your local device before transmission, CoreFlow does not hold the private keys required to decrypt them. 
+      <em>Please note:</em> While we implement industry-standard cryptographic techniques, no data transmission or storage can be guaranteed as absolutely secure. Users are solely responsible for safeguarding their local encryption keys, backup phrases, and account recovery credentials. Loss of these credentials may result in the permanent loss of access to encrypted messages.</p>
+      
+      <h2>5. Audit Logging</h2>
+      <p>To maintain structural compliance, CoreFlow logs critical administrative operations in an append-only <code>activity_logs</code> database. Logged events include role changes, department updates, project creations, and document uploads. These logs contain actor details, timestamps, and previous state configurations, and are visible to the Organization Owner and Super Administrators.</p>
+      
+      <h2>6. Data Retention</h2>
+      <p>We retain data based on its classification and operational needs:</p>
       <ul>
-        <li><strong>Supabase:</strong> For cloud hosting, PostgreSQL database storage, and secure user authentication.</li>
-        <li><strong>Vercel:</strong> For executing and securing the API routing and serverless middleware.</li>
+        <li><strong>Active Records:</strong> Preserved as long as the organization's workspace remains active.</li>
+        <li><strong>Historical Records:</strong> Soft-deleted records (including inactive departments) are preserved to prevent orphans, maintaining the integrity of financial ledgers and audits.</li>
+        <li><strong>Backups:</strong> Retained in encrypted off-site archives for up to 30 days.</li>
+        <li><strong>Account Deletion:</strong> Upon explicit deletion requests from the Organization Owner, all non-audit and non-financial data is purged within 30 days, subject to backup cycles.</li>
       </ul>
       
-      <h2>4. Data Retention & Security</h2>
-      <p>All personal and business data is stored using industry-standard encryption protocols on Supabase. We retain your data as long as your account remains active. You can request the permanent deletion of your account and all associated data at any time.</p>
+      <h2>7. User Rights</h2>
+      <p>Workspace users can access, correct, or export their personal data directly through their account preference pages. Deletion requests for personal data within an organization must be initiated via the workspace administrator, as some records may be tied to active project or financial workflows.</p>
       
-      <h2>5. Your Rights & Choices</h2>
-      <p>Depending on your location, you have the right to access, edit, export, or delete your personal data. You can manage these settings directly in the app or contact support to request complete removal of your records.</p>
+      <h2>8. Security Measures</h2>
+      <p>We secure data using a layered security model: TLS encryption for all data in transit, AES-256 encryption for data at rest, role-based access control (RBAC), database-level Row-Level Security (RLS) policies, and regular database backup schedules.</p>
       
-      <h2>6. Contact Us</h2>
-      <p>If you have any questions or concerns about this Privacy Policy, please reach out to us at <a href="mailto:support@coreflow.app">support@coreflow.app</a>.</p>
+      <h2>9. Third-Party Services</h2>
+      <p>We share data only with infrastructure providers necessary to operate CoreFlow:</p>
+      <ul>
+        <li><strong>Hosting & Database:</strong> Supabase (PostgreSQL hosting, storage buckets, and auth triggers).</li>
+        <li><strong>Middleware:</strong> Vercel (API routing and serverless function environment).</li>
+      </ul>
+      
+      <h2>10. Cookies and Analytics</h2>
+      <p>We use session cookies and local storage tokens to maintain authenticated states and user preferences (such as dark mode and currency view options). We do not run third-party advertising cookies or trackers.</p>
+      
+      <h2>11. International Data Transfers</h2>
+      <p>Your data is processed in cloud data centers located in the United States. If you access our services from other regions, you acknowledge that your data will be transferred to and stored in these secure facilities, subject to Standard Contractual Clauses.</p>
+      
+      <h2>12. Contact Information</h2>
+      <p>For any privacy-related questions, access requests, or inquiries, please contact our data team at <a href="mailto:support@coreflow.app">support@coreflow.app</a>.</p>
     </div>
     <div class="footer">
       &copy; 2026 CoreFlow. All rights reserved. | <a href="terms.html">Terms of Service</a>

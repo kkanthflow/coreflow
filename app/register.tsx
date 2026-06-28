@@ -8,6 +8,7 @@ import { PremiumInput } from '@/components/ui/premium-input';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
+import { SUPPORTED_CURRENCIES } from '@/lib/currency';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -24,10 +25,12 @@ export default function RegisterScreen() {
   
   const [organization, setOrganization] = useState('');
   const [role, setRole] = useState('general_member'); // Default for joining
+  const [defaultCurrency, setDefaultCurrency] = useState('USD');
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string | null>>({});
+  const [agreed, setAgreed] = useState(false);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string | null> = {};
@@ -61,6 +64,11 @@ export default function RegisterScreen() {
 
     if (password !== confirmPassword) {
       newErrors.confirmPassword = 'Passwords do not match';
+      isValid = false;
+    }
+
+    if (!agreed) {
+      newErrors.agreed = 'You must agree to the Privacy Policy and Terms & Conditions to proceed.';
       isValid = false;
     }
 
@@ -153,7 +161,7 @@ export default function RegisterScreen() {
         } else if (accountType === 'create') {
           const { data: newOrg, error: createOrgError } = await supabase
             .from('organizations')
-            .insert({ name: cleanOrgName })
+            .insert({ name: cleanOrgName, default_currency: defaultCurrency })
             .select('id')
             .single();
             
@@ -360,10 +368,34 @@ export default function RegisterScreen() {
                 )}
 
                 {accountType === 'create' && (
-                  <View className="mb-4 p-4 rounded-xl bg-primary/10 border border-primary/20">
-                    <Text className="text-sm text-primary font-bold mb-1">🏛️ Role: Owner</Text>
-                    <Text className="text-xs text-muted">As the founder of this organization, you receive the Owner role — full access to all modules, billing, roles, audit logs, and analytics.</Text>
-                  </View>
+                  <>
+                    <View className="mb-4 p-4 rounded-xl bg-primary/10 border border-primary/20">
+                      <Text className="text-sm text-primary font-bold mb-1">🏛️ Role: Owner</Text>
+                      <Text className="text-xs text-muted">As the founder of this organization, you receive the Owner role — full access to all modules, billing, roles, audit logs, and analytics.</Text>
+                    </View>
+
+                    <View className="mb-4">
+                      <Text className="text-sm font-bold text-foreground mb-2 ml-1">Default Currency</Text>
+                      <View className="border border-border rounded-xl overflow-hidden bg-surface py-2">
+                        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}>
+                          {SUPPORTED_CURRENCIES.map((curr) => {
+                            const isSelected = defaultCurrency === curr.code;
+                            return (
+                              <Pressable
+                                key={curr.code}
+                                onPress={() => setDefaultCurrency(curr.code)}
+                                className={`px-4 py-2 rounded-full border ${isSelected ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
+                              >
+                                <Text style={{ color: isSelected ? '#FFF' : '#7A7A92', fontSize: 12, fontWeight: '700' }}>
+                                  {curr.name}
+                                </Text>
+                              </Pressable>
+                            );
+                          })}
+                        </ScrollView>
+                      </View>
+                    </View>
+                  </>
                 )}
               </>
             )}
@@ -388,6 +420,67 @@ export default function RegisterScreen() {
               error={errors.confirmPassword || undefined}
             />
           </View>
+
+          {/* Consent Checkbox */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 12, marginBottom: 20 }}>
+            <Pressable
+              onPress={() => setAgreed(!agreed)}
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 6,
+                borderWidth: 2,
+                borderColor: agreed ? colors.primary : colors.border,
+                backgroundColor: agreed ? colors.primary : 'transparent',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: agreed }}
+              accessibilityLabel="I agree to the Privacy Policy and Terms & Conditions"
+            >
+              {agreed && <Ionicons name="checkmark" size={16} color="#FFFFFF" />}
+            </Pressable>
+            
+            <Text style={{ color: colors.foreground, fontSize: 14, flex: 1, fontWeight: '400' }}>
+              I agree to the{' '}
+              <Text
+                style={{ color: colors.primary, fontWeight: '700' }}
+                onPress={() => {
+                  if (Platform.OS === 'web') {
+                    window.open('/privacy-policy', '_blank');
+                  } else {
+                    router.push('/privacy-policy' as any);
+                  }
+                }}
+                accessibilityRole="link"
+                accessibilityLabel="Privacy Policy"
+              >
+                Privacy Policy
+              </Text>{' '}
+              and{' '}
+              <Text
+                style={{ color: colors.primary, fontWeight: '700' }}
+                onPress={() => {
+                  if (Platform.OS === 'web') {
+                    window.open('/terms-and-conditions', '_blank');
+                  } else {
+                    router.push('/terms-and-conditions' as any);
+                  }
+                }}
+                accessibilityRole="link"
+                accessibilityLabel="Terms and Conditions"
+              >
+                Terms & Conditions
+              </Text>
+              .
+            </Text>
+          </View>
+          {errors.agreed && (
+            <Text style={{ color: '#EF4444', fontSize: 12, marginTop: -12, marginBottom: 16, marginLeft: 4 }}>
+              {errors.agreed}
+            </Text>
+          )}
 
           {/* Register Button */}
           <PremiumButton

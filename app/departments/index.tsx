@@ -33,7 +33,8 @@ export default function DepartmentsScreen() {
             full_name
           )
         `)
-        .eq('org_id', user.organizationId);
+        .eq('org_id', user.organizationId)
+        .eq('is_deleted', false);
 
       if (deptError) throw deptError;
 

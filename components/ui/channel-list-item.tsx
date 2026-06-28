@@ -8,6 +8,7 @@ interface ChannelListItemProps {
     id: string;
     name: string;
     description?: string;
+    lastMessageText?: string;
     type: 'org_general' | 'org_announcement' | 'project' | 'direct';
     unreadCount?: number;
     lastMessageTime?: string;
@@ -72,9 +73,9 @@ export function ChannelListItem({ channel, onPress }: ChannelListItemProps) {
           )}
         </View>
 
-        {channel.description ? (
+        {(channel.lastMessageText || channel.description) ? (
           <Text style={[styles.description, { color: colors.muted }]} numberOfLines={1}>
-            {channel.description}
+            {channel.lastMessageText || channel.description}
           </Text>
         ) : null}
       </View>

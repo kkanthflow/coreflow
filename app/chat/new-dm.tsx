@@ -14,54 +14,93 @@ export default function NewDMScreen() {
 
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!user?.organizationId) {
-      console.log('[NewDM] No organization ID for user:', user);
-      setLoading(false); 
-      return; 
+    if (!user) return;
+    
+    async function loadMembers() {
+      if (!user?.organizationId) {
+        console.log('[NewDM] No organization ID for user:', user);
+        setLoading(false); 
+        return; 
+      }
+
+      console.log('[NewDM] Fetching members for org:', user.organizationId);
+      setFetchError(null);
+
+      try {
+        const { data: orgUsers, error: orgUsersError } = await supabase
+          .from('user_organizations')
+          .select('user_id')
+          .eq('org_id', user.organizationId);
+
+        if (orgUsersError) {
+          console.error('[NewDM] Error fetching member IDs:', orgUsersError);
+          setFetchError(orgUsersError.message);
+          setLoading(false);
+          return;
+        }
+
+        const userIds = orgUsers?.map(u => u.user_id) || [];
+        
+        if (userIds.length > 0) {
+          const { data: profiles, error: profilesError } = await supabase
+            .from('users')
+            .select('id, full_name, email')
+            .in('id', userIds);
+
+          if (profilesError) {
+            console.error('[NewDM] Error fetching profiles:', profilesError);
+            setFetchError(profilesError.message);
+          }
+
+          if (profiles) {
+            const list = profiles.filter((u: any) => u && u.id !== user.id);
+            console.log('[NewDM] Processed user list:', list);
+            setUsers(list);
+          }
+        } else {
+          setUsers([]);
+        }
+      } catch (err: any) {
+        console.error('[NewDM] Query exception:', err);
+        setFetchError(err.message || String(err));
+      } finally {
+        setLoading(false);
+      }
     }
 
-    console.log('[NewDM] Fetching members for org:', user.organizationId);
-
-    // Fetch members of the same organization
-    supabase
-      .from('user_organizations')
-      .select(`
-        user_id,
-        users:users!user_organizations_user_id_fkey (
-          id,
-          full_name,
-          email
-        )
-      `)
-      .eq('org_id', user.organizationId)
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('[NewDM] Error fetching members:', error);
-        }
-        console.log('[NewDM] Raw query data:', data);
-        if (data && !error) {
-          const list = data
-            .map((d: any) => {
-              const u = d.users;
-              return Array.isArray(u) ? u[0] : u;
-            })
-            .filter((u: any) => u && u.id !== user.id);
-          console.log('[NewDM] Processed user list:', list);
-          setUsers(list);
-        }
-        setLoading(false);
-      });
+    loadMembers();
   }, [user]);
 
   const handleStartDM = async (targetUserId: string, targetName: string) => {
-    if (!user?.organizationId || !user?.id) return;
     setLoading(true);
 
     try {
+      // Get the fresh active session
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentUserId = session?.user?.id;
+      if (!currentUserId) {
+        throw new Error("No active session found. Please log in again.");
+      }
+
+      // Fetch the active organization ID for this user from user_organizations
+      const { data: userOrg, error: userOrgError } = await supabase
+        .from('user_organizations')
+        .select('org_id, role')
+        .eq('user_id', currentUserId)
+        .limit(1)
+        .maybeSingle();
+
+      if (userOrgError || !userOrg) {
+        throw new Error(userOrgError?.message || "You do not belong to any organization.");
+      }
+
+      const activeOrgId = userOrg.org_id;
+
       // 1. Check if a DM channel already exists between these two users
-      const { data: myDMs } = await supabase
+      const { data: myDMs, error: dmsError } = await supabase
         .from('chat_channels')
         .select(`
           id,
@@ -69,14 +108,16 @@ export default function NewDMScreen() {
           type,
           channel_members(user_id)
         `)
-        .eq('org_id', user.organizationId)
+        .eq('org_id', activeOrgId)
         .eq('type', 'direct');
+
+      if (dmsError) throw dmsError;
 
       const existingDM = (myDMs || []).find((dm: any) => {
         const members = dm.channel_members || [];
         return (
           members.length === 2 &&
-          members.some((m: any) => m.user_id === user.id) &&
+          members.some((m: any) => m.user_id === currentUserId) &&
           members.some((m: any) => m.user_id === targetUserId)
         );
       });
@@ -91,11 +132,11 @@ export default function NewDMScreen() {
       const { data: newChan, error: chanError } = await supabase
         .from('chat_channels')
         .insert({
-          org_id: user.organizationId,
-          name: `DM: ${user.fullName} & ${targetName}`,
+          org_id: activeOrgId,
+          name: `DM: ${user?.fullName || 'User'} & ${targetName}`,
           type: 'direct',
           is_private: true,
-          created_by: user.id,
+          created_by: currentUserId,
         })
         .select('id')
         .single();
@@ -103,13 +144,16 @@ export default function NewDMScreen() {
       if (chanError) throw chanError;
 
       // 3. Add both users to channel members
-      await supabase.from('channel_members').insert([
-        { channel_id: newChan.id, user_id: user.id, role: 'member' },
+      const { error: membersError } = await supabase.from('channel_members').insert([
+        { channel_id: newChan.id, user_id: currentUserId, role: 'member' },
         { channel_id: newChan.id, user_id: targetUserId, role: 'member' },
       ]);
 
+      if (membersError) throw membersError;
+
       router.replace(`/chat/${newChan.id}` as any);
     } catch (e: any) {
+      console.error('[NewDM] Error starting chat:', e);
       Alert.alert('Error starting chat', e.message || 'An error occurred.');
       setLoading(false);
     }
@@ -161,8 +205,33 @@ export default function NewDMScreen() {
             </Pressable>
           )}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={{ color: colors.muted }}>No team members found to chat with.</Text>
+            <View style={[styles.empty, { paddingHorizontal: 24 }]}>
+              <Ionicons name="people-outline" size={48} color={colors.muted} style={{ marginBottom: 12 }} />
+              <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: '600', textAlign: 'center' }}>
+                No team members found to chat with
+              </Text>
+              
+              <View style={{
+                padding: 16,
+                borderRadius: 12,
+                borderWidth: 1,
+                borderColor: colors.border,
+                backgroundColor: colors.surface,
+                marginTop: 20,
+                width: '100%'
+              }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: colors.primary, marginBottom: 8, textTransform: 'uppercase' }}>
+                  Diagnostic Info:
+                </Text>
+                <Text style={{ fontSize: 12, color: colors.foreground, marginBottom: 4 }}>Email: {user?.email || 'N/A'}</Text>
+                <Text style={{ fontSize: 12, color: colors.foreground, marginBottom: 4 }}>User ID: {user?.id || 'N/A'}</Text>
+                <Text style={{ fontSize: 12, color: colors.foreground, marginBottom: 4 }}>Role: {user?.role || 'N/A'}</Text>
+                <Text style={{ fontSize: 12, color: colors.foreground, marginBottom: 4 }}>Org ID: {user?.organizationId || 'N/A'}</Text>
+                <Text style={{ fontSize: 12, color: colors.foreground, marginBottom: 4 }}>Org Name: {user?.organizationName || 'N/A'}</Text>
+                {fetchError && (
+                  <Text style={{ fontSize: 12, color: colors.error, marginTop: 8, fontWeight: '600' }}>Error: {fetchError}</Text>
+                )}
+              </View>
             </View>
           }
         />

@@ -8,26 +8,33 @@ import { supabase } from '@/lib/supabase';
 import { ChannelListItem } from '@/components/ui/channel-list-item';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassCard } from '@/components/ui/glass-card';
-import { ShimmerCard, ShimmerLoader } from '@/components/ui/shimmer-loader';
+import { ShimmerCard } from '@/components/ui/shimmer-loader';
 
-const C = {
-  bg: '#07070B', card: '#181822', border: '#2A2A3A',
-  primary: '#FF6B4A', text: '#F5F5FA', textSec: '#B4B4C7',
-  muted: '#7A7A92', error: '#F87171', info: '#60A5FA',
-};
+import { decryptKeyWithSender, decryptMessagePayload } from '@/lib/crypto';
+import { useColors } from '@/hooks/use-colors';
 
 export default function ChatScreen() {
   const { user } = useAuth();
   const router   = useRouter();
+  const colors   = useColors();
+
+  const C = {
+    bg: colors.background,
+    card: colors.card,
+    border: colors.border,
+    primary: colors.primary,
+    text: colors.foreground,
+    textSec: colors.secondary_text,
+    muted: colors.muted,
+    error: colors.error,
+    info: colors.info,
+  };
 
   const [channels, setChannels] = useState<any[]>([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
   const headerFade  = useRef(new Animated.Value(0)).current;
   const headerSlide = useRef(new Animated.Value(-16)).current;
-
-  const isFreelancer = user?.role === 'freelancer';
 
   useEffect(() => {
     Animated.parallel([
@@ -37,58 +44,176 @@ export default function ChatScreen() {
   }, []);
 
   const fetchChannels = useCallback(async () => {
-    if (!user?.organizationId || isFreelancer) { setLoading(false); return; }
-    setLoading(true);
+    if (!user) { setLoading(false); return; }
     try {
+      // Fetch blocks
+      const { data: blockedList } = await supabase
+        .from('user_blocks')
+        .select('blocked_id')
+        .eq('blocker_id', user.id);
+      const blockedIds = (blockedList || []).map((b: any) => b.blocked_id);
+
+      // Fetch mutes
+      const { data: mutedList } = await supabase
+        .from('channel_mutes')
+        .select('channel_id')
+        .eq('user_id', user.id);
+      const mutedChannelIds = (mutedList || []).map((m: any) => m.channel_id);
+
+      // Fetch channels along with members
       const { data, error } = await supabase
         .from('chat_channels')
-        .select('*, channel_members(user_id)')
-        .eq('org_id', user.organizationId)
+        .select(`
+          *,
+          channel_members(
+            user_id,
+            last_read_at,
+            user:user_id(
+              id,
+              full_name,
+              avatar_url
+            )
+          )
+        `)
         .order('created_at', { ascending: false });
+
       if (error) throw error;
 
-      const filtered = (data || []).filter((ch: any) => {
-        if (['org_general', 'org_announcement', 'project'].includes(ch.type)) return true;
-        return (ch.channel_members || []).some((m: any) => m.user_id === user.id);
-      });
+      // Enhance with unread counts and last message details
+      const channelsWithStats = await Promise.all(
+        (data || []).map(async (ch: any) => {
+          const { data: lastMsgData } = await supabase
+            .from('chat_messages')
+            .select('content, created_at, sender_id')
+            .eq('channel_id', ch.id)
+            .order('created_at', { ascending: false })
+            .limit(1);
 
-      setChannels(filtered);
+          const lastMsg = lastMsgData && lastMsgData[0];
+          
+          let lastMsgText = lastMsg?.content || ch.description || 'No messages yet';
+
+          // Decrypt if encrypted
+          if (lastMsgText && lastMsgText.startsWith('__E2EE__:')) {
+            const { data: myKeyData } = await supabase
+              .from('channel_keys')
+              .select('encrypted_key')
+              .eq('channel_id', ch.id)
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (myKeyData) {
+              const creatorId = ch.created_by || user.id;
+              const { data: creatorKeyData } = await supabase
+                .from('user_public_keys')
+                .select('public_key')
+                .eq('user_id', creatorId)
+                .single();
+
+              if (creatorKeyData) {
+                try {
+                  const symmetricKey = await decryptKeyWithSender(myKeyData.encrypted_key, creatorKeyData.public_key);
+                  const ciphertext = lastMsgText.substring('__E2EE__:'.length);
+                  const decrypted = await decryptMessagePayload(ciphertext, symmetricKey);
+                  lastMsgText = decrypted?.text || '[Decryption Failed]';
+                } catch (err) {
+                  console.warn('Error decrypting preview:', err);
+                }
+              }
+            }
+          }
+          
+          const myMembership = ch.channel_members?.find((m: any) => m.user_id === user.id);
+          const lastReadAt = myMembership?.last_read_at || ch.created_at;
+
+          const { count } = await supabase
+            .from('chat_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('channel_id', ch.id)
+            .gt('created_at', lastReadAt)
+            .neq('sender_id', user.id);
+
+          let displayName = ch.name;
+          let isBlocked = false;
+          const other = ch.channel_members?.find((m: any) => m.user_id !== user.id)?.user;
+          
+          if (ch.type === 'direct') {
+            if (other) {
+              displayName = other.full_name;
+              isBlocked = blockedIds.includes(other.id);
+            }
+          }
+
+          const isMuted = mutedChannelIds.includes(ch.id);
+
+          return {
+            ...ch,
+            name: displayName,
+            unreadCount: count || 0,
+            lastMessageText: lastMsgText,
+            lastMessageTime: lastMsg?.created_at || ch.created_at,
+            isBlocked,
+            isMuted,
+          };
+        })
+      );
+
+      // Filter out blocked DMs and sort by activity
+      const activeChannels = channelsWithStats
+        .filter((ch: any) => !ch.isBlocked)
+        .sort((a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime());
+
+      setChannels(activeChannels);
     } catch (e) {
       console.error('Chat channels error:', e);
     } finally {
       setLoading(false);
     }
-  }, [user?.organizationId, user?.id, isFreelancer]);
+  }, [user]);
 
-  useFocusEffect(useCallback(() => { fetchChannels(); }, [fetchChannels]));
+  useFocusEffect(
+    useCallback(() => {
+      fetchChannels();
+    }, [fetchChannels])
+  );
 
-  if (isFreelancer) {
-    return (
-      <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center', padding: 32 }}>
-        <StatusBar barStyle="light-content" backgroundColor={C.bg} />
-        <View style={{ width: 72, height: 72, borderRadius: 22, backgroundColor: `${C.error}15`, alignItems: 'center', justifyContent: 'center', marginBottom: 20, borderWidth: 1, borderColor: `${C.error}30` }}>
-          <Ionicons name="lock-closed" size={32} color={C.error} />
-        </View>
-        <Text style={{ color: C.text, fontSize: 20, fontWeight: '800', marginBottom: 10 }}>Access Restricted</Text>
-        <Text style={{ color: C.muted, fontSize: 14, textAlign: 'center', lineHeight: 20 }}>
-          Freelancers don't have access to company-wide channels. Communicate through project discussion pages.
-        </Text>
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (!user) return;
+
+    const listChannel = supabase
+      .channel('chat:list-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_messages',
+        },
+        () => {
+          fetchChannels();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'chat_channels',
+        },
+        () => {
+          fetchChannels();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(listChannel);
+    };
+  }, [user, fetchChannels]);
 
   const filtered = channels.filter(ch =>
     !search || ch.name?.toLowerCase().includes(search.toLowerCase())
   );
-
-  const channelTypeIcon = (type: string) => {
-    switch (type) {
-      case 'org_general':      return 'grid-outline';
-      case 'org_announcement': return 'megaphone-outline';
-      case 'project':          return 'briefcase-outline';
-      default:                 return 'chatbubble-outline';
-    }
-  };
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -181,3 +306,4 @@ const styles = StyleSheet.create({
   emptyTitle: { color: '#F5F5FA', fontSize: 18, fontWeight: '700', marginBottom: 8 },
   emptySub: { color: '#7A7A92', fontSize: 14, textAlign: 'center', lineHeight: 20 },
 });
+

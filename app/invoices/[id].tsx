@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
+import { getCurrencyDetails, formatCurrency } from '@/lib/currency';
 
 interface Client {
   name: string;
@@ -61,6 +62,11 @@ interface Invoice {
   clients: Client;
   invoice_items: InvoiceItem[];
   invoice_payments: InvoicePayment[];
+  organizations?: {
+    name: string;
+    gst_number?: string | null;
+    address?: string | null;
+  } | null;
 }
 
 export default function InvoiceDetailScreen() {
@@ -88,7 +94,7 @@ export default function InvoiceDetailScreen() {
     try {
       const { data, error } = await supabase
         .from('invoices')
-        .select('*, clients(*), invoice_items(*), invoice_payments(*)')
+        .select('*, clients(*), invoice_items(*), invoice_payments(*), organizations(name, gst_number, address)')
         .eq('id', id)
         .eq('is_deleted', false)
         .single();
@@ -119,7 +125,7 @@ export default function InvoiceDetailScreen() {
   const handleSoftDelete = async () => {
     Alert.alert(
       'Delete Invoice',
-      'Are you sure you want to soft-delete this invoice? You can restore it later from your dashboard logs.',
+      'Are you sure you want to permanently delete this invoice? All associated items, payments, and receipt logs will be permanently deleted.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -127,18 +133,7 @@ export default function InvoiceDetailScreen() {
           style: 'destructive',
           onPress: async () => {
             try {
-              const { error } = await supabase
-                .from('invoices')
-                .update({
-                  is_deleted: true,
-                  deleted_at: new Date().toISOString(),
-                  deleted_by: user!.id,
-                })
-                .eq('id', id);
-
-              if (error) throw error;
-
-              // Log audit record
+              // Log audit record first (while invoice still exists and fields are readable)
               await supabase.from('invoice_audit_logs').insert({
                 organization_id: invoice?.organization_id,
                 invoice_id: id,
@@ -147,7 +142,15 @@ export default function InvoiceDetailScreen() {
                 old_values: { invoice_number: invoice?.invoice_number },
               });
 
-              Alert.alert('Deleted', 'Invoice moved to trash.');
+              // Perform hard delete
+              const { error } = await supabase
+                .from('invoices')
+                .delete()
+                .eq('id', id);
+
+              if (error) throw error;
+
+              Alert.alert('Deleted', 'Invoice successfully deleted.');
               router.replace('/invoices' as any);
             } catch (e: any) {
               Alert.alert('Error', e.message || 'Failed to delete invoice');
@@ -157,6 +160,7 @@ export default function InvoiceDetailScreen() {
       ]
     );
   };
+
 
   const handleUpdateTemplateStyle = async (style: 'classic' | 'modern' | 'corporate' | 'minimal') => {
     try {
@@ -217,6 +221,7 @@ export default function InvoiceDetailScreen() {
             transaction_reference: transactionRef || null,
             notes: paymentNotes || null,
             received_by: user!.id,
+            currency: invoice!.currency,
           });
 
         if (error) throw error;
@@ -287,6 +292,7 @@ export default function InvoiceDetailScreen() {
   const getHTMLTemplate = () => {
     if (!invoice) return '';
     const style = invoice.template_style || 'classic';
+    const symbol = getCurrencyDetails(invoice.currency).symbol;
 
     const itemsRows = invoice.invoice_items.map((it, idx) => `
       <tr>
@@ -294,11 +300,11 @@ export default function InvoiceDetailScreen() {
         <td>${it.description}</td>
         <td>${it.hsn_code || '-'}</td>
         <td style="text-align: right;">${it.quantity}</td>
-        <td style="text-align: right;">₹${it.rate.toFixed(2)}</td>
-        <td style="text-align: right;">₹${it.discount.toFixed(2)}</td>
+        <td style="text-align: right;">${symbol}${it.rate.toFixed(2)}</td>
+        <td style="text-align: right;">${symbol}${it.discount.toFixed(2)}</td>
         <td style="text-align: right;">${it.tax_rate}%</td>
-        <td style="text-align: right;">₹${it.tax_amount.toFixed(2)}</td>
-        <td style="text-align: right;">₹${it.amount.toFixed(2)}</td>
+        <td style="text-align: right;">${symbol}${it.tax_amount.toFixed(2)}</td>
+        <td style="text-align: right;">${symbol}${it.amount.toFixed(2)}</td>
       </tr>
     `).join('');
 
@@ -308,14 +314,22 @@ export default function InvoiceDetailScreen() {
           <td>${new Date(p.payment_date).toLocaleDateString()}</td>
           <td>${p.payment_method.replace('_', ' ').toUpperCase()}</td>
           <td>${p.transaction_reference || '-'}</td>
-          <td style="text-align: right;">₹${Number(p.amount).toFixed(2)}</td>
+          <td style="text-align: right;">${symbol}${Number(p.amount).toFixed(2)}</td>
         </tr>
       `).join('')
       : '<tr><td colspan="4" style="text-align: center; color: #777;">No payments recorded</td></tr>';
 
+    const vr = (invoice as any).visual_recreation || {};
+
     // Styles configurations
     let themeCSS = '';
-    if (style === 'modern') {
+    if ((style as any) === 'custom' || vr.primary_color) {
+      themeCSS = `
+        body { font-family: ${vr.font_family || 'Arial, sans-serif'}; color: #2D3748; }
+        .invoice-header { border-bottom: 3px solid ${vr.primary_color || '#4F46E5'}; padding-bottom: 20px; margin-bottom: 30px; }
+        th { background-color: ${vr.primary_color || '#4F46E5'}; color: #FFF; }
+      `;
+    } else if (style === 'modern') {
       themeCSS = `
         body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #2D3748; }
         .invoice-header { background: linear-gradient(135deg, #6366F1, #8B5CF6); color: #FFF; padding: 30px; border-radius: 12px; margin-bottom: 30px; }
@@ -361,18 +375,22 @@ export default function InvoiceDetailScreen() {
       </head>
       <body>
         <div class="container">
-          <div class="invoice-header">
-            <h2>CoreFlow Enterprise Invoice</h2>
-            <p>Invoice Number: <strong>${invoice.invoice_number}</strong></p>
-            <p>Status: ${invoice.status.toUpperCase()}</p>
+          <div class="invoice-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              ${vr.logo_url ? `<img src="${vr.logo_url}" style="max-height: 50px; margin-bottom: 10px; display: block;" />` : ''}
+              <h2 style="margin: 0;">${invoice.organizations?.name || 'CoreFlow Labs Ltd'}</h2>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">GSTIN: ${invoice.organizations?.gst_number || '27CFFLOW1234A1Z9'}</p>
+            </div>
+            <div style="text-align: right;">
+              <p style="margin: 0 0 5px 0;">Invoice Number: <strong>${invoice.invoice_number}</strong></p>
+              <p style="margin: 0;">Status: <strong>${invoice.status.toUpperCase()}</strong></p>
+            </div>
           </div>
 
-          <div class="grid">
+          <div class="grid" style="margin-top: 30px;">
             <div class="col">
               <h3>Issuer Info</h3>
-              <p><strong>CoreFlow Labs Ltd</strong></p>
-              <p>GSTIN: 27CFFLOW1234A1Z9</p>
-              <p>Mumbai, Maharashtra, India</p>
+              <p>${invoice.organizations?.address || 'Mumbai, Maharashtra, India'}</p>
             </div>
             <div class="col" style="text-align: right;">
               <h3>Client Details</h3>
@@ -409,31 +427,31 @@ export default function InvoiceDetailScreen() {
             <table class="totals-table">
               <tr>
                 <td>Subtotal</td>
-                <td style="text-align: right;">₹${invoice.subtotal.toFixed(2)}</td>
+                <td style="text-align: right;">${symbol}${invoice.subtotal.toFixed(2)}</td>
               </tr>
               <tr>
                 <td>CGST (9%)</td>
-                <td style="text-align: right;">₹${invoice.cgst.toFixed(2)}</td>
+                <td style="text-align: right;">${symbol}${invoice.cgst.toFixed(2)}</td>
               </tr>
               <tr>
                 <td>SGST (9%)</td>
-                <td style="text-align: right;">₹${invoice.sgst.toFixed(2)}</td>
+                <td style="text-align: right;">${symbol}${invoice.sgst.toFixed(2)}</td>
               </tr>
               <tr>
                 <td>Discount</td>
-                <td style="text-align: right;">-₹${invoice.discount_amount.toFixed(2)}</td>
+                <td style="text-align: right;">-${symbol}${invoice.discount_amount.toFixed(2)}</td>
               </tr>
               <tr style="border-top: 2px solid #000; font-weight: bold;">
                 <td>Grand Total</td>
-                <td style="text-align: right;">₹${invoice.total_amount.toFixed(2)}</td>
+                <td style="text-align: right;">${symbol}${invoice.total_amount.toFixed(2)}</td>
               </tr>
               <tr>
                 <td>Paid Amount</td>
-                <td style="text-align: right; color: green;">₹${invoice.paid_amount.toFixed(2)}</td>
+                <td style="text-align: right; color: green;">${symbol}${invoice.paid_amount.toFixed(2)}</td>
               </tr>
               <tr style="font-weight: bold; color: red;">
                 <td>Balance Due</td>
-                <td style="text-align: right;">₹${invoice.balance_due.toFixed(2)}</td>
+                <td style="text-align: right;">${symbol}${invoice.balance_due.toFixed(2)}</td>
               </tr>
             </table>
           </div>
@@ -470,14 +488,6 @@ export default function InvoiceDetailScreen() {
     } catch (e: any) {
       Alert.alert('PDF Print Failed', e.message || 'Failed to print PDF');
     }
-  };
-
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(val);
   };
 
   const getStatusColor = (status: string) => {
@@ -586,9 +596,9 @@ export default function InvoiceDetailScreen() {
         <View className="flex-row mb-6">
           <View className="flex-1 p-4 rounded-3xl border border-border mr-3" style={{ backgroundColor: colors.surface }}>
             <Text className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2">Billed From</Text>
-            <Text className="text-sm font-bold text-foreground mb-0.5">CoreFlow Labs Ltd</Text>
-            <Text className="text-xs text-muted mb-0.5">GSTIN: 27CFFLOW1234A1Z9</Text>
-            <Text className="text-xs text-muted">Mumbai, MH</Text>
+            <Text className="text-sm font-bold text-foreground mb-0.5">{invoice.organizations?.name || 'CoreFlow Labs Ltd'}</Text>
+            <Text className="text-xs text-muted mb-0.5">GSTIN: {invoice.organizations?.gst_number || '27CFFLOW1234A1Z9'}</Text>
+            <Text className="text-xs text-muted">{invoice.organizations?.address || 'Mumbai, MH'}</Text>
           </View>
           <View className="flex-1 p-4 rounded-3xl border border-border" style={{ backgroundColor: colors.surface }}>
             <Text className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2">Billed To</Text>
@@ -617,8 +627,8 @@ export default function InvoiceDetailScreen() {
             <View key={it.id || idx} className="p-4 mb-3 rounded-2xl border border-border" style={{ backgroundColor: colors.surface }}>
               <Text className="text-sm font-bold text-foreground mb-2">{it.description}</Text>
               <View className="flex-row justify-between items-center">
-                <Text className="text-xs text-muted">Qty: {it.quantity} x ₹{it.rate.toFixed(2)} (Tax {it.tax_rate}%)</Text>
-                <Text className="text-sm font-bold text-foreground">₹ {it.amount.toFixed(2)}</Text>
+                <Text className="text-xs text-muted">Qty: {it.quantity} x {formatCurrency(it.rate, invoice.currency)} (Tax {it.tax_rate}%)</Text>
+                <Text className="text-sm font-bold text-foreground">{formatCurrency(it.amount, invoice.currency)}</Text>
               </View>
             </View>
           ))}
@@ -629,23 +639,23 @@ export default function InvoiceDetailScreen() {
           <Text className="text-sm font-bold text-foreground mb-4">Financial Summary</Text>
           <View className="flex-row justify-between mb-2">
             <Text className="text-xs text-muted">Subtotal</Text>
-            <Text className="text-xs text-foreground font-semibold">₹ {invoice.subtotal.toFixed(2)}</Text>
+            <Text className="text-xs text-foreground font-semibold">{formatCurrency(invoice.subtotal, invoice.currency)}</Text>
           </View>
           <View className="flex-row justify-between mb-2">
             <Text className="text-xs text-muted">CGST (9%)</Text>
-            <Text className="text-xs text-foreground font-semibold">₹ {invoice.cgst.toFixed(2)}</Text>
+            <Text className="text-xs text-foreground font-semibold">{formatCurrency(invoice.cgst, invoice.currency)}</Text>
           </View>
           <View className="flex-row justify-between mb-2">
             <Text className="text-xs text-muted">SGST (9%)</Text>
-            <Text className="text-xs text-foreground font-semibold">₹ {invoice.sgst.toFixed(2)}</Text>
+            <Text className="text-xs text-foreground font-semibold">{formatCurrency(invoice.sgst, invoice.currency)}</Text>
           </View>
           <View className="flex-row justify-between mb-3">
             <Text className="text-xs text-muted">Discount</Text>
-            <Text className="text-xs text-rose-500 font-semibold">-₹ {invoice.discount_amount.toFixed(2)}</Text>
+            <Text className="text-xs text-rose-500 font-semibold">-{formatCurrency(invoice.discount_amount, invoice.currency)}</Text>
           </View>
           <View className="border-t border-border pt-3 flex-row justify-between items-center">
             <Text className="text-sm font-bold text-foreground">Total Balance Due</Text>
-            <Text className="text-base font-bold text-primary">₹ {invoice.balance_due.toFixed(2)}</Text>
+            <Text className="text-base font-bold text-primary">{formatCurrency(invoice.balance_due, invoice.currency)}</Text>
           </View>
         </View>
 
@@ -655,7 +665,10 @@ export default function InvoiceDetailScreen() {
             <Text className="text-xs font-bold text-muted uppercase tracking-wider ml-1">Payment History</Text>
             {invoice.balance_due > 0 && (
               <Pressable 
-                onPress={() => setIsPaymentModalVisible(true)}
+                onPress={() => {
+                  setPaymentAmount(invoice.balance_due.toString());
+                  setIsPaymentModalVisible(true);
+                }}
                 className="flex-row items-center px-3 py-1.5 rounded-xl bg-primary/10"
               >
                 <Ionicons name="add-circle" size={14} color={colors.primary} className="mr-1" />
@@ -672,7 +685,7 @@ export default function InvoiceDetailScreen() {
             invoice.invoice_payments.map((p, idx) => (
               <View key={p.id || idx} className="p-4 mb-3 rounded-2xl border border-border flex-row justify-between items-center" style={{ backgroundColor: colors.surface }}>
                 <View className="flex-1 mr-3">
-                  <Text className="text-sm font-bold text-foreground">₹ {Number(p.amount).toFixed(2)}</Text>
+                  <Text className="text-sm font-bold text-foreground">{formatCurrency(Number(p.amount), invoice.currency)}</Text>
                   <Text className="text-xs text-muted">{new Date(p.payment_date).toLocaleDateString()} via {p.payment_method.replace('_', ' ').toUpperCase()}</Text>
                   {p.transaction_reference && <Text className="text-[10px] text-muted">Ref: {p.transaction_reference}</Text>}
                 </View>
@@ -696,7 +709,7 @@ export default function InvoiceDetailScreen() {
               </Pressable>
             </View>
 
-            <Text className="text-xs text-muted mb-1 ml-1">Payment Amount (Max ₹ {invoice.balance_due.toFixed(2)})</Text>
+            <Text className="text-xs text-muted mb-1 ml-1">Payment Amount (Max {formatCurrency(invoice.balance_due, invoice.currency)})</Text>
             <TextInput
               keyboardType="numeric"
               placeholder={`0.00`}

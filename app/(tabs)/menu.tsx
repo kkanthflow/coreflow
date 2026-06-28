@@ -9,12 +9,7 @@ import { hasPermission } from '@/lib/permissions';
 import { AvatarUpload } from '@/components/ui/avatar-upload';
 import { GlassCard } from '@/components/ui/glass-card';
 
-const C = {
-  bg: '#07070B', card: '#181822', border: '#2A2A3A',
-  primary: '#FF6B4A', secondary: '#FFA86B',
-  text: '#F5F5FA', textSec: '#B4B4C7', muted: '#7A7A92',
-  success: '#34D399', warning: '#FBBF24', error: '#F87171', info: '#60A5FA', purple: '#8B5CF6',
-};
+import { useColors } from '@/hooks/use-colors';
 
 interface MenuItem {
   id: string;
@@ -31,6 +26,23 @@ interface MenuSection {
 }
 
 function MenuRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
+  const colors = useColors();
+  const C = {
+    bg: colors.background,
+    card: colors.card,
+    border: colors.border,
+    primary: colors.primary,
+    secondary: colors.secondary,
+    text: colors.foreground,
+    textSec: colors.secondary_text,
+    muted: colors.muted,
+    success: colors.success,
+    warning: colors.warning,
+    error: colors.error,
+    info: colors.info,
+    purple: '#8B5CF6',
+  };
+
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   const onPressIn  = () => Animated.spring(scaleAnim, { toValue: 0.97, useNativeDriver: true, tension: 300, friction: 10 }).start();
@@ -67,6 +79,24 @@ function MenuRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
 export default function MenuScreen() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router  = useRouter();
+  const colors  = useColors();
+
+  const C = {
+    bg: colors.background,
+    card: colors.card,
+    border: colors.border,
+    primary: colors.primary,
+    secondary: colors.secondary,
+    text: colors.foreground,
+    textSec: colors.secondary_text,
+    muted: colors.muted,
+    success: colors.success,
+    warning: colors.warning,
+    error: colors.error,
+    info: colors.info,
+    purple: '#8B5CF6',
+  };
+
   const fadAnim = useRef(new Animated.Value(0)).current;
   const slidAnim = useRef(new Animated.Value(20)).current;
 

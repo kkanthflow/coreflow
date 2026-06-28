@@ -24,6 +24,7 @@ import { AuthProvider, useAuth } from '@/lib/auth-context';
 import * as Notifications from 'expo-notifications';
 import { ErrorBoundary } from "@/components/error-boundary";
 import { useOTAUpdates } from '@/hooks/use-ota-updates';
+import { supabase } from "@/lib/supabase";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -83,7 +84,7 @@ function AuthGate() {
 
     const currentSegment = segments[0] as string | undefined;
     const isIndex = currentSegment === 'index' || currentSegment === undefined || currentSegment === '';
-    const onAuthScreens = ['login', 'register', 'forgot-password', 'oauth'].includes(currentSegment ?? '');
+    const onAuthScreens = ['login', 'register', 'forgot-password', 'oauth', 'privacy-policy', 'terms-and-conditions'].includes(currentSegment ?? '');
     const onFreelancerPortal = currentSegment === 'freelancer';
 
     // Handle fine-grained redirects WITHIN the authenticated stack
@@ -123,6 +124,8 @@ export default function RootLayout() {
 
   const [insets, setInsets] = useState<EdgeInsets>(initialInsets);
   const [frame, setFrame] = useState<Rect>(initialFrame);
+  
+  const router = useRouter();
 
   // Initialize Manus runtime for cookie injection from parent container
   useEffect(() => {
@@ -147,6 +150,161 @@ export default function RootLayout() {
       }
     }
   }, []);
+
+  // Set up global real-time chat push notification scheduler
+  useEffect(() => {
+    // Listen for notification taps
+    const tapSubscription = Notifications.addNotificationResponseReceivedListener(response => {
+      const data = response.notification.request.content.data;
+      if (data && data.channelId) {
+        router.push(`/chat/${data.channelId}` as any);
+      }
+    });
+
+    let chatChannel: any = null;
+
+    const setupRealtimeSubscription = async (userId: string) => {
+      // Clean up previous subscription if any
+      if (chatChannel) {
+        supabase.removeChannel(chatChannel);
+        chatChannel = null;
+      }
+
+      // Startup Catch-up: Mark all undelivered messages sent to this user as delivered
+      try {
+        const { data: myChannels } = await supabase
+          .from('channel_members')
+          .select('channel_id')
+          .eq('user_id', userId);
+
+        const channelIds = (myChannels || []).map((c: any) => c.channel_id);
+        
+        if (channelIds.length > 0) {
+          await supabase
+            .from('chat_messages')
+            .update({ delivered_at: new Date().toISOString() })
+            .in('channel_id', channelIds)
+            .neq('sender_id', userId)
+            .is('delivered_at', null);
+        }
+      } catch (err) {
+        console.warn('E2E Delivery catch-up failed:', err);
+      }
+
+      chatChannel = supabase
+        .channel('chat:global-push-notifs')
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'chat_messages',
+          },
+          async (payload: any) => {
+            if (payload.new.sender_id !== userId) {
+              // Mark as delivered immediately on receipt
+              if (!payload.new.delivered_at) {
+                supabase
+                  .from('chat_messages')
+                  .update({ delivered_at: new Date().toISOString() })
+                  .eq('id', payload.new.id)
+                  .then();
+              }
+
+              // Suppress notification if the user is actively viewing this channel
+              if ((global as any).activeChannelId === payload.new.channel_id) {
+                return;
+              }
+
+              // Fetch sender details
+              const { data: senderData } = await supabase
+                .from('users')
+                .select('full_name')
+                .eq('id', payload.new.sender_id)
+                .single();
+
+              const senderName = senderData?.full_name || 'New Message';
+              let body = payload.new.content || '';
+
+              if (body.startsWith('__E2EE__:')) {
+                body = '🔒 Encrypted Message';
+              }
+
+              Notifications.scheduleNotificationAsync({
+                identifier: payload.new.channel_id,
+                content: {
+                  title: senderName,
+                  body: body,
+                  data: {
+                    channelId: payload.new.channel_id,
+                  },
+                },
+                trigger: null,
+              });
+            }
+          }
+        )
+        .subscribe();
+    };
+
+    // Get initial session and subscribe to auth state changes
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        setupRealtimeSubscription(session.user.id);
+        registerAndSavePushToken(session.user.id);
+      }
+    });
+
+    const registerAndSavePushToken = async (userId: string) => {
+      if (Platform.OS === 'web') return;
+      try {
+        const { status: existingStatus } = await Notifications.getPermissionsAsync();
+        let finalStatus = existingStatus;
+        if (existingStatus !== 'granted') {
+          const { status } = await Notifications.requestPermissionsAsync();
+          finalStatus = status;
+        }
+        if (finalStatus !== 'granted') return;
+
+        // Try to get Expo Push Token using project ID from Constants
+        const Constants = require('expo-constants').default;
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+        
+        const tokenData = await Notifications.getExpoPushTokenAsync(
+          projectId ? { projectId } : undefined
+        );
+        const token = tokenData.data;
+
+        if (token) {
+          await supabase
+            .from('user_push_tokens')
+            .upsert({ user_id: userId, token });
+        }
+      } catch (err) {
+        console.warn('Failed to register push token:', err);
+      }
+    };
+
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user?.id) {
+        setupRealtimeSubscription(session.user.id);
+        registerAndSavePushToken(session.user.id);
+      } else {
+        if (chatChannel) {
+          supabase.removeChannel(chatChannel);
+          chatChannel = null;
+        }
+      }
+    });
+
+    return () => {
+      tapSubscription.remove();
+      authSubscription.unsubscribe();
+      if (chatChannel) {
+        supabase.removeChannel(chatChannel);
+      }
+    };
+  }, [router]);
 
   const handleSafeAreaUpdate = useCallback((metrics: Metrics) => {
     setInsets(metrics.insets);

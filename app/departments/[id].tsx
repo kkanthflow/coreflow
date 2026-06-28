@@ -1,22 +1,40 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Pressable, StyleSheet } from 'react-native';
+import { View, Text, FlatList, ActivityIndicator, Pressable, StyleSheet, Modal, ScrollView, Alert } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { RoleBadge } from '@/components/ui/role-badge';
+import { useAuth } from '@/hooks/use-auth';
+import { hasPermission } from '@/lib/permissions';
+import { PremiumSelect } from '@/components/ui/premium-select';
+import { PremiumButton } from '@/components/ui/premium-button';
+import { PremiumInput } from '@/components/ui/premium-input';
 
 export default function DepartmentDetailScreen() {
   const { id } = useLocalSearchParams();
   const colors = useColors();
   const router = useRouter();
+  const { user } = useAuth();
 
   const [department, setDepartment] = useState<any | null>(null);
   const [members, setMembers] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'members' | 'projects'>('members');
+
+  // Deletion States
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [depsEmployees, setDepsEmployees] = useState(0);
+  const [depsProjects, setDepsProjects] = useState(0);
+  const [otherDepartments, setOtherDepartments] = useState<any[]>([]);
+  const [transferUserDeptId, setTransferUserDeptId] = useState('');
+  const [transferProjectDeptId, setTransferProjectDeptId] = useState('');
+  const [confirmName, setConfirmName] = useState('');
+  const [deleting, setDeleting] = useState(false);
+
+  const canDelete = hasPermission(user?.role, 'manage_departments');
 
   useEffect(() => {
     const fetchDeptDetails = async () => {
@@ -83,6 +101,73 @@ export default function DepartmentDetailScreen() {
     if (id) fetchDeptDetails();
   }, [id]);
 
+  const handleOpenDeleteModal = async () => {
+    try {
+      setDeleting(true);
+      // Fetch dependencies counts
+      const { data: depData, error: depError } = await supabase.rpc('check_department_dependencies', { dept_id: id });
+      if (depError) throw depError;
+
+      if (depData && depData.length > 0) {
+        setDepsEmployees(depData[0].employees_count);
+        setDepsProjects(depData[0].projects_count);
+      }
+
+      // Fetch other departments in organization
+      const { data: otherData } = await supabase
+        .from('departments')
+        .select('id, name')
+        .eq('org_id', user?.organizationId)
+        .neq('id', id);
+
+      if (otherData) {
+        setOtherDepartments(otherData);
+      }
+
+      setDeleteModalVisible(true);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not fetch department dependencies.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (depsEmployees > 0 && !transferUserDeptId) {
+      Alert.alert('Required', 'Please select a department to transfer employees to.');
+      return;
+    }
+    if (depsProjects > 0 && !transferProjectDeptId) {
+      Alert.alert('Required', 'Please select a department to transfer projects to.');
+      return;
+    }
+
+    const needsTypeConfirmation = depsEmployees > 0 || depsProjects > 0 || members.length > 0 || projects.length > 0;
+    if (needsTypeConfirmation && confirmName.trim().toLowerCase() !== department.name.trim().toLowerCase()) {
+      Alert.alert('Confirmation Failed', 'Please type the department name exactly to confirm deletion.');
+      return;
+    }
+
+    try {
+      setDeleting(true);
+      const { error } = await supabase.rpc('delete_department_safe', {
+        dept_id: id,
+        transfer_user_dept_id: transferUserDeptId || null,
+        transfer_project_dept_id: transferProjectDeptId || null
+      });
+
+      if (error) throw error;
+
+      Alert.alert('Success', 'Department has been successfully deleted.');
+      setDeleteModalVisible(false);
+      router.back();
+    } catch (e: any) {
+      Alert.alert('Error Deleting Department', e.message || 'An error occurred.');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading) {
     return (
       <ScreenContainer style={styles.center}>
@@ -97,12 +182,22 @@ export default function DepartmentDetailScreen() {
     <ScreenContainer>
       {/* Header Banner */}
       <View style={[styles.banner, { backgroundColor: department.color || colors.primary }]}>
-        <Pressable
-          onPress={() => router.back()}
-          style={styles.backBtn}
-        >
-          <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
-        </Pressable>
+        <View style={styles.bannerHeader}>
+          <Pressable
+            onPress={() => router.back()}
+            style={styles.backBtn}
+          >
+            <Ionicons name="arrow-back" size={20} color="#FFFFFF" />
+          </Pressable>
+          {canDelete && (
+            <Pressable
+              onPress={handleOpenDeleteModal}
+              style={styles.deleteBtn}
+            >
+              <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
+            </Pressable>
+          )}
+        </View>
         <Text style={styles.bannerTitle}>{department.name}</Text>
         {department.description ? (
           <Text style={styles.bannerDesc}>{department.description}</Text>
@@ -205,6 +300,106 @@ export default function DepartmentDetailScreen() {
           }
         />
       )}
+
+      {/* Deletion Modal */}
+      <Modal
+        visible={deleteModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Delete Department</Text>
+              <Pressable onPress={() => setDeleteModalVisible(false)}>
+                <Ionicons name="close" size={24} color={colors.foreground} />
+              </Pressable>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.modalScroll}>
+              <Text style={[styles.modalWarningText, { color: colors.muted }]}>
+                Are you sure you want to delete <Text style={{ fontWeight: 'bold', color: colors.foreground }}>{department.name}</Text>? This action will soft-delete the department and preserve historical records.
+              </Text>
+
+              {/* Dependencies Summary */}
+              <View style={[styles.depsContainer, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+                <Text style={[styles.depsTitle, { color: colors.foreground }]}>Dependencies Summary:</Text>
+                <View style={styles.depRow}>
+                  <Text style={[styles.depLabel, { color: colors.muted }]}>Employees assigned:</Text>
+                  <Text style={[styles.depValue, { color: depsEmployees > 0 ? '#EF4444' : colors.foreground }]}>
+                    {depsEmployees}
+                  </Text>
+                </View>
+                <View style={styles.depRow}>
+                  <Text style={[styles.depLabel, { color: colors.muted }]}>Projects linked:</Text>
+                  <Text style={[styles.depValue, { color: depsProjects > 0 ? '#EF4444' : colors.foreground }]}>
+                    {depsProjects}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Reassignment Fields if dependencies exist */}
+              {depsEmployees > 0 && (
+                <View style={styles.reassignSection}>
+                  <PremiumSelect
+                    label="Reassign Employees To *"
+                    value={transferUserDeptId}
+                    options={otherDepartments.map(d => ({ label: d.name, value: d.id }))}
+                    onSelect={setTransferUserDeptId}
+                    placeholder="Select department for employees"
+                  />
+                </View>
+              )}
+
+              {depsProjects > 0 && (
+                <View style={styles.reassignSection}>
+                  <PremiumSelect
+                    label="Reassign Projects To *"
+                    value={transferProjectDeptId}
+                    options={otherDepartments.map(d => ({ label: d.name, value: d.id }))}
+                    onSelect={setTransferProjectDeptId}
+                    placeholder="Select department for projects"
+                  />
+                </View>
+              )}
+
+              {/* Name typing confirmation */}
+              {(depsEmployees > 0 || depsProjects > 0 || members.length > 0 || projects.length > 0) && (
+                <View style={styles.reassignSection}>
+                  <PremiumInput
+                    label={`Type "${department.name}" to confirm *`}
+                    placeholder="Department name"
+                    value={confirmName}
+                    onChangeText={setConfirmName}
+                    editable={!deleting}
+                  />
+                </View>
+              )}
+            </ScrollView>
+
+            <View style={[styles.modalActions, { borderTopColor: colors.border }]}>
+              <Pressable
+                onPress={() => setDeleteModalVisible(false)}
+                style={[styles.cancelBtn, { borderColor: colors.border }]}
+                disabled={deleting}
+              >
+                <Text style={[styles.cancelBtnText, { color: colors.muted }]}>Cancel</Text>
+              </Pressable>
+              {deleting ? (
+                <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 16 }} />
+              ) : (
+                <Pressable
+                  onPress={handleDelete}
+                  style={[styles.confirmDeleteBtn, { backgroundColor: '#EF4444' }]}
+                >
+                  <Text style={styles.confirmDeleteBtnText}>Confirm Delete</Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScreenContainer>
   );
 }
@@ -222,6 +417,12 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 24,
     borderBottomRightRadius: 24,
   },
+  bannerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
   backBtn: {
     width: 36,
     height: 36,
@@ -229,7 +430,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+  },
+  deleteBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(239, 68, 68, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   bannerTitle: {
     fontSize: 26,
@@ -319,5 +527,90 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    maxHeight: '90%',
+    paddingBottom: 32,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  modalScroll: {
+    paddingHorizontal: 24,
+  },
+  modalWarningText: {
+    fontSize: 14,
+    lineHeight: 22,
+    marginBottom: 16,
+  },
+  depsContainer: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+    marginBottom: 20,
+  },
+  depsTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 12,
+  },
+  depRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  depLabel: {
+    fontSize: 13,
+  },
+  depValue: {
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  reassignSection: {
+    marginBottom: 16,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    borderTopWidth: 1,
+  },
+  cancelBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginRight: 12,
+  },
+  cancelBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  confirmDeleteBtn: {
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+  },
+  confirmDeleteBtnText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
 });

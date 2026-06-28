@@ -31,6 +31,14 @@ export default function InvoicesReportScreen() {
     if (!user?.organizationId) { setLoading(false); return; }
     setLoading(true);
     try {
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('default_currency')
+        .eq('id', user.organizationId)
+        .single();
+
+      let defaultCurrency = orgData?.default_currency || 'USD';
+
       const { data, error } = await supabase
         .from('invoices')
         .select(`
@@ -61,7 +69,6 @@ export default function InvoicesReportScreen() {
       let paid = 0;
       let outstanding = 0;
       let total = 0;
-      let defaultCurrency = 'INR';
 
       items.forEach((inv: any) => {
         if (inv.status !== 'cancelled') {

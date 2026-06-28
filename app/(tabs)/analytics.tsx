@@ -6,21 +6,35 @@ import {
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 import { useFocusEffect } from 'expo-router';
+import { formatCurrency } from '@/lib/currency';
 import { Ionicons } from '@expo/vector-icons';
 import { HealthRing } from '@/components/ui/health-ring';
 import { GlassCard } from '@/components/ui/glass-card';
 import { ShimmerCard, ShimmerLoader } from '@/components/ui/shimmer-loader';
 
-const C = {
-  bg: '#07070B', surface: '#111118', card: '#181822', border: '#2A2A3A',
-  primary: '#FF6B4A', secondary: '#FFA86B', text: '#F5F5FA',
-  textSec: '#B4B4C7', muted: '#7A7A92', success: '#34D399',
-  warning: '#FBBF24', error: '#F87171', info: '#60A5FA', purple: '#8B5CF6',
-};
+import { useColors } from '@/hooks/use-colors';
 
 type Period = 'week' | 'month' | 'all';
 
 function AnimatedBar({ value, total, color, label }: { value: number; total: number; color: string; label: string }) {
+  const colors = useColors();
+  const C = {
+    bg: colors.background,
+    surface: colors.surface,
+    card: colors.card,
+    border: colors.border,
+    primary: colors.primary,
+    secondary: colors.secondary,
+    text: colors.foreground,
+    textSec: colors.secondary_text,
+    muted: colors.muted,
+    success: colors.success,
+    warning: colors.warning,
+    error: colors.error,
+    info: colors.info,
+    purple: '#8B5CF6',
+  };
+
   const widthAnim = useRef(new Animated.Value(0)).current;
   const pct = total > 0 ? (value / total) * 100 : 0;
 
@@ -55,6 +69,24 @@ function AnimatedBar({ value, total, color, label }: { value: number; total: num
 }
 
 function StatCard({ label, value, icon, color, sub }: { label: string; value: string | number; icon: string; color: string; sub?: string }) {
+  const colors = useColors();
+  const C = {
+    bg: colors.background,
+    surface: colors.surface,
+    card: colors.card,
+    border: colors.border,
+    primary: colors.primary,
+    secondary: colors.secondary,
+    text: colors.foreground,
+    textSec: colors.secondary_text,
+    muted: colors.muted,
+    success: colors.success,
+    warning: colors.warning,
+    error: colors.error,
+    info: colors.info,
+    purple: '#8B5CF6',
+  };
+
   const scaleAnim = useRef(new Animated.Value(0.9)).current;
   const fadeAnim  = useRef(new Animated.Value(0)).current;
 
@@ -81,9 +113,28 @@ function StatCard({ label, value, icon, color, sub }: { label: string; value: st
 
 export default function AnalyticsScreen() {
   const { user } = useAuth();
+  const colors = useColors();
+  const C = {
+    bg: colors.background,
+    surface: colors.surface,
+    card: colors.card,
+    border: colors.border,
+    primary: colors.primary,
+    secondary: colors.secondary,
+    text: colors.foreground,
+    textSec: colors.secondary_text,
+    muted: colors.muted,
+    success: colors.success,
+    warning: colors.warning,
+    error: colors.error,
+    info: colors.info,
+    purple: '#8B5CF6',
+  };
+
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [period, setPeriod]     = useState<Period>('month');
+  const [orgCurrency, setOrgCurrency] = useState('USD');
   const headerAnim = useRef(new Animated.Value(-16)).current;
   const headerFade = useRef(new Animated.Value(0)).current;
 
@@ -109,6 +160,15 @@ export default function AnalyticsScreen() {
     if (!user?.organizationId) { setLoading(false); return; }
     setLoading(true);
     try {
+      const { data: orgData } = await supabase
+        .from('organizations')
+        .select('default_currency')
+        .eq('id', user.organizationId)
+        .single();
+      
+      if (orgData && orgData.default_currency) {
+        setOrgCurrency(orgData.default_currency);
+      }
       if (isManagement) {
         const [projRes, taskRes, invRes] = await Promise.all([
           supabase.from('projects').select('id, status').eq('org_id', user.organizationId),
@@ -226,8 +286,8 @@ export default function AnalyticsScreen() {
                 <StatCard label="Tasks" value={orgStats.totalTasks} icon="checkmark-circle" color={C.info} sub={`${orgStats.doneTasks} done`} />
               </View>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
-                <StatCard label="Revenue" value={`$${Math.round(orgStats.paidValue).toLocaleString()}`} icon="cash" color={C.success} />
-                <StatCard label="Outstanding" value={`$${Math.round(orgStats.pendingValue).toLocaleString()}`} icon="hourglass" color={C.warning} />
+                <StatCard label="Revenue" value={formatCurrency(orgStats.paidValue, orgCurrency)} icon="cash" color={C.success} />
+                <StatCard label="Outstanding" value={formatCurrency(orgStats.pendingValue, orgCurrency)} icon="hourglass" color={C.warning} />
               </View>
 
               {/* Progress bars */}
@@ -270,7 +330,7 @@ export default function AnalyticsScreen() {
                     <Text style={{ color: C.textSec, fontSize: 13 }}>Received Revenue</Text>
                   </View>
                   <Text style={{ color: C.success, fontSize: 15, fontWeight: '800' }}>
-                    ${orgStats.paidValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {formatCurrency(orgStats.paidValue, orgCurrency)}
                   </Text>
                 </View>
                 <View style={styles.financeRow}>
@@ -279,7 +339,7 @@ export default function AnalyticsScreen() {
                     <Text style={{ color: C.textSec, fontSize: 13 }}>Outstanding</Text>
                   </View>
                   <Text style={{ color: C.warning, fontSize: 15, fontWeight: '800' }}>
-                    ${orgStats.pendingValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {formatCurrency(orgStats.pendingValue, orgCurrency)}
                   </Text>
                 </View>
               </GlassCard>

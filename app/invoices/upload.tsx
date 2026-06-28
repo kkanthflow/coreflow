@@ -129,23 +129,40 @@ export default function BillUploadScreen() {
       // Resolve user organization context for default assignment
       const { data: myOrgs } = await supabase
         .from('user_organizations')
-        .select('org_id')
+        .select('org_id, organizations(default_currency)')
         .eq('user_id', user!.id);
 
       const orgId = myOrgs && myOrgs.length > 0 ? myOrgs[0].org_id : null;
+      let defaultCurrency = 'USD';
+      if (myOrgs && myOrgs[0]?.organizations) {
+        const rawOrg = myOrgs[0].organizations;
+        const org = Array.isArray(rawOrg) ? rawOrg[0] : rawOrg;
+        if (org && org.default_currency) {
+          defaultCurrency = org.default_currency;
+        }
+      }
 
       // Mock Extracted Data matching the OCR specifications
       const mockExtractedData = {
         vendor_name: 'Acme Corporates Ltd',
         gst_number: '27AAAAA1111A1Z1',
         invoice_number: 'ACME-' + Math.floor(1000 + Math.random() * 9000),
-        currency: 'INR',
+        currency: defaultCurrency,
         items: [
           { description: 'Premium Cloud Server Hosting (Standard Tier)', quantity: 1, rate: 8500, hsn_code: '9984', tax_rate: 18 },
           { description: 'Dedicated Database Migration Consultations', quantity: 4, rate: 2500, hsn_code: '9983', tax_rate: 18 },
         ],
         discount_amount: 500,
         notes: 'Extracted automatically from Acme Corporates invoice bill reference file.',
+        visual_recreation: {
+          logo_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=150&auto=format&fit=crop&q=80',
+          primary_color: '#4F46E5', // Acme Corporate Indigo
+          background_color: '#FFFFFF',
+          font_family: 'Georgia, Times, serif',
+          border_style: '1px solid #E5E7EB',
+          header_style: 'corporate',
+          layout_type: 'grid',
+        }
       };
 
       // 1. Create a record in public.bill_references table

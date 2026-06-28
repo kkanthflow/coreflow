@@ -1,35 +1,45 @@
 import { Tabs } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Platform, View, Pressable, Text, Animated, StyleSheet } from "react-native";
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useAuth } from "@/hooks/use-auth";
 import { hasPermission } from "@/lib/permissions";
-
-// Colors hardcoded to avoid flash during navigation
-const COLORS = {
-  bg:       '#111118',
-  border:   '#2A2A3A',
-  primary:  '#FF6B4A',
-  inactive: '#5A5A70',
-  text:     '#F5F5FA',
-  navBg:    '#07070B',
-};
-
 import { useColors } from "@/hooks/use-colors";
+import { supabase } from "@/lib/supabase";
 
-function TabIcon({ name, focused, label }: { name: keyof typeof Ionicons.glyphMap; focused: boolean; label: string }) {
+function TabIcon({
+  name,
+  focused,
+  label,
+  badge,
+}: {
+  name: keyof typeof Ionicons.glyphMap;
+  focused: boolean;
+  label: string;
+  badge?: number;
+}) {
   const colors = useColors();
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    Animated.spring(scaleAnim, { toValue: focused ? 1.15 : 1, useNativeDriver: true, tension: 300, friction: 10 }).start();
+    Animated.spring(scaleAnim, {
+      toValue: focused ? 1.15 : 1,
+      useNativeDriver: true,
+      tension: 300,
+      friction: 10,
+    }).start();
   }, [focused]);
 
   return (
     <View style={styles.tabItem}>
       {focused && (
-        <View style={[styles.activeIndicator, { backgroundColor: colors.primary, shadowColor: colors.primary }]} />
+        <View
+          style={[
+            styles.activeIndicator,
+            { backgroundColor: colors.primary, shadowColor: colors.primary },
+          ]}
+        />
       )}
       <Animated.View
         style={[
@@ -43,6 +53,13 @@ function TabIcon({ name, focused, label }: { name: keyof typeof Ionicons.glyphMa
           size={22}
           color={focused ? colors.primary : colors.muted}
         />
+        {badge !== undefined && badge > 0 && (
+          <View
+            style={[styles.badgeContainer, { backgroundColor: colors.primary }]}
+          >
+            <Text style={styles.badgeText}>{badge > 99 ? '99+' : badge}</Text>
+          </View>
+        )}
       </Animated.View>
       <Text
         style={[
@@ -63,10 +80,73 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const colors = useColors();
 
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
+
   const canViewMeetings = hasPermission(user?.role, "schedule_meetings");
 
   const bottomPadding = Platform.OS === "web" ? 12 : Math.max(insets.bottom, 8);
-  const tabBarHeight  = 68 + bottomPadding;
+  const tabBarHeight = 68 + bottomPadding;
+
+  const fetchUnreadCount = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const { data: channels } = await supabase
+        .from('chat_channels')
+        .select(`
+          id,
+          channel_members(user_id, last_read_at)
+        `);
+
+      let totalUnread = 0;
+
+      if (channels) {
+        for (const ch of channels) {
+          const myMember = ch.channel_members?.find(
+            (m: any) => m.user_id === user.id
+          );
+          const lastRead = myMember?.last_read_at || new Date(0).toISOString();
+
+          const { count } = await supabase
+            .from('chat_messages')
+            .select('*', { count: 'exact', head: true })
+            .eq('channel_id', ch.id)
+            .gt('created_at', lastRead)
+            .neq('sender_id', user.id);
+
+          totalUnread += count || 0;
+        }
+      }
+      setUnreadChatCount(totalUnread);
+    } catch (err) {
+      console.warn('Error fetching unread count:', err);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    fetchUnreadCount();
+
+    const channel = supabase
+      .channel('chat:tab-badges-updates')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_messages' },
+        () => {
+          fetchUnreadCount();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'message_reads' },
+        () => {
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, fetchUnreadCount]);
 
   return (
     <Tabs
@@ -93,40 +173,77 @@ export default function TabLayout() {
       <Tabs.Screen
         name="home"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? "home" : "home-outline"} focused={focused} label="Home" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              name={focused ? "home" : "home-outline"}
+              focused={focused}
+              label="Home"
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="meetings"
         options={{
           href: canViewMeetings ? undefined : null,
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? "calendar" : "calendar-outline"} focused={focused} label="Meetings" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              name={focused ? "calendar" : "calendar-outline"}
+              focused={focused}
+              label="Meetings"
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="projects"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? "briefcase" : "briefcase-outline"} focused={focused} label="Projects" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              name={focused ? "briefcase" : "briefcase-outline"}
+              focused={focused}
+              label="Projects"
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="analytics"
         options={{
           href: user?.role === "freelancer" ? null : undefined,
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? "bar-chart" : "bar-chart-outline"} focused={focused} label="Analytics" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              name={focused ? "bar-chart" : "bar-chart-outline"}
+              focused={focused}
+              label="Analytics"
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="chat"
         options={{
           href: user?.role === "freelancer" ? null : undefined,
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? "chatbubbles" : "chatbubbles-outline"} focused={focused} label="Chat" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              name={focused ? "chatbubbles" : "chatbubbles-outline"}
+              focused={focused}
+              label="Chat"
+              badge={unreadChatCount}
+            />
+          ),
         }}
       />
       <Tabs.Screen
         name="menu"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon name={focused ? "person" : "person-outline"} focused={focused} label="Profile" />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon
+              name={focused ? "person" : "person-outline"}
+              focused={focused}
+              label="Profile"
+            />
+          ),
         }}
       />
     </Tabs>
@@ -165,4 +282,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     letterSpacing: 0.2,
   },
+  badgeContainer: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 8,
+    fontWeight: '900',
+  },
 });
+

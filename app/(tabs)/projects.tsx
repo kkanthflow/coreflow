@@ -13,29 +13,33 @@ import { HealthRing } from '@/components/ui/health-ring';
 import { ShimmerCard, ShimmerLoader } from '@/components/ui/shimmer-loader';
 import { GradientButton } from '@/components/ui/gradient-button';
 
-const C = {
-  bg: '#07070B', surface: '#111118', card: '#181822', border: '#2A2A3A',
-  primary: '#FF6B4A', text: '#F5F5FA', textSec: '#B4B4C7', muted: '#7A7A92',
-  success: '#34D399', warning: '#FBBF24', error: '#F87171', info: '#60A5FA',
-};
-
-const STATUS_FILTERS = [
-  { key: 'all', label: 'All' },
-  { key: 'active', label: 'Active' },
-  { key: 'planning', label: 'Planning' },
-  { key: 'review', label: 'Review' },
-  { key: 'completed', label: 'Done' },
-];
-
-const STATUS_COLORS: Record<string, string> = {
-  planning: '#7A7A92', active: C.info, on_hold: C.warning,
-  review: '#8B5CF6', completed: C.success, cancelled: C.error,
-};
-const PRIORITY_COLORS: Record<string, string> = {
-  low: C.success, medium: C.info, high: C.warning, critical: C.error,
-};
+import { useColors } from '@/hooks/use-colors';
 
 function ProjectCard({ project, onPress, index }: { project: any; onPress: () => void; index: number }) {
+  const colors = useColors();
+  const C = {
+    bg: colors.background,
+    surface: colors.surface,
+    card: colors.card,
+    border: colors.border,
+    primary: colors.primary,
+    text: colors.foreground,
+    textSec: colors.secondary_text,
+    muted: colors.muted,
+    success: colors.success,
+    warning: colors.warning,
+    error: colors.error,
+    info: colors.info,
+  };
+
+  const STATUS_COLORS: Record<string, string> = {
+    planning: '#7A7A92', active: C.info, on_hold: C.warning,
+    review: '#8B5CF6', completed: C.success, cancelled: C.error,
+  };
+  const PRIORITY_COLORS: Record<string, string> = {
+    low: C.success, medium: C.info, high: C.warning, critical: C.error,
+  };
+
   const slideAnim = useRef(new Animated.Value(30)).current;
   const fadeAnim  = useRef(new Animated.Value(0)).current;
 
@@ -134,9 +138,34 @@ function ProjectCard({ project, onPress, index }: { project: any; onPress: () =>
   );
 }
 
+const STATUS_FILTERS = [
+  { key: 'all', label: 'All' },
+  { key: 'active', label: 'Active' },
+  { key: 'planning', label: 'Planning' },
+  { key: 'review', label: 'Review' },
+  { key: 'completed', label: 'Done' },
+];
+
 export default function ProjectsScreen() {
   const { user } = useAuth();
   const router   = useRouter();
+  const colors   = useColors();
+
+  const C = {
+    bg: colors.background,
+    surface: colors.surface,
+    card: colors.card,
+    border: colors.border,
+    primary: colors.primary,
+    text: colors.foreground,
+    textSec: colors.secondary_text,
+    muted: colors.muted,
+    success: colors.success,
+    warning: colors.warning,
+    error: colors.error,
+    info: colors.info,
+  };
+
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading]   = useState(true);
   const [filter, setFilter]     = useState('all');

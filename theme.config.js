@@ -6,10 +6,10 @@ const themeColors = {
   tertiary:  { light: '#60A5FA', dark: '#60A5FA' },
 
   // ── Backgrounds ──────────────────────────────────────────────
-  background: { light: '#F8F9FA', dark: '#07070B' },
+  background: { light: '#FFFFFF', dark: '#07070B' },
   surface:    { light: '#FFFFFF', dark: '#111118' },
-  card:       { light: '#F1F3F5', dark: '#181822' },
-  overlay:    { light: '#E9ECEF', dark: '#1D1D29' },
+  card:       { light: '#F8F9FA', dark: '#181822' },
+  overlay:    { light: '#F1F3F5', dark: '#1D1D29' },
 
   // ── Text ─────────────────────────────────────────────────────
   foreground: { light: '#111118', dark: '#F5F5FA' },
@@ -18,10 +18,10 @@ const themeColors = {
   disabled:   { light: '#ADB5BD', dark: '#5A5A70' },
 
   // ── UI Elements ──────────────────────────────────────────────
-  border:   { light: '#DEE2E6', dark: '#2A2A3A' },
-  divider:  { light: '#E9ECEF', dark: '#333347' },
+  border:   { light: '#E5E7EB', dark: '#2A2A3A' },
+  divider:  { light: '#F3F4F6', dark: '#333347' },
   glass:    { light: '#FFFFFF40', dark: '#FFFFFF08' },
-  shadow:   { light: '#00000020', dark: '#00000080' },
+  shadow:   { light: '#00000008', dark: '#00000080' },
 
   // ── Chat ─────────────────────────────────────────────────────
   chat_bubble: { light: '#F1F3F5', dark: '#1D1D29' },

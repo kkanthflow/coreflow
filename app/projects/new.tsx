@@ -58,6 +58,7 @@ export default function NewProjectScreen() {
         .from('departments')
         .select('id, name')
         .eq('org_id', user.organizationId)
+        .eq('is_deleted', false)
         .then(({ data }) => {
           if (data) setDepartments(data);
         });

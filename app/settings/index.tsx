@@ -11,6 +11,8 @@ import { useAuth } from '@/hooks/use-auth';
 import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Alert, Platform } from 'react-native';
+import { SUPPORTED_CURRENCIES } from '@/lib/currency';
+import { useEffect } from 'react';
 
 export default function SettingsScreen() {
   const colors = useColors();
@@ -20,6 +22,57 @@ export default function SettingsScreen() {
   
   const hapticsEnabled = user?.preferences?.hapticFeedback ?? true;
   const biometricsEnabled = user?.preferences?.biometricLogin ?? false;
+
+  const [defaultCurrency, setDefaultCurrency] = useState('USD');
+  const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(false);
+  const [orgId, setOrgId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user?.organizationId) {
+      setOrgId(user.organizationId);
+      
+      // Check role
+      supabase
+        .from('user_organizations')
+        .select('role')
+        .eq('user_id', user.id)
+        .eq('org_id', user.organizationId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data && (data.role === 'owner' || data.role === 'administrator')) {
+            setIsOwnerOrAdmin(true);
+          }
+        });
+
+      // Fetch organization currency
+      supabase
+        .from('organizations')
+        .select('default_currency')
+        .eq('id', user.organizationId)
+        .single()
+        .then(({ data }) => {
+          if (data && data.default_currency) {
+            setDefaultCurrency(data.default_currency);
+          }
+        });
+    }
+  }, [user]);
+
+  const handleUpdateCurrency = async (currencyCode: string) => {
+    if (!orgId) return;
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update({ default_currency: currencyCode })
+        .eq('id', orgId);
+
+      if (error) throw error;
+      setDefaultCurrency(currencyCode);
+      Alert.alert('Success', `Organization default currency updated to ${currencyCode}.`);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to update currency');
+    }
+  };
 
   const toggleTheme = async () => {
     const nextScheme = colorScheme === 'dark' ? 'light' : 'dark';
@@ -149,10 +202,48 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Security / Session */}
+        {/* Organization settings for owners/admins */}
+        {isOwnerOrAdmin && (
+          <View className="px-6 mb-6">
+            <Text className="text-xs font-bold text-muted mb-3 uppercase tracking-wider ml-1">Organization Currency</Text>
+            <View className="rounded-2xl border border-border overflow-hidden py-3" style={{ backgroundColor: colors.surface }}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}>
+                {SUPPORTED_CURRENCIES.map((curr) => {
+                  const isSelected = defaultCurrency === curr.code;
+                  return (
+                    <Pressable
+                      key={curr.code}
+                      onPress={() => handleUpdateCurrency(curr.code)}
+                      className={`px-4 py-2 rounded-full border ${isSelected ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
+                    >
+                      <Text style={{ color: isSelected ? '#FFF' : '#7A7A92', fontSize: 12, fontWeight: '700' }}>
+                        {curr.name}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </View>
+        )}
+
+        {/* Security & Privacy */}
         <View className="px-6 mb-6">
-          <Text className="text-xs font-bold text-muted mb-3 uppercase tracking-wider ml-1">Security</Text>
+          <Text className="text-xs font-bold text-muted mb-3 uppercase tracking-wider ml-1">Security & Privacy</Text>
           <View className="rounded-2xl border border-border overflow-hidden" style={{ backgroundColor: colors.surface }}>
+            <Pressable 
+              onPress={() => router.push('/settings/privacy' as any)}
+              className="flex-row items-center justify-between p-4 border-b border-border"
+            >
+              <View className="flex-row items-center">
+                <View className="w-8 h-8 rounded-full items-center justify-center mr-3 bg-primary/10">
+                  <Ionicons name="shield-outline" size={18} color={colors.primary} />
+                </View>
+                <Text className="text-base font-semibold text-foreground">Privacy Controls</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            </Pressable>
+
             <Pressable 
               onPress={() => router.push('/forgot-password' as any)}
               className="flex-row items-center justify-between p-4"

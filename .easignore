@@ -7,4 +7,6 @@ web-build/
 app.apk
 *.apk
 combined_migrations.sql
+ios/
+android/
 .vercel/

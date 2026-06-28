@@ -100,6 +100,12 @@ const config: ExpoConfig = {
     "expo-web-browser",
     "expo-asset",
     [
+      "expo-image-picker",
+      {
+        photosPermission: "Allow CoreFlow to access your photos to select invoice and bill images."
+      }
+    ],
+    [
       "expo-local-authentication",
       {
         faceIDPermission: "Allow CoreFlow to use Face ID for quick authentication."

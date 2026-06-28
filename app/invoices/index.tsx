@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { hasPermission } from '@/lib/permissions';
+import { formatCurrency as currencyFormatter } from '@/lib/currency';
 
 interface Invoice {
   id: string;
@@ -40,6 +41,7 @@ export default function InvoiceDashboard() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'number'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [orgCurrency, setOrgCurrency] = useState('USD');
 
   // KPI Metrics
   const [metrics, setMetrics] = useState({
@@ -55,10 +57,17 @@ export default function InvoiceDashboard() {
       // 1. Resolve user organization / freelancer context
       const { data: myOrgs } = await supabase
         .from('user_organizations')
-        .select('org_id')
+        .select('org_id, organizations(default_currency)')
         .eq('user_id', user!.id);
 
       const orgId = myOrgs && myOrgs.length > 0 ? myOrgs[0].org_id : null;
+      if (myOrgs && myOrgs[0]?.organizations) {
+        const rawOrg = myOrgs[0].organizations;
+        const org = Array.isArray(rawOrg) ? rawOrg[0] : rawOrg;
+        if (org && org.default_currency) {
+          setOrgCurrency(org.default_currency);
+        }
+      }
 
       // 2. Fetch Invoices
       let invQuery = supabase
@@ -167,12 +176,8 @@ export default function InvoiceDashboard() {
     return result;
   };
 
-  const formatCurrency = (val: number) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      maximumFractionDigits: 0,
-    }).format(val);
+  const formatCurrency = (val: number, currencyCode?: string) => {
+    return currencyFormatter(val, currencyCode || orgCurrency);
   };
 
   const getStatusColor = (status: string) => {
@@ -415,9 +420,9 @@ export default function InvoiceDashboard() {
                       <Text className="text-xs text-muted">Due: {item.due_date}</Text>
                     </View>
                     <View className="items-end">
-                      <Text className="text-base font-bold text-foreground mb-1">{formatCurrency(item.total_amount)}</Text>
+                      <Text className="text-base font-bold text-foreground mb-1">{formatCurrency(item.total_amount, item.currency)}</Text>
                       {item.balance_due > 0 && (
-                        <Text className="text-[11px] text-amber-600 font-medium">Bal: {formatCurrency(item.balance_due)}</Text>
+                        <Text className="text-[11px] text-amber-600 font-medium">Bal: {formatCurrency(item.balance_due, item.currency)}</Text>
                       )}
                     </View>
                   </Pressable>

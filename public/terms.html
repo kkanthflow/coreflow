@@ -101,38 +101,68 @@
   <div class="container">
     <div class="card">
       <h1>Terms of Service</h1>
-      <div class="subtitle">Last Updated: June 14, 2026</div>
+      <div class="subtitle">Last Updated: June 25, 2026</div>
       
       <p>Please read these Terms of Service ("Terms") carefully before using the CoreFlow mobile application and any backend systems, tools, or APIs provided by CoreFlow (collectively, the "Services").</p>
       
       <h2>1. Acceptance of Terms</h2>
       <p>By accessing or using our Services, you agree to be bound by these Terms and our Privacy Policy. If you do not agree to all of these Terms, you must immediately uninstall the application and discontinue any use of the Services.</p>
       
-      <h2>2. Account Registration & Security</h2>
-      <p>To access the app's meeting planning and organization tools, you must authenticate through our login system. You are responsible for maintaining the confidentiality of your account tokens, credentials, and all actions taken under your profile.</p>
-      
-      <h2>3. Acceptable Use Policy</h2>
-      <p>You agree not to use the Services to:</p>
+      <h2>2. User Responsibilities & Account Security</h2>
+      <p>To access the meeting, invoicing, and chat tools, you must authenticate through our secure login system. You are responsible for:</p>
       <ul>
-        <li>Upload or transmit any content that violates laws, third-party rights, or contains malicious code.</li>
-        <li>Attempt to bypass access controls, Row-Level Security (RLS) policies, or disrupt the operation of Vercel API routing and Supabase databases.</li>
-        <li>Perform reverse engineering or distribute modified APKs that attempt to impersonate CoreFlow.</li>
+        <li>Maintaining the confidentiality of your account credentials and OAuth tokens.</li>
+        <li>Protecting and safely backing up your local cryptographic keys and passphrase credentials required for end-to-end encrypted (E2EE) chat rooms.</li>
+        <li>All actions, data edits, and document uploads made under your profile.</li>
       </ul>
       
-      <h2>4. Intellectual Property</h2>
-      <p>The CoreFlow application, including user interfaces, graphics, brand design, backend logic, and serverless middlewares, are the exclusive intellectual property of CoreFlow. You receive a limited, revocable, non-exclusive license to use the app on personal devices.</p>
+      <h2>3. Organization Administration & Access Control</h2>
+      <p>A workspace represents a single organization. Organization Owners and Super Administrators possess ultimate administrative authority within their workspaces. This includes, but is not limited to: managing user roles (Owner, Super Admin, Admin, Manager, Employee), configuring permission templates, inviting/removing users, creating/deleting departments, and executing reassignments.</p>
       
-      <h2>5. Service Modifications & Availability</h2>
-      <p>We reserve the right to temporarily suspend, update, or modify our backend APIs or database schemas at any time without liability. While we strive to maintain high uptime on Vercel and Supabase, we do not guarantee uninterrupted availability.</p>
+      <h2>4. Department Deletion & Reassignment Rules</h2>
+      <p>Before a department can be soft-deleted, administrators must resolve its active dependencies. This includes reassigning assigned employees and active projects to another active department. Workspace administrators assume full responsibility for reassignment decisions, and CoreFlow holds no liability for operational delays or coordination issues arising from these choices.</p>
       
-      <h2>6. Limitation of Liability</h2>
-      <p>To the maximum extent permitted by law, CoreFlow shall not be liable for any indirect, incidental, special, or consequential damages resulting from data loss, server interruptions, or unauthorized database access.</p>
+      <h2>5. Acceptable Use Policy</h2>
+      <p>You agree not to use the Services to:</p>
+      <ul>
+        <li>Upload, distribute, or link to any content that violates applicable local, state, or international laws.</li>
+        <li>Attempt to bypass access controls, circumvent Supabase Row-Level Security (RLS) policies, or disrupt API middleware routing.</li>
+        <li>Impersonate other users or launch denial-of-service (DoS) attacks.</li>
+        <li>Reverse engineer CoreFlow application binaries or distribute modified APKs.</li>
+      </ul>
       
-      <h2>7. Governing Law</h2>
-      <p>These Terms shall be governed by and construed in accordance with the laws of your jurisdiction, without regard to conflict of law principles.</p>
+      <h2>6. Data Ownership & Licensing</h2>
+      <p>Your organization retains full ownership of all data inputted into CoreFlow. CoreFlow is granted a limited, worldwide license to host, transmit, format, and display your data solely to provide the Services. CoreFlow grants you a limited, non-transferable, non-exclusive license to use the client applications.</p>
       
-      <h2>8. Contact Information</h2>
-      <p>For any questions or clarification regarding these Terms, please contact us at <a href="mailto:support@coreflow.app">support@coreflow.app</a>.</p>
+      <h2>7. Subscription, Billing, & Multi-Currency</h2>
+      <p>Organizations must pay all applicable subscription fees. Paid plans will automatically renew under the same terms unless cancelled in writing. Subscription fees are exclusive of taxes, and organizations must pay all relevant local transaction fees.</p>
+      
+      <h2>8. Multi-Currency Disclaimer</h2>
+      <p>CoreFlow supports multi-currency configurations (such as USD, INR, EUR, etc.) to format invoice values, dashboards, and reporting metrics. Currency conversion information displayed within the platform is provided for operational convenience only and does not constitute official financial, legal, or tax advice. You are responsible for verifying invoice calculations and reporting currency metrics to your local tax authorities.</p>
+      
+      <h2>9. File Upload Responsibilities</h2>
+      <p>You assume sole liability for any documents, receipts, or attachments uploaded to the platform. You represent that you possess the necessary rights and consents to host these documents. CoreFlow reserves the right to automatically remove files that violate copyright laws or contain malware.</p>
+      
+      <h2>10. Service Availability & Maintenance</h2>
+      <p>We strive to maintain high service availability for our cloud infrastructure. However, we do not guarantee uninterrupted uptime. The Services may be temporarily unavailable for scheduled maintenance windows, system updates, or unscheduled third-party outages (including Supabase or Vercel downtime).</p>
+      
+      <h2>11. Limitation of Liability</h2>
+      <p>To the maximum extent permitted by law, CoreFlow shall not be liable for any indirect, incidental, special, or consequential damages resulting from data loss, server interruptions, lost revenue, or unauthorized database access.</p>
+      
+      <h2>12. Indemnification</h2>
+      <p>You agree to defend, indemnify, and hold harmless CoreFlow and its affiliates from any claims, damages, or liabilities arising from your violation of these Terms, acceptable use policies, or third-party intellectual property claims.</p>
+      
+      <h2>13. Suspension & Termination</h2>
+      <p>We reserve the right to suspend or terminate your account or organization workspace if you breach these Terms, fail to pay subscription fees, or present security risks to other customers.</p>
+      
+      <h2>14. Intellectual Property</h2>
+      <p>All software, interface designs, trademarks, logos, and code related to CoreFlow are the exclusive property of CoreFlow and its licensors. You may not copy, modify, or distribute any portion of our intellectual property.</p>
+      
+      <h2>15. Governing Law & Jurisdiction</h2>
+      <p>These Terms shall be governed by and construed in accordance with the laws of Delaware, United States, without regard to conflict of law principles. Any legal actions must be filed in the competent courts of Delaware.</p>
+      
+      <h2>16. Changes to Terms</h2>
+      <p>We reserve the right to modify these Terms at any time. We will notify you of material updates through application notifications or via email. Continued use of the Services after terms updates constitute acceptance of the new Terms.</p>
     </div>
     <div class="footer">
       &copy; 2026 CoreFlow. All rights reserved. | <a href="privacy.html">Privacy Policy</a>

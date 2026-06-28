@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, Modal } from 'react-native';
+import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, Modal, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
@@ -7,6 +7,7 @@ import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useLocalSearchParams, Stack } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getCurrencyDetails, SUPPORTED_CURRENCIES } from '@/lib/currency';
 
 interface Client {
   id: string;
@@ -53,6 +54,7 @@ export default function NewInvoiceScreen() {
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringFrequency, setRecurringFrequency] = useState('monthly');
   const [billReferenceId, setBillReferenceId] = useState<string | null>(null);
+  const [visualRecreation, setVisualRecreation] = useState<any>(null);
 
   // Line Items state
   const [items, setItems] = useState<LineItem[]>([
@@ -68,16 +70,39 @@ export default function NewInvoiceScreen() {
   const [newClientGst, setNewClientGst] = useState('');
   const [newClientAddress, setNewClientAddress] = useState('');
 
+  // Organization configuration modal state
+  const [orgDetails, setOrgDetails] = useState<any>(null);
+  const [isOrgModalVisible, setIsOrgModalVisible] = useState(false);
+  const [orgGst, setOrgGst] = useState('');
+  const [orgAddress, setOrgAddress] = useState('');
+  const [orgName, setOrgName] = useState('');
+
   const loadInitialData = useCallback(async () => {
     setIsLoading(true);
     try {
       // 1. Resolve user organization / freelancer context
       const { data: myOrgs } = await supabase
         .from('user_organizations')
-        .select('org_id')
+        .select('org_id, organizations(*)')
         .eq('user_id', user!.id);
 
       const orgId = myOrgs && myOrgs.length > 0 ? myOrgs[0].org_id : null;
+      if (orgId && myOrgs && myOrgs[0] && myOrgs[0].organizations) {
+        const rawOrg = myOrgs[0].organizations;
+        const org = Array.isArray(rawOrg) ? rawOrg[0] : rawOrg;
+        if (org) {
+          setOrgDetails(org);
+          if (!editId && !duplicateId && org.default_currency) {
+            setCurrency(org.default_currency);
+          }
+          if (!org.gst_number || !org.address) {
+            setOrgName(org.name || '');
+            setOrgGst(org.gst_number || '');
+            setOrgAddress(org.address || '');
+            setIsOrgModalVisible(true);
+          }
+        }
+      }
 
       // 2. Fetch Clients
       let clientQuery = supabase.from('clients').select('*').eq('is_deleted', false);
@@ -107,6 +132,7 @@ export default function NewInvoiceScreen() {
         setIsRecurring(inv.is_recurring);
         setRecurringFrequency(inv.recurring_frequency || 'monthly');
         setBillReferenceId(inv.bill_reference_id);
+        setVisualRecreation(inv.visual_recreation || null);
 
         if (!duplicateId) {
           // If we are editing, keep dates
@@ -136,6 +162,7 @@ export default function NewInvoiceScreen() {
           setBillReferenceId(draft.billReferenceId || null);
           setCurrency(draft.currency || 'INR');
           setDiscountAmount(Number(draft.discount_amount || 0));
+          setVisualRecreation(draft.visual_recreation || null);
 
           // Try to match or create vendor client
           const existingVendor = (clientData || []).find((c: any) => c.name.toLowerCase().includes(draft.vendor_name.toLowerCase()));
@@ -193,6 +220,31 @@ export default function NewInvoiceScreen() {
       if (frameId) cancelAnimationFrame(frameId);
     };
   }, [user, editId, duplicateId, ocr, loadInitialData]);
+
+  const handleSaveOrgDetails = async () => {
+    if (!orgName.trim() || !orgAddress.trim()) {
+      Alert.alert('Validation Error', 'Company Name and Address are required');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update({
+          name: orgName,
+          gst_number: orgGst || null,
+          address: orgAddress,
+        })
+        .eq('id', orgDetails.id);
+
+      if (error) throw error;
+      setOrgDetails((prev: any) => ({ ...prev, name: orgName, gst_number: orgGst, address: orgAddress }));
+      setIsOrgModalVisible(false);
+      Alert.alert('Success', 'Organization profile updated successfully.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to update organization profile');
+    }
+  };
 
   const handleCreateClient = async () => {
     if (!newClientName.trim()) {
@@ -351,7 +403,9 @@ export default function NewInvoiceScreen() {
         is_recurring: isRecurring,
         recurring_frequency: isRecurring ? recurringFrequency : null,
         creator_id: user!.id,
-        status: 'draft',
+        status: 'sent',
+        visual_recreation: visualRecreation,
+        template_style: visualRecreation ? 'custom' : 'classic',
       };
 
       let invoiceId = '';
@@ -432,80 +486,90 @@ export default function NewInvoiceScreen() {
   return (
     <ScreenContainer>
       <Stack.Screen options={{ presentation: 'modal', headerShown: false }} />
-      {/* Header */}
-      <View className="px-6 pt-6 pb-4 flex-row items-center justify-between">
-        <View className="flex-row items-center">
-          <Pressable 
-            onPress={() => router.back()}
-            className="w-10 h-10 rounded-full items-center justify-center mr-3"
-            style={{ backgroundColor: colors.surface }}
-          >
-            <Ionicons name="arrow-back" size={20} color={colors.foreground} />
-          </Pressable>
-          <Text className="text-xl font-bold text-foreground">
-            {editId ? 'Edit Invoice' : duplicateId ? 'Duplicate Invoice' : 'New Invoice'}
-          </Text>
-        </View>
-        
-        <Pressable
-          disabled={isSaving}
-          onPress={handleSaveInvoice}
-          className="px-5 py-2.5 rounded-full items-center justify-center"
-          style={{ backgroundColor: colors.primary, opacity: isSaving ? 0.6 : 1 }}
-        >
-          {isSaving ? (
-            <ActivityIndicator size="small" color="#FFF" />
-          ) : (
-            <Text className="text-white font-bold text-sm">Save Draft</Text>
-          )}
-        </Pressable>
-      </View>
-
-      <ScrollView contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        {/* Client Selection */}
-        <View className="mb-6">
-          <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">Client Information</Text>
+      
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
+      >
+        {/* Header */}
+        <View className="px-6 pt-6 pb-4 flex-row items-center justify-between">
           <View className="flex-row items-center">
-            <View className="flex-1 rounded-2xl border border-border overflow-hidden mr-3" style={{ backgroundColor: colors.surface }}>
-              <View className="px-4 py-3 flex-row items-center justify-between">
-                <TextInput
-                  placeholder="Select Client..."
-                  placeholderTextColor={colors.muted}
-                  value={clients.find(c => c.id === selectedClientId)?.name || ''}
-                  editable={false}
-                  className="text-base text-foreground flex-1"
-                />
-                <Ionicons name="chevron-down" size={18} color={colors.muted} />
-              </View>
-              {/* Simple inline client dropdown list */}
-              {clients.length > 0 && (
-                <View className="border-t border-border px-1 py-1 max-h-32">
-                  <ScrollView nestedScrollEnabled>
-                    {clients.map(c => (
-                      <Pressable
-                        key={c.id}
-                        onPress={() => setSelectedClientId(c.id)}
-                        className="p-2.5 rounded-lg mb-1"
-                        style={{ backgroundColor: selectedClientId === c.id ? `${colors.primary}15` : 'transparent' }}
-                      >
-                        <Text className="text-sm font-semibold text-foreground">{c.name}</Text>
-                        {c.company_name && <Text className="text-[11px] text-muted">{c.company_name}</Text>}
-                      </Pressable>
-                    ))}
-                  </ScrollView>
-                </View>
-              )}
-            </View>
-
-            <Pressable
-              onPress={() => setIsClientModalVisible(true)}
-              className="w-12 h-12 rounded-2xl items-center justify-center border border-border"
+            <Pressable 
+              onPress={() => router.back()}
+              className="w-10 h-10 rounded-full items-center justify-center mr-3"
               style={{ backgroundColor: colors.surface }}
             >
-              <Ionicons name="person-add-outline" size={20} color={colors.primary} />
+              <Ionicons name="arrow-back" size={20} color={colors.foreground} />
             </Pressable>
+            <Text className="text-xl font-bold text-foreground">
+              {editId ? 'Edit Invoice' : duplicateId ? 'Duplicate Invoice' : 'New Invoice'}
+            </Text>
           </View>
+          
+          <Pressable
+            disabled={isSaving}
+            onPress={handleSaveInvoice}
+            className="px-5 py-2.5 rounded-full items-center justify-center"
+            style={{ backgroundColor: colors.primary, opacity: isSaving ? 0.6 : 1 }}
+          >
+            {isSaving ? (
+              <ActivityIndicator size="small" color="#FFF" />
+            ) : (
+              <Text className="text-white font-bold text-sm">Save Draft</Text>
+            )}
+          </Pressable>
         </View>
+ 
+        <ScrollView 
+          contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 60 }} 
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Client Selection */}
+          <View className="mb-6">
+            <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">Client Information</Text>
+            <View className="flex-row items-center">
+              <View className="flex-1 rounded-2xl border border-border overflow-hidden mr-3" style={{ backgroundColor: colors.surface }}>
+                <View className="px-4 py-3 flex-row items-center justify-between">
+                  <TextInput
+                    placeholder="Select Client..."
+                    placeholderTextColor={colors.muted}
+                    value={clients.find(c => c.id === selectedClientId)?.name || ''}
+                    editable={false}
+                    className="text-base text-foreground flex-1"
+                  />
+                  <Ionicons name="chevron-down" size={18} color={colors.muted} />
+                </View>
+                {/* Simple inline client dropdown list */}
+                {clients.length > 0 && (
+                  <View className="border-t border-border px-1 py-1 max-h-32">
+                    <ScrollView nestedScrollEnabled>
+                      {clients.map(c => (
+                        <Pressable
+                          key={c.id}
+                          onPress={() => setSelectedClientId(c.id)}
+                          className="p-2.5 rounded-lg mb-1"
+                          style={{ backgroundColor: selectedClientId === c.id ? `${colors.primary}15` : 'transparent' }}
+                        >
+                          <Text className="text-sm font-semibold text-foreground">{c.name}</Text>
+                          {c.company_name && <Text className="text-[11px] text-muted">{c.company_name}</Text>}
+                        </Pressable>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+ 
+              <Pressable
+                onPress={() => setIsClientModalVisible(true)}
+                className="w-12 h-12 rounded-2xl items-center justify-center border border-border"
+                style={{ backgroundColor: colors.surface }}
+              >
+                <Ionicons name="person-add-outline" size={20} color={colors.primary} />
+              </Pressable>
+            </View>
+          </View>
 
         {/* Invoice details */}
         <View className="flex-row mb-6">
@@ -530,6 +594,29 @@ export default function NewInvoiceScreen() {
               className="px-4 py-3 rounded-2xl border border-border text-base text-foreground"
               style={{ backgroundColor: colors.surface }}
             />
+          </View>
+        </View>
+
+        {/* Currency Selection */}
+        <View className="mb-6">
+          <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">Invoice Currency</Text>
+          <View className="border border-border rounded-xl overflow-hidden py-2" style={{ backgroundColor: colors.surface }}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}>
+              {SUPPORTED_CURRENCIES.map((curr) => {
+                const isSelected = currency === curr.code;
+                return (
+                  <Pressable
+                    key={curr.code}
+                    onPress={() => setCurrency(curr.code)}
+                    className={`px-4 py-2 rounded-full border ${isSelected ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
+                  >
+                    <Text style={{ color: isSelected ? '#FFF' : '#7A7A92', fontSize: 12, fontWeight: '700' }}>
+                      {curr.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
           </View>
         </View>
 
@@ -570,7 +657,7 @@ export default function NewInvoiceScreen() {
                   />
                 </View>
                 <View className="flex-1 mr-2">
-                  <Text className="text-[10px] font-bold text-muted uppercase mb-1 ml-1">Rate (₹)</Text>
+                  <Text className="text-[10px] font-bold text-muted uppercase mb-1 ml-1">Rate ({getCurrencyDetails(currency).symbol})</Text>
                   <TextInput
                     keyboardType="numeric"
                     placeholder="0"
@@ -608,7 +695,7 @@ export default function NewInvoiceScreen() {
                   />
                 </View>
                 <View className="flex-1">
-                  <Text className="text-[10px] font-bold text-muted uppercase mb-1 ml-1">Discount (₹)</Text>
+                  <Text className="text-[10px] font-bold text-muted uppercase mb-1 ml-1">Discount ({getCurrencyDetails(currency).symbol})</Text>
                   <TextInput
                     keyboardType="numeric"
                     placeholder="0"
@@ -638,19 +725,19 @@ export default function NewInvoiceScreen() {
           <Text className="text-sm font-bold text-foreground mb-4">Summary Breakdown</Text>
           <View className="flex-row justify-between mb-2">
             <Text className="text-sm text-muted">Subtotal</Text>
-            <Text className="text-sm text-foreground font-semibold">₹ {totals.subtotal.toFixed(2)}</Text>
+            <Text className="text-sm text-foreground font-semibold">{getCurrencyDetails(currency).symbol} {totals.subtotal.toFixed(2)}</Text>
           </View>
           <View className="flex-row justify-between mb-2">
             <Text className="text-sm text-muted">CGST (9%)</Text>
-            <Text className="text-sm text-foreground font-semibold">₹ {totals.cgst.toFixed(2)}</Text>
+            <Text className="text-sm text-foreground font-semibold">{getCurrencyDetails(currency).symbol} {totals.cgst.toFixed(2)}</Text>
           </View>
           <View className="flex-row justify-between mb-2">
             <Text className="text-sm text-muted">SGST (9%)</Text>
-            <Text className="text-sm text-foreground font-semibold">₹ {totals.sgst.toFixed(2)}</Text>
+            <Text className="text-sm text-foreground font-semibold">{getCurrencyDetails(currency).symbol} {totals.sgst.toFixed(2)}</Text>
           </View>
 
           <View className="flex-row justify-between mb-4 items-center">
-            <Text className="text-sm text-muted">Additional Discount (₹)</Text>
+            <Text className="text-sm text-muted">Additional Discount ({getCurrencyDetails(currency).symbol})</Text>
             <TextInput
               keyboardType="numeric"
               value={discountAmount.toString()}
@@ -661,84 +748,215 @@ export default function NewInvoiceScreen() {
           </View>
           <View className="border-t border-border pt-4 flex-row justify-between">
             <Text className="text-base font-bold text-foreground">Grand Total</Text>
-            <Text className="text-lg font-bold text-primary">₹ {totals.total.toFixed(2)}</Text>
+            <Text className="text-lg font-bold text-primary">{getCurrencyDetails(currency).symbol} {totals.total.toFixed(2)}</Text>
           </View>
         </View>
+
+        {/* AI OCR Visual Reconstruction Customizer */}
+        {visualRecreation && (
+          <View className="mb-6 p-5 rounded-3xl border border-border" style={{ backgroundColor: colors.surface }}>
+            <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-3 ml-1">AI Recreated Branding</Text>
+            
+            <View className="flex-row items-center justify-between mb-4">
+              <View className="flex-row items-center gap-3">
+                {visualRecreation.logo_url ? (
+                  <Image source={{ uri: visualRecreation.logo_url }} style={{ width: 42, height: 42, borderRadius: 10 }} />
+                ) : (
+                  <View className="w-10 h-10 rounded-xl bg-border items-center justify-center">
+                    <Ionicons name="image-outline" size={20} color={colors.muted} />
+                  </View>
+                )}
+                <View>
+                  <Text className="text-sm font-bold text-foreground">Corporate Logo & Style</Text>
+                  <Text className="text-xs text-muted">Font: {visualRecreation.font_family?.split(',')[0] || 'Default'}</Text>
+                </View>
+              </View>
+              
+              <View className="flex-row items-center gap-2">
+                <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: visualRecreation.primary_color, borderWidth: 1, borderColor: colors.border }} />
+                <Text className="text-xs font-mono font-bold text-foreground">{visualRecreation.primary_color}</Text>
+              </View>
+            </View>
+
+            <View className="gap-3">
+              <View>
+                <Text className="text-[11px] font-bold text-muted mb-1 ml-1">Logo Image URL</Text>
+                <TextInput
+                  value={visualRecreation.logo_url}
+                  onChangeText={(text) => setVisualRecreation((prev: any) => ({ ...prev, logo_url: text }))}
+                  placeholder="Logo URL (https://...)"
+                  placeholderTextColor={colors.muted}
+                  className="px-3 py-2 rounded-xl border border-border text-sm text-foreground"
+                  style={{ backgroundColor: colors.background }}
+                />
+              </View>
+
+              <View>
+                <Text className="text-[11px] font-bold text-muted mb-1 ml-1">Branding Hex Color</Text>
+                <View className="flex-row items-center gap-2">
+                  <TextInput
+                    value={visualRecreation.primary_color}
+                    onChangeText={(text) => setVisualRecreation((prev: any) => ({ ...prev, primary_color: text }))}
+                    placeholder="#4F46E5"
+                    placeholderTextColor={colors.muted}
+                    className="flex-1 px-3 py-2 rounded-xl border border-border text-sm text-foreground font-mono"
+                    style={{ backgroundColor: colors.background }}
+                  />
+                  <View className="flex-row gap-1">
+                    {['#4F46E5', '#FF6B4A', '#10B981', '#3B82F6', '#111118'].map((c) => (
+                      <Pressable
+                        key={c}
+                        onPress={() => setVisualRecreation((prev: any) => ({ ...prev, primary_color: c }))}
+                        className="w-6 h-6 rounded-full border border-white/20"
+                        style={{ backgroundColor: c }}
+                      />
+                    ))}
+                  </View>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Client Modal */}
       <Modal visible={isClientModalVisible} transparent animationType="slide">
-        <View className="flex-1 justify-end bg-black/50">
-          <View className="p-6 rounded-t-3xl border-t border-border" style={{ backgroundColor: colors.background }}>
-            <View className="flex-row justify-between items-center mb-6">
-              <Text className="text-lg font-bold text-foreground">Add New Client</Text>
-              <Pressable onPress={() => setIsClientModalVisible(false)}>
-                <Ionicons name="close-circle" size={24} color={colors.muted} />
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          style={{ flex: 1 }}
+        >
+          <View className="flex-1 justify-end bg-black/50">
+            <View className="p-6 rounded-t-3xl border-t border-border" style={{ backgroundColor: colors.background }}>
+              <View className="flex-row justify-between items-center mb-6">
+                <Text className="text-lg font-bold text-foreground">Add New Client</Text>
+                <Pressable onPress={() => setIsClientModalVisible(false)}>
+                  <Ionicons name="close-circle" size={24} color={colors.muted} />
+                </Pressable>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} className="max-h-96" keyboardShouldPersistTaps="handled">
+                <TextInput
+                  placeholder="Client Name *"
+                  placeholderTextColor={colors.muted}
+                  value={newClientName}
+                  onChangeText={setNewClientName}
+                  className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
+                  style={{ backgroundColor: colors.surface }}
+                />
+                <TextInput
+                  placeholder="Company Name"
+                  placeholderTextColor={colors.muted}
+                  value={newClientCompany}
+                  onChangeText={setNewClientCompany}
+                  className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
+                  style={{ backgroundColor: colors.surface }}
+                />
+                <TextInput
+                  placeholder="Email Address"
+                  placeholderTextColor={colors.muted}
+                  value={newClientEmail}
+                  onChangeText={setNewClientEmail}
+                  keyboardType="email-address"
+                  className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
+                  style={{ backgroundColor: colors.surface }}
+                />
+                <TextInput
+                  placeholder="Phone Number"
+                  placeholderTextColor={colors.muted}
+                  value={newClientPhone}
+                  onChangeText={setNewClientPhone}
+                  className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
+                  style={{ backgroundColor: colors.surface }}
+                />
+                <TextInput
+                  placeholder="GSTIN Number"
+                  placeholderTextColor={colors.muted}
+                  value={newClientGst}
+                  onChangeText={setNewClientGst}
+                  className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
+                  style={{ backgroundColor: colors.surface }}
+                />
+                <TextInput
+                  placeholder="Address Details"
+                  placeholderTextColor={colors.muted}
+                  value={newClientAddress}
+                  onChangeText={setNewClientAddress}
+                  className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-6"
+                  style={{ backgroundColor: colors.surface }}
+                />
+              </ScrollView>
+
+              <Pressable
+                onPress={handleCreateClient}
+                className="p-4 rounded-2xl items-center justify-center"
+                style={{ backgroundColor: colors.primary }}
+              >
+                <Text className="text-white font-bold text-base">Add Client</Text>
               </Pressable>
             </View>
-
-            <ScrollView showsVerticalScrollIndicator={false} className="max-h-96">
-              <TextInput
-                placeholder="Client Name *"
-                placeholderTextColor={colors.muted}
-                value={newClientName}
-                onChangeText={setNewClientName}
-                className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
-                style={{ backgroundColor: colors.surface }}
-              />
-              <TextInput
-                placeholder="Company Name"
-                placeholderTextColor={colors.muted}
-                value={newClientCompany}
-                onChangeText={setNewClientCompany}
-                className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
-                style={{ backgroundColor: colors.surface }}
-              />
-              <TextInput
-                placeholder="Email Address"
-                placeholderTextColor={colors.muted}
-                value={newClientEmail}
-                onChangeText={setNewClientEmail}
-                keyboardType="email-address"
-                className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
-                style={{ backgroundColor: colors.surface }}
-              />
-              <TextInput
-                placeholder="Phone Number"
-                placeholderTextColor={colors.muted}
-                value={newClientPhone}
-                onChangeText={setNewClientPhone}
-                className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
-                style={{ backgroundColor: colors.surface }}
-              />
-              <TextInput
-                placeholder="GSTIN Number"
-                placeholderTextColor={colors.muted}
-                value={newClientGst}
-                onChangeText={setNewClientGst}
-                className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
-                style={{ backgroundColor: colors.surface }}
-              />
-              <TextInput
-                placeholder="Address Details"
-                placeholderTextColor={colors.muted}
-                value={newClientAddress}
-                onChangeText={setNewClientAddress}
-                className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-6"
-                style={{ backgroundColor: colors.surface }}
-              />
-            </ScrollView>
-
-            <Pressable
-              onPress={handleCreateClient}
-              className="p-4 rounded-2xl items-center justify-center"
-              style={{ backgroundColor: colors.primary }}
-            >
-              <Text className="text-white font-bold text-base">Add Client</Text>
-            </Pressable>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
-    </ScreenContainer>
+
+      {/* Organization Setup Modal */}
+      <Modal visible={isOrgModalVisible} transparent animationType="slide">
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          style={{ flex: 1 }}
+        >
+          <View className="flex-1 justify-end bg-black/50">
+            <View className="p-6 rounded-t-3xl border-t border-border" style={{ backgroundColor: colors.background }}>
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-lg font-bold text-foreground">Configure Billed From Details</Text>
+              </View>
+              <Text className="text-xs text-muted mb-4">
+                Your organization profile is incomplete. Please set up your company details once. These will be automatically populated on all future invoices.
+              </Text>
+
+              <ScrollView showsVerticalScrollIndicator={false} className="max-h-96" keyboardShouldPersistTaps="handled">
+                <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">Company Name *</Text>
+                <TextInput
+                  placeholder="CoreFlow Labs Ltd"
+                  placeholderTextColor={colors.muted}
+                  value={orgName}
+                  onChangeText={setOrgName}
+                  className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-4"
+                  style={{ backgroundColor: colors.surface }}
+                />
+
+                <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">Company Address *</Text>
+                <TextInput
+                  placeholder="Mumbai, Maharashtra, India"
+                  placeholderTextColor={colors.muted}
+                  value={orgAddress}
+                  onChangeText={setOrgAddress}
+                  className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-4"
+                  style={{ backgroundColor: colors.surface }}
+                />
+
+                <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">GSTIN Tax Details</Text>
+                <TextInput
+                  placeholder="27CFFLOW1234A1Z9"
+                  placeholderTextColor={colors.muted}
+                  value={orgGst}
+                  onChangeText={setOrgGst}
+                  className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-6"
+                  style={{ backgroundColor: colors.surface }}
+                />
+              </ScrollView>
+
+              <Pressable
+                onPress={handleSaveOrgDetails}
+                className="p-4 rounded-2xl items-center justify-center"
+                style={{ backgroundColor: colors.primary }}
+              >
+                <Text className="text-white font-bold text-base">Save Company Profile</Text>
+              </Pressable>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+    </KeyboardAvoidingView>
+  </ScreenContainer>
   );
 }

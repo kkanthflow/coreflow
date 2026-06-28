@@ -15,14 +15,25 @@ import { GradientButton } from '@/components/ui/gradient-button';
 import { ShimmerCard, ShimmerLoader } from '@/components/ui/shimmer-loader';
 import { hasPermission } from '@/lib/permissions';
 
-const C = {
-  bg: '#07070B', card: '#181822', border: '#2A2A3A',
-  primary: '#FF6B4A', secondary: '#FFA86B',
-  text: '#F5F5FA', textSec: '#B4B4C7', muted: '#7A7A92',
-  success: '#34D399', warning: '#FBBF24', error: '#F87171', info: '#60A5FA',
-};
+import { useColors } from '@/hooks/use-colors';
 
 function MeetingCard({ meeting, userId, onPress, index }: { meeting: any; userId: string; onPress: () => void; index: number }) {
+  const colors = useColors();
+  const C = {
+    bg: colors.background,
+    card: colors.card,
+    border: colors.border,
+    primary: colors.primary,
+    secondary: colors.secondary,
+    text: colors.foreground,
+    textSec: colors.secondary_text,
+    muted: colors.muted,
+    success: colors.success,
+    warning: colors.warning,
+    error: colors.error,
+    info: colors.info,
+  };
+
   const slideAnim = useRef(new Animated.Value(24)).current;
   const fadeAnim  = useRef(new Animated.Value(0)).current;
 
@@ -137,6 +148,22 @@ function MeetingCard({ meeting, userId, onPress, index }: { meeting: any; userId
 export default function MeetingsScreen() {
   const { user } = useAuth();
   const router   = useRouter();
+  const colors   = useColors();
+
+  const C = {
+    bg: colors.background,
+    card: colors.card,
+    border: colors.border,
+    primary: colors.primary,
+    secondary: colors.secondary,
+    text: colors.foreground,
+    textSec: colors.secondary_text,
+    muted: colors.muted,
+    success: colors.success,
+    warning: colors.warning,
+    error: colors.error,
+    info: colors.info,
+  };
 
   const [tab, setTab]         = useState<'upcoming' | 'past'>('upcoming');
   const [meetings, setMeetings] = useState<any[]>([]);

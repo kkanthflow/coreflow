@@ -30,6 +30,8 @@ export default function LoginScreen() {
     error: colors.error,
   };
 
+  const styles = getStyles(C);
+
   const [email, setEmail]     = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -163,7 +165,7 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
-      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+      <StatusBar barStyle={colors.background === '#FFFFFF' ? 'dark-content' : 'light-content'} backgroundColor={C.bg} />
       
       {/* Full-screen dark loading overlay — shown during auth transition to protect native layout engine */}
       {loading && (
@@ -289,7 +291,7 @@ export default function LoginScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const getStyles = (C: any) => StyleSheet.create({
   glowBlob: {
     position: 'absolute',
     width: 280,
@@ -318,38 +320,38 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   brand: {
-    color: '#F5F5FA',
+    color: C.text,
     fontSize: 32,
     fontWeight: '800',
     letterSpacing: -0.5,
     marginBottom: 6,
   },
   brandTagline: {
-    color: '#7A7A92',
+    color: C.muted,
     fontSize: 14,
     fontWeight: '500',
   },
   formCard: {
-    backgroundColor: '#111118',
+    backgroundColor: C.card,
     borderRadius: 28,
     padding: 24,
     borderWidth: 1,
-    borderColor: '#2A2A3A',
+    borderColor: C.border,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.5,
+    shadowOpacity: C.bg === '#FFFFFF' ? 0.05 : 0.5,
     shadowRadius: 24,
     elevation: 10,
   },
   formTitle: {
-    color: '#F5F5FA',
+    color: C.text,
     fontSize: 24,
     fontWeight: '800',
     letterSpacing: -0.3,
     marginBottom: 4,
   },
   formSubtitle: {
-    color: '#7A7A92',
+    color: C.muted,
     fontSize: 14,
     marginBottom: 24,
   },

@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, Pressable, Modal, TouchableOpacity } from 'react-native';
 import { useColors } from '@/hooks/use-colors';
 import { useAuth } from '@/hooks/use-auth';
+import { Ionicons } from '@expo/vector-icons';
 
 interface ChatBubbleProps {
   message: {
@@ -11,12 +12,22 @@ interface ChatBubbleProps {
     sender?: { full_name: string; avatar_url?: string };
     created_at: string;
     is_edited?: boolean;
+    reply_to_id?: string | null;
+    reply_message?: { content: string; sender: { full_name: string } } | null;
+    reactions?: string[] | any;
+    delivered_at?: string | null;
   };
+  onReply?: (message: any) => void;
+  onReact?: (messageId: string, reaction: string) => void;
+  isRead?: boolean;
 }
 
-export function ChatBubble({ message }: ChatBubbleProps) {
+const REACTION_OPTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
+
+export function ChatBubble({ message, onReply, onReact, isRead }: ChatBubbleProps) {
   const { user } = useAuth();
   const colors = useColors();
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const isMe = message.sender_id === user?.id;
 
@@ -29,6 +40,32 @@ export function ChatBubble({ message }: ChatBubbleProps) {
         .toUpperCase()
     : '?';
 
+  const reactionsList = Array.isArray(message.reactions) 
+    ? message.reactions 
+    : (typeof message.reactions === 'object' && message.reactions !== null) 
+      ? Object.values(message.reactions) 
+      : [];
+
+  const handleLongPress = () => {
+    setMenuVisible(true);
+  };
+
+  const handleSelectReaction = (emoji: string) => {
+    if (onReact) {
+      onReact(message.id, emoji);
+    }
+    setMenuVisible(false);
+  };
+
+  const handleReplyPress = () => {
+    if (onReply) {
+      onReply(message);
+    }
+    setMenuVisible(false);
+  };
+
+  const isDelivered = !!message.delivered_at;
+
   return (
     <View style={[styles.wrapper, { flexDirection: isMe ? 'row-reverse' : 'row' }]}>
       {/* Sender Avatar */}
@@ -39,14 +76,16 @@ export function ChatBubble({ message }: ChatBubbleProps) {
       )}
 
       {/* Message Box */}
-      <View style={styles.messageBox}>
+      <View style={[styles.messageBox, { alignItems: isMe ? 'flex-end' : 'flex-start' }]}>
         {!isMe && (
           <Text style={[styles.senderName, { color: colors.muted }]}>
             {message.sender?.full_name || 'System'}
           </Text>
         )}
 
-        <View
+        <Pressable
+          onLongPress={handleLongPress}
+          delayLongPress={300}
           style={[
             styles.bubble,
             {
@@ -57,6 +96,21 @@ export function ChatBubble({ message }: ChatBubbleProps) {
             },
           ]}
         >
+          {/* Reply Quoted Preview */}
+          {message.reply_message && (
+            <View style={[styles.replyContainer, { backgroundColor: isMe ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)' }]}>
+              <View style={[styles.replyBar, { backgroundColor: colors.primary }]} />
+              <View style={styles.replyContent}>
+                <Text style={[styles.replySender, { color: isMe ? '#FFFFFF' : colors.primary }]} numberOfLines={1}>
+                  {message.reply_message.sender?.full_name || 'User'}
+                </Text>
+                <Text style={[styles.replyText, { color: isMe ? 'rgba(255,255,255,0.8)' : colors.foreground }]} numberOfLines={1}>
+                  {message.reply_message.content}
+                </Text>
+              </View>
+            </View>
+          )}
+
           <Text style={[styles.content, { color: isMe ? '#FFFFFF' : colors.foreground }]}>
             {message.content}
           </Text>
@@ -70,9 +124,60 @@ export function ChatBubble({ message }: ChatBubbleProps) {
             <Text style={[styles.time, { color: isMe ? 'rgba(255,255,255,0.7)' : colors.muted }]}>
               {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </Text>
+
+            {/* Read/Delivery Ticks */}
+            {isMe && (
+              <View style={styles.ticksContainer}>
+                {isRead ? (
+                  <Ionicons name="checkmark-done" size={14} color="#38BDF8" /> // Blue double ticks
+                ) : isDelivered ? (
+                  <Ionicons name="checkmark-done" size={14} color="rgba(255,255,255,0.7)" /> // Grey double ticks
+                ) : (
+                  <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.7)" /> // Grey single tick
+                )}
+              </View>
+            )}
           </View>
-        </View>
+        </Pressable>
+
+        {/* Reactions Row */}
+        {reactionsList.length > 0 && (
+          <View style={[styles.reactionsRow, { alignSelf: isMe ? 'flex-end' : 'flex-start' }]}>
+            {reactionsList.map((react: any, idx: number) => (
+              <View key={idx} style={[styles.reactionBadge, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={styles.reactionText}>{react.emoji || react}</Text>
+              </View>
+            ))}
+          </View>
+        )}
       </View>
+
+      {/* Long-Press Action Menu Modal */}
+      <Modal visible={menuVisible} transparent animationType="fade" onRequestClose={() => setMenuVisible(false)}>
+        <Pressable style={styles.modalOverlay} onPress={() => setMenuVisible(false)}>
+          <View style={[styles.menuContainer, { backgroundColor: colors.background }]}>
+            {/* Quick Reactions Bar */}
+            <View style={[styles.reactionsBar, { borderColor: colors.border }]}>
+              {REACTION_OPTIONS.map((emoji) => (
+                <TouchableOpacity key={emoji} onPress={() => handleSelectReaction(emoji)} style={styles.reactionOption}>
+                  <Text style={styles.reactionOptionText}>{emoji}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {/* Menu Options */}
+            <TouchableOpacity onPress={handleReplyPress} style={[styles.menuItem, { borderBottomColor: colors.border }]}>
+              <Ionicons name="arrow-undo-outline" size={18} color={colors.foreground} style={styles.menuIcon} />
+              <Text style={[styles.menuItemText, { color: colors.foreground }]}>Reply</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity onPress={() => setMenuVisible(false)} style={styles.menuItem}>
+              <Ionicons name="close-outline" size={18} color={colors.error} style={styles.menuIcon} />
+              <Text style={[styles.menuItemText, { color: colors.error }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -99,7 +204,6 @@ const styles = StyleSheet.create({
   },
   messageBox: {
     maxWidth: '80%',
-    alignItems: 'flex-start',
   },
   senderName: {
     fontSize: 11,
@@ -112,10 +216,35 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 12,
     borderWidth: 1,
+    overflow: 'hidden',
   },
   content: {
     fontSize: 14,
     lineHeight: 19,
+  },
+  replyContainer: {
+    flexDirection: 'row',
+    borderRadius: 6,
+    overflow: 'hidden',
+    marginBottom: 6,
+    height: 38,
+  },
+  replyBar: {
+    width: 4,
+    height: '100%',
+  },
+  replyContent: {
+    flex: 1,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+  },
+  replySender: {
+    fontSize: 11,
+    fontWeight: '700',
+    marginBottom: 1,
+  },
+  replyText: {
+    fontSize: 11,
   },
   footerRow: {
     flexDirection: 'row',
@@ -131,5 +260,66 @@ const styles = StyleSheet.create({
   edited: {
     fontSize: 9,
     fontStyle: 'italic',
+  },
+  ticksContainer: {
+    marginLeft: 2,
+  },
+  reactionsRow: {
+    flexDirection: 'row',
+    marginTop: -6,
+    paddingHorizontal: 4,
+    gap: 2,
+  },
+  reactionBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  reactionText: {
+    fontSize: 10,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  menuContainer: {
+    width: '100%',
+    maxWidth: 300,
+    borderRadius: 18,
+    overflow: 'hidden',
+    padding: 12,
+  },
+  reactionsBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    paddingVertical: 8,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    marginBottom: 8,
+  },
+  reactionOption: {
+    padding: 6,
+  },
+  reactionOptionText: {
+    fontSize: 24,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  menuIcon: {
+    marginRight: 12,
+  },
+  menuItemText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
