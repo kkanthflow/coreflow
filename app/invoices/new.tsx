@@ -824,7 +824,7 @@ export default function NewInvoiceScreen() {
       {/* Client Modal */}
       <Modal visible={isClientModalVisible} transparent animationType="slide">
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
           style={{ flex: 1 }}
         >
           <View className="flex-1 justify-end bg-black/50">
@@ -904,7 +904,7 @@ export default function NewInvoiceScreen() {
       {/* Organization Setup Modal */}
       <Modal visible={isOrgModalVisible} transparent animationType="slide">
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
           style={{ flex: 1 }}
         >
           <View className="flex-1 justify-end bg-black/50">

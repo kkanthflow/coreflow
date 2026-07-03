@@ -59,6 +59,7 @@ const config: ExpoConfig = {
       }
   },
   android: {
+    softwareKeyboardLayoutMode: "resize",
     adaptiveIcon: {
       backgroundColor: "#E6F4FE",
       foregroundImage: "./assets/images/android-icon-foreground.png",
