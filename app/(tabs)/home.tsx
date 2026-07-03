@@ -234,6 +234,9 @@ export default function HomeScreen() {
           <View style={{ flex: 1 }}>
             <Text style={[styles.greeting, { color: colors.muted }]}>{greeting()},</Text>
             <Text style={[styles.name, { color: colors.foreground }]}>{firstName} 👋</Text>
+            <Text style={{ color: colors.primary, fontSize: 12, fontWeight: 'bold', marginTop: 4 }}>
+              DEBUG: Scheme = {colorScheme} | BG = {colors.background}
+            </Text>
             {user.organizationName ? (
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary }} />
