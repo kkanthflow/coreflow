@@ -527,6 +527,7 @@ export default function NewInvoiceScreen() {
           contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 60 }} 
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}
+          automaticallyAdjustKeyboardInsets={true}
         >
           {/* Client Selection */}
           <View className="mb-6">
@@ -836,7 +837,7 @@ export default function NewInvoiceScreen() {
                 </Pressable>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false} className="max-h-96" keyboardShouldPersistTaps="handled">
+              <ScrollView showsVerticalScrollIndicator={false} className="max-h-96" keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets={true}>
                 <TextInput
                   placeholder="Client Name *"
                   placeholderTextColor={colors.muted}
@@ -923,7 +924,7 @@ export default function NewInvoiceScreen() {
                 Your organization profile is incomplete. Please set up your company details once. These will be automatically populated on all future invoices.
               </Text>
 
-              <ScrollView showsVerticalScrollIndicator={false} className="max-h-96" keyboardShouldPersistTaps="handled">
+              <ScrollView showsVerticalScrollIndicator={false} className="max-h-96" keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets={true}>
                 <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">Company Name *</Text>
                 <TextInput
                   placeholder="CoreFlow Labs Ltd"

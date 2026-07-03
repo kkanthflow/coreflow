@@ -356,7 +356,7 @@ export default function SettingsScreen() {
                 Update details for Billed From configurations. These will be automatically populated on all future invoices.
               </Text>
 
-              <ScrollView showsVerticalScrollIndicator={false} className="max-h-96" keyboardShouldPersistTaps="handled">
+              <ScrollView showsVerticalScrollIndicator={false} className="max-h-96" keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets={true}>
                 <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">Company Name *</Text>
                 <TextInput
                   placeholder="CoreFlow Labs Ltd"
