@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, Pressable, StyleSheet,
   Animated, StatusBar, TextInput,
 } from 'react-native';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 import { ChannelListItem } from '@/components/ui/channel-list-item';
@@ -17,6 +18,7 @@ export default function ChatScreen() {
   const { user } = useAuth();
   const router   = useRouter();
   const colors   = useColors();
+  const colorScheme = useColorScheme();
 
   const C = {
     bg: colors.background,
@@ -217,13 +219,13 @@ export default function ChatScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={C.bg} />
 
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade, transform: [{ translateY: headerSlide }] }]}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <View>
-            <Text style={styles.title}>Messages</Text>
+            <Text style={[styles.title, { color: C.text }]}>Messages</Text>
             <Text style={styles.subtitle}>{channels.length} channel{channels.length !== 1 ? 's' : ''}</Text>
           </View>
           <Pressable
@@ -240,7 +242,7 @@ export default function ChatScreen() {
         </View>
 
         {/* Search */}
-        <View style={styles.searchBar}>
+        <View style={[styles.searchBar, { backgroundColor: C.card, borderColor: C.border }]}>
           <Ionicons name="search-outline" size={16} color={C.muted} />
           <TextInput
             placeholder="Search channels..."
@@ -277,10 +279,10 @@ export default function ChatScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
+              <View style={[styles.emptyIcon, { backgroundColor: C.card, borderColor: C.border }]}>
                 <Ionicons name="chatbubbles-outline" size={36} color={C.muted} />
               </View>
-              <Text style={styles.emptyTitle}>{search ? 'No channels found' : 'No conversations'}</Text>
+              <Text style={[styles.emptyTitle, { color: C.text }]}>{search ? 'No channels found' : 'No conversations'}</Text>
               <Text style={styles.emptySub}>
                 {search ? 'Try a different search term' : 'Start a direct message or join a project thread.'}
               </Text>

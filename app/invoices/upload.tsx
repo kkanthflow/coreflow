@@ -145,7 +145,7 @@ export default function BillUploadScreen() {
       // Mock Extracted Data matching the OCR specifications
       const mockExtractedData = {
         vendor_name: 'Acme Corporates Ltd',
-        gst_number: '27AAAAA1111A1Z1',
+        gst_number: '',
         invoice_number: 'ACME-' + Math.floor(1000 + Math.random() * 9000),
         currency: defaultCurrency,
         items: [

@@ -378,8 +378,8 @@ export default function InvoiceDetailScreen() {
           <div class="invoice-header" style="display: flex; justify-content: space-between; align-items: center;">
             <div>
               ${vr.logo_url ? `<img src="${vr.logo_url}" style="max-height: 50px; margin-bottom: 10px; display: block;" />` : ''}
-              <h2 style="margin: 0;">${invoice.organizations?.name || 'CoreFlow Labs Ltd'}</h2>
-              <p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">GSTIN: ${invoice.organizations?.gst_number || '27CFFLOW1234A1Z9'}</p>
+              <h2 style="margin: 0;">${invoice.organizations?.name || '-'}</h2>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">GSTIN: ${invoice.organizations?.gst_number || '-'}</p>
             </div>
             <div style="text-align: right;">
               <p style="margin: 0 0 5px 0;">Invoice Number: <strong>${invoice.invoice_number}</strong></p>
@@ -390,7 +390,9 @@ export default function InvoiceDetailScreen() {
           <div class="grid" style="margin-top: 30px;">
             <div class="col">
               <h3>Issuer Info</h3>
-              <p>${invoice.organizations?.address || 'Mumbai, Maharashtra, India'}</p>
+              <p><strong>${invoice.organizations?.name || '-'}</strong></p>
+              <p>GSTIN: ${invoice.organizations?.gst_number || '-'}</p>
+              <p>${invoice.organizations?.address || '-'}</p>
             </div>
             <div class="col" style="text-align: right;">
               <h3>Client Details</h3>
@@ -596,9 +598,9 @@ export default function InvoiceDetailScreen() {
         <View className="flex-row mb-6">
           <View className="flex-1 p-4 rounded-3xl border border-border mr-3" style={{ backgroundColor: colors.surface }}>
             <Text className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2">Billed From</Text>
-            <Text className="text-sm font-bold text-foreground mb-0.5">{invoice.organizations?.name || 'CoreFlow Labs Ltd'}</Text>
-            <Text className="text-xs text-muted mb-0.5">GSTIN: {invoice.organizations?.gst_number || '27CFFLOW1234A1Z9'}</Text>
-            <Text className="text-xs text-muted">{invoice.organizations?.address || 'Mumbai, MH'}</Text>
+            <Text className="text-sm font-bold text-foreground mb-0.5">{invoice.organizations?.name || '-'}</Text>
+            <Text className="text-xs text-muted mb-0.5">GSTIN: {invoice.organizations?.gst_number || '-'}</Text>
+            <Text className="text-xs text-muted">{invoice.organizations?.address || '-'}</Text>
           </View>
           <View className="flex-1 p-4 rounded-3xl border border-border" style={{ backgroundColor: colors.surface }}>
             <Text className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2">Billed To</Text>

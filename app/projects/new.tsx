@@ -68,7 +68,7 @@ export default function NewProjectScreen() {
         .from('user_organizations')
         .select(`
           user_id,
-          users (
+          users:user_id (
             id,
             full_name
           )

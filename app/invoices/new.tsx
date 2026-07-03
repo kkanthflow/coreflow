@@ -76,6 +76,7 @@ export default function NewInvoiceScreen() {
   const [orgGst, setOrgGst] = useState('');
   const [orgAddress, setOrgAddress] = useState('');
   const [orgName, setOrgName] = useState('');
+  const [hasPromptedOrg, setHasPromptedOrg] = useState(false);
 
   const loadInitialData = useCallback(async () => {
     setIsLoading(true);
@@ -95,11 +96,12 @@ export default function NewInvoiceScreen() {
           if (!editId && !duplicateId && org.default_currency) {
             setCurrency(org.default_currency);
           }
-          if (!org.gst_number || !org.address) {
+          if (!hasPromptedOrg && (!org.name || !org.address)) {
             setOrgName(org.name || '');
             setOrgGst(org.gst_number || '');
             setOrgAddress(org.address || '');
             setIsOrgModalVisible(true);
+            setHasPromptedOrg(true);
           }
         }
       }
@@ -822,7 +824,7 @@ export default function NewInvoiceScreen() {
       {/* Client Modal */}
       <Modal visible={isClientModalVisible} transparent animationType="slide">
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
           style={{ flex: 1 }}
         >
           <View className="flex-1 justify-end bg-black/50">
@@ -865,6 +867,7 @@ export default function NewInvoiceScreen() {
                   placeholderTextColor={colors.muted}
                   value={newClientPhone}
                   onChangeText={setNewClientPhone}
+                  keyboardType="phone-pad"
                   className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
                   style={{ backgroundColor: colors.surface }}
                 />
@@ -901,13 +904,20 @@ export default function NewInvoiceScreen() {
       {/* Organization Setup Modal */}
       <Modal visible={isOrgModalVisible} transparent animationType="slide">
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
           style={{ flex: 1 }}
         >
           <View className="flex-1 justify-end bg-black/50">
             <View className="p-6 rounded-t-3xl border-t border-border" style={{ backgroundColor: colors.background }}>
               <View className="flex-row justify-between items-center mb-4">
                 <Text className="text-lg font-bold text-foreground">Configure Billed From Details</Text>
+                <Pressable 
+                  onPress={() => setIsOrgModalVisible(false)}
+                  className="w-8 h-8 rounded-full items-center justify-center"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Ionicons name="close" size={20} color={colors.foreground} />
+                </Pressable>
               </View>
               <Text className="text-xs text-muted mb-4">
                 Your organization profile is incomplete. Please set up your company details once. These will be automatically populated on all future invoices.

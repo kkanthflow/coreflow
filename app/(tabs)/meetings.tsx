@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, Pressable, StyleSheet,
   Animated, StatusBar, RefreshControl,
 } from 'react-native';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 import { Ionicons } from '@expo/vector-icons';
@@ -149,6 +150,7 @@ export default function MeetingsScreen() {
   const { user } = useAuth();
   const router   = useRouter();
   const colors   = useColors();
+  const colorScheme = useColorScheme();
 
   const C = {
     bg: colors.background,
@@ -211,13 +213,13 @@ export default function MeetingsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={C.bg} />
 
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade, transform: [{ translateY: headerSlide }] }]}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <View>
-            <Text style={styles.title}>Meetings</Text>
+            <Text style={[styles.title, { color: C.text }]}>Meetings</Text>
             <Text style={styles.subtitle}>{meetings.length} {tab} meeting{meetings.length !== 1 ? 's' : ''}</Text>
           </View>
           {canSchedule && (
@@ -257,10 +259,10 @@ export default function MeetingsScreen() {
         >
           {meetings.length === 0 ? (
             <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
+              <View style={[styles.emptyIcon, { backgroundColor: C.card, borderColor: C.border }]}>
                 <Ionicons name="calendar-outline" size={36} color={C.muted} />
               </View>
-              <Text style={styles.emptyTitle}>No {tab} meetings</Text>
+              <Text style={[styles.emptyTitle, { color: C.text }]}>No {tab} meetings</Text>
               <Text style={styles.emptySub}>
                 {tab === 'upcoming'
                   ? 'Nothing scheduled yet. Schedule a meeting to get started.'

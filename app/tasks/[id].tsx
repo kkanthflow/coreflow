@@ -85,7 +85,7 @@ export default function TaskDetailScreen() {
           .from('user_organizations')
           .select(`
             user_id,
-            users (
+            users:user_id (
               id,
               full_name
             )

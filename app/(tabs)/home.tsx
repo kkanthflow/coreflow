@@ -3,6 +3,7 @@ import {
   ScrollView, Text, View, Pressable, StyleSheet,
   Animated, StatusBar, RefreshControl,
 } from 'react-native';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
@@ -68,6 +69,7 @@ const QUICK_ACTIONS = (perms: Record<string, boolean>, router: any, colors: any)
 export default function HomeScreen() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const colors = useColors();
+  const colorScheme = useColorScheme();
   const router = useRouter();
 
   const headerAnim = useRef(new Animated.Value(-20)).current;
@@ -150,7 +152,7 @@ export default function HomeScreen() {
   if (isLoading || loading) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
         <View style={{ paddingHorizontal: 24, paddingTop: 64 }}>
           <ShimmerLoader height={32} width="60%" borderRadius={10} style={{ marginBottom: 8 }} />
           <ShimmerLoader height={16} width="40%" borderRadius={6} style={{ marginBottom: 32 }} />
@@ -166,7 +168,7 @@ export default function HomeScreen() {
   if (!user) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
-        <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+        <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
         <View style={{ paddingHorizontal: 24, paddingTop: 64 }}>
           <ShimmerLoader height={32} width="60%" borderRadius={10} style={{ marginBottom: 8 }} />
           <ShimmerLoader height={16} width="40%" borderRadius={6} style={{ marginBottom: 32 }} />
@@ -216,7 +218,7 @@ export default function HomeScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <StatusBar barStyle="light-content" backgroundColor={colors.background} />
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 100 }}

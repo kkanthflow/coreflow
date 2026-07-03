@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet, Pressable,
   Animated, StatusBar, RefreshControl,
 } from 'react-native';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 import { useFocusEffect } from 'expo-router';
@@ -114,6 +115,7 @@ function StatCard({ label, value, icon, color, sub }: { label: string; value: st
 export default function AnalyticsScreen() {
   const { user } = useAuth();
   const colors = useColors();
+  const colorScheme = useColorScheme();
   const C = {
     bg: colors.background,
     surface: colors.surface,
@@ -218,7 +220,7 @@ export default function AnalyticsScreen() {
   if (loading) {
     return (
       <View style={{ flex: 1, backgroundColor: C.bg }}>
-        <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+        <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={C.bg} />
         <View style={{ paddingHorizontal: 24, paddingTop: 64 }}>
           <ShimmerLoader height={36} width="50%" borderRadius={10} style={{ marginBottom: 8 }} />
           <ShimmerLoader height={14} width="70%" borderRadius={6} style={{ marginBottom: 32 }} />
@@ -240,7 +242,7 @@ export default function AnalyticsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={C.bg} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -250,7 +252,7 @@ export default function AnalyticsScreen() {
         {/* Header */}
         <Animated.View style={[styles.header, { transform: [{ translateY: headerAnim }], opacity: headerFade }]}>
           <View>
-            <Text style={styles.title}>Analytics</Text>
+            <Text style={[styles.title, { color: C.text }]}>Analytics</Text>
             <Text style={styles.subtitle}>
               {isManagement ? 'Organization-wide business metrics' : 'Personal performance & targets'}
             </Text>

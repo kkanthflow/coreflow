@@ -40,6 +40,7 @@ export default function LoginScreen() {
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [biometricsAvailable,  setBiometricsAvailable]  = useState(false);
   const [biometricsConfigured, setBiometricsConfigured] = useState(false);
+  const [authTypes, setAuthTypes] = useState<number[]>([]);
 
   const { isAuthenticated } = useAuth();
 
@@ -114,6 +115,10 @@ export default function LoginScreen() {
       const compatible = await LocalAuthentication.hasHardwareAsync();
       const enrolled   = await LocalAuthentication.isEnrolledAsync();
       setBiometricsAvailable(compatible && enrolled);
+      if (compatible && enrolled) {
+        const types = await LocalAuthentication.supportedAuthenticationTypesAsync();
+        setAuthTypes(types);
+      }
       const enabled = await SecureStore.getItemAsync('biometric_enabled');
       const se = await SecureStore.getItemAsync('biometric_email');
       const sp = await SecureStore.getItemAsync('biometric_password');
@@ -272,7 +277,11 @@ export default function LoginScreen() {
                   disabled={loading}
                   style={styles.biometricBtn}
                 >
-                  <Ionicons name="finger-print" size={26} color={C.primary} />
+                  <Ionicons 
+                    name={authTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION) ? "scan-outline" : "finger-print"} 
+                    size={26} 
+                    color={C.primary} 
+                  />
                 </Pressable>
               )}
             </View>

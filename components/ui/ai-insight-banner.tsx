@@ -46,7 +46,7 @@ export function AIInsightBanner({ title = 'AI Insight', insight, score, onPress 
         onPress={onPress}
         style={({ pressed }) => [
           {
-            backgroundColor: '#111118',
+            backgroundColor: colors.surface,
             borderRadius: 20,
             padding: 18,
             borderWidth: 1,
@@ -107,7 +107,7 @@ export function AIInsightBanner({ title = 'AI Insight', insight, score, onPress 
                 </View>
               )}
             </View>
-            <Text style={{ color: '#F5F5FA', fontSize: 14, lineHeight: 20, fontWeight: '500' }}>
+            <Text style={{ color: colors.foreground, fontSize: 14, lineHeight: 20, fontWeight: '500' }}>
               {insight}
             </Text>
           </View>

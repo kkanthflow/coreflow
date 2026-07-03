@@ -48,6 +48,7 @@ export default function ChannelChatScreen() {
   const listRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const presenceChannelRef = useRef<any>(null);
+  const receiverTypingTimeoutsRef = useRef<{ [key: string]: NodeJS.Timeout }>({});
   const symmetricKeyRef = useRef<string | null>(null);
 
   const setSymmetricKey = (key: string | null) => {
@@ -351,7 +352,13 @@ export default function ChannelChatScreen() {
       .subscribe();
 
     // Subscribe to Presence and Typing Broadcast
-    const presenceChannel = supabase.channel(`presence:${channelId}`);
+    console.log('[Typing] Setting up presence channel for channel:', channelId);
+    const presenceChannel = supabase.channel(`presence:${channelId}`, {
+      config: {
+        broadcast: { self: false },
+        presence: { key: user?.id },
+      },
+    });
     presenceChannelRef.current = presenceChannel;
 
     presenceChannel
@@ -365,18 +372,35 @@ export default function ChannelChatScreen() {
         }
       })
       .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        console.log('[Typing] Received broadcast event payload:', payload);
         const { userId, isTyping } = payload;
-        if (userId !== user?.id) {
+        if (userId && userId !== user?.id) {
           if (isTyping) {
             setTypingUsers((prev) =>
               prev.includes(userId) ? prev : [...prev, userId]
             );
+
+            // Clear existing timeout for this user
+            if (receiverTypingTimeoutsRef.current[userId]) {
+              clearTimeout(receiverTypingTimeoutsRef.current[userId]);
+            }
+
+            // Automatically clear typing status after 4 seconds of inactivity
+            receiverTypingTimeoutsRef.current[userId] = setTimeout(() => {
+              console.log('[Typing] Automatically clearing typing status for user due to inactivity:', userId);
+              setTypingUsers((prev) => prev.filter((id) => id !== userId));
+            }, 4000);
           } else {
+            if (receiverTypingTimeoutsRef.current[userId]) {
+              clearTimeout(receiverTypingTimeoutsRef.current[userId]);
+              delete receiverTypingTimeoutsRef.current[userId];
+            }
             setTypingUsers((prev) => prev.filter((id) => id !== userId));
           }
         }
       })
       .subscribe(async (status) => {
+        console.log('[Typing] Presence channel status:', status);
         if (status === 'SUBSCRIBED' && user) {
           await presenceChannel.track({
             user_id: user.id,
@@ -386,10 +410,14 @@ export default function ChannelChatScreen() {
       });
 
     return () => {
+      console.log('[Typing] Cleaning up channel subscriptions');
       supabase.removeChannel(messageChannel);
       if (presenceChannelRef.current) {
         supabase.removeChannel(presenceChannelRef.current);
       }
+      // Clear all typing timeouts
+      Object.values(receiverTypingTimeoutsRef.current).forEach(clearTimeout);
+      receiverTypingTimeoutsRef.current = {};
     };
   }, [channelId, fetchChannelData, otherMember?.id, user, decryptMessage]);
 
@@ -408,6 +436,7 @@ export default function ChannelChatScreen() {
     setInputText(text);
 
     if (presenceChannelRef.current && user) {
+      console.log('[Typing] Sending broadcast typing status:', text.length > 0);
       presenceChannelRef.current.send({
         type: 'broadcast',
         event: 'typing',
@@ -418,6 +447,7 @@ export default function ChannelChatScreen() {
 
       if (text.length > 0) {
         typingTimeoutRef.current = setTimeout(() => {
+          console.log('[Typing] Idle timeout reached, sending isTyping: false');
           presenceChannelRef.current.send({
             type: 'broadcast',
             event: 'typing',
@@ -438,6 +468,7 @@ export default function ChannelChatScreen() {
       clearTimeout(typingTimeoutRef.current);
     }
     if (presenceChannelRef.current && user) {
+      console.log('[Typing] Message sent, sending typing broadcast isTyping: false');
       presenceChannelRef.current.send({
         type: 'broadcast',
         event: 'typing',

@@ -69,7 +69,14 @@ const config: ExpoConfig = {
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
-    permissions: ["POST_NOTIFICATIONS", "USE_BIOMETRIC", "USE_FINGERPRINT"],
+    permissions: [
+      "POST_NOTIFICATIONS",
+      "USE_BIOMETRIC",
+      "USE_FINGERPRINT",
+      "USE_FACIAL_RECOGNITION",
+      "READ_EXTERNAL_STORAGE",
+      "WRITE_EXTERNAL_STORAGE"
+    ],
     intentFilters: [
       {
         action: "VIEW",

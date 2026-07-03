@@ -3,6 +3,7 @@ import {
   View, Text, FlatList, Pressable, StyleSheet,
   Animated, StatusBar, TextInput,
 } from 'react-native';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
 import { hasPermission } from '@/lib/permissions';
@@ -150,6 +151,7 @@ export default function ProjectsScreen() {
   const { user } = useAuth();
   const router   = useRouter();
   const colors   = useColors();
+  const colorScheme = useColorScheme();
 
   const C = {
     bg: colors.background,
@@ -216,13 +218,13 @@ export default function ProjectsScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={C.bg} />
 
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade, transform: [{ translateY: headerSlide }] }]}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
           <View>
-            <Text style={styles.title}>Projects</Text>
+            <Text style={[styles.title, { color: C.text }]}>Projects</Text>
             <Text style={styles.subtitle}>{projects.length} active workspace{projects.length !== 1 ? 's' : ''}</Text>
           </View>
           {canCreateProject && (
@@ -233,7 +235,7 @@ export default function ProjectsScreen() {
         </View>
 
         {/* Search bar */}
-        <View style={styles.searchBar}>
+        <View style={[styles.searchBar, { backgroundColor: C.card, borderColor: C.border }]}>
           <Ionicons name="search-outline" size={16} color={C.muted} />
           <TextInput
             placeholder="Search projects..."
@@ -290,10 +292,10 @@ export default function ProjectsScreen() {
           )}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <View style={styles.emptyIconWrap}>
+              <View style={[styles.emptyIconWrap, { backgroundColor: C.card, borderColor: C.border }]}>
                 <Ionicons name="folder-open-outline" size={40} color={C.muted} />
               </View>
-              <Text style={styles.emptyTitle}>{search ? 'No matches found' : 'No projects yet'}</Text>
+              <Text style={[styles.emptyTitle, { color: C.text }]}>{search ? 'No matches found' : 'No projects yet'}</Text>
               <Text style={styles.emptySub}>
                 {search ? 'Try a different search term' : 'Create your first project to start tracking progress.'}
               </Text>

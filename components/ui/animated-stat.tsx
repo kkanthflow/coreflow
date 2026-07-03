@@ -3,8 +3,6 @@ import { View, Text, Animated, StyleSheet, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 
-const CARD_BG = '#181822';
-const BORDER  = '#2A2A3A';
 
 interface AnimatedStatProps {
   value: number;
@@ -65,11 +63,11 @@ export function AnimatedStat({
       style={[
         {
           flex: 1,
-          backgroundColor: CARD_BG,
+          backgroundColor: colors.card || colors.surface,
           borderRadius: 20,
           padding: 16,
           borderWidth: 1,
-          borderColor: BORDER,
+          borderColor: colors.border,
           alignItems: 'flex-start',
           transform: [{ scale: scaleAnim }],
           opacity: opacityAnim,

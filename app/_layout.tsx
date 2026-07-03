@@ -9,7 +9,7 @@ import "react-native-reanimated";
 import { Platform, View, ActivityIndicator, StyleSheet } from "react-native";
 
 import "@/lib/_core/nativewind-pressable";
-import { ThemeProvider } from "@/lib/theme-provider";
+import { ThemeProvider, useThemeContext } from "@/lib/theme-provider";
 import {
   SafeAreaFrameContext,
   SafeAreaInsetsContext,
@@ -52,10 +52,20 @@ import { useColors } from "@/hooks/use-colors";
 // ─────────────────────────────────────────────────────────────────────────
 function AuthGate() {
   const { isAuthenticated, isLoading, user, logout } = useAuth();
+  const { colorScheme, setColorScheme } = useThemeContext();
   const router = useRouter();
   const segments = useSegments();
   const rootNavigationState = useRootNavigationState();
   const stuckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Sync user theme preference to theme provider
+  useEffect(() => {
+    if (user?.preferences?.theme) {
+      if (user.preferences.theme !== colorScheme) {
+        setColorScheme(user.preferences.theme as any);
+      }
+    }
+  }, [user?.preferences?.theme, colorScheme, setColorScheme]);
 
   // Check for OTA updates silently — notifies user if one is available
   useOTAUpdates();
@@ -201,7 +211,11 @@ export default function RootLayout() {
             table: 'chat_messages',
           },
           async (payload: any) => {
-            if (payload.new.sender_id !== userId) {
+            console.log('[GlobalPushNotifs] Received new message payload:', payload.new);
+            console.log('[GlobalPushNotifs] Current user ID:', userId);
+            
+            const isSelfMessage = payload.new.sender_id?.toLowerCase() === userId?.toLowerCase();
+            if (!isSelfMessage) {
               // Mark as delivered immediately on receipt
               if (!payload.new.delivered_at) {
                 supabase
@@ -247,13 +261,7 @@ export default function RootLayout() {
         .subscribe();
     };
 
-    // Get initial session and subscribe to auth state changes
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user?.id) {
-        setupRealtimeSubscription(session.user.id);
-        registerAndSavePushToken(session.user.id);
-      }
-    });
+
 
     const registerAndSavePushToken = async (userId: string) => {
       if (Platform.OS === 'web') return;

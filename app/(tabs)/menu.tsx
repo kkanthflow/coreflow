@@ -1,5 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import { ScrollView, Text, View, Pressable, StyleSheet, Animated, StatusBar } from 'react-native';
+import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -80,6 +81,7 @@ export default function MenuScreen() {
   const { user, isAuthenticated, isLoading } = useAuth();
   const router  = useRouter();
   const colors  = useColors();
+  const colorScheme = useColorScheme();
 
   const C = {
     bg: colors.background,
@@ -152,12 +154,12 @@ export default function MenuScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle="light-content" backgroundColor={C.bg} />
+      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={C.bg} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
 
         {/* Header */}
         <Animated.View style={[styles.header, { opacity: fadAnim, transform: [{ translateY: slidAnim }] }]}>
-          <Text style={styles.title}>Profile</Text>
+          <Text style={[styles.title, { color: C.text }]}>Profile</Text>
         </Animated.View>
 
         <View style={{ paddingHorizontal: 20 }}>

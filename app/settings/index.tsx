@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 
 import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, Modal, TextInput, KeyboardAvoidingView, StyleSheet } from 'react-native';
 import { SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { useEffect } from 'react';
 
@@ -26,6 +26,12 @@ export default function SettingsScreen() {
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(false);
   const [orgId, setOrgId] = useState<string | null>(null);
+
+  // Company Profile details state
+  const [isCompanyModalVisible, setIsCompanyModalVisible] = useState(false);
+  const [orgName, setOrgName] = useState('');
+  const [orgAddress, setOrgAddress] = useState('');
+  const [orgGst, setOrgGst] = useState('');
 
   useEffect(() => {
     if (user?.organizationId) {
@@ -44,15 +50,20 @@ export default function SettingsScreen() {
           }
         });
 
-      // Fetch organization currency
+      // Fetch organization currency & details
       supabase
         .from('organizations')
-        .select('default_currency')
+        .select('name, address, gst_number, default_currency')
         .eq('id', user.organizationId)
         .single()
         .then(({ data }) => {
-          if (data && data.default_currency) {
-            setDefaultCurrency(data.default_currency);
+          if (data) {
+            if (data.default_currency) {
+              setDefaultCurrency(data.default_currency);
+            }
+            setOrgName(data.name || '');
+            setOrgAddress(data.address || '');
+            setOrgGst(data.gst_number || '');
           }
         });
     }
@@ -71,6 +82,29 @@ export default function SettingsScreen() {
       Alert.alert('Success', `Organization default currency updated to ${currencyCode}.`);
     } catch (e: any) {
       Alert.alert('Error', e.message || 'Failed to update currency');
+    }
+  };
+
+  const handleSaveOrgDetails = async () => {
+    if (!orgName.trim() || !orgAddress.trim()) {
+      Alert.alert('Validation Error', 'Company Name and Address are required');
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('organizations')
+        .update({
+          name: orgName.trim(),
+          address: orgAddress.trim(),
+          gst_number: orgGst.trim() || null,
+        })
+        .eq('id', orgId);
+
+      if (error) throw error;
+      setIsCompanyModalVisible(false);
+      Alert.alert('Success', 'Company profile updated successfully.');
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to update company details');
     }
   };
 
@@ -204,27 +238,47 @@ export default function SettingsScreen() {
 
         {/* Organization settings for owners/admins */}
         {isOwnerOrAdmin && (
-          <View className="px-6 mb-6">
-            <Text className="text-xs font-bold text-muted mb-3 uppercase tracking-wider ml-1">Organization Currency</Text>
-            <View className="rounded-2xl border border-border overflow-hidden py-3" style={{ backgroundColor: colors.surface }}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}>
-                {SUPPORTED_CURRENCIES.map((curr) => {
-                  const isSelected = defaultCurrency === curr.code;
-                  return (
-                    <Pressable
-                      key={curr.code}
-                      onPress={() => handleUpdateCurrency(curr.code)}
-                      className={`px-4 py-2 rounded-full border ${isSelected ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
-                    >
-                      <Text style={{ color: isSelected ? '#FFF' : '#7A7A92', fontSize: 12, fontWeight: '700' }}>
-                        {curr.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
+          <>
+            <View className="px-6 mb-6">
+              <Text className="text-xs font-bold text-muted mb-3 uppercase tracking-wider ml-1">Organization Currency</Text>
+              <View className="rounded-2xl border border-border overflow-hidden py-3" style={{ backgroundColor: colors.surface }}>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}>
+                  {SUPPORTED_CURRENCIES.map((curr) => {
+                    const isSelected = defaultCurrency === curr.code;
+                    return (
+                      <Pressable
+                        key={curr.code}
+                        onPress={() => handleUpdateCurrency(curr.code)}
+                        className={`px-4 py-2 rounded-full border ${isSelected ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
+                      >
+                        <Text style={{ color: isSelected ? '#FFF' : '#7A7A92', fontSize: 12, fontWeight: '700' }}>
+                          {curr.name}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </ScrollView>
+              </View>
             </View>
-          </View>
+
+            <View className="px-6 mb-6">
+              <Text className="text-xs font-bold text-muted mb-3 uppercase tracking-wider ml-1">Organization Settings</Text>
+              <View className="rounded-2xl border border-border overflow-hidden" style={{ backgroundColor: colors.surface }}>
+                <Pressable 
+                  onPress={() => setIsCompanyModalVisible(true)}
+                  className="flex-row items-center justify-between p-4"
+                >
+                  <View className="flex-row items-center">
+                    <View className="w-8 h-8 rounded-full items-center justify-center mr-3 bg-primary/10">
+                      <Ionicons name="business-outline" size={18} color={colors.primary} />
+                    </View>
+                    <Text className="text-base font-semibold text-foreground">Company Profile</Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+                </Pressable>
+              </View>
+            </View>
+          </>
         )}
 
         {/* Security & Privacy */}
@@ -278,6 +332,73 @@ export default function SettingsScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Edit Company Profile Modal */}
+      {isCompanyModalVisible && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]} className="justify-end bg-black/50">
+          <KeyboardAvoidingView 
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+            style={{ flex: 1, justifyContent: 'flex-end' }}
+          >
+            <Pressable style={{ flex: 1 }} onPress={() => setIsCompanyModalVisible(false)} />
+            <View className="p-6 rounded-t-3xl border-t border-border" style={{ backgroundColor: colors.background }}>
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-lg font-bold text-foreground">Edit Company Profile</Text>
+                <Pressable 
+                  onPress={() => setIsCompanyModalVisible(false)}
+                  className="w-8 h-8 rounded-full items-center justify-center"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Ionicons name="close" size={20} color={colors.foreground} />
+                </Pressable>
+              </View>
+              <Text className="text-xs text-muted mb-4">
+                Update details for Billed From configurations. These will be automatically populated on all future invoices.
+              </Text>
+
+              <ScrollView showsVerticalScrollIndicator={false} className="max-h-96" keyboardShouldPersistTaps="handled">
+                <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">Company Name *</Text>
+                <TextInput
+                  placeholder="CoreFlow Labs Ltd"
+                  placeholderTextColor={colors.muted}
+                  value={orgName}
+                  onChangeText={setOrgName}
+                  className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-4"
+                  style={{ backgroundColor: colors.surface }}
+                />
+
+                <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">Company Address *</Text>
+                <TextInput
+                  placeholder="Mumbai, Maharashtra, India"
+                  placeholderTextColor={colors.muted}
+                  value={orgAddress}
+                  onChangeText={setOrgAddress}
+                  className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-4"
+                  style={{ backgroundColor: colors.surface }}
+                />
+
+                <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">GSTIN Tax Details</Text>
+                <TextInput
+                  placeholder="27CFFLOW1234A1Z9"
+                  placeholderTextColor={colors.muted}
+                  value={orgGst}
+                  onChangeText={setOrgGst}
+                  className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-6"
+                  style={{ backgroundColor: colors.surface }}
+                />
+              </ScrollView>
+
+              <Pressable
+                onPress={handleSaveOrgDetails}
+                className="p-4 rounded-2xl items-center justify-center mt-2"
+                style={{ backgroundColor: colors.primary }}
+              >
+                <Text className="text-white font-bold text-base">Save Details</Text>
+              </Pressable>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      )}
     </ScreenContainer>
   );
 }
