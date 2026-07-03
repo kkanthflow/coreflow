@@ -48,7 +48,7 @@ const config: ExpoConfig = {
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   updates: {
-    url: "https://u.expo.dev/37b85719-7377-4428-8e3f-1da74745a19c"
+    url: "https://u.expo.dev/ab13f79a-49f6-4cf3-879a-6f78ba1dec07"
   },
   runtimeVersion: "1.0.0",
   ios: {
