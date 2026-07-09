@@ -12,7 +12,7 @@ import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
-import { useRouter, Stack } from 'expo-router';
+import { useRouter, Stack, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { hasPermission } from '@/lib/permissions';
 import { PremiumButton } from '@/components/ui/premium-button';
@@ -35,8 +35,10 @@ export default function NewProjectScreen() {
     d.setDate(d.getDate() + 30); // Default to 30 days from now
     return d;
   });
-  const [departmentId, setDepartmentId] = useState('');
+  const params = useLocalSearchParams();
+  const [departmentId, setDepartmentId] = useState((params?.deptId as string) || '');
   const [ownerId, setOwnerId] = useState('');
+  const [selectedMemberIds, setSelectedMemberIds] = useState<string[]>([]);
   
   const [departments, setDepartments] = useState<any[]>([]);
   const [orgUsers, setOrgUsers] = useState<any[]>([]);
@@ -118,14 +120,42 @@ export default function NewProjectScreen() {
 
       if (error) throw error;
 
-      // Add the creator as the first project member automatically as owner/manager
-      if (data?.id && user?.id) {
-        await supabase.from('project_members').insert({
-          project_id: data.id,
-          user_id: user.id,
-          role: 'owner',
-          added_by: user.id,
+      // Add the project members
+      if (data?.id) {
+        const memberInserts = [];
+        
+        // Always add the owner/creator as owner
+        if (ownerId) {
+          memberInserts.push({
+            project_id: data.id,
+            user_id: ownerId,
+            role: 'owner',
+            added_by: user.id,
+          });
+        } else if (user?.id) {
+          memberInserts.push({
+            project_id: data.id,
+            user_id: user.id,
+            role: 'owner',
+            added_by: user.id,
+          });
+        }
+
+        // Add other selected members
+        selectedMemberIds.forEach(memberId => {
+          if (memberId !== ownerId && memberId !== user.id) {
+            memberInserts.push({
+              project_id: data.id,
+              user_id: memberId,
+              role: 'member',
+              added_by: user.id,
+            });
+          }
         });
+
+        if (memberInserts.length > 0) {
+          await supabase.from('project_members').insert(memberInserts);
+        }
       }
 
       router.back();
@@ -281,6 +311,53 @@ export default function NewProjectScreen() {
           disabled={loading}
         />
 
+        {/* Project Members Selection */}
+        <View style={styles.section}>
+          <Text style={[styles.label, { color: colors.foreground, marginBottom: 8 }]}>Assign Team Members</Text>
+          <View style={[styles.membersListContainer, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+            <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled={true}>
+              {orgUsers.map((u, index) => {
+                // Skip rendering owner in list of extra members
+                if (u.id === ownerId) return null;
+                
+                const isSelected = selectedMemberIds.includes(u.id);
+                const isLast = index === orgUsers.length - 1;
+                return (
+                  <Pressable
+                    key={u.id}
+                    onPress={() => {
+                      if (isSelected) {
+                        setSelectedMemberIds(prev => prev.filter(id => id !== u.id));
+                      } else {
+                        setSelectedMemberIds(prev => [...prev, u.id]);
+                      }
+                    }}
+                    style={[
+                      styles.memberCheckItem,
+                      { 
+                        borderBottomColor: colors.border,
+                        borderBottomWidth: isLast ? 0 : 1 
+                      }
+                    ]}
+                  >
+                    <View style={styles.memberCheckRow}>
+                      <Ionicons 
+                        name={isSelected ? "checkbox" : "square-outline"} 
+                        size={20} 
+                        color={isSelected ? colors.primary : colors.muted} 
+                        style={{ marginRight: 10 }}
+                      />
+                      <Text style={[styles.memberCheckText, { color: colors.foreground }]}>
+                        {u.full_name}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+
         {/* Create Button */}
         <View style={{ marginTop: 24, marginBottom: 40 }}>
           {loading ? (
@@ -350,6 +427,26 @@ const styles = StyleSheet.create({
   badgeBtnText: {
     fontSize: 12,
     textTransform: 'capitalize',
+  },
+  membersListContainer: {
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 4,
+    maxHeight: 210,
+    overflow: 'hidden',
+  },
+  memberCheckItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+  },
+  memberCheckRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  memberCheckText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 

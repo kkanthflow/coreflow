@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, FlatList, ActivityIndicator, Pressable, StyleSheet, Modal, ScrollView, Alert } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -34,72 +34,176 @@ export default function DepartmentDetailScreen() {
   const [confirmName, setConfirmName] = useState('');
   const [deleting, setDeleting] = useState(false);
 
+  // Add Member Modal States
+  const [addMemberModalVisible, setAddMemberModalVisible] = useState(false);
+  const [availableUsers, setAvailableUsers] = useState<any[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState('');
+  const [addingMember, setAddingMember] = useState(false);
+
   const canDelete = hasPermission(user?.role, 'manage_departments');
+  const canAddMember = hasPermission(user?.role, 'manage_departments');
+
+  const fetchDeptDetails = useCallback(async () => {
+    try {
+      // 1. Fetch department info
+      const { data: deptData, error: deptError } = await supabase
+        .from('departments')
+        .select(`
+          id,
+          name,
+          description,
+          color,
+          head_user:head_user_id (
+            full_name,
+            email
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      if (deptError) throw deptError;
+      setDepartment(deptData);
+
+      // 2. Fetch members of this department
+      const { data: memberData } = await supabase
+        .from('user_organizations')
+        .select(`
+          role,
+          user:user_id (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .eq('department_id', id);
+
+      const activeMembers = (memberData || [])
+        .filter(m => m.user)
+        .map(m => {
+          const u = m.user as any;
+          return {
+            id: u.id,
+            full_name: u.full_name,
+            email: u.email,
+            role: m.role,
+          };
+        });
+      setMembers(activeMembers);
+
+      // 3. Fetch projects for this department
+      const { data: projectData } = await supabase
+        .from('projects')
+        .select('id, title, description, status, cover_color')
+        .eq('department_id', id);
+
+      setProjects(projectData || []);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
 
   useEffect(() => {
-    const fetchDeptDetails = async () => {
-      try {
-        // 1. Fetch department info
-        const { data: deptData, error: deptError } = await supabase
-          .from('departments')
-          .select(`
-            id,
-            name,
-            description,
-            color,
-            head_user:head_user_id (
-              full_name,
-              email
-            )
-          `)
-          .eq('id', id)
-          .single();
-
-        if (deptError) throw deptError;
-        setDepartment(deptData);
-
-        // 2. Fetch members of this department
-        const { data: memberData } = await supabase
-          .from('user_organizations')
-          .select(`
-            role,
-            user:user_id (
-              id,
-              full_name,
-              email
-            )
-          `)
-          .eq('department_id', id);
-
-        const activeMembers = (memberData || [])
-          .filter(m => m.user)
-          .map(m => {
-            const u = m.user as any;
-            return {
-              id: u.id,
-              full_name: u.full_name,
-              email: u.email,
-              role: m.role,
-            };
-          });
-        setMembers(activeMembers);
-
-        // 3. Fetch projects for this department
-        const { data: projectData } = await supabase
-          .from('projects')
-          .select('id, title, description, status, cover_color')
-          .eq('department_id', id);
-
-        setProjects(projectData || []);
-      } catch (e) {
-        console.error(e);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (id) fetchDeptDetails();
-  }, [id]);
+  }, [id, fetchDeptDetails]);
+
+  const handleOpenAddMemberModal = async () => {
+    if (!user?.organizationId) return;
+    try {
+      // Fetch all users in organization
+      const { data: orgUserData, error } = await supabase
+        .from('user_organizations')
+        .select(`
+          user_id,
+          user:user_id (
+            id,
+            full_name,
+            email
+          )
+        `)
+        .eq('org_id', user.organizationId);
+
+      if (error) throw error;
+
+      // Filter out users already in this department
+      const currentMemberIds = new Set(members.map(m => m.id));
+      const available = (orgUserData || [])
+        .filter(m => {
+          const u = m.user as any;
+          return u && !currentMemberIds.has(u.id);
+        })
+        .map(m => {
+          const u = m.user as any;
+          return {
+            label: `${u.full_name} (${u.email})`,
+            value: u.id
+          };
+        });
+
+      setAvailableUsers(available);
+      setSelectedUserId('');
+      setAddMemberModalVisible(true);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Could not fetch organization members.');
+    }
+  };
+
+  const handleAddMember = async () => {
+    if (!selectedUserId) {
+      Alert.alert('Required', 'Please select a member to add.');
+      return;
+    }
+
+    try {
+      setAddingMember(true);
+      const { error } = await supabase
+        .from('user_organizations')
+        .update({ department_id: id })
+        .eq('user_id', selectedUserId)
+        .eq('org_id', user?.organizationId);
+
+      if (error) throw error;
+
+      Alert.alert('Success', 'Member has been successfully added to the department.');
+      setAddMemberModalVisible(false);
+      await fetchDeptDetails();
+    } catch (e: any) {
+      Alert.alert('Error Adding Member', e.message || 'An error occurred.');
+    } finally {
+      setAddingMember(false);
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    Alert.alert(
+      'Remove Member',
+      `Are you sure you want to remove ${memberName} from this department?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('user_organizations')
+                .update({ department_id: null })
+                .eq('user_id', memberId)
+                .eq('org_id', user?.organizationId);
+
+              if (error) throw error;
+
+              Alert.alert('Success', 'Member has been removed from the department.');
+              await fetchDeptDetails();
+            } catch (e: any) {
+              Alert.alert('Error', e.message || 'Could not remove member.');
+            }
+          }
+        }
+      ]
+    );
+  };
 
   const handleOpenDeleteModal = async () => {
     try {
@@ -254,16 +358,35 @@ export default function DepartmentDetailScreen() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
-            <Pressable
-              onPress={() => router.push(`/team/${item.id}` as any)}
-              style={[styles.memberCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+            <View
+              style={[styles.memberCard, { backgroundColor: colors.surface, borderColor: colors.border, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
             >
-              <View style={styles.memberInfo}>
-                <Text style={[styles.memberName, { color: colors.foreground }]}>{item.full_name}</Text>
-                <Text style={[styles.memberEmail, { color: colors.muted }]}>{item.email}</Text>
+              <Pressable
+                onPress={() => router.push(`/team/${item.id}` as any)}
+                style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}
+              >
+                <View style={styles.memberInfo}>
+                  <Text style={[styles.memberName, { color: colors.foreground }]}>{item.full_name}</Text>
+                  <Text style={[styles.memberEmail, { color: colors.muted }]}>{item.email}</Text>
+                </View>
+              </Pressable>
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <RoleBadge role={item.role as any} size="sm" />
+                {canDelete && (
+                  <Pressable 
+                    onPress={() => handleRemoveMember(item.id, item.full_name)}
+                    style={({ pressed }) => ({
+                      padding: 6,
+                      borderRadius: 8,
+                      backgroundColor: pressed ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
+                    })}
+                  >
+                    <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                  </Pressable>
+                )}
               </View>
-              <RoleBadge role={item.role as any} size="sm" />
-            </Pressable>
+            </View>
           )}
           ListEmptyComponent={
             <View style={styles.empty}>
@@ -400,11 +523,108 @@ export default function DepartmentDetailScreen() {
           </View>
         </View>
       </Modal>
+      
+      {/* Add Member Modal */}
+      <Modal
+        visible={addMemberModalVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setAddMemberModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.background }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.foreground }]}>Add Department Member</Text>
+              <Pressable onPress={() => setAddMemberModalVisible(false)}>
+                <Ionicons name="close" size={24} color={colors.foreground} />
+              </Pressable>
+            </View>
+
+            <ScrollView contentContainerStyle={styles.modalScroll}>
+              <Text style={[styles.modalWarningText, { color: colors.muted }]}>
+                Select a member from your team/organization to assign to <Text style={{ fontWeight: 'bold', color: colors.foreground }}>{department.name}</Text>.
+              </Text>
+
+              {availableUsers.length > 0 ? (
+                <View style={styles.reassignSection}>
+                  <PremiumSelect
+                    label="Select Team Member *"
+                    value={selectedUserId}
+                    options={availableUsers}
+                    onSelect={setSelectedUserId}
+                    placeholder="Choose a team member"
+                  />
+                </View>
+              ) : (
+                <Text style={{ textAlign: 'center', marginVertical: 24, color: colors.muted }}>
+                  All organization members are already assigned to this department.
+                </Text>
+              )}
+            </ScrollView>
+
+            <View style={[styles.modalActions, { borderTopColor: colors.border }]}>
+              <Pressable
+                onPress={() => setAddMemberModalVisible(false)}
+                style={[styles.cancelBtn, { borderColor: colors.border }]}
+                disabled={addingMember}
+              >
+                <Text style={[styles.cancelBtnText, { color: colors.muted }]}>Cancel</Text>
+              </Pressable>
+              {addingMember ? (
+                <ActivityIndicator size="small" color={colors.primary} style={{ marginLeft: 16 }} />
+              ) : (
+                availableUsers.length > 0 && (
+                  <Pressable
+                    onPress={handleAddMember}
+                    style={[styles.confirmDeleteBtn, { backgroundColor: colors.primary }]}
+                  >
+                    <Text style={styles.confirmDeleteBtnText}>Add Member</Text>
+                  </Pressable>
+                )
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {activeTab === 'projects' && hasPermission(user?.role, 'create_projects') && (
+        <Pressable
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={() => router.push({ pathname: '/projects/new', params: { deptId: id } })}
+        >
+          <Ionicons name="add" size={28} color="#FFFFFF" />
+        </Pressable>
+      )}
+
+      {activeTab === 'members' && canAddMember && (
+        <Pressable
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={handleOpenAddMemberModal}
+        >
+          <Ionicons name="add" size={28} color="#FFFFFF" />
+        </Pressable>
+      )}
     </ScreenContainer>
   );
 }
 
 const styles = StyleSheet.create({
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    zIndex: 99,
+  },
   center: {
     flex: 1,
     justifyContent: 'center',

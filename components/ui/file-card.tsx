@@ -15,6 +15,13 @@ export interface FileData {
   created_at: string;
   uploader_id?: string;
   project_id?: string | null;
+  project?: {
+    title: string;
+    department?: {
+      name: string;
+      color?: string;
+    };
+  };
   uploader?: {
     full_name: string;
   };
@@ -95,6 +102,22 @@ export function FileCard({ file, onDelete, canDelete = false }: FileCardProps) {
           <Text style={[styles.uploader, { color: colors.muted }]}>
             Uploaded by: <Text style={{ fontWeight: '600', color: colors.foreground }}>{file.uploader.full_name}</Text>
           </Text>
+        )}
+        {file.project && (
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, flexWrap: 'wrap', gap: 6 }}>
+            <View style={{ backgroundColor: `${colors.primary}10`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+              <Text style={{ fontSize: 10, fontWeight: '700', color: colors.primary }}>
+                📁 {file.project.title}
+              </Text>
+            </View>
+            {file.project.department && (
+              <View style={{ backgroundColor: `${file.project.department.color || colors.primary}15`, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                <Text style={{ fontSize: 10, fontWeight: '700', color: file.project.department.color || colors.primary }}>
+                  🏢 {file.project.department.name}
+                </Text>
+              </View>
+            )}
+          </View>
         )}
       </View>
 

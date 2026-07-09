@@ -1,8 +1,7 @@
 import React from 'react';
 import { View, ViewStyle, StyleSheet } from 'react-native';
+import { useColors } from '@/hooks/use-colors';
 
-const CARD_BG   = '#181822';
-const BORDER    = '#2A2A3A';
 const SHADOW    = '#00000080';
 
 interface GlassCardProps {
@@ -24,6 +23,7 @@ export function GlassCard({
   radius = 20,
   noBorder = false,
 }: GlassCardProps) {
+  const colors = useColors();
   const overlayOpacity = {
     light: 0.04,
     medium: 0.06,
@@ -34,11 +34,11 @@ export function GlassCard({
     <View
       style={[
         {
-          backgroundColor: CARD_BG,
+          backgroundColor: colors.card,
           borderRadius: radius,
           padding,
           borderWidth: noBorder ? 0 : 1,
-          borderColor: glowColor ? `${glowColor}30` : BORDER,
+          borderColor: glowColor ? `${glowColor}30` : colors.border,
           shadowColor: glowColor || SHADOW,
           shadowOffset: { width: 0, height: 4 },
           shadowOpacity: glowColor ? 0.25 : 0.15,

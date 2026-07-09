@@ -8,6 +8,7 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/use-auth';
@@ -81,6 +82,28 @@ export default function ChannelChatScreen() {
     return msg;
   }, []);
 
+  const markChannelAsRead = useCallback(async () => {
+    if (!channelId || !user?.id) return;
+    try {
+      await supabase
+        .from('channel_members')
+        .update({ last_read_at: new Date().toISOString() })
+        .eq('channel_id', channelId)
+        .eq('user_id', user.id);
+
+      // Automatically mark in-app notifications for this chat room as read
+      await supabase
+        .from('notifications')
+        .update({ is_read: true })
+        .eq('user_id', user.id)
+        .eq('entity_id', channelId)
+        .in('type', ['chat', 'chat_channel'])
+        .eq('is_read', false);
+    } catch (err) {
+      console.warn('Failed to update last_read_at:', err);
+    }
+  }, [channelId, user?.id]);
+
   const fetchChannelData = useCallback(async () => {
     if (!channelId || !user) return;
     try {
@@ -94,7 +117,9 @@ export default function ChannelChatScreen() {
             user:user_id(
               id,
               full_name,
-              avatar_url
+              avatar_url,
+              is_online,
+              last_seen_at
             )
           )
         `)
@@ -108,7 +133,17 @@ export default function ChannelChatScreen() {
       if (chanData.type === 'direct') {
         const other = chanData.channel_members?.find((m: any) => m.user_id !== user?.id)?.user;
         if (other) {
-          setOtherMember(other);
+          const { data: otherPriv } = await supabase
+            .from('privacy_settings')
+            .select('show_last_seen, show_online')
+            .eq('user_id', other.id)
+            .maybeSingle();
+
+          setOtherMember({
+            ...other,
+            show_last_seen: otherPriv?.show_last_seen ?? 'everyone',
+            show_online: otherPriv?.show_online ?? 'everyone',
+          });
         }
       }
 
@@ -205,17 +240,22 @@ export default function ChannelChatScreen() {
       setMessages(decryptedMsgs);
 
       // Mark messages as read & delivered
-      if (user && msgs.length > 0) {
-        const unreadIds = msgs.filter(m => m.sender_id !== user.id && !m.message_reads?.some((r: any) => r.user_id === user.id)).map(m => m.id);
-        if (unreadIds.length > 0) {
-          const reads = unreadIds.map(mId => ({ message_id: mId, user_id: user.id }));
-          await supabase.from('message_reads').insert(reads);
+      if (user) {
+        if (msgs.length > 0) {
+          const unreadIds = msgs.filter(m => m.sender_id !== user.id && !m.message_reads?.some((r: any) => r.user_id === user.id)).map(m => m.id);
+          if (unreadIds.length > 0) {
+            const reads = unreadIds.map(mId => ({ message_id: mId, user_id: user.id }));
+            await supabase.from('message_reads').insert(reads);
+          }
+          
+          const undelivered = msgs.filter(m => m.sender_id !== user.id && !m.delivered_at);
+          if (undelivered.length > 0) {
+            await supabase.from('chat_messages').update({ delivered_at: new Date().toISOString() }).in('id', undelivered.map(m => m.id));
+          }
         }
-        
-        const undelivered = msgs.filter(m => m.sender_id !== user.id && !m.delivered_at);
-        if (undelivered.length > 0) {
-          await supabase.from('chat_messages').update({ delivered_at: new Date().toISOString() }).in('id', undelivered.map(m => m.id));
-        }
+
+        // Mark channel as read
+        await markChannelAsRead();
       }
 
     } catch (e) {
@@ -223,7 +263,7 @@ export default function ChannelChatScreen() {
     } finally {
       setLoading(false);
     }
-  }, [channelId, user, decryptMessage]);
+  }, [channelId, user, decryptMessage, markChannelAsRead]);
 
   useEffect(() => {
     fetchChannelData();
@@ -297,6 +337,8 @@ export default function ChannelChatScreen() {
                 .eq('id', payload.new.id)
                 .then();
             }
+            // Mark channel as read
+            markChannelAsRead();
           }
 
           setTimeout(() => {
@@ -529,7 +571,8 @@ export default function ChannelChatScreen() {
 
       if (error) throw error;
     } catch (e: any) {
-      console.error(e);
+      console.error('[ChatSendMessageError]', e);
+      Alert.alert('Send Error', e.message || 'Failed to send message.');
       setMessages((prev) => prev.filter((m) => m.id !== optimisticMsgId));
     } finally {
       setSending(false);
@@ -585,6 +628,34 @@ export default function ChannelChatScreen() {
     );
   }
 
+  const formatLastSeen = (dateString: string) => {
+    if (!dateString) return 'Offline';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffSec = Math.floor(diffMs / 1000);
+    const diffMin = Math.floor(diffSec / 60);
+    const diffHr = Math.floor(diffMin / 60);
+    const diffDays = Math.floor(diffHr / 24);
+
+    if (diffSec < 60) {
+      return 'Last seen just now';
+    }
+    if (diffMin < 60) {
+      return `Last seen ${diffMin}m ago`;
+    }
+    if (diffHr < 24) {
+      return `Last seen ${diffHr}h ago`;
+    }
+    if (diffDays === 1) {
+      return 'Last seen yesterday';
+    }
+    if (diffDays < 7) {
+      return `Last seen ${diffDays}d ago`;
+    }
+    return `Last seen on ${date.toLocaleDateString()}`;
+  };
+
   const renderHeaderTitle = () => {
     if (channel.type === 'direct' && otherMember) {
       return otherMember.full_name;
@@ -594,14 +665,23 @@ export default function ChannelChatScreen() {
 
   const renderHeaderSubtitle = () => {
     if (channel.type === 'direct' && otherMember) {
-      return isOtherUserOnline ? 'Online' : 'Offline';
+      const showOnline = otherMember.show_online !== 'nobody';
+      const showLastSeen = otherMember.show_last_seen !== 'nobody';
+
+      if (isOtherUserOnline && showOnline) {
+        return 'Active now';
+      }
+      if (showLastSeen && otherMember.last_seen_at) {
+        return formatLastSeen(otherMember.last_seen_at);
+      }
+      return 'Offline';
     }
     return channel.description;
   };
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={{ flex: 1 }}
     >
       <ScreenContainer>
@@ -632,8 +712,8 @@ export default function ChannelChatScreen() {
                   styles.headerSubtitle,
                   {
                     color:
-                      channel.type === 'direct' && isOtherUserOnline
-                        ? '#38BDF8'
+                      channel.type === 'direct' && isOtherUserOnline && otherMember?.show_online !== 'nobody'
+                        ? '#22C55E'
                         : colors.muted,
                   },
                 ]}
@@ -650,17 +730,62 @@ export default function ChannelChatScreen() {
           ref={listRef}
           data={messages}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
+          renderItem={({ item, index }) => {
             const isRead =
               item.message_reads &&
               item.message_reads.some((r: any) => r.user_id !== item.sender_id);
+
+            // Determine if we need to show a date divider
+            let showDateDivider = false;
+            let dateText = '';
+            if (index === 0) {
+              showDateDivider = true;
+            } else {
+              const prevItem = messages[index - 1];
+              const prevDate = new Date(prevItem.created_at).toDateString();
+              const currDate = new Date(item.created_at).toDateString();
+              if (prevDate !== currDate) {
+                showDateDivider = true;
+              }
+            }
+
+            if (showDateDivider) {
+              const messageDate = new Date(item.created_at);
+              const today = new Date();
+              const yesterday = new Date();
+              yesterday.setDate(today.getDate() - 1);
+
+              if (messageDate.toDateString() === today.toDateString()) {
+                dateText = 'Today';
+              } else if (messageDate.toDateString() === yesterday.toDateString()) {
+                dateText = 'Yesterday';
+              } else {
+                dateText = messageDate.toLocaleDateString([], {
+                  weekday: 'long',
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                });
+              }
+            }
+
             return (
-              <ChatBubble
-                message={item}
-                onReply={setReplyToMessage}
-                onReact={handleReact}
-                isRead={isRead}
-              />
+              <View>
+                {showDateDivider && (
+                  <View style={styles.dateDivider}>
+                    <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
+                    <Text style={[styles.dateText, { color: colors.muted, backgroundColor: colors.background }]}>
+                      {dateText}
+                    </Text>
+                  </View>
+                )}
+                <ChatBubble
+                  message={item}
+                  onReply={setReplyToMessage}
+                  onReact={handleReact}
+                  isRead={isRead}
+                />
+              </View>
             );
           }}
           contentContainerStyle={{ paddingVertical: 20 }}
@@ -806,6 +931,25 @@ const styles = StyleSheet.create({
     width: 4,
     height: '80%',
     borderRadius: 2,
+  },
+  dateDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 16,
+    paddingHorizontal: 20,
+  },
+  dateLine: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    height: 1,
+  },
+  dateText: {
+    fontSize: 12,
+    fontWeight: '600',
+    paddingHorizontal: 12,
+    textTransform: 'capitalize',
   },
 });
 

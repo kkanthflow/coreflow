@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
 import { SUPPORTED_CURRENCIES } from '@/lib/currency';
+import { hashPassword } from '@/lib/crypto';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -109,6 +110,9 @@ export default function RegisterScreen() {
         }
       }
 
+      // Hash password client-side
+      const hashedPassword = await hashPassword(password);
+
       // 2. Sign up the user
       let userId = null;
       const metaRole = accountType === 'freelancer'
@@ -117,7 +121,7 @@ export default function RegisterScreen() {
 
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
-        password,
+        password: hashedPassword,
         options: {
           data: {
             full_name: fullName,
@@ -128,9 +132,16 @@ export default function RegisterScreen() {
 
       if (signUpError) {
         if (signUpError.message.includes('User already registered')) {
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-          if (signInError) throw new Error('This email is already registered. Please sign in instead.');
-          userId = signInData.user?.id;
+          let signInResult = await supabase.auth.signInWithPassword({ email, password: hashedPassword });
+          if (signInResult.error) {
+            signInResult = await supabase.auth.signInWithPassword({ email, password });
+            if (signInResult.error) throw new Error('This email is already registered. Please sign in instead.');
+            
+            if (signInResult.data.user) {
+              await supabase.auth.updateUser({ password: hashedPassword });
+            }
+          }
+          userId = signInResult.data.user?.id;
         } else {
           throw signUpError;
         }
@@ -222,7 +233,7 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={{ flex: 1, backgroundColor: colors.background }}
     >
       {/* Full-screen dark loading overlay — shown while creating account + during auth transition */}

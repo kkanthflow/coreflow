@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, ScrollView, Pressable, TextInput, ActivityIndicator, Alert, Modal, KeyboardAvoidingView, Platform, Image } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/use-auth';
@@ -69,6 +69,13 @@ export default function NewInvoiceScreen() {
   const [newClientPhone, setNewClientPhone] = useState('');
   const [newClientGst, setNewClientGst] = useState('');
   const [newClientAddress, setNewClientAddress] = useState('');
+
+  const clientScrollRef = useRef<ScrollView>(null);
+  const handleClientInputFocus = (yOffset: number) => {
+    setTimeout(() => {
+      clientScrollRef.current?.scrollTo({ y: yOffset, animated: true });
+    }, 100);
+  };
 
   // Organization configuration modal state
   const [orgDetails, setOrgDetails] = useState<any>(null);
@@ -490,7 +497,7 @@ export default function NewInvoiceScreen() {
       <Stack.Screen options={{ presentation: 'modal', headerShown: false }} />
       
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
       >
@@ -825,7 +832,7 @@ export default function NewInvoiceScreen() {
       {/* Client Modal */}
       <Modal visible={isClientModalVisible} transparent animationType="slide">
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
           style={{ flex: 1 }}
         >
           <View className="flex-1 justify-end bg-black/50">
@@ -837,12 +844,13 @@ export default function NewInvoiceScreen() {
                 </Pressable>
               </View>
 
-              <ScrollView showsVerticalScrollIndicator={false} className="max-h-96" keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets={true}>
+              <ScrollView ref={clientScrollRef} showsVerticalScrollIndicator={false} className="max-h-96" keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets={true}>
                 <TextInput
                   placeholder="Client Name *"
                   placeholderTextColor={colors.muted}
                   value={newClientName}
                   onChangeText={setNewClientName}
+                  onFocus={() => handleClientInputFocus(0)}
                   className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
                   style={{ backgroundColor: colors.surface }}
                 />
@@ -851,6 +859,7 @@ export default function NewInvoiceScreen() {
                   placeholderTextColor={colors.muted}
                   value={newClientCompany}
                   onChangeText={setNewClientCompany}
+                  onFocus={() => handleClientInputFocus(50)}
                   className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
                   style={{ backgroundColor: colors.surface }}
                 />
@@ -859,6 +868,7 @@ export default function NewInvoiceScreen() {
                   placeholderTextColor={colors.muted}
                   value={newClientEmail}
                   onChangeText={setNewClientEmail}
+                  onFocus={() => handleClientInputFocus(110)}
                   keyboardType="email-address"
                   className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
                   style={{ backgroundColor: colors.surface }}
@@ -868,6 +878,7 @@ export default function NewInvoiceScreen() {
                   placeholderTextColor={colors.muted}
                   value={newClientPhone}
                   onChangeText={setNewClientPhone}
+                  onFocus={() => handleClientInputFocus(170)}
                   keyboardType="phone-pad"
                   className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
                   style={{ backgroundColor: colors.surface }}
@@ -877,6 +888,7 @@ export default function NewInvoiceScreen() {
                   placeholderTextColor={colors.muted}
                   value={newClientGst}
                   onChangeText={setNewClientGst}
+                  onFocus={() => handleClientInputFocus(230)}
                   className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-3"
                   style={{ backgroundColor: colors.surface }}
                 />
@@ -885,6 +897,7 @@ export default function NewInvoiceScreen() {
                   placeholderTextColor={colors.muted}
                   value={newClientAddress}
                   onChangeText={setNewClientAddress}
+                  onFocus={() => handleClientInputFocus(290)}
                   className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-6"
                   style={{ backgroundColor: colors.surface }}
                 />
@@ -905,7 +918,7 @@ export default function NewInvoiceScreen() {
       {/* Organization Setup Modal */}
       <Modal visible={isOrgModalVisible} transparent animationType="slide">
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
           style={{ flex: 1 }}
         >
           <View className="flex-1 justify-end bg-black/50">

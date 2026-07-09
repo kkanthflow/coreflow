@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
-import { Alert, Platform } from 'react-native';
+import { Alert, Platform, AppState } from 'react-native';
 import { supabase } from './supabase';
 import { Session } from '@supabase/supabase-js';
 
@@ -294,7 +294,43 @@ export function AuthProvider({ children }: AuthProviderProps) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const updateOnlineStatus = async (userId: string, isOnline: boolean) => {
+    try {
+      await supabase
+        .from('users')
+        .update({
+          is_online: isOnline,
+          last_seen_at: new Date().toISOString(),
+        })
+        .eq('id', userId);
+    } catch (err) {
+      console.warn('[AuthContext] Failed to update presence status:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Set online on load
+    updateOnlineStatus(user.id, true);
+
+    // Listen for app state changes to background/foreground
+    const appStateSub = AppState.addEventListener('change', (nextAppState) => {
+      const isForeground = nextAppState === 'active';
+      updateOnlineStatus(user.id, isForeground);
+    });
+
+    return () => {
+      appStateSub.remove();
+      // Set offline on unmount/logout
+      updateOnlineStatus(user.id, false);
+    };
+  }, [user?.id]);
+
   const logout = async () => {
+    if (user?.id) {
+      await updateOnlineStatus(user.id, false);
+    }
     await supabase.auth.signOut();
   };
 

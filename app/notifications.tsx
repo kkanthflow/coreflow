@@ -46,7 +46,18 @@ export default function NotificationsScreen() {
 
       const { data, error } = await query;
       if (data && !error) {
-        setNotifications(data as DbNotification[]);
+        const list = data as DbNotification[];
+        setNotifications(list);
+        
+        // Automatically mark all as read when opening the page
+        const hasUnread = list.some(n => !n.is_read);
+        if (hasUnread && filter === 'all') {
+          await supabase
+            .from('notifications')
+            .update({ is_read: true })
+            .eq('user_id', user.id)
+            .eq('is_read', false);
+        }
       }
     } catch (e) {
       console.error('Error fetching notifications:', e);
@@ -177,6 +188,7 @@ export default function NotificationsScreen() {
           router.push(`/invoices/${notification.entity_id}` as any);
           break;
         case 'chat_channel':
+        case 'chat':
           router.push(`/chat/${notification.entity_id}` as any);
           break;
         default:
@@ -197,7 +209,9 @@ export default function NotificationsScreen() {
         case 'project': return 'briefcase-outline';
         case 'task': return 'checkbox-outline';
         case 'invoice': return 'receipt-outline';
-        case 'chat_channel': return 'chatbubbles-outline';
+        case 'chat_channel':
+        case 'chat':
+          return 'chatbubbles-outline';
         case 'meeting': return 'calendar-outline';
       }
     }
@@ -206,6 +220,7 @@ export default function NotificationsScreen() {
       case 'meeting_invite': return 'mail-unread-outline';
       case 'meeting_reminder': return 'alarm-outline';
       case 'role_change': return 'shield-checkmark-outline';
+      case 'chat': return 'chatbubbles-outline';
       default: return 'notifications-outline';
     }
   };

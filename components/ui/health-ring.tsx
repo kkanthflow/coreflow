@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { View, Text, Animated, StyleSheet } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { useColors } from '@/hooks/use-colors';
 
 interface HealthRingProps {
   progress: number; // 0-100
@@ -19,6 +20,7 @@ export function HealthRing({
   label,
   showPercent = true,
 }: HealthRingProps) {
+  const colors = useColors();
   const safeSize = isNaN(size) || size <= 0 ? 72 : size;
   const safeStrokeWidth = isNaN(strokeWidth) || strokeWidth < 0 ? 6 : strokeWidth;
   const safeProgress = isNaN(progress) || typeof progress !== 'number' ? 0 : Math.max(0, Math.min(100, progress));
@@ -63,7 +65,7 @@ export function HealthRing({
             cx={safeSize / 2}
             cy={safeSize / 2}
             r={radius}
-            stroke="#2A2A3A"
+            stroke={colors.border}
             strokeWidth={safeStrokeWidth}
             fill="none"
           />
@@ -82,14 +84,14 @@ export function HealthRing({
         </Svg>
         {showPercent && (
           <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-            <Text style={{ color: '#F5F5FA', fontSize: safeSize * 0.18, fontWeight: '800' }}>
+            <Text style={{ color: colors.foreground, fontSize: safeSize * 0.18, fontWeight: '800' }}>
               {displayProgress}%
             </Text>
           </View>
         )}
       </View>
       {label && (
-        <Text style={{ color: '#7A7A92', fontSize: 11, fontWeight: '600', marginTop: 6, textAlign: 'center' }}>
+        <Text style={{ color: colors.secondary_text, fontSize: 11, fontWeight: '600', marginTop: 6, textAlign: 'center' }}>
           {label}
         </Text>
       )}

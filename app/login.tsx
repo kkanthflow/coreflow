@@ -13,6 +13,7 @@ import { supabase } from '@/lib/supabase';
 
 import { useColors } from '@/hooks/use-colors';
 import { useAuth } from '@/hooks/use-auth';
+import { hashPassword } from '@/lib/crypto';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -99,8 +100,27 @@ export default function LoginScreen() {
       if (result.success) {
         setLoading(true);
         setError(null);
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email: emailToUse, password: passwordToUse });
-        if (signInError) throw signInError;
+        
+        let signInResult = await supabase.auth.signInWithPassword({ email: emailToUse, password: passwordToUse });
+        
+        if (signInResult.error) {
+          const hashedStorePassword = await hashPassword(passwordToUse);
+          signInResult = await supabase.auth.signInWithPassword({ email: emailToUse, password: hashedStorePassword });
+          if (signInResult.error) throw signInResult.error;
+          
+          if (Platform.OS !== 'web') {
+            await SecureStore.setItemAsync('biometric_password', hashedStorePassword);
+          }
+        } else {
+          const isHex64 = /^[0-9a-f]{64}$/i.test(passwordToUse);
+          if (!isHex64 && signInResult.data.user) {
+            const hashedPassword = await hashPassword(passwordToUse);
+            await supabase.auth.updateUser({ password: hashedPassword });
+            if (Platform.OS !== 'web') {
+              await SecureStore.setItemAsync('biometric_password', hashedPassword);
+            }
+          }
+        }
       }
     } catch (err) {
       setError('Biometric authentication failed.');
@@ -151,13 +171,28 @@ export default function LoginScreen() {
     if (!validate()) return;
     setLoading(true); setError(null);
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-      if (signInError) throw signInError;
-      if (Platform.OS !== 'web') {
-        // ONLY write credentials to SecureStore if biometrics was explicitly enabled in Settings.
-        // This prevents native Android Keystore initialization exceptions from crashing and closing the app.
-        const isBiometricEnabled = await SecureStore.getItemAsync('biometric_enabled');
-        if (isBiometricEnabled === 'true') {
+      const hashedPassword = await hashPassword(password);
+      let signInResult = await supabase.auth.signInWithPassword({ email, password: hashedPassword });
+      let isLegacyUser = false;
+
+      if (signInResult.error) {
+        signInResult = await supabase.auth.signInWithPassword({ email, password });
+        if (signInResult.error) throw signInResult.error;
+        isLegacyUser = true;
+      }
+
+      if (signInResult.data.user) {
+        if (isLegacyUser) {
+          const { error: updateError } = await supabase.auth.updateUser({ password: hashedPassword });
+          if (updateError) {
+            console.warn('[Login] Failed to upgrade legacy password:', updateError);
+          }
+        }
+
+        if (Platform.OS !== 'web') {
+          // Always cache the latest successful credentials in SecureStore.
+          // This ensures that if the user enables Biometrics in settings later,
+          // the credentials are already securely stored and biometrics works immediately.
           await SecureStore.setItemAsync('biometric_email', email);
           await SecureStore.setItemAsync('biometric_password', password);
         }
@@ -169,7 +204,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <StatusBar barStyle={colors.background === '#FFFFFF' ? 'dark-content' : 'light-content'} backgroundColor={C.bg} />
       
       {/* Full-screen dark loading overlay — shown during auth transition to protect native layout engine */}

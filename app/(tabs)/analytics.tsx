@@ -253,7 +253,7 @@ export default function AnalyticsScreen() {
         <Animated.View style={[styles.header, { transform: [{ translateY: headerAnim }], opacity: headerFade }]}>
           <View>
             <Text style={[styles.title, { color: C.text }]}>Analytics</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.subtitle, { color: C.muted }]}>
               {isManagement ? 'Organization-wide business metrics' : 'Personal performance & targets'}
             </Text>
           </View>
@@ -282,7 +282,7 @@ export default function AnalyticsScreen() {
           {isManagement ? (
             <>
               {/* Org KPIs */}
-              <Text style={styles.sectionTitle}>Workspace Health</Text>
+              <Text style={[styles.sectionTitle, { color: C.text }]}>Workspace Health</Text>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
                 <StatCard label="Projects" value={orgStats.totalProjects} icon="folder" color={C.primary} sub={`${orgStats.completedProjects} done`} />
                 <StatCard label="Tasks" value={orgStats.totalTasks} icon="checkmark-circle" color={C.info} sub={`${orgStats.doneTasks} done`} />
@@ -293,7 +293,7 @@ export default function AnalyticsScreen() {
               </View>
 
               {/* Progress bars */}
-              <Text style={styles.sectionTitle}>Completion Rates</Text>
+              <Text style={[styles.sectionTitle, { color: C.text }]}>Completion Rates</Text>
               <GlassCard padding={20} radius={20} style={{ marginBottom: 24 }}>
                 <AnimatedBar value={orgStats.completedProjects} total={orgStats.totalProjects} color={C.primary} label="Project Completion" />
                 <AnimatedBar value={orgStats.doneTasks} total={orgStats.totalTasks} color={C.info} label="Task Completion" />
@@ -301,7 +301,7 @@ export default function AnalyticsScreen() {
               </GlassCard>
 
               {/* Health rings */}
-              <Text style={styles.sectionTitle}>Visual Health</Text>
+              <Text style={[styles.sectionTitle, { color: C.text }]}>Visual Health</Text>
               <GlassCard padding={20} radius={20} style={{ marginBottom: 24 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' }}>
                   <HealthRing
@@ -320,7 +320,7 @@ export default function AnalyticsScreen() {
               </GlassCard>
 
               {/* Finance breakdown */}
-              <Text style={styles.sectionTitle}>Finance & Billing</Text>
+              <Text style={[styles.sectionTitle, { color: C.text }]}>Finance & Billing</Text>
               <GlassCard glowColor={C.success} padding={20} radius={20} style={{ marginBottom: 24 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
                   <Text style={{ color: C.textSec, fontSize: 13, fontWeight: '600' }}>Total Invoices</Text>
@@ -349,7 +349,7 @@ export default function AnalyticsScreen() {
           ) : (
             <>
               {/* Personal stats */}
-              <Text style={styles.sectionTitle}>My Performance</Text>
+              <Text style={[styles.sectionTitle, { color: C.text }]}>My Performance</Text>
               <View style={{ alignItems: 'center', marginBottom: 24 }}>
                 <HealthRing
                   progress={personalStats.total > 0 ? (personalStats.done / personalStats.total) * 100 : 0}
@@ -366,7 +366,7 @@ export default function AnalyticsScreen() {
                 <StatCard label="Review" value={personalStats.review} icon="eye" color={C.purple} />
               </View>
 
-              <Text style={styles.sectionTitle}>Task Breakdown</Text>
+              <Text style={[styles.sectionTitle, { color: C.text }]}>Task Breakdown</Text>
               <GlassCard padding={20} radius={20} style={{ marginBottom: 24 }}>
                 <AnimatedBar value={personalStats.done}       total={personalStats.total} color={C.success} label="Completed" />
                 <AnimatedBar value={personalStats.inProgress} total={personalStats.total} color={C.warning} label="In Progress" />

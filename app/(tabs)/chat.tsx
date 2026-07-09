@@ -206,6 +206,17 @@ export default function ChatScreen() {
           fetchChannels();
         }
       )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'channel_members',
+        },
+        () => {
+          fetchChannels();
+        }
+      )
       .subscribe();
 
     return () => {

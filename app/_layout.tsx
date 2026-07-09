@@ -6,7 +6,10 @@ import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import "react-native-reanimated";
-import { Platform, View, ActivityIndicator, StyleSheet } from "react-native";
+import { Platform, View, ActivityIndicator, StyleSheet, Text, Pressable, AppState, AppStateStatus } from "react-native";
+import * as LocalAuthentication from 'expo-local-authentication';
+import * as SecureStore from 'expo-secure-store';
+import { Ionicons } from '@expo/vector-icons';
 
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider, useThemeContext } from "@/lib/theme-provider";
@@ -27,13 +30,33 @@ import { useOTAUpdates } from '@/hooks/use-ota-updates';
 import { supabase } from "@/lib/supabase";
 
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
+  handleNotification: async (notification) => {
+    try {
+      const senderId = notification.request.content.data?.senderId as string | undefined;
+      const sessionRes = await supabase.auth.getSession();
+      const currentUserId = sessionRes.data.session?.user?.id;
+
+      if (senderId && currentUserId && senderId.toLowerCase() === currentUserId.toLowerCase()) {
+        return {
+          shouldShowAlert: false,
+          shouldPlaySound: false,
+          shouldSetBadge: false,
+          shouldShowBanner: false,
+          shouldShowList: false,
+        };
+      }
+    } catch (e) {
+      console.warn('[NotificationHandler] Error checking self-message:', e);
+    }
+
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
+    };
+  },
 });
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
@@ -120,6 +143,115 @@ function AuthGate() {
   return null;
 }
 
+function BiometricAppLock({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const [isLocked, setIsLocked] = useState(false);
+  const [authenticating, setAuthenticating] = useState(false);
+  const colors = useColors();
+  const appState = useRef(AppState.currentState);
+
+  const triggerLock = useCallback(async () => {
+    if (Platform.OS === 'web' || !user) return;
+    
+    // Check if biometrics is enabled in SecureStore
+    const isBiometricEnabled = await SecureStore.getItemAsync('biometric_enabled');
+    if (isBiometricEnabled !== 'true') return;
+
+    setIsLocked(true);
+    authenticate();
+  }, [user]);
+
+  const authenticate = async () => {
+    if (authenticating) return;
+    setAuthenticating(true);
+    try {
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+
+      if (!compatible || !enrolled) {
+        setIsLocked(false);
+        return;
+      }
+
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Unlock CoreFlow',
+        fallbackLabel: 'Cancel',
+        disableDeviceFallback: false,
+      });
+
+      if (result.success) {
+        setIsLocked(false);
+      }
+    } catch (e) {
+      console.warn('[AppLock] Authentication error:', e);
+    } finally {
+      setAuthenticating(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      // If returning to active from background, trigger the lock
+      if (
+        appState.current.match(/inactive|background/) &&
+        nextAppState === 'active'
+      ) {
+        triggerLock();
+      }
+      appState.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    return () => {
+      subscription.remove();
+    };
+  }, [triggerLock]);
+
+  // Lock the app initially if biometric is configured, but don't block web
+  useEffect(() => {
+    if (user && Platform.OS !== 'web') {
+      triggerLock();
+    }
+  }, [user]);
+
+  if (isLocked) {
+    return (
+      <View style={[StyleSheet.absoluteFill, { backgroundColor: colors.background, alignItems: 'center', justifyContent: 'center', zIndex: 99999 }]}>
+        <View style={{ width: 84, height: 84, borderRadius: 28, backgroundColor: '#FF6B4A18', borderWidth: 1, borderColor: '#FF6B4A30', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+          <Ionicons name="lock-closed" size={38} color="#FF6B4A" />
+        </View>
+        <Text style={{ fontSize: 22, fontWeight: '800', color: colors.foreground, marginBottom: 8 }}>Workspace Locked</Text>
+        <Text style={{ fontSize: 14, color: colors.muted, marginBottom: 40, textAlign: 'center', paddingHorizontal: 40 }}>
+          Use biometric authentication to unlock and access your workspace
+        </Text>
+        
+        <Pressable
+          onPress={authenticate}
+          style={({ pressed }) => ({
+            backgroundColor: colors.primary,
+            paddingVertical: 14,
+            paddingHorizontal: 28,
+            borderRadius: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            shadowColor: colors.primary,
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 10,
+            elevation: 4,
+            opacity: pressed ? 0.9 : 1,
+          })}
+        >
+          <Ionicons name="finger-print" size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
+          <Text style={{ color: '#FFFFFF', fontSize: 16, fontWeight: '700' }}>Unlock Workspace</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 function AppNavigator() {
   const colors = useColors();
 
@@ -166,7 +298,37 @@ export default function RootLayout() {
     // Listen for notification taps
     const tapSubscription = Notifications.addNotificationResponseReceivedListener(response => {
       const data = response.notification.request.content.data;
-      if (data && data.channelId) {
+      if (!data) return;
+
+      if (data.action_url) {
+        router.push(data.action_url as any);
+        return;
+      }
+
+      if (data.entity_type && data.entity_id) {
+        switch (data.entity_type) {
+          case 'meeting':
+            router.push(`/meetings/${data.entity_id}` as any);
+            break;
+          case 'project':
+            router.push(`/projects/${data.entity_id}` as any);
+            break;
+          case 'task':
+            router.push(`/tasks/${data.entity_id}` as any);
+            break;
+          case 'invoice':
+            router.push(`/invoices/${data.entity_id}` as any);
+            break;
+          case 'chat_channel':
+            router.push(`/chat/${data.entity_id}` as any);
+            break;
+          default:
+            break;
+        }
+        return;
+      }
+
+      if (data.channelId) {
         router.push(`/chat/${data.channelId}` as any);
       }
     });
@@ -212,9 +374,12 @@ export default function RootLayout() {
           },
           async (payload: any) => {
             console.log('[GlobalPushNotifs] Received new message payload:', payload.new);
-            console.log('[GlobalPushNotifs] Current user ID:', userId);
-            
-            const isSelfMessage = payload.new.sender_id?.toLowerCase() === userId?.toLowerCase();
+            const sessionRes = await supabase.auth.getSession();
+            const currentUserId = sessionRes.data.session?.user?.id || userId;
+            const isSelfMessage =
+              payload.new.sender_id &&
+              currentUserId &&
+              payload.new.sender_id.toLowerCase() === currentUserId.toLowerCase();
             if (!isSelfMessage) {
               // Mark as delivered immediately on receipt
               if (!payload.new.delivered_at) {
@@ -266,13 +431,29 @@ export default function RootLayout() {
     const registerAndSavePushToken = async (userId: string) => {
       if (Platform.OS === 'web') return;
       try {
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('default', {
+            name: 'default',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#FF231F7C',
+            showBadge: true,
+          });
+        }
+
         const { status: existingStatus } = await Notifications.getPermissionsAsync();
         let finalStatus = existingStatus;
         if (existingStatus !== 'granted') {
           const { status } = await Notifications.requestPermissionsAsync();
           finalStatus = status;
         }
-        if (finalStatus !== 'granted') return;
+        if (finalStatus !== 'granted') {
+          await supabase
+            .from('user_push_tokens')
+            .delete()
+            .eq('user_id', userId);
+          return;
+        }
 
         // Try to get Expo Push Token using project ID from Constants
         const Constants = require('expo-constants').default;
@@ -292,6 +473,14 @@ export default function RootLayout() {
         console.warn('Failed to register push token:', err);
       }
     };
+
+    // Automatically register push token on startup if session already exists
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user?.id) {
+        setupRealtimeSubscription(session.user.id);
+        registerAndSavePushToken(session.user.id);
+      }
+    });
 
     const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user?.id) {
@@ -358,15 +547,17 @@ export default function RootLayout() {
     <ErrorBoundary>
       <GestureHandlerRootView style={{ flex: 1 }}>
         <AuthProvider>
-          <trpc.Provider client={trpcClient} queryClient={queryClient}>
-            <QueryClientProvider client={queryClient}>
-            {/* AuthGate: centrally handles auth → navigation decisions.
-                Must be inside Stack (navigation tree) to use useRouter/useSegments */}
-            <AuthGate />
-            <AppNavigator />
-            <StatusBar style="auto" />
-            </QueryClientProvider>
-          </trpc.Provider>
+          <BiometricAppLock>
+            <trpc.Provider client={trpcClient} queryClient={queryClient}>
+              <QueryClientProvider client={queryClient}>
+              {/* AuthGate: centrally handles auth → navigation decisions.
+                  Must be inside Stack (navigation tree) to use useRouter/useSegments */}
+              <AuthGate />
+              <AppNavigator />
+              <StatusBar style="auto" />
+              </QueryClientProvider>
+            </trpc.Provider>
+          </BiometricAppLock>
         </AuthProvider>
       </GestureHandlerRootView>
     </ErrorBoundary>

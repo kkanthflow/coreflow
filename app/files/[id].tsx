@@ -32,6 +32,13 @@ export default function FileDetailScreen() {
             created_at,
             uploader_id,
             project_id,
+            project:project_id (
+              title,
+              department:department_id (
+                name,
+                color
+              )
+            ),
             uploader:uploader_id (
               full_name
             )
@@ -55,11 +62,19 @@ export default function FileDetailScreen() {
 
   const handleOpenFile = async () => {
     if (!file) return;
-    const storageUrl = `https://rltygdzldplkmwuqfadm.supabase.co/storage/v1/object/authenticated/${file.bucket}/${file.storage_path}`;
     try {
-      await Linking.openURL(storageUrl);
-    } catch (e) {
-      Alert.alert('Error', 'Unable to open file link on this device.');
+      const { data, error } = await supabase.storage
+        .from(file.bucket)
+        .createSignedUrl(file.storage_path, 60); // Valid for 60 seconds
+
+      if (error) throw error;
+      if (data?.signedUrl) {
+        await Linking.openURL(data.signedUrl);
+      } else {
+        throw new Error('Could not generate secure link');
+      }
+    } catch (e: any) {
+      Alert.alert('Access Error', e.message || 'Unable to open file link on this device.');
     }
   };
 
@@ -139,16 +154,26 @@ export default function FileDetailScreen() {
 
           <View style={[styles.infoRow, { borderTopWidth: 1, borderTopColor: colors.border }]}>
             <Text style={[styles.infoLabel, { color: colors.muted }]}>Context</Text>
-            <Text style={[styles.infoValue, { color: colors.foreground }]}>
-              {file.project_id ? 'Project Attached' : 'General Organization'}
+            <Text style={[styles.infoValue, { color: colors.foreground }]} numberOfLines={1}>
+              {file.project ? `Project: ${file.project.title}` : 'General Organization'}
             </Text>
           </View>
+
+          {file.project?.department && (
+            <View style={[styles.infoRow, { borderTopWidth: 1, borderTopColor: colors.border }]}>
+              <Text style={[styles.infoLabel, { color: colors.muted }]}>Department</Text>
+              <Text style={[styles.infoValue, { color: file.project.department.color || colors.foreground, fontWeight: '700' }]} numberOfLines={1}>
+                {file.project.department.name}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Action Buttons */}
         <View style={styles.actions}>
           <PremiumButton
             variant="primary"
+            
             size="lg"
             onPress={handleOpenFile}
             style={{ width: '100%', marginBottom: 12 }}
@@ -160,10 +185,7 @@ export default function FileDetailScreen() {
           <PremiumButton
             variant="outline"
             size="lg"
-            onPress={() => {
-              const storageUrl = `https://rltygdzldplkmwuqfadm.supabase.co/storage/v1/object/authenticated/${file.bucket}/${file.storage_path}`;
-              Linking.openURL(storageUrl);
-            }}
+            onPress={handleOpenFile}
             style={{ width: '100%' }}
           >
             <Ionicons name="download-outline" size={20} color={colors.foreground} style={{ marginRight: 8 }} />

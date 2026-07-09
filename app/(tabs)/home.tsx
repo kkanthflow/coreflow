@@ -95,9 +95,10 @@ export default function HomeScreen() {
       const now = new Date().toISOString();
 
       const [{ count: upcoming }, { count: pending }, unreadRes] = await Promise.all([
-        supabase.from('meeting_attendees')
-          .select('meeting_id, meetings!inner(start_time)', { count: 'exact', head: true })
-          .eq('user_id', user.id).eq('rsvp_status', 'accepted').gt('meetings.start_time', now),
+        supabase.from('meetings')
+          .select('id', { count: 'exact', head: true })
+          .gt('start_time', now)
+          .is('is_cancelled', false),
         supabase.from('meeting_attendees')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', user.id).eq('rsvp_status', 'pending'),

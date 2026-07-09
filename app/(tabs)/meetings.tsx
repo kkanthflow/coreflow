@@ -220,7 +220,7 @@ export default function MeetingsScreen() {
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
           <View>
             <Text style={[styles.title, { color: C.text }]}>Meetings</Text>
-            <Text style={styles.subtitle}>{meetings.length} {tab} meeting{meetings.length !== 1 ? 's' : ''}</Text>
+            <Text style={[styles.subtitle, { color: C.muted }]}>{meetings.length} {tab} meeting{meetings.length !== 1 ? 's' : ''}</Text>
           </View>
           {canSchedule && (
             <GradientButton onPress={() => router.push('/meetings/new')} size="sm">
@@ -230,14 +230,14 @@ export default function MeetingsScreen() {
         </View>
 
         {/* Tab toggle */}
-        <View style={styles.tabRow}>
+        <View style={[styles.tabRow, { backgroundColor: C.card, borderColor: C.border }]}>
           {(['upcoming', 'past'] as const).map(t => (
             <Pressable
               key={t}
               onPress={() => { setTab(t); setLoading(true); }}
               style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
             >
-              <Text style={[styles.tabLabel, tab === t && styles.tabLabelActive]}>
+              <Text style={[styles.tabLabel, { color: tab === t ? '#FFFFFF' : C.muted }, tab === t && styles.tabLabelActive]}>
                 {t.charAt(0).toUpperCase() + t.slice(1)}
               </Text>
             </Pressable>
@@ -263,7 +263,7 @@ export default function MeetingsScreen() {
                 <Ionicons name="calendar-outline" size={36} color={C.muted} />
               </View>
               <Text style={[styles.emptyTitle, { color: C.text }]}>No {tab} meetings</Text>
-              <Text style={styles.emptySub}>
+              <Text style={[styles.emptySub, { color: C.muted }]}>
                 {tab === 'upcoming'
                   ? 'Nothing scheduled yet. Schedule a meeting to get started.'
                   : 'No past meetings on record.'}

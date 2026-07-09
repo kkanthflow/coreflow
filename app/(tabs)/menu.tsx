@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { ScrollView, Text, View, Pressable, StyleSheet, Animated, StatusBar } from 'react-native';
+import React, { useRef, useEffect, useState } from 'react';
+import { ScrollView, Text, View, Pressable, StyleSheet, Animated, StatusBar, Platform, Alert, Modal, TextInput, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'expo-router';
@@ -9,6 +9,7 @@ import { RoleBadge } from '@/components/ui/role-badge';
 import { hasPermission } from '@/lib/permissions';
 import { AvatarUpload } from '@/components/ui/avatar-upload';
 import { GlassCard } from '@/components/ui/glass-card';
+import * as Notifications from 'expo-notifications';
 
 import { useColors } from '@/hooks/use-colors';
 
@@ -102,12 +103,119 @@ export default function MenuScreen() {
   const fadAnim = useRef(new Animated.Value(0)).current;
   const slidAnim = useRef(new Animated.Value(20)).current;
 
+  const [permission, setPermission] = useState<string>('checking');
+  const [pushToken, setPushToken] = useState<string>('checking');
+  const [isSynced, setIsSynced] = useState<boolean | 'checking'>('checking');
+  const [registering, setRegistering] = useState<boolean>(false);
+
+  const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const checkDiagnostics = async () => {
+    if (Platform.OS === 'web') {
+      setPermission('unsupported');
+      setPushToken('unsupported');
+      setIsSynced(false);
+      return;
+    }
+
+    try {
+      const { status } = await Notifications.getPermissionsAsync();
+      setPermission(status);
+
+      if (status !== 'granted') {
+        setPushToken('no-permission');
+        setIsSynced(false);
+        if (user?.id) {
+          await supabase
+            .from('user_push_tokens')
+            .delete()
+            .eq('user_id', user.id);
+        }
+        return;
+      }
+
+      const Constants = require('expo-constants').default;
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+      
+      const tokenData = await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined
+      );
+      const token = tokenData.data;
+      setPushToken(token || 'failed');
+
+      if (token && user?.id) {
+        const { data, error } = await supabase
+          .from('user_push_tokens')
+          .select('token')
+          .eq('user_id', user.id)
+          .eq('token', token)
+          .maybeSingle();
+
+        if (error) throw error;
+        setIsSynced(!!data);
+      } else {
+        setIsSynced(false);
+      }
+    } catch (err) {
+      console.warn('Diagnostics error:', err);
+      setPushToken('error');
+      setIsSynced(false);
+    }
+  };
+
+  const forceRegister = async () => {
+    if (!user?.id || Platform.OS === 'web') return;
+    setRegistering(true);
+    try {
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        alert('Notification permission is required');
+        return;
+      }
+
+      const Constants = require('expo-constants').default;
+      const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+      
+      const tokenData = await Notifications.getExpoPushTokenAsync(
+        projectId ? { projectId } : undefined
+      );
+      const token = tokenData.data;
+
+      if (token) {
+        const { error } = await supabase
+          .from('user_push_tokens')
+          .upsert({ user_id: user.id, token });
+        
+        if (error) throw error;
+        alert('Device registered successfully!');
+      } else {
+        alert('Failed to generate push token');
+      }
+    } catch (err: any) {
+      alert('Registration failed: ' + err.message);
+    } finally {
+      setRegistering(false);
+      await checkDiagnostics();
+    }
+  };
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(fadAnim,  { toValue: 1, duration: 500, useNativeDriver: true }),
       Animated.timing(slidAnim, { toValue: 0, duration: 500, useNativeDriver: true }),
     ]).start();
-  }, []);
+
+    if (user?.id) {
+      checkDiagnostics();
+    }
+  }, [user?.id]);
 
   if (isLoading || !isAuthenticated || !user) return null;
 
@@ -195,10 +303,55 @@ export default function MenuScreen() {
             )}
           </GlassCard>
 
+          {/* Push Diagnostics Card */}
+          {Platform.OS !== 'web' && (
+            <GlassCard padding={16} radius={20} style={{ marginBottom: 24 }}>
+              <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', marginBottom: 12 }}>
+                Push Notifications Diagnostic
+              </Text>
+              <View style={{ gap: 8, marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: C.textSec, fontSize: 13 }}>Permission</Text>
+                  <Text style={{ color: permission === 'granted' ? C.success : C.error, fontSize: 13, fontWeight: '700' }}>
+                    {permission.toUpperCase()}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: C.textSec, fontSize: 13 }}>Expo Token</Text>
+                  <Text style={{ color: pushToken.startsWith('ExponentPushToken') ? C.success : C.error, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
+                    {pushToken.startsWith('ExponentPushToken') ? 'GENERATED' : pushToken.toUpperCase()}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={{ color: C.textSec, fontSize: 13 }}>Supabase Sync</Text>
+                  <Text style={{ color: isSynced === true ? C.success : C.error, fontSize: 13, fontWeight: '700' }}>
+                    {isSynced === 'checking' ? 'CHECKING...' : isSynced ? 'ACTIVE ✅' : 'NOT SYNCED ❌'}
+                  </Text>
+                </View>
+              </View>
+              <Pressable
+                onPress={forceRegister}
+                disabled={registering}
+                style={({ pressed }) => ({
+                  backgroundColor: pressed ? `${C.primary}20` : 'transparent',
+                  borderWidth: 1,
+                  borderColor: C.primary,
+                  borderRadius: 12,
+                  padding: 10,
+                  alignItems: 'center',
+                })}
+              >
+                <Text style={{ color: C.primary, fontSize: 13, fontWeight: '700' }}>
+                  {registering ? 'REGISTERING...' : 'RE-REGISTER DEVICE'}
+                </Text>
+              </Pressable>
+            </GlassCard>
+          )}
+
           {/* Menu sections */}
           {sections.map((section, idx) => (
             <View key={idx} style={{ marginBottom: 24 }}>
-              <Text style={styles.sectionLabel}>{section.title}</Text>
+              <Text style={[styles.sectionLabel, { color: C.muted }]}>{section.title}</Text>
               <GlassCard padding={0} radius={18} style={{ overflow: 'hidden' }}>
                 {section.items.map((item, i) => (
                   <MenuRow key={item.id} item={item} isLast={i === section.items.length - 1} />
@@ -215,14 +368,119 @@ export default function MenuScreen() {
               padding: 16, borderRadius: 18,
               backgroundColor: pressed ? '#F8717120' : '#F8717110',
               borderWidth: 1, borderColor: '#F8717140',
-              gap: 10, marginBottom: 20,
+              gap: 10, marginBottom: 12,
             })}
           >
             <Ionicons name="log-out-outline" size={20} color={C.error} />
             <Text style={{ color: C.error, fontSize: 16, fontWeight: '700' }}>Sign Out</Text>
           </Pressable>
+
+          {/* Delete Account */}
+          <Pressable
+            onPress={() => {
+              setIsDeleteModalVisible(true);
+            }}
+            style={({ pressed }) => ({
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+              padding: 16, borderRadius: 18,
+              backgroundColor: pressed ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.05)',
+              borderWidth: 1, borderColor: 'rgba(239, 68, 68, 0.3)',
+              gap: 10, marginBottom: 20,
+            })}
+          >
+            <Ionicons name="trash-outline" size={20} color="#EF4444" />
+            <Text style={{ color: '#EF4444', fontSize: 16, fontWeight: '700' }}>Delete Account</Text>
+          </Pressable>
         </View>
       </ScrollView>
+
+      {/* Delete Account Password Confirmation Modal */}
+      {isDeleteModalVisible && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]} className="justify-end bg-black/50">
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1, justifyContent: 'flex-end' }}
+          >
+            <Pressable style={{ flex: 1 }} onPress={() => { if (!isDeleting) setIsDeleteModalVisible(false); }} />
+            <View className="p-6 rounded-t-3xl border-t border-border" style={{ backgroundColor: colors.background }}>
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-lg font-bold text-foreground">Confirm Password</Text>
+                <Pressable
+                  onPress={() => { if (!isDeleting) setIsDeleteModalVisible(false); }}
+                  className="w-8 h-8 rounded-full items-center justify-center"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Ionicons name="close" size={20} color={colors.foreground} />
+                </Pressable>
+              </View>
+              
+              <Text className="text-sm text-muted mb-4">
+                Please enter your password to confirm account deletion. This action is irreversible.
+              </Text>
+
+              <TextInput
+                placeholder="Enter your password"
+                placeholderTextColor={colors.muted}
+                secureTextEntry
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                editable={!isDeleting}
+                className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-6"
+                style={{ backgroundColor: colors.surface }}
+              />
+
+              <Pressable
+                onPress={async () => {
+                  if (!confirmPassword.trim()) {
+                    Alert.alert('Verification Required', 'Please enter your password.');
+                    return;
+                  }
+                  setIsDeleting(true);
+                  try {
+                    const { hashPassword } = require('@/lib/crypto');
+                    const hashedPassword = await hashPassword(confirmPassword);
+
+                    let verifyResult = await supabase.auth.signInWithPassword({
+                      email: user.email,
+                      password: hashedPassword
+                    });
+
+                    if (verifyResult.error) {
+                      verifyResult = await supabase.auth.signInWithPassword({
+                        email: user.email,
+                        password: confirmPassword
+                      });
+                      if (verifyResult.error) {
+                        throw new Error('Incorrect password. Please verify and try again.');
+                      }
+                    }
+
+                    const { error: deleteError } = await supabase.rpc('delete_own_user');
+                    if (deleteError) throw deleteError;
+
+                    setIsDeleteModalVisible(false);
+                    setConfirmPassword('');
+                    await supabase.auth.signOut();
+                  } catch (e: any) {
+                    Alert.alert('Authentication Failed', e.message || 'Verification failed.');
+                  } finally {
+                    setIsDeleting(false);
+                  }
+                }}
+                disabled={isDeleting}
+                className="p-4 rounded-2xl items-center justify-center"
+                style={{ backgroundColor: '#EF4444', opacity: isDeleting ? 0.6 : 1 }}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text className="text-white font-bold text-base">Permanently Delete Account</Text>
+                )}
+              </Pressable>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      )}
     </View>
   );
 }

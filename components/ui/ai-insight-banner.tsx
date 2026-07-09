@@ -10,7 +10,7 @@ interface AIInsightBannerProps {
   onPress?: () => void;
 }
 
-export function AIInsightBanner({ title = 'AI Insight', insight, score, onPress }: AIInsightBannerProps) {
+export function AIInsightBanner({ title = 'Insight', insight, score, onPress }: AIInsightBannerProps) {
   const colors = useColors();
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;

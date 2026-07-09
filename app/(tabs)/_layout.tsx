@@ -90,26 +90,21 @@ export default function TabLayout() {
   const fetchUnreadCount = useCallback(async () => {
     if (!user?.id) return;
     try {
-      const { data: channels } = await supabase
-        .from('chat_channels')
-        .select(`
-          id,
-          channel_members(user_id, last_read_at)
-        `);
+      const { data: memberships } = await supabase
+        .from('channel_members')
+        .select('channel_id, last_read_at')
+        .eq('user_id', user.id);
 
       let totalUnread = 0;
 
-      if (channels) {
-        for (const ch of channels) {
-          const myMember = ch.channel_members?.find(
-            (m: any) => m.user_id === user.id
-          );
-          const lastRead = myMember?.last_read_at || new Date(0).toISOString();
+      if (memberships) {
+        for (const mem of memberships) {
+          const lastRead = mem.last_read_at || new Date(0).toISOString();
 
           const { count } = await supabase
             .from('chat_messages')
             .select('*', { count: 'exact', head: true })
-            .eq('channel_id', ch.id)
+            .eq('channel_id', mem.channel_id)
             .gt('created_at', lastRead)
             .neq('sender_id', user.id);
 
@@ -136,7 +131,14 @@ export default function TabLayout() {
       )
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'message_reads' },
+        { event: '*', schema: 'public', table: 'channel_members' },
+        () => {
+          fetchUnreadCount();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'channel_members' },
         () => {
           fetchUnreadCount();
         }

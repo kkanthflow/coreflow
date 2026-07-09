@@ -65,6 +65,13 @@ export default function FileBrowserScreen() {
           created_at,
           uploader_id,
           project_id,
+          project:project_id (
+            title,
+            department:department_id (
+              name,
+              color
+            )
+          ),
           uploader:uploader_id (
             full_name
           )

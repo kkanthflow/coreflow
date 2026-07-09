@@ -337,7 +337,7 @@ export default function SettingsScreen() {
       {isCompanyModalVisible && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]} className="justify-end bg-black/50">
           <KeyboardAvoidingView 
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
             style={{ flex: 1, justifyContent: 'flex-end' }}
           >
             <Pressable style={{ flex: 1 }} onPress={() => setIsCompanyModalVisible(false)} />

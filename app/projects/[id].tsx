@@ -180,6 +180,40 @@ export default function ProjectDetailScreen() {
     }
   };
 
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (memberId === project?.owner_id) {
+      Alert.alert('Cannot Remove Owner', 'The project owner cannot be removed from the project.');
+      return;
+    }
+
+    Alert.alert(
+      'Remove Member',
+      `Are you sure you want to remove ${memberName} from this project?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const { error } = await supabase
+                .from('project_members')
+                .delete()
+                .eq('project_id', id)
+                .eq('user_id', memberId);
+
+              if (error) throw error;
+              Alert.alert('Success', 'Member has been removed from the project.');
+              fetchProjectData();
+            } catch (e: any) {
+              Alert.alert('Error', e.message || 'Failed to remove member.');
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const handleAddMilestone = async () => {
     if (!newMilestoneTitle.trim()) {
       Alert.alert('Validation Error', 'Milestone title is required.');
@@ -306,7 +340,7 @@ export default function ProjectDetailScreen() {
         onRequestClose={() => setShowDeleteModal(false)}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={{ flex: 1 }}
         >
           <Pressable
@@ -748,10 +782,25 @@ export default function ProjectDetailScreen() {
                     </View>
 
                     {/* Project role badge */}
-                    <View style={[styles.projectRoleBadge, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}30` }]}>
-                      <Text style={{ fontSize: 10, fontWeight: '700', color: colors.primary, textTransform: 'uppercase', letterSpacing: 0.4 }}>
-                        {m.role || 'Member'}
-                      </Text>
+                    {/* Project role badge / Delete action */}
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View style={[styles.projectRoleBadge, { backgroundColor: `${colors.primary}15`, borderColor: `${colors.primary}30` }]}>
+                        <Text style={{ fontSize: 10, fontWeight: '700', color: colors.primary, textTransform: 'uppercase', letterSpacing: 0.4 }}>
+                          {m.role || 'Member'}
+                        </Text>
+                      </View>
+                      {resolvedCanAssign && m.user_id !== project?.owner_id && (
+                        <Pressable 
+                          onPress={() => handleRemoveMember(m.user_id, u?.full_name || 'Member')}
+                          style={({ pressed }) => ({
+                            padding: 6,
+                            borderRadius: 8,
+                            backgroundColor: pressed ? 'rgba(239, 68, 68, 0.15)' : 'transparent',
+                          })}
+                        >
+                          <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                        </Pressable>
+                      )}
                     </View>
                   </View>
                 );
