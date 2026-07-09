@@ -6,6 +6,7 @@ import {
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/hooks/use-auth';
 import { supabase } from '@/lib/supabase';
+import { scheduleMeetingLocalNotifications } from '@/lib/notifications-helper';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
@@ -199,6 +200,9 @@ export default function MeetingsScreen() {
         const s = new Date(m.start_time);
         return tab === 'upcoming' ? s >= now : s < now;
       }));
+
+      // Re-schedule meeting notifications locally based on fetched list
+      scheduleMeetingLocalNotifications(user.id);
     } catch (e) {
       console.error('Meetings fetch error:', e);
     } finally {

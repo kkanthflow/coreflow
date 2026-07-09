@@ -5,6 +5,7 @@ import { PremiumButton } from '@/components/ui/premium-button';
 import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
 import { supabase } from '@/lib/supabase';
+import { scheduleMeetingLocalNotifications } from '@/lib/notifications-helper';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { Image } from 'expo-image';
@@ -76,6 +77,9 @@ export default function MeetingDetailsScreen() {
           a.user_id === user.id ? { ...a, rsvp_status: status } : a
         )
       }));
+
+      // Re-schedule meeting notifications locally based on new RSVP response
+      scheduleMeetingLocalNotifications(user.id);
     } catch (err) {
       console.error('Error updating RSVP:', err);
       Alert.alert('Error', 'Failed to update your RSVP status.');

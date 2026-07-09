@@ -48,7 +48,7 @@ const config: ExpoConfig = {
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   updates: {
-    url: "https://u.expo.dev/ab13f79a-49f6-4cf3-879a-6f78ba1dec07"
+    url: "https://u.expo.dev/2774c41f-4987-4393-9fee-12eb5e3ab9eb"
   },
   runtimeVersion: "1.0.0",
   ios: {
@@ -59,6 +59,7 @@ const config: ExpoConfig = {
       }
   },
   android: {
+    googleServicesFile: "./google-services.json",
     softwareKeyboardLayoutMode: "resize",
     adaptiveIcon: {
       backgroundColor: "#E6F4FE",
@@ -160,7 +161,7 @@ const config: ExpoConfig = {
   },
   extra: {
     eas: {
-      projectId: "ab13f79a-49f6-4cf3-879a-6f78ba1dec07"
+      projectId: "2774c41f-4987-4393-9fee-12eb5e3ab9eb"
     }
   }
 };

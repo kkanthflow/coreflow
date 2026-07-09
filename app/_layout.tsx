@@ -28,6 +28,7 @@ import * as Notifications from 'expo-notifications';
 import { ErrorBoundary } from "@/components/error-boundary";
 import { useOTAUpdates } from '@/hooks/use-ota-updates';
 import { supabase } from "@/lib/supabase";
+import { scheduleMeetingLocalNotifications } from '@/lib/notifications-helper';
 
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
@@ -479,6 +480,7 @@ export default function RootLayout() {
       if (session?.user?.id) {
         setupRealtimeSubscription(session.user.id);
         registerAndSavePushToken(session.user.id);
+        scheduleMeetingLocalNotifications(session.user.id);
       }
     });
 
@@ -486,6 +488,7 @@ export default function RootLayout() {
       if (session?.user?.id) {
         setupRealtimeSubscription(session.user.id);
         registerAndSavePushToken(session.user.id);
+        scheduleMeetingLocalNotifications(session.user.id);
       } else {
         if (chatChannel) {
           supabase.removeChannel(chatChannel);
