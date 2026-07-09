@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, ActivityIndicator, Pressable, ScrollView } from 'react-native';
+import { View, Text, ActivityIndicator, Pressable, ScrollView, Modal, TextInput, KeyboardAvoidingView, Alert, Platform, StyleSheet } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
@@ -18,6 +18,11 @@ export default function MemberProfileScreen() {
 
   const [member, setMember] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Edit Profile States
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [fullName, setFullName] = useState('');
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const fetchMemberProfile = useCallback(async () => {
     setIsLoading(true);
@@ -76,15 +81,30 @@ export default function MemberProfileScreen() {
     <ScreenContainer>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View className="px-6 pt-6 pb-4 flex-row items-center">
-          <Pressable 
-            onPress={() => router.back()}
-            className="w-10 h-10 rounded-full items-center justify-center mr-3"
-            style={{ backgroundColor: colors.surface }}
-          >
-            <Ionicons name="arrow-back" size={20} color={colors.foreground} />
-          </Pressable>
-          <Text className="text-xl font-bold text-foreground">Member Profile</Text>
+        <View className="px-6 pt-6 pb-4 flex-row items-center justify-between">
+          <View className="flex-row items-center">
+            <Pressable 
+              onPress={() => router.back()}
+              className="w-10 h-10 rounded-full items-center justify-center mr-3"
+              style={{ backgroundColor: colors.surface }}
+            >
+              <Ionicons name="arrow-back" size={20} color={colors.foreground} />
+            </Pressable>
+            <Text className="text-xl font-bold text-foreground">Member Profile</Text>
+          </View>
+          {user?.id === member.id && (
+            <Pressable 
+              onPress={() => {
+                setFullName(member.full_name || '');
+                setIsEditModalVisible(true);
+              }}
+              className="px-4 py-2 rounded-xl flex-row items-center gap-1.5"
+              style={{ backgroundColor: colors.surface }}
+            >
+              <Ionicons name="create-outline" size={16} color={colors.primary} />
+              <Text className="text-sm font-bold" style={{ color: colors.primary }}>Edit</Text>
+            </Pressable>
+          )}
         </View>
 
         {/* Profile Info */}
@@ -159,6 +179,80 @@ export default function MemberProfileScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* Edit Profile Modal */}
+      {isEditModalVisible && (
+        <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]} className="justify-end bg-black/50">
+          <KeyboardAvoidingView
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            style={{ flex: 1, justifyContent: 'flex-end' }}
+          >
+            <Pressable style={{ flex: 1 }} onPress={() => { if (!isUpdating) setIsEditModalVisible(false); }} />
+            <View className="p-6 rounded-t-3xl border-t border-border" style={{ backgroundColor: colors.background }}>
+              <View className="flex-row justify-between items-center mb-4">
+                <Text className="text-lg font-bold text-foreground">Edit Profile</Text>
+                <Pressable
+                  onPress={() => { if (!isUpdating) setIsEditModalVisible(false); }}
+                  className="w-8 h-8 rounded-full items-center justify-center"
+                  style={{ backgroundColor: colors.surface }}
+                >
+                  <Ionicons name="close" size={20} color={colors.foreground} />
+                </Pressable>
+              </View>
+              
+              <Text className="text-xs text-muted mb-4">
+                Update your public profile display name.
+              </Text>
+
+              <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">Full Name *</Text>
+              <TextInput
+                placeholder="Krishnakanth"
+                placeholderTextColor={colors.muted}
+                value={fullName}
+                onChangeText={setFullName}
+                editable={!isUpdating}
+                className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-6"
+                style={{ backgroundColor: colors.surface }}
+              />
+
+              <Pressable
+                onPress={async () => {
+                  if (!fullName.trim()) {
+                    Alert.alert('Validation Error', 'Full Name is required.');
+                    return;
+                  }
+                  setIsUpdating(true);
+                  try {
+                    const { error } = await supabase
+                      .from('users')
+                      .update({ full_name: fullName.trim() })
+                      .eq('id', user?.id);
+
+                    if (error) throw error;
+
+                    Alert.alert('Success', 'Profile updated successfully.');
+                    setIsEditModalVisible(false);
+                    fetchMemberProfile();
+                  } catch (e: any) {
+                    Alert.alert('Error', e.message || 'Could not update profile.');
+                  } finally {
+                    setIsUpdating(false);
+                  }
+                }}
+                disabled={isUpdating}
+                className="p-4 rounded-2xl items-center justify-center"
+                style={{ backgroundColor: colors.primary, opacity: isUpdating ? 0.6 : 1 }}
+              >
+                {isUpdating ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text className="text-white font-bold text-base">Save Changes</Text>
+                )}
+              </Pressable>
+            </View>
+          </KeyboardAvoidingView>
+        </View>
+      )}
     </ScreenContainer>
   );
 }
