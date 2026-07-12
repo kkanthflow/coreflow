@@ -48,7 +48,7 @@ const config: ExpoConfig = {
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   updates: {
-    url: "https://u.expo.dev/2774c41f-4987-4393-9fee-12eb5e3ab9eb"
+    url: "https://u.expo.dev/4c5173e9-30a8-474f-9fb7-cab0c9dbf3da"
   },
   runtimeVersion: "1.0.0",
   ios: {
@@ -109,6 +109,13 @@ const config: ExpoConfig = {
     "expo-web-browser",
     "expo-asset",
     [
+      "expo-notifications",
+      {
+        "icon": "./assets/images/icon.png",
+        "color": "#ffffff"
+      }
+    ],
+    [
       "expo-image-picker",
       {
         photosPermission: "Allow CoreFlow to access your photos to select invoice and bill images."
@@ -139,9 +146,9 @@ const config: ExpoConfig = {
         image: "./assets/images/splash-icon.png",
         imageWidth: 200,
         resizeMode: "contain",
-        backgroundColor: "#ffffff",
+        backgroundColor: "#07070B",
         dark: {
-          backgroundColor: "#000000",
+          backgroundColor: "#07070B",
         },
       },
     ],
@@ -161,7 +168,7 @@ const config: ExpoConfig = {
   },
   extra: {
     eas: {
-      projectId: "2774c41f-4987-4393-9fee-12eb5e3ab9eb"
+      projectId: "4c5173e9-30a8-474f-9fb7-cab0c9dbf3da"
     }
   }
 };

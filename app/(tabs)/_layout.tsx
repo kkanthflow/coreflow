@@ -8,6 +8,7 @@ import { hasPermission } from "@/lib/permissions";
 import { useColors } from "@/hooks/use-colors";
 import { supabase } from "@/lib/supabase";
 
+
 function TabIcon({
   name,
   focused,
@@ -75,8 +76,9 @@ function TabIcon({
   );
 }
 
+
 export default function TabLayout() {
-  const { user } = useAuth();
+  const { user, hasWorkspacePermission } = useAuth();
   const insets = useSafeAreaInsets();
   const colors = useColors();
 
@@ -120,8 +122,9 @@ export default function TabLayout() {
   useEffect(() => {
     fetchUnreadCount();
 
+    const uniqueId = Math.random().toString(36).substring(7);
     const channel = supabase
-      .channel('chat:tab-badges-updates')
+      .channel(`chat:tab-badges-updates:${uniqueId}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'chat_messages' },
@@ -170,6 +173,8 @@ export default function TabLayout() {
         tabBarShowLabel: false,
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.muted,
+        sceneStyle: { backgroundColor: colors.background },
+        lazy: false,
       }}
     >
       <Tabs.Screen
@@ -200,6 +205,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="projects"
         options={{
+          href: hasWorkspacePermission("project.view") ? undefined : null,
           tabBarIcon: ({ focused }) => (
             <TabIcon
               name={focused ? "briefcase" : "briefcase-outline"}
@@ -212,7 +218,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="analytics"
         options={{
-          href: user?.role === "freelancer" ? null : undefined,
+          href: hasWorkspacePermission("invoice.view") ? undefined : null,
           tabBarIcon: ({ focused }) => (
             <TabIcon
               name={focused ? "bar-chart" : "bar-chart-outline"}
@@ -225,7 +231,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="chat"
         options={{
-          href: user?.role === "freelancer" ? null : undefined,
+          href: hasWorkspacePermission("chat.view") ? undefined : null,
           tabBarIcon: ({ focused }) => (
             <TabIcon
               name={focused ? "chatbubbles" : "chatbubbles-outline"}

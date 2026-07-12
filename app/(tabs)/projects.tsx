@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { TabScreenWrapper } from '@/components/ui/tab-screen-wrapper';
 import {
   View, Text, FlatList, Pressable, StyleSheet,
   Animated, StatusBar, TextInput,
@@ -175,7 +176,7 @@ export default function ProjectsScreen() {
   const headerFade = useRef(new Animated.Value(0)).current;
   const headerSlide = useRef(new Animated.Value(-16)).current;
 
-  const canCreateProject = hasPermission(user?.role, 'create_projects');
+  const canCreateProject = hasPermission(user, 'create_projects');
 
   useEffect(() => {
     Animated.parallel([
@@ -185,16 +186,24 @@ export default function ProjectsScreen() {
   }, []);
 
   const fetchProjects = useCallback(async () => {
-    if (!user?.organizationId) { setLoading(false); return; }
+    const isIndependent = user?.role === 'freelancer' && user?.freelancerType === 'independent';
+    if (!user?.organizationId && !isIndependent) { setLoading(false); return; }
     setLoading(true);
     try {
-      const { data } = await supabase
+      let query = supabase
         .from('projects')
         .select('id, title, description, status, priority, due_date, cover_color, owner:owner_id(full_name), department:department_id(name), tasks(id, status)')
-        .eq('org_id', user.organizationId)
         .is('deleted_at', null)
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
+
+      if (isIndependent) {
+        query = query.eq('owner_id', user.id);
+      } else {
+        query = query.eq('org_id', user.organizationId);
+      }
+
+      const { data } = await query;
 
       setProjects((data || []).map((p: any) => {
         const tasks = p.tasks || [];
@@ -206,7 +215,7 @@ export default function ProjectsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user?.organizationId]);
+  }, [user]);
 
   useFocusEffect(useCallback(() => { fetchProjects(); }, [fetchProjects]));
 
@@ -217,6 +226,7 @@ export default function ProjectsScreen() {
   });
 
   return (
+    <TabScreenWrapper>
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={C.bg} />
 
@@ -304,6 +314,7 @@ export default function ProjectsScreen() {
         />
       )}
     </View>
+    </TabScreenWrapper>
   );
 }
 

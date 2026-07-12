@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, FlatList, ActivityIndicator, Pressable, StyleSheet, Alert, ScrollView } from 'react-native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { View, Text, ActivityIndicator, Pressable, StyleSheet, Alert, ScrollView, Platform, Dimensions, Animated } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
@@ -10,15 +10,34 @@ import { PremiumButton } from '@/components/ui/premium-button';
 import { PremiumSelect } from '@/components/ui/premium-select';
 import { FileUploader } from '@/components/ui/file-uploader';
 import { FileCard, FileData } from '@/components/ui/file-card';
+import { GlassCard } from '@/components/ui/glass-card';
+import { TiltCard } from '@/components/ui/tilt-card';
+
+const { width } = Dimensions.get('window');
 
 export default function FreelancerPortalScreen() {
   const { user } = useAuth();
   const colors = useColors();
   const router = useRouter();
 
+  const isIndependent = user?.freelancerType === 'independent';
+
+  // Entrance animation
+  const fadeAnim  = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(18)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim,  { toValue: 1, duration: 260, useNativeDriver: true }),
+      Animated.spring(slideAnim, { toValue: 0, tension: 160, friction: 13, useNativeDriver: true }),
+    ]).start();
+  }, []);
+
   const [tasks, setTasks] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [files, setFiles] = useState<FileData[]>([]);
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [clientsCount, setClientsCount] = useState<number>(0);
   const [selectedProjectId, setSelectedProjectId] = useState<string>('');
   
   const [loading, setLoading] = useState(true);
@@ -28,92 +47,146 @@ export default function FreelancerPortalScreen() {
     if (!user) { setLoading(false); return; }
     setLoading(true);
     try {
-      // 1. Fetch assigned projects via project_members
-      const { data: memberData, error: memberError } = await supabase
-        .from('project_members')
-        .select(`
-          project:project_id (
-            id,
-            title,
-            description,
-            status,
-            priority,
-            due_date
-          )
-        `)
-        .eq('user_id', user.id);
+      if (isIndependent) {
+        // Parallelize independent freelancer queries
+        const [projResult, invResult, clientResult, tasksResult] = await Promise.all([
+          supabase
+            .from('projects')
+            .select('id, title, description, status, priority, due_date')
+            .eq('owner_id', user.id)
+            .is('deleted_at', null),
+          supabase
+            .from('invoices')
+            .select('*, clients(name, company_name)')
+            .eq('owner_id', user.id)
+            .eq('is_deleted', false)
+            .order('created_at', { ascending: false }),
+          supabase
+            .from('clients')
+            .select('id', { count: 'exact', head: true })
+            .eq('owner_id', user.id)
+            .eq('is_deleted', false),
+          supabase
+            .from('tasks')
+            .select(`
+              id,
+              title,
+              description,
+              status,
+              priority,
+              due_date,
+              project_id,
+              project:project_id (
+                title
+              )
+            `)
+            .eq('assignee_id', user.id)
+            .order('due_date', { ascending: true })
+        ]);
 
-      if (memberError) throw memberError;
-      const assignedProjects = (memberData || []).map((m: any) => m.project).filter(Boolean);
-      setProjects(assignedProjects);
+        if (projResult.error) throw projResult.error;
+        if (invResult.error) throw invResult.error;
+        if (clientResult.error) throw clientResult.error;
+        if (tasksResult.error) throw tasksResult.error;
 
-      if (assignedProjects.length > 0 && !selectedProjectId) {
-        setSelectedProjectId(assignedProjects[0].id);
-      }
-
-      // 2. Fetch assigned tasks
-      const { data: tasksData, error: tasksError } = await supabase
-        .from('tasks')
-        .select(`
-          id,
-          title,
-          description,
-          status,
-          priority,
-          due_date,
-          project_id,
-          project:project_id (
-            title
-          )
-        `)
-        .eq('assignee_id', user.id)
-        .order('due_date', { ascending: true });
-
-      if (tasksError) throw tasksError;
-      setTasks(tasksData || []);
-
-      // 3. Fetch files uploaded by the freelancer or related to assigned projects
-      if (user.organizationId) {
-        const projectIds = assignedProjects.map((p: any) => p.id);
-        
-        let filesQuery = supabase
-          .from('files')
-          .select(`
-            id,
-            file_name,
-            file_size,
-            mime_type,
-            storage_path,
-            bucket,
-            created_at,
-            uploader_id,
-            project_id,
-            uploader:uploader_id (
-              full_name
-            )
-          `)
-          .eq('org_id', user.organizationId)
-          .order('created_at', { ascending: false });
-
-        if (projectIds.length > 0) {
-          filesQuery = filesQuery.in('project_id', projectIds);
-        } else {
-          filesQuery = filesQuery.eq('uploader_id', user.id);
+        const projData = projResult.data || [];
+        setProjects(projData);
+        if (projData.length > 0 && !selectedProjectId) {
+          setSelectedProjectId(projData[0].id);
         }
 
-        const { data: filesData, error: filesError } = await filesQuery;
-        if (!filesError && filesData) {
-          setFiles(filesData as unknown as FileData[]);
+        setInvoices(invResult.data || []);
+        setClientsCount(clientResult.count || 0);
+        setTasks(tasksResult.data || []);
+
+      } else {
+        // Organization Freelancer - parallelize projects and tasks fetches
+        const [memberResult, tasksResult] = await Promise.all([
+          supabase
+            .from('project_members')
+            .select(`
+              project:project_id (
+                id,
+                title,
+                description,
+                status,
+                priority,
+                due_date
+              )
+            `)
+            .eq('user_id', user.id),
+          supabase
+            .from('tasks')
+            .select(`
+              id,
+              title,
+              description,
+              status,
+              priority,
+              due_date,
+              project_id,
+              project:project_id (
+                title
+              )
+            `)
+            .eq('assignee_id', user.id)
+            .order('due_date', { ascending: true })
+        ]);
+
+        if (memberResult.error) throw memberResult.error;
+        if (tasksResult.error) throw tasksResult.error;
+
+        const assignedProjects = (memberResult.data || []).map((m: any) => m.project).filter(Boolean);
+        setProjects(assignedProjects);
+
+        if (assignedProjects.length > 0 && !selectedProjectId) {
+          setSelectedProjectId(assignedProjects[0].id);
+        }
+
+        setTasks(tasksResult.data || []);
+
+        // 3. Fetch files uploaded by the freelancer or related to assigned projects
+        if (user.organizationId) {
+          const projectIds = assignedProjects.map((p: any) => p.id);
+          
+          let filesQuery = supabase
+            .from('files')
+            .select(`
+              id,
+              file_name,
+              file_size,
+              mime_type,
+              storage_path,
+              bucket,
+              created_at,
+              uploader_id,
+              project_id,
+              uploader:uploader_id (
+                full_name
+              )
+            `)
+            .eq('org_id', user.organizationId)
+            .order('created_at', { ascending: false });
+
+          if (projectIds.length > 0) {
+            filesQuery = filesQuery.in('project_id', projectIds);
+          } else {
+            filesQuery = filesQuery.eq('uploader_id', user.id);
+          }
+
+          const { data: filesData, error: filesError } = await filesQuery;
+          if (!filesError && filesData) {
+            setFiles(filesData as unknown as FileData[]);
+          }
         }
       }
-
     } catch (e) {
       console.error('Error fetching freelancer portal data:', e);
       Alert.alert('Error', 'Failed to retrieve portal data.');
     } finally {
       setLoading(false);
     }
-  }, [user, selectedProjectId]);
+  }, [user, selectedProjectId, isIndependent]);
 
   useEffect(() => {
     fetchData();
@@ -138,7 +211,6 @@ export default function FreelancerPortalScreen() {
 
             if (error) throw error;
 
-            // Log activity
             if (user?.organizationId) {
               await supabase.from('activity_logs').insert({
                 org_id: user.organizationId,
@@ -218,37 +290,27 @@ export default function FreelancerPortalScreen() {
     value: p.id,
   }));
 
+  // Calculations for Independent Freelancer Overview
+  const totalRevenue = invoices
+    .filter(inv => inv.status === 'paid')
+    .reduce((sum, inv) => sum + (parseFloat(inv.total_amount) || 0), 0);
+
+  const outstandingRevenue = invoices
+    .filter(inv => inv.status === 'sent' || inv.status === 'overdue')
+    .reduce((sum, inv) => sum + (parseFloat(inv.total_amount) || 0), 0);
+
   return (
-    <ScreenContainer>
+    <Animated.View style={{ flex: 1, opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+    <ScreenContainer edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
       {/* Header */}
       <View style={styles.header}>
-        <Pressable
-          onPress={() => router.back()}
-          style={[styles.backBtn, { backgroundColor: colors.surface }]}
-        >
-          <Ionicons name="arrow-back" size={20} color={colors.foreground} />
-        </Pressable>
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Contractor Portal</Text>
-          <Text style={[styles.headerSubtitle, { color: colors.muted }]}>
-            Your assigned tasks, projects, and deliverables
+          <Text style={[styles.headerTitle, { color: colors.foreground }]} numberOfLines={1}>
+            Hello, {user?.fullName || 'Freelancer'} 👋
           </Text>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 8 }}>
-          <Pressable
-            onPress={() => router.push('/invoices')}
-            style={[styles.scheduleBtn, { backgroundColor: `${colors.success}18`, borderColor: `${colors.success}40`, borderWidth: 1 }]}
-          >
-            <Ionicons name="receipt" size={16} color={colors.success} style={{ marginRight: 6 }} />
-            <Text style={{ color: colors.success, fontSize: 12, fontWeight: '700' }}>Invoices</Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push('/meetings/new')}
-            style={[styles.scheduleBtn, { backgroundColor: `${colors.primary}18`, borderColor: `${colors.primary}40`, borderWidth: 1 }]}
-          >
-            <Ionicons name="calendar" size={16} color={colors.primary} style={{ marginRight: 6 }} />
-            <Text style={{ color: colors.primary, fontSize: 12, fontWeight: '700' }}>Schedule</Text>
-          </Pressable>
+          <Text style={[styles.headerSubtitle, { color: colors.muted }]} numberOfLines={1}>
+            Welcome back! Here is your dashboard.
+          </Text>
         </View>
       </View>
 
@@ -258,20 +320,162 @@ export default function FreelancerPortalScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-          {/* Section 1: Assigned Projects */}
+          
+          {/* WIDGET 1: Quick Stats Overview */}
+          {isIndependent ? (
+            <View style={styles.statsContainer}>
+              <GlassCard bob={true} bobDelay={0} glowColor={colors.success} padding={16} radius={20} style={styles.statCard}>
+                <Text style={[styles.statLabel, { color: colors.muted }]}>Total Earnings</Text>
+                <Text style={[styles.statValue, { color: colors.success }]} numberOfLines={1}>
+                  ${totalRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+              </GlassCard>
+
+              <GlassCard bob={true} bobDelay={150} glowColor={colors.warning} padding={16} radius={20} style={styles.statCard}>
+                <Text style={[styles.statLabel, { color: colors.muted }]}>Outstanding</Text>
+                <Text style={[styles.statValue, { color: colors.warning }]} numberOfLines={1}>
+                  ${outstandingRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+              </GlassCard>
+
+              <GlassCard bob={true} bobDelay={300} glowColor={colors.info} padding={16} radius={20} style={styles.statCard}>
+                <Text style={[styles.statLabel, { color: colors.muted }]}>Total Clients</Text>
+                <Text style={[styles.statValue, { color: colors.foreground }]} numberOfLines={1}>
+                  {clientsCount}
+                </Text>
+              </GlassCard>
+            </View>
+          ) : (
+            <View style={styles.statsContainer}>
+              <GlassCard bob={true} bobDelay={0} glowColor={colors.primary} padding={16} radius={20} style={styles.statCard}>
+                <Text style={[styles.statLabel, { color: colors.muted }]}>Active Projects</Text>
+                <Text style={[styles.statValue, { color: colors.primary }]} numberOfLines={1}>
+                  {projects.length}
+                </Text>
+              </GlassCard>
+
+              <GlassCard bob={true} bobDelay={150} glowColor={colors.info} padding={16} radius={20} style={styles.statCard}>
+                <Text style={[styles.statLabel, { color: colors.muted }]}>My Tasks</Text>
+                <Text style={[styles.statValue, { color: colors.foreground }]} numberOfLines={1}>
+                  {tasks.length}
+                </Text>
+              </GlassCard>
+
+              <GlassCard bob={true} bobDelay={300} glowColor={colors.success} padding={16} radius={20} style={styles.statCard}>
+                <Text style={[styles.statLabel, { color: colors.muted }]}>Completed</Text>
+                <Text style={[styles.statValue, { color: colors.success }]} numberOfLines={1}>
+                  {tasks.filter(t => t.status === 'done').length}
+                </Text>
+              </GlassCard>
+            </View>
+          )}
+
+          {/* WIDGET 2: Quick Actions Widget */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>My Projects ({projects.length})</Text>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Quick Actions</Text>
+            {isIndependent ? (
+              <View style={styles.actionsGrid}>
+                <Pressable
+                  onPress={() => router.push('/invoices' as any)}
+                  style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={[styles.actionIconWrapper, { backgroundColor: `${colors.success}15` }]}>
+                    <Ionicons name="receipt-outline" size={20} color={colors.success} />
+                  </View>
+                  <Text style={[styles.actionLabelText, { color: colors.foreground }]}>Invoices</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push('/meetings/new' as any)}
+                  style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={[styles.actionIconWrapper, { backgroundColor: `${colors.primary}15` }]}>
+                    <Ionicons name="calendar-outline" size={20} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.actionLabelText, { color: colors.foreground }]}>Schedule</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push('/invoices' as any)}
+                  style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={[styles.actionIconWrapper, { backgroundColor: `${colors.info}15` }]}>
+                    <Ionicons name="people-outline" size={20} color={colors.info} />
+                  </View>
+                  <Text style={[styles.actionLabelText, { color: colors.foreground }]}>Clients</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push('/settings' as any)}
+                  style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={[styles.actionIconWrapper, { backgroundColor: `${colors.muted}15` }]}>
+                    <Ionicons name="settings-outline" size={20} color={colors.muted} />
+                  </View>
+                  <Text style={[styles.actionLabelText, { color: colors.foreground }]}>Settings</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.actionsGrid}>
+                <Pressable
+                  onPress={() => router.push('/(tabs)/chat' as any)}
+                  style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={[styles.actionIconWrapper, { backgroundColor: `${colors.primary}15` }]}>
+                    <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
+                  </View>
+                  <Text style={[styles.actionLabelText, { color: colors.foreground }]}>Open Chat</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push('/invoices' as any)}
+                  style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={[styles.actionIconWrapper, { backgroundColor: `${colors.success}15` }]}>
+                    <Ionicons name="receipt-outline" size={20} color={colors.success} />
+                  </View>
+                  <Text style={[styles.actionLabelText, { color: colors.foreground }]}>My Invoices</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push('/meetings/new' as any)}
+                  style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={[styles.actionIconWrapper, { backgroundColor: `${colors.info}15` }]}>
+                    <Ionicons name="calendar-outline" size={20} color={colors.info} />
+                  </View>
+                  <Text style={[styles.actionLabelText, { color: colors.foreground }]}>Schedule</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => router.push('/files' as any)}
+                  style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <View style={[styles.actionIconWrapper, { backgroundColor: `${colors.muted}15` }]}>
+                    <Ionicons name="folder-open-outline" size={20} color={colors.muted} />
+                  </View>
+                  <Text style={[styles.actionLabelText, { color: colors.foreground }]}>All Files</Text>
+                </Pressable>
+              </View>
+            )}
+          </View>
+
+          {/* WIDGET 3: Projects Widget */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>
+              {isIndependent ? 'Managed Projects' : 'Assigned Projects'} ({projects.length})
+            </Text>
             {projects.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <GlassCard padding={24} radius={20} style={{ ...styles.emptyWidget, borderColor: colors.border }}>
                 <Ionicons name="briefcase-outline" size={32} color={colors.muted} />
                 <Text style={[styles.emptyText, { color: colors.muted, marginTop: 8 }]}>
-                  You are not assigned to any projects.
+                  {isIndependent ? 'Create your first project to get started.' : 'You are not assigned to any projects.'}
                 </Text>
-              </View>
+              </GlassCard>
             ) : (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.projectList}>
                 {projects.map((proj) => (
-                  <View key={proj.id} style={[styles.projectCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                  <TiltCard key={proj.id} style={[styles.projectCard, { backgroundColor: colors.surface, borderRadius: 18, padding: 16, borderColor: colors.border, borderWidth: 1 }]}>
                     <Text style={[styles.projectTitle, { color: colors.foreground }]} numberOfLines={1}>{proj.title}</Text>
                     <Text style={[styles.projectDesc, { color: colors.muted }]} numberOfLines={2}>
                       {proj.description || 'No description provided.'}
@@ -282,28 +486,28 @@ export default function FreelancerPortalScreen() {
                         {proj.due_date ? new Date(proj.due_date).toLocaleDateString() : 'No Due Date'}
                       </Text>
                     </View>
-                  </View>
+                  </TiltCard>
                 ))}
               </ScrollView>
             )}
           </View>
 
-          {/* Section 2: Project Task List */}
+          {/* WIDGET 4: Tasks List Widget */}
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Project Task List ({tasks.length})</Text>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Active Tasks ({tasks.length})</Text>
             {tasks.length === 0 ? (
-              <View style={[styles.emptyCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <GlassCard padding={24} radius={20} style={{ ...styles.emptyWidget, borderColor: colors.border }}>
                 <Ionicons name="checkbox-outline" size={32} color={colors.muted} />
                 <Text style={[styles.emptyText, { color: colors.muted, marginTop: 8 }]}>
-                  No tasks assigned to you.
+                  No tasks currently on your list.
                 </Text>
-              </View>
+              </GlassCard>
             ) : (
               Object.entries(tasksByProject).map(([projId, group]: any) => (
                 <View key={projId} style={styles.projectGroup}>
                   <View style={styles.projectGroupHeader}>
-                    <Ionicons name="folder-open-outline" size={16} color={colors.primary} />
-                    <Text style={[styles.projectGroupTitle, { color: colors.foreground }]}>{group.projectTitle}</Text>
+                    <Ionicons name="folder-open-outline" size={14} color={colors.primary} />
+                    <Text style={[styles.projectGroupTitle, { color: colors.foreground }]} numberOfLines={1}>{group.projectTitle}</Text>
                     <View style={[styles.projectBadge, { backgroundColor: `${colors.primary}15` }]}>
                       <Text style={[styles.projectBadgeText, { color: colors.primary }]}>{group.tasks.length}</Text>
                     </View>
@@ -317,9 +521,9 @@ export default function FreelancerPortalScreen() {
                     if (task.status === 'blocked') statusColor = colors.error;
 
                     return (
-                      <View key={task.id} style={[styles.taskCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                      <TiltCard key={task.id} style={[styles.taskCard, { backgroundColor: colors.surface, borderRadius: 18, padding: 16, borderColor: colors.border, borderWidth: 1 }]}>
                         <View style={styles.taskHeader}>
-                          <View style={{ flex: 1 }}>
+                          <View style={{ flex: 1, paddingRight: 8 }}>
                             <Text style={[styles.taskTitle, { color: colors.foreground }]}>{task.title}</Text>
                           </View>
                           <Pressable
@@ -341,24 +545,24 @@ export default function FreelancerPortalScreen() {
                         </View>
                         
                         {task.description ? (
-                          <Text style={[styles.taskDesc, { color: colors.muted }]}>{task.description}</Text>
+                          <Text style={[styles.taskDesc, { color: colors.muted }]} numberOfLines={2}>{task.description}</Text>
                         ) : null}
 
                         <View style={styles.taskFooter}>
                           <View style={styles.metaItem}>
-                            <Ionicons name="flag-outline" size={14} color={colors.muted} />
+                            <Ionicons name="flag-outline" size={12} color={colors.muted} />
                             <Text style={[styles.metaText, { color: colors.muted, textTransform: 'uppercase' }]}>
                               {task.priority}
                             </Text>
                           </View>
                           <View style={styles.metaItem}>
-                            <Ionicons name="calendar-outline" size={14} color={colors.muted} />
+                            <Ionicons name="calendar-outline" size={12} color={colors.muted} />
                             <Text style={[styles.metaText, { color: colors.muted }]}>
-                              Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'N/A'}
+                              {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'No deadline'}
                             </Text>
                           </View>
                         </View>
-                      </View>
+                      </TiltCard>
                     );
                   })}
                 </View>
@@ -366,8 +570,8 @@ export default function FreelancerPortalScreen() {
             )}
           </View>
 
-          {/* Section 3: Deliverables File Uploader */}
-          {projects.length > 0 && (
+          {/* WIDGET 5: Files and Deliverables Upload (Only for Organization Mode) */}
+          {!isIndependent && projects.length > 0 && (
             <View style={styles.section}>
               <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Deliverables & File Upload</Text>
               
@@ -404,9 +608,11 @@ export default function FreelancerPortalScreen() {
               )}
             </View>
           )}
+
         </ScrollView>
       )}
     </ScreenContainer>
+    </Animated.View>
   );
 }
 
@@ -420,178 +626,207 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 16,
-    gap: 12,
+    paddingTop: 16,
+    paddingBottom: 12,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: '800',
+    letterSpacing: -0.5,
   },
   headerSubtitle: {
-    fontSize: 13,
-    marginTop: 2,
+    fontSize: 12,
+    marginTop: 1,
   },
   backBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
   },
   scrollContainer: {
     paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingBottom: 32,
+  },
+  statsContainer: {
+    flexDirection: 'row',
+    gap: 8,
+    marginVertical: 16,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: (width - 64) / 3,
+  },
+  statLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  statValue: {
+    fontSize: 15,
+    fontWeight: '800',
   },
   section: {
-    marginBottom: 28,
+    marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '800',
-    marginBottom: 14,
+    marginBottom: 12,
+    letterSpacing: -0.3,
   },
   subSectionTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     marginTop: 16,
     marginBottom: 8,
   },
-  emptyCard: {
+  emptyWidget: {
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 24,
+    borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 32,
   },
   emptyText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
   },
   projectList: {
-    gap: 12,
+    gap: 10,
   },
   projectCard: {
-    width: 220,
-    borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
+    width: 190,
+    marginRight: 2,
   },
   projectTitle: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '700',
     marginBottom: 4,
   },
   projectDesc: {
-    fontSize: 12,
-    lineHeight: 16,
-    height: 32,
-    marginBottom: 12,
+    fontSize: 11,
+    lineHeight: 15,
+    height: 30,
+    marginBottom: 10,
   },
   projectMeta: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   projectMetaText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '500',
   },
-  taskCard: {
+  actionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  actionButton: {
+    width: (width - 58) / 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 14,
     borderWidth: 1,
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+  },
+  actionIconWrapper: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+  },
+  actionLabelText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  taskCard: {
+    marginBottom: 10,
   },
   taskHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   taskTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    marginBottom: 2,
-  },
-  taskProject: {
-    fontSize: 12,
-    fontWeight: '500',
   },
   taskDesc: {
-    fontSize: 13,
-    lineHeight: 18,
-    marginBottom: 12,
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 10,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   statusText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     textTransform: 'uppercase',
   },
   taskFooter: {
     flexDirection: 'row',
-    gap: 16,
+    gap: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
-    paddingTop: 10,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    paddingTop: 8,
+    marginTop: 4,
   },
   metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   metaText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '600',
   },
   uploadSelector: {
-    marginBottom: 16,
+    marginBottom: 12,
   },
   selectorLabel: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   noFilesText: {
-    fontSize: 13,
+    fontSize: 12,
     fontStyle: 'italic',
-    paddingVertical: 12,
-  },
-  scheduleBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 20,
   },
   projectGroup: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   projectGroupHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    gap: 8,
+    marginBottom: 8,
+    gap: 6,
   },
   projectGroupTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
+    maxWidth: width - 120,
   },
   projectBadge: {
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 5,
   },
   projectBadgeText: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
   },
 });
-

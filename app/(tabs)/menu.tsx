@@ -1,4 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
+import { TabScreenWrapper } from '@/components/ui/tab-screen-wrapper';
 import { ScrollView, Text, View, Pressable, StyleSheet, Animated, StatusBar, Platform, Alert, Modal, TextInput, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/hooks/use-auth';
@@ -219,10 +220,30 @@ export default function MenuScreen() {
 
   if (isLoading || !isAuthenticated || !user) return null;
 
-  const canManageRoles  = hasPermission(user.role, 'manage_roles');
-  const canViewAuditLog = hasPermission(user.role, 'view_audit_logs');
-  const canViewInvoices = hasPermission(user.role, 'view_invoices');
-  const canViewReports  = hasPermission(user.role, 'view_reports');
+  const canManageRoles  = hasPermission(user, 'manage_roles');
+  const canViewAuditLog = hasPermission(user, 'view_audit_logs');
+  const canViewInvoices = hasPermission(user, 'view_invoices');
+  const canViewReports  = hasPermission(user, 'view_reports');
+
+  const canViewDirectory = hasPermission(user, 'view_team_directory');
+  const hasOrg = !!user.organizationId;
+
+  const workspaceItems: MenuItem[] = [];
+  if (canViewDirectory) {
+    workspaceItems.push({ id: 'team', label: 'Team Directory', icon: 'people-outline', color: C.info, onPress: () => router.push('/team/directory' as any) });
+    workspaceItems.push({ id: 'hierarchy', label: 'Org Hierarchy', icon: 'git-network-outline', color: C.purple, onPress: () => router.push('/workspace/hierarchy' as any) });
+  }
+  if (hasOrg) {
+    workspaceItems.push({ id: 'departments', label: 'Departments', icon: 'business-outline', color: C.secondary, onPress: () => router.push('/departments' as any) });
+  }
+  workspaceItems.push({ id: 'files', label: 'File Browser', icon: 'folder-open-outline', color: '#FBBF24', onPress: () => router.push('/files' as any) });
+  
+  if (canViewReports) {
+    workspaceItems.push({ id: 'reports', label: 'Reports Hub', icon: 'document-text-outline', color: C.info, onPress: () => router.push('/reports' as any) });
+  }
+  if (canViewInvoices) {
+    workspaceItems.push({ id: 'invoices', label: 'Invoice Dashboard', icon: 'receipt-outline', color: C.success, onPress: () => router.push('/invoices' as any) });
+  }
 
   const sections: MenuSection[] = [
     {
@@ -235,14 +256,7 @@ export default function MenuScreen() {
     },
     {
       title: 'Workspace',
-      items: [
-        { id: 'team',       label: 'Team Directory',       icon: 'people-outline',       color: C.info,    onPress: () => router.push('/team/directory' as any) },
-        { id: 'hierarchy',  label: 'Org Hierarchy',        icon: 'git-network-outline',  color: C.purple,  onPress: () => router.push('/workspace/hierarchy' as any) },
-        { id: 'departments',label: 'Departments',          icon: 'business-outline',     color: C.secondary,onPress: () => router.push('/departments' as any) },
-        { id: 'files',      label: 'File Browser',         icon: 'folder-open-outline',  color: '#FBBF24', onPress: () => router.push('/files' as any) },
-        ...(canViewReports  ? [{ id: 'reports',  label: 'Reports Hub',     icon: 'document-text-outline', color: C.info,    onPress: () => router.push('/reports' as any) }] : []),
-        ...(canViewInvoices ? [{ id: 'invoices', label: 'Invoice Dashboard',icon: 'receipt-outline',      color: C.success, onPress: () => router.push('/invoices' as any) }] : []),
-      ],
+      items: workspaceItems,
     },
   ];
 
@@ -261,6 +275,7 @@ export default function MenuScreen() {
   };
 
   return (
+    <TabScreenWrapper>
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={C.bg} />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
@@ -272,7 +287,7 @@ export default function MenuScreen() {
 
         <View style={{ paddingHorizontal: 20 }}>
           {/* User hero card */}
-          <GlassCard glowColor={C.primary} padding={20} radius={24} style={{ marginBottom: 28 }}>
+          <GlassCard bob={true} bobDelay={0} glowColor={C.primary} padding={20} radius={24} style={{ marginBottom: 28 }}>
             {/* Subtle gradient glow overlay */}
             <View style={[StyleSheet.absoluteFill, { borderRadius: 24, backgroundColor: '#FF6B4A06' }]} pointerEvents="none" />
 
@@ -305,7 +320,7 @@ export default function MenuScreen() {
 
           {/* Push Diagnostics Card */}
           {Platform.OS !== 'web' && (
-            <GlassCard padding={16} radius={20} style={{ marginBottom: 24 }}>
+            <GlassCard bob={true} bobDelay={150} padding={16} radius={20} style={{ marginBottom: 24 }}>
               <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', marginBottom: 12 }}>
                 Push Notifications Diagnostic
               </Text>
@@ -352,7 +367,7 @@ export default function MenuScreen() {
           {sections.map((section, idx) => (
             <View key={idx} style={{ marginBottom: 24 }}>
               <Text style={[styles.sectionLabel, { color: C.muted }]}>{section.title}</Text>
-              <GlassCard padding={0} radius={18} style={{ overflow: 'hidden' }}>
+              <GlassCard bob={true} bobDelay={200 + idx * 100} padding={0} radius={18} style={{ overflow: 'hidden' }}>
                 {section.items.map((item, i) => (
                   <MenuRow key={item.id} item={item} isLast={i === section.items.length - 1} />
                 ))}
@@ -398,7 +413,7 @@ export default function MenuScreen() {
       {isDeleteModalVisible && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]} className="justify-end bg-black/50">
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{ flex: 1, justifyContent: 'flex-end' }}
           >
             <Pressable style={{ flex: 1 }} onPress={() => { if (!isDeleting) setIsDeleteModalVisible(false); }} />
@@ -482,6 +497,7 @@ export default function MenuScreen() {
         </View>
       )}
     </View>
+    </TabScreenWrapper>
   );
 }
 

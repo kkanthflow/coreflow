@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useEffect, useState, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, useState, useRef, ReactNode, useCallback } from 'react';
 import { Alert, Platform, AppState } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from './supabase';
+import { WorkspacePermission, resolveWorkspacePermissions } from './permissions';
 import { Session } from '@supabase/supabase-js';
 
 export interface UserPreferences {
@@ -19,6 +21,7 @@ export interface AppUser {
   email: string;
   fullName: string;
   role: string;
+  freelancerType?: 'organization' | 'independent';
   avatarUrl?: string;
   // Enterprise fields
   organizationId?: string;
@@ -35,11 +38,33 @@ export interface AppUser {
   preferences?: UserPreferences;
 }
 
+export type WorkspaceType = 
+  | 'organization'
+  | 'independent'
+  | 'external'
+  | 'guest'
+  | 'archived';
+
+export interface Workspace {
+  id: string; // orgId or 'independent'
+  name: string;
+  type: WorkspaceType;
+  roles: string[];
+  permissions: WorkspacePermission[];
+  departmentId?: string;
+  departmentName?: string;
+}
+
 interface AuthContextType {
   user: AppUser | null;
   session: Session | null;
   isLoading: boolean;
   isAuthenticated: boolean;
+  activeWorkspace: Workspace | null;
+  availableWorkspaces: Workspace[];
+  switchWorkspace: (workspaceId: string) => Promise<void>;
+  hasWorkspacePermission: (permission: WorkspacePermission) => boolean;
+  isFeatureEnabled: (featureKey: string) => boolean;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
@@ -69,6 +94,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<AppUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeWorkspace, setActiveWorkspace] = useState<Workspace | null>(null);
+  const [availableWorkspaces, setAvailableWorkspaces] = useState<Workspace[]>([]);
 
   const activeFetchRef = useRef<string | null>(null);
 
@@ -86,9 +113,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         supabase
           .from('user_organizations')
           .select('org_id, role, organizations (id, name)')
-          .eq('user_id', userId)
-          .limit(1)
-          .maybeSingle(),
+          .eq('user_id', userId),
         supabase
           .from('user_preferences')
           .select('*')
@@ -120,7 +145,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         return false;
       }
 
-      const orgMembership = orgResult.data;
+      const orgMemberships = (orgResult.data || []) as any[];
+      const hasOrg = orgMemberships.length > 0;
 
       // Race condition guard: for brand-new accounts (created < 15s ago),
       // if org membership is missing retry — register.tsx may still be writing to DB.
@@ -130,7 +156,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const diff = Date.now() - new Date(data.created_at).getTime();
       const isNewAccount = data.created_at && diff > -10000 && diff < 15000;
       
-      if (!orgMembership && !isFreelancer && isNewAccount && attempt < 20) {
+      if (!hasOrg && !isFreelancer && isNewAccount && attempt < 20) {
         console.warn(`[AuthContext] New account with no org yet, retrying in 100ms... (attempt ${attempt})`);
         await new Promise(resolve => setTimeout(resolve, 100));
         return fetchProfile(userId, attempt + 1, force);
@@ -149,17 +175,20 @@ export function AuthProvider({ children }: AuthProviderProps) {
         weeklyDigest: prefData.weekly_digest,
       } : DEFAULT_PREFERENCES;
 
-      const orgData = (orgMembership?.organizations && !Array.isArray(orgMembership.organizations)
-        ? orgMembership.organizations
-        : Array.isArray(orgMembership?.organizations) && orgMembership.organizations.length > 0
-          ? orgMembership.organizations[0]
+      // Primary org fallback for legacy dashboard support
+      const primaryOrg = orgMemberships[0];
+      const orgData = (primaryOrg?.organizations && !Array.isArray(primaryOrg.organizations)
+        ? primaryOrg.organizations
+        : Array.isArray(primaryOrg?.organizations) && primaryOrg.organizations.length > 0
+          ? primaryOrg.organizations[0]
           : null) as { id: string; name: string } | null;
 
-      setUser({
+      const newUser = {
         id: data.id,
         email: data.email,
         fullName: data.full_name,
         role: data.role,
+        freelancerType: data.freelancer_type,
         avatarUrl: data.avatar_url,
         organizationId: orgData?.id,
         organizationName: orgData?.name,
@@ -170,9 +199,49 @@ export function AuthProvider({ children }: AuthProviderProps) {
         department: data.department,
         lastLogin: data.last_login,
         preferences,
-      });
+      };
 
-      console.log('[AuthContext] User state set:', data.email, '| Org:', orgData?.name ?? '(freelancer/pending)');
+      setUser(newUser);
+      AsyncStorage.setItem('cached_user_profile', JSON.stringify(newUser)).catch(() => {});
+
+      // Build available workspaces
+      const independentWS: Workspace = {
+        id: 'independent',
+        name: `${data.full_name || 'My'} Freelancing`,
+        type: 'independent',
+        roles: ['freelancer'],
+        permissions: resolveWorkspacePermissions('independent', ['freelancer']),
+      };
+
+      const orgWorkspaces: Workspace[] = orgMemberships
+        .map((mem) => {
+          const org = mem.organizations;
+          if (!org) return null;
+          const isExternal = data.is_external || false;
+          const type: WorkspaceType = isExternal ? 'external' : 'organization';
+          const roles = [mem.role];
+          const permissions = resolveWorkspacePermissions(type, roles);
+          return {
+            id: org.id,
+            name: `${org.name} Organization`,
+            type,
+            roles,
+            permissions,
+          };
+        })
+        .filter(Boolean) as Workspace[];
+
+      const workspacesList: Workspace[] = [independentWS, ...orgWorkspaces];
+      setAvailableWorkspaces(workspacesList);
+
+      // Restore active workspace
+      const savedActiveId = await AsyncStorage.getItem('active_workspace_id');
+      const matched = workspacesList.find(w => w.id === savedActiveId) || 
+                      workspacesList.find(w => w.id === data.default_workspace_id) || 
+                      workspacesList[0];
+      setActiveWorkspace(matched);
+
+      console.log('[AuthContext] User and workspaces loaded. Active:', matched?.name);
       return true;
     } catch (e: any) {
       console.error('[AuthContext] Error fetching profile:', e);
@@ -249,6 +318,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   useEffect(() => {
     let initialSessionHandled = false;
+
+    // Load cached profile instantly to make startup 0ms
+    AsyncStorage.getItem('cached_user_profile')
+      .then((cached) => {
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setUser(parsed);
+          setIsLoading(false);
+        }
+      })
+      .catch(() => {});
 
     supabase.auth.getSession().then(({ data: { session } }) => {
       initialSessionHandled = true;
@@ -327,10 +407,50 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
   }, [user?.id]);
 
+  const switchWorkspace = async (workspaceId: string) => {
+    const matched = availableWorkspaces.find(w => w.id === workspaceId);
+    if (matched) {
+      setActiveWorkspace(matched);
+      await AsyncStorage.setItem('active_workspace_id', workspaceId);
+
+      try {
+        await supabase.from('audit_logs').insert({
+          workspace_id: matched.id === 'independent' ? null : matched.id,
+          actor_id: user?.id,
+          action: 'Workspace Switched',
+          resource_type: 'workspace',
+          resource_id: matched.id === 'independent' ? null : matched.id,
+          new_values: { workspace_name: matched.name, workspace_type: matched.type },
+        });
+      } catch (e) {
+        console.warn('[AuthContext] Workspace switch audit log insertion failed:', e);
+      }
+    }
+  };
+
+  const hasWorkspacePermission = useCallback((permission: WorkspacePermission): boolean => {
+    if (!activeWorkspace) return false;
+    return activeWorkspace.permissions.includes(permission);
+  }, [activeWorkspace]);
+
+  const isFeatureEnabled = useCallback((featureKey: string): boolean => {
+    if (activeWorkspace?.type === 'independent') {
+      return ['Finance', 'Invoices', 'Contracts', 'Portfolio'].includes(featureKey);
+    }
+    return ['CRM', 'Finance', 'HR', 'Chat', 'Analytics'].includes(featureKey);
+  }, [activeWorkspace]);
+
   const logout = async () => {
     if (user?.id) {
       await updateOnlineStatus(user.id, false);
     }
+    await Promise.all([
+      AsyncStorage.removeItem('cached_user_profile'),
+      AsyncStorage.removeItem('cached_home_stats'),
+      AsyncStorage.removeItem('cached_home_projects'),
+      AsyncStorage.removeItem('cached_home_tasks'),
+      AsyncStorage.removeItem('active_workspace_id'),
+    ]).catch(() => {});
     await supabase.auth.signOut();
   };
 
@@ -344,6 +464,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     session,
     isLoading,
     isAuthenticated: !!session,
+    activeWorkspace,
+    availableWorkspaces,
+    switchWorkspace,
+    hasWorkspacePermission,
+    isFeatureEnabled,
     logout,
     refreshUser,
     requestPasswordReset,

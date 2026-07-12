@@ -75,16 +75,16 @@ export default function ProjectDetailScreen() {
   const [showAssignModal, setShowAssignModal] = useState(false);
 
   // ── Permissions ──────────────────────────────────────────────────────────────
-  const canManageProject = hasPermission(user?.role, 'manage_projects');
-  const canCreateTasks = hasPermission(user?.role, 'create_tasks');
+  const canManageProject = hasPermission(user, 'manage_projects');
+  const canCreateTasks = hasPermission(user, 'create_tasks');
   const canDeleteProject =
-    hasPermission(user?.role, 'manage_organization') ||
-    hasPermission(user?.role, 'manage_departments');
+    hasPermission(user, 'manage_organization') ||
+    hasPermission(user, 'manage_departments');
   // assign_projects: owner, administrator, director, senior_manager, manager
   const canAssignMembers =
-    hasPermission(user?.role, 'assign_projects') &&
-    (hasPermission(user?.role, 'manage_organization') ||
-      hasPermission(user?.role, 'manage_departments') ||
+    hasPermission(user, 'assign_projects') &&
+    (hasPermission(user, 'manage_organization') ||
+      hasPermission(user, 'manage_departments') ||
       project?.owner_id === user?.id);
 
   // ── Fetch ────────────────────────────────────────────────────────────────────
@@ -340,7 +340,7 @@ export default function ProjectDetailScreen() {
         onRequestClose={() => setShowDeleteModal(false)}
       >
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{ flex: 1 }}
         >
           <Pressable

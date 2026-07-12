@@ -24,6 +24,15 @@ export default function MemberProfileScreen() {
   const [fullName, setFullName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
 
+  const [stats, setStats] = useState<any>({
+    clients: 0,
+    projects: 0,
+    invoices: 0,
+    assignedProjects: [] as string[],
+    workspaces: [] as string[],
+    roles: [] as string[]
+  });
+
   const fetchMemberProfile = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -35,6 +44,54 @@ export default function MemberProfileScreen() {
         
       if (data && !error) {
         setMember(data);
+
+        // Fetch freelancer profile details
+        const { data: freelancerProfile } = await supabase
+          .from('freelancer_profiles')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        const isIndie = freelancerProfile?.freelancer_type === 'independent';
+
+        if (isIndie) {
+          const [clientsRes, projectsRes, invoicesRes] = await Promise.all([
+            supabase.from('clients').select('id', { count: 'exact', head: true }).eq('owner_id', id).eq('is_deleted', false),
+            supabase.from('projects').select('id', { count: 'exact', head: true }).eq('owner_id', id),
+            supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('owner_id', id).eq('is_deleted', false),
+          ]);
+          setStats({
+            clients: clientsRes.count || 0,
+            projects: projectsRes.count || 0,
+            invoices: invoicesRes.count || 0,
+            assignedProjects: [],
+            workspaces: [freelancerProfile?.portfolio || 'Independent Freelancing'],
+            roles: ['Independent Freelancer']
+          });
+        } else {
+          // Organization mode
+          const [orgMems, projMems] = await Promise.all([
+            supabase.from('user_organizations').select('role, organizations(name)').eq('user_id', id),
+            supabase.from('project_members').select('projects(title)').eq('user_id', id)
+          ]);
+
+          const orgMemsData = (orgMems?.data || []) as any[];
+          const projMemsData = (projMems?.data || []) as any[];
+
+          const projectTitles = projMemsData.map((pm: any) => pm.projects?.title).filter(Boolean);
+          const workspaceNames = orgMemsData.map((om: any) => om.organizations?.name).filter(Boolean);
+          const rolesList = orgMemsData.map((om: any) => om.role).filter(Boolean);
+          if (data.role) rolesList.push(data.role);
+
+          setStats({
+            clients: 0,
+            projects: 0,
+            invoices: 0,
+            assignedProjects: projectTitles,
+            workspaces: workspaceNames,
+            roles: Array.from(new Set(rolesList))
+          });
+        }
       }
     } catch (e) {
       console.error(e);
@@ -123,14 +180,58 @@ export default function MemberProfileScreen() {
           </View>
           
           <Text className="text-2xl font-bold text-foreground mb-2">{member.full_name}</Text>
-          <RoleBadge role={member.role} size="lg" />
           
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginVertical: 8 }}>
+            {stats.roles.map((r: string) => (
+              <RoleBadge key={r} role={r as any} size="sm" />
+            ))}
+          </View>
+          
+          {stats.workspaces.length > 0 && (
+            <Text className="text-base text-muted mt-1 font-medium">
+              Workspaces: {stats.workspaces.join(', ')}
+            </Text>
+          )}
+
           {member.department && (
-            <Text className="text-base text-muted mt-3 font-medium">
+            <Text className="text-base text-muted mt-1 font-medium">
               Department: {member.department}
             </Text>
           )}
         </View>
+
+        {/* Dynamic Scoped Stats / Assignments */}
+        {stats.roles.includes('Independent Freelancer') ? (
+          <View className="px-6 mb-8">
+            <Text className="text-lg font-bold text-foreground mb-4">Independent Statistics</Text>
+            <View style={{ flexDirection: 'row', gap: 12, justifyContent: 'space-between' }}>
+              <View style={{ flex: 1, padding: 16, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
+                <Text style={{ fontSize: 24, fontWeight: '800', color: colors.primary }}>{stats.clients}</Text>
+                <Text style={{ fontSize: 12, color: colors.muted, marginTop: 4 }}>Clients</Text>
+              </View>
+              <View style={{ flex: 1, padding: 16, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
+                <Text style={{ fontSize: 24, fontWeight: '800', color: '#60A5FA' }}>{stats.projects}</Text>
+                <Text style={{ fontSize: 12, color: colors.muted, marginTop: 4 }}>Projects</Text>
+              </View>
+              <View style={{ flex: 1, padding: 16, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, alignItems: 'center' }}>
+                <Text style={{ fontSize: 24, fontWeight: '800', color: colors.success }}>{stats.invoices}</Text>
+                <Text style={{ fontSize: 12, color: colors.muted, marginTop: 4 }}>Invoices</Text>
+              </View>
+            </View>
+          </View>
+        ) : stats.assignedProjects.length > 0 ? (
+          <View className="px-6 mb-8">
+            <Text className="text-lg font-bold text-foreground mb-4">Assigned Projects</Text>
+            <View style={{ padding: 16, borderRadius: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }}>
+              {stats.assignedProjects.map((title: string, index: number) => (
+                <View key={title} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: index === stats.assignedProjects.length - 1 ? 0 : 8 }}>
+                  <Ionicons name="folder-outline" size={16} color={colors.primary} />
+                  <Text style={{ fontSize: 15, color: colors.foreground, fontWeight: '500' }}>{title}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         {/* Contact Info Card */}
         <View className="px-6 mb-8">
@@ -184,7 +285,7 @@ export default function MemberProfileScreen() {
       {isEditModalVisible && (
         <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]} className="justify-end bg-black/50">
           <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             style={{ flex: 1, justifyContent: 'flex-end' }}
           >
             <Pressable style={{ flex: 1 }} onPress={() => { if (!isUpdating) setIsEditModalVisible(false); }} />

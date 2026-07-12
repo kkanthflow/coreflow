@@ -35,7 +35,7 @@ export default function TaskDetailScreen() {
   const [postingComment, setPostingComment] = useState(false);
   const [orgUsers, setOrgUsers] = useState<any[]>([]);
 
-  const canManageTask = hasPermission(user?.role, 'manage_tasks');
+  const canManageTask = hasPermission(user, 'manage_tasks');
 
   const fetchTaskDetails = useCallback(async () => {
     if (!id) { setLoading(false); return; }

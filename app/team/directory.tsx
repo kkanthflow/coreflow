@@ -116,7 +116,7 @@ export default function TeamDirectoryScreen() {
 
   const roles = Array.from(new Set(members.map(m => m.role))).filter(Boolean);
 
-  const canViewDirectory = hasPermission(user?.role, 'view_team_directory');
+  const canViewDirectory = hasPermission(user, 'view_team_directory');
 
   if (!canViewDirectory) {
     return (
@@ -139,7 +139,11 @@ export default function TeamDirectoryScreen() {
           >
             <Ionicons name="arrow-back" size={20} color={colors.foreground} />
           </Pressable>
-          <Text className="text-2xl font-bold text-foreground">Team Directory</Text>
+          <Text className="text-2xl font-bold text-foreground">
+            {['owner', 'ceo', 'managing_director', 'administrator'].includes(user?.role || '') 
+              ? 'Employee Directory' 
+              : 'Team Directory'}
+          </Text>
         </View>
 
         <View 
@@ -148,7 +152,9 @@ export default function TeamDirectoryScreen() {
         >
           <Ionicons name="search" size={20} color={colors.muted} className="mr-2" />
           <TextInput
-            placeholder="Search team members..."
+            placeholder={['owner', 'ceo', 'managing_director', 'administrator'].includes(user?.role || '') 
+              ? "Search employees..." 
+              : "Search team members..."}
             placeholderTextColor={colors.muted}
             value={searchQuery}
             onChangeText={setSearchQuery}
@@ -229,7 +235,25 @@ export default function TeamDirectoryScreen() {
                 <Text className="text-sm text-muted mb-2">
                   {item.email}
                 </Text>
-                <RoleBadge role={item.role} size="sm" />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <RoleBadge role={item.role} size="sm" />
+                  {item.department && (
+                    <View 
+                      style={{ 
+                        paddingHorizontal: 8, 
+                        paddingVertical: 2, 
+                        borderRadius: 6, 
+                        backgroundColor: `${colors.info || '#60A5FA'}15`, 
+                        borderWidth: 1, 
+                        borderColor: `${colors.info || '#60A5FA'}30` 
+                      }}
+                    >
+                      <Text style={{ color: colors.info || '#60A5FA', fontSize: 10, fontWeight: '700', textTransform: 'uppercase' }}>
+                        {item.department}
+                      </Text>
+                    </View>
+                  )}
+                </View>
               </View>
               <Ionicons name="chevron-forward" size={20} color={colors.muted} />
             </Pressable>

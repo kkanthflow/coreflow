@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useColors } from '@/hooks/use-colors';
 import { safeFormatDistanceToNow } from '@/lib/utils';
 import * as Sharing from 'expo-sharing';
+import { TiltCard } from './tilt-card';
 
 export interface FileData {
   id: string;
@@ -76,16 +77,13 @@ export function FileCard({ file, onDelete, canDelete = false }: FileCardProps) {
   };
 
   return (
-    <Pressable
+    <TiltCard
       onPress={handleOpen}
-      style={({ pressed }) => [
-        styles.container,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-          opacity: pressed ? 0.9 : 1,
-        },
-      ]}
+      style={{
+        ...styles.container,
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+      }}
     >
       <View style={[styles.iconContainer, { backgroundColor: `${colors.primary}12` }]}>
         <Ionicons name={getFileIcon(file.mime_type)} size={24} color={colors.primary} />
@@ -139,7 +137,7 @@ export function FileCard({ file, onDelete, canDelete = false }: FileCardProps) {
           <Ionicons name="open-outline" size={18} color={colors.foreground} />
         </Pressable>
       </View>
-    </Pressable>
+    </TiltCard>
   );
 }
 

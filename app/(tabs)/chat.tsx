@@ -1,7 +1,8 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { TabScreenWrapper } from '@/components/ui/tab-screen-wrapper';
 import {
   View, Text, FlatList, Pressable, StyleSheet,
-  Animated, StatusBar, TextInput,
+  Animated, StatusBar, TextInput, Alert
 } from 'react-native';
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { useAuth } from '@/hooks/use-auth';
@@ -33,10 +34,15 @@ export default function ChatScreen() {
   };
 
   const [channels, setChannels] = useState<any[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading]   = useState(true);
   const [search, setSearch]     = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+
   const headerFade  = useRef(new Animated.Value(0)).current;
   const headerSlide = useRef(new Animated.Value(-16)).current;
+
+  const isSelectionMode = selectedIds.length > 0;
 
   useEffect(() => {
     Animated.parallel([
@@ -178,12 +184,12 @@ export default function ChatScreen() {
       fetchChannels();
     }, [fetchChannels])
   );
-
   useEffect(() => {
     if (!user) return;
 
+    const uniqueId = Math.random().toString(36).substring(7);
     const listChannel = supabase
-      .channel('chat:list-updates')
+      .channel(`chat:list-updates:${uniqueId}`)
       .on(
         'postgres_changes',
         {
@@ -228,46 +234,122 @@ export default function ChatScreen() {
     !search || ch.name?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const handleCardPress = (channelId: string) => {
+    if (isSelectionMode) {
+      toggleSelection(channelId);
+    } else {
+      router.push(`/chat/${channelId}` as any);
+    }
+  };
+
+  const toggleSelection = (channelId: string) => {
+    setSelectedIds(prev => 
+      prev.includes(channelId) 
+        ? prev.filter(id => id !== channelId) 
+        : [...prev, channelId]
+    );
+  };
+
+  const handleClearSelection = () => {
+    setSelectedIds([]);
+  };
+
+  const handleDeleteSelected = () => {
+    if (selectedIds.length === 0) return;
+    Alert.alert(
+      'Delete Conversations',
+      `Are you sure you want to permanently delete the ${selectedIds.length} selected chat conversations? This deletes your message history.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            setIsDeleting(true);
+            try {
+              // Delete channels
+              const { error } = await supabase
+                .from('chat_channels')
+                .delete()
+                .in('id', selectedIds);
+
+              if (error) throw error;
+
+              // Refresh list and clear selection
+              setSelectedIds([]);
+              fetchChannels();
+              Alert.alert('Success', 'Conversations deleted successfully.');
+            } catch (err: any) {
+              console.error('Error deleting conversations:', err);
+              Alert.alert('Error', err.message || 'Failed to delete selected conversations.');
+            } finally {
+              setIsDeleting(false);
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
+    <TabScreenWrapper>
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={C.bg} />
 
       {/* Header */}
       <Animated.View style={[styles.header, { opacity: headerFade, transform: [{ translateY: headerSlide }] }]}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-          <View>
-            <Text style={[styles.title, { color: C.text }]}>Messages</Text>
-            <Text style={styles.subtitle}>{channels.length} channel{channels.length !== 1 ? 's' : ''}</Text>
-          </View>
-          <Pressable
-            onPress={() => router.push('/chat/new-dm' as any)}
-            style={({ pressed }) => ({
-              width: 44, height: 44, borderRadius: 14,
-              backgroundColor: pressed ? '#FF6B4A30' : '#FF6B4A20',
-              borderWidth: 1, borderColor: '#FF6B4A40',
-              alignItems: 'center', justifyContent: 'center',
-            })}
-          >
-            <Ionicons name="create-outline" size={20} color={C.primary} />
-          </Pressable>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          {isSelectionMode ? (
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                <Pressable onPress={handleClearSelection} style={styles.headerActionBtn}>
+                  <Ionicons name="close" size={24} color={C.text} />
+                </Pressable>
+                <Text style={[styles.titleSelection, { color: C.text }]}>{selectedIds.length} Selected</Text>
+              </View>
+              <Pressable onPress={handleDeleteSelected} disabled={isDeleting} style={styles.headerActionBtn}>
+                <Ionicons name="trash-outline" size={24} color={C.error} />
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              <View>
+                <Text style={[styles.title, { color: C.text }]}>Messages</Text>
+                <Text style={styles.subtitle}>{channels.length} conversation{channels.length !== 1 ? 's' : ''}</Text>
+              </View>
+              <Pressable
+                onPress={() => router.push('/chat/new-dm' as any)}
+                style={({ pressed }) => ({
+                  width: 44, height: 44, borderRadius: 14,
+                  backgroundColor: pressed ? '#FF6B4A30' : '#FF6B4A20',
+                  borderWidth: 1, borderColor: '#FF6B4A40',
+                  alignItems: 'center', justifyContent: 'center',
+                })}
+              >
+                <Ionicons name="create-outline" size={20} color={C.primary} />
+              </Pressable>
+            </>
+          )}
         </View>
 
         {/* Search */}
-        <View style={[styles.searchBar, { backgroundColor: C.card, borderColor: C.border }]}>
-          <Ionicons name="search-outline" size={16} color={C.muted} />
-          <TextInput
-            placeholder="Search channels..."
-            placeholderTextColor={C.muted}
-            value={search}
-            onChangeText={setSearch}
-            style={{ flex: 1, color: C.text, fontSize: 14, marginLeft: 8 }}
-          />
-          {search.length > 0 && (
-            <Pressable onPress={() => setSearch('')}>
-              <Ionicons name="close-circle" size={16} color={C.muted} />
-            </Pressable>
-          )}
-        </View>
+        {!isSelectionMode && (
+          <View style={[styles.searchBar, { backgroundColor: C.card, borderColor: C.border }]}>
+            <Ionicons name="search-outline" size={16} color={C.muted} />
+            <TextInput
+              placeholder="Search conversations..."
+              placeholderTextColor={C.muted}
+              value={search}
+              onChangeText={setSearch}
+              style={{ flex: 1, color: C.text, fontSize: 14, marginLeft: 8 }}
+            />
+            {search.length > 0 && (
+              <Pressable onPress={() => setSearch('')}>
+                <Ionicons name="close-circle" size={16} color={C.muted} />
+              </Pressable>
+            )}
+          </View>
+        )}
       </Animated.View>
 
       {loading ? (
@@ -285,7 +367,10 @@ export default function ChatScreen() {
           renderItem={({ item }) => (
             <ChannelListItem
               channel={item}
-              onPress={() => router.push(`/chat/${item.id}` as any)}
+              isSelected={selectedIds.includes(item.id)}
+              isSelectionMode={isSelectionMode}
+              onPress={() => handleCardPress(item.id)}
+              onLongPress={() => toggleSelection(item.id)}
             />
           )}
           ListEmptyComponent={
@@ -302,12 +387,14 @@ export default function ChatScreen() {
         />
       )}
     </View>
+    </TabScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   header: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12 },
   title: { color: '#F5F5FA', fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
+  titleSelection: { color: '#F5F5FA', fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
   subtitle: { color: '#7A7A92', fontSize: 14, marginTop: 4 },
   searchBar: {
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#181822',
@@ -318,5 +405,10 @@ const styles = StyleSheet.create({
   emptyIcon: { width: 80, height: 80, borderRadius: 24, backgroundColor: '#181822', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#2A2A3A' },
   emptyTitle: { color: '#F5F5FA', fontSize: 18, fontWeight: '700', marginBottom: 8 },
   emptySub: { color: '#7A7A92', fontSize: 14, textAlign: 'center', lineHeight: 20 },
+  headerActionBtn: {
+    padding: 6,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });
-

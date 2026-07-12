@@ -123,16 +123,8 @@ function AuthGate() {
 
     // Handle fine-grained redirects WITHIN the authenticated stack
     if (isAuthenticated) {
-      if (user?.role === 'freelancer') {
-        if (!onFreelancerPortal) {
-          router.replace('/freelancer/portal' as any);
-        }
-      } else {
-        // If they are on the splash screen, auth screens, or freelancer portal, send them home
-        if (isIndex || onAuthScreens || onFreelancerPortal) {
-          router.replace('/(tabs)/home' as any);
-        }
-        // Otherwise, let them navigate freely to tabs, projects, departments, etc.
+      if (isIndex || onAuthScreens || onFreelancerPortal) {
+        router.replace('/(tabs)/home' as any);
       }
     } else {
       if (!onAuthScreens) {
@@ -257,7 +249,13 @@ function AppNavigator() {
   const colors = useColors();
 
   return (
-    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }} />
+    <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.background } }}>
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="meetings/new" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="chat/new-dm" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="projects/new" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+      <Stack.Screen name="departments/new" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />
+    </Stack>
   );
 }
 
@@ -364,8 +362,9 @@ export default function RootLayout() {
         console.warn('E2E Delivery catch-up failed:', err);
       }
 
+      const uniqueId = Math.random().toString(36).substring(7);
       chatChannel = supabase
-        .channel('chat:global-push-notifs')
+        .channel(`chat:global-push-notifs:${uniqueId}`)
         .on(
           'postgres_changes',
           {
@@ -458,11 +457,9 @@ export default function RootLayout() {
 
         // Try to get Expo Push Token using project ID from Constants
         const Constants = require('expo-constants').default;
-        const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
+        const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId ?? "2774c41f-4987-4393-9fee-12eb5e3ab9eb";
         
-        const tokenData = await Notifications.getExpoPushTokenAsync(
-          projectId ? { projectId } : undefined
-        );
+        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
         const token = tokenData.data;
 
         if (token) {

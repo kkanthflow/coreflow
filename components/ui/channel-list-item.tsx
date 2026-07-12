@@ -14,9 +14,18 @@ interface ChannelListItemProps {
     lastMessageTime?: string;
   };
   onPress: () => void;
+  onLongPress?: () => void;
+  isSelected?: boolean;
+  isSelectionMode?: boolean;
 }
 
-export function ChannelListItem({ channel, onPress }: ChannelListItemProps) {
+export function ChannelListItem({ 
+  channel, 
+  onPress, 
+  onLongPress, 
+  isSelected, 
+  isSelectionMode 
+}: ChannelListItemProps) {
   const colors = useColors();
 
   const getIcon = () => {
@@ -39,15 +48,27 @@ export function ChannelListItem({ channel, onPress }: ChannelListItemProps) {
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={300}
       style={({ pressed }) => [
         styles.container,
         {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
+          backgroundColor: isSelected ? `${colors.primary}12` : colors.surface,
+          borderColor: isSelected ? colors.primary : colors.border,
           opacity: pressed ? 0.95 : 1,
         },
       ]}
     >
+      {isSelectionMode && (
+        <View style={{ marginRight: 12, justifyContent: 'center' }}>
+          <Ionicons
+            name={isSelected ? "checkbox" : "square-outline"}
+            size={20}
+            color={isSelected ? colors.primary : colors.muted}
+          />
+        </View>
+      )}
+
       <View style={[styles.iconContainer, { backgroundColor: `${colors.primary}12` }]}>
         <Ionicons name={getIcon() as any} size={20} color={colors.primary} />
       </View>

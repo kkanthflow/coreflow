@@ -19,12 +19,13 @@ interface ChatBubbleProps {
   };
   onReply?: (message: any) => void;
   onReact?: (messageId: string, reaction: string) => void;
+  onDelete?: (messageId: string) => void;
   isRead?: boolean;
 }
 
 const REACTION_OPTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
 
-export function ChatBubble({ message, onReply, onReact, isRead }: ChatBubbleProps) {
+export function ChatBubble({ message, onReply, onReact, onDelete, isRead }: ChatBubbleProps) {
   const { user } = useAuth();
   const colors = useColors();
   const [menuVisible, setMenuVisible] = useState(false);
@@ -170,6 +171,19 @@ export function ChatBubble({ message, onReply, onReact, isRead }: ChatBubbleProp
               <Ionicons name="arrow-undo-outline" size={18} color={colors.foreground} style={styles.menuIcon} />
               <Text style={[styles.menuItemText, { color: colors.foreground }]}>Reply</Text>
             </TouchableOpacity>
+
+            {onDelete && (isMe || user?.role === 'admin' || user?.role === 'owner') && (
+              <TouchableOpacity
+                onPress={() => {
+                  setMenuVisible(false);
+                  onDelete(message.id);
+                }}
+                style={[styles.menuItem, { borderBottomColor: colors.border }]}
+              >
+                <Ionicons name="trash-outline" size={18} color={colors.error} style={styles.menuIcon} />
+                <Text style={[styles.menuItemText, { color: colors.error }]}>Delete Message</Text>
+              </TouchableOpacity>
+            )}
             
             <TouchableOpacity onPress={() => setMenuVisible(false)} style={styles.menuItem}>
               <Ionicons name="close-outline" size={18} color={colors.error} style={styles.menuIcon} />

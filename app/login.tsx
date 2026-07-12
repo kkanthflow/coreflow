@@ -204,7 +204,7 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
       <StatusBar barStyle={colors.background === '#FFFFFF' ? 'dark-content' : 'light-content'} backgroundColor={C.bg} />
       
       {/* Full-screen dark loading overlay — shown during auth transition to protect native layout engine */}
@@ -243,7 +243,9 @@ export default function LoginScreen() {
         />
 
         <ScrollView
+          style={{ flex: 1 }}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 48 }}
         >

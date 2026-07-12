@@ -23,6 +23,7 @@ export default function RegisterScreen() {
   
   // Registration Mode
   const [accountType, setAccountType] = useState<'join' | 'create' | 'freelancer'>('join');
+  const [freelancerWorkType, setFreelancerWorkType] = useState<'organization' | 'independent'>('organization');
   
   const [organization, setOrganization] = useState('');
   const [role, setRole] = useState('general_member'); // Default for joining
@@ -42,7 +43,8 @@ export default function RegisterScreen() {
       isValid = false;
     }
 
-    if (accountType !== 'freelancer' && !organization) {
+    const needsOrg = accountType !== 'freelancer' || (accountType === 'freelancer' && freelancerWorkType === 'organization');
+    if (needsOrg && !organization) {
       newErrors.organization = 'Organization is required';
       isValid = false;
     }
@@ -89,8 +91,9 @@ export default function RegisterScreen() {
       let orgId = null;
       let existingOrg = null;
       const cleanOrgName = organization.trim();
-      
-      if (accountType !== 'freelancer') {
+      const needsOrg = accountType !== 'freelancer' || (accountType === 'freelancer' && freelancerWorkType === 'organization');
+
+      if (needsOrg) {
         const { data: orgData, error: orgSearchError } = await supabase
           .from('organizations')
           .select('id')
@@ -102,8 +105,8 @@ export default function RegisterScreen() {
         }
         existingOrg = orgData;
 
-        if (accountType === 'join' && !existingOrg) {
-          throw new Error(`Organization "${cleanOrgName}" not found. Please check the spelling or create a new one.`);
+        if ((accountType === 'join' || accountType === 'freelancer') && !existingOrg) {
+          throw new Error(`Organization "${cleanOrgName}" not found. Please check the spelling or ask your administrator.`);
         }
         if (accountType === 'create' && existingOrg) {
           throw new Error(`Organization "${cleanOrgName}" already exists. Please join it instead.`);
@@ -151,7 +154,38 @@ export default function RegisterScreen() {
       
       if (!userId) throw new Error('Failed to get user ID after registration');
 
-      if (accountType !== 'freelancer') {
+      if (accountType === 'freelancer') {
+        if (freelancerWorkType === 'organization' && existingOrg) {
+          orgId = existingOrg.id;
+          
+          const { error: linkError } = await supabase
+            .from('user_organizations')
+            .insert({ user_id: userId, org_id: orgId, role: 'freelancer' });
+          if (linkError) {
+            await supabase.auth.signOut();
+            throw linkError;
+          }
+
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ role: 'freelancer', freelancer_type: 'organization' })
+            .eq('id', userId);
+          if (updateError) {
+            await supabase.auth.signOut();
+            throw updateError;
+          }
+        } else {
+          // Independent freelancer (no organization link)
+          const { error: updateError } = await supabase
+            .from('users')
+            .update({ role: 'freelancer', freelancer_type: 'independent' })
+            .eq('id', userId);
+          if (updateError) {
+            await supabase.auth.signOut();
+            throw updateError;
+          }
+        }
+      } else {
         if (accountType === 'join' && existingOrg) {
           orgId = existingOrg.id;
           const assignedRole = role || 'employee';
@@ -233,7 +267,7 @@ export default function RegisterScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1, backgroundColor: colors.background }}
     >
       {/* Full-screen dark loading overlay — shown while creating account + during auth transition */}
@@ -261,7 +295,13 @@ export default function RegisterScreen() {
       )}
       <ScreenContainer className="justify-between p-6">
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+        <ScrollView 
+          style={{ flex: 1 }} 
+          keyboardShouldPersistTaps="handled" 
+          keyboardDismissMode="on-drag" 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
           {/* Header */}
           <View className="mt-12 mb-8">
             <Text className="text-4xl font-bold text-foreground mb-2">Create Account</Text>
@@ -335,16 +375,54 @@ export default function RegisterScreen() {
               </View>
             </View>
 
-            {accountType !== 'freelancer' && (
-              <>
-                <PremiumInput
-                  label={accountType === 'create' ? "New Organization Name" : "Organization Name to Join"}
-                  placeholder="Acme Corp"
-                  value={organization}
-                  onChangeText={setOrganization}
-                  editable={!loading}
-                  error={errors.organization || undefined}
-                />
+            {accountType === 'freelancer' && (
+              <View className="mb-4">
+                <Text className="text-base font-bold text-foreground mb-3">How do you want to work?</Text>
+                <View className="gap-2">
+                  <Pressable 
+                    className={`flex-row items-center p-3 rounded-xl border ${freelancerWorkType === 'organization' ? 'border-primary bg-primary/10' : 'border-border'}`}
+                    onPress={() => setFreelancerWorkType('organization')}
+                  >
+                    <View className={`w-5 h-5 rounded-full border items-center justify-center mr-3 ${freelancerWorkType === 'organization' ? 'border-primary' : 'border-muted'}`}>
+                      {freelancerWorkType === 'organization' && <View className="w-3 h-3 rounded-full bg-primary" />}
+                    </View>
+                    <Text className="text-base text-foreground font-medium">Join an Organization</Text>
+                  </Pressable>
+
+                  <Pressable 
+                    className={`flex-row items-center p-3 rounded-xl border ${freelancerWorkType === 'independent' ? 'border-primary bg-primary/10' : 'border-border'}`}
+                    onPress={() => setFreelancerWorkType('independent')}
+                  >
+                    <View className={`w-5 h-5 rounded-full border items-center justify-center mr-3 ${freelancerWorkType === 'independent' ? 'border-primary' : 'border-muted'}`}>
+                      {freelancerWorkType === 'independent' && <View className="w-3 h-3 rounded-full bg-primary" />}
+                    </View>
+                    <Text className="text-base text-foreground font-medium">Work Independently</Text>
+                  </Pressable>
+                </View>
+              </View>
+            )}
+
+            {((accountType !== 'freelancer' && accountType !== 'create') || (accountType === 'freelancer' && freelancerWorkType === 'organization')) && (
+              <PremiumInput
+                label="Organization Name to Join"
+                placeholder="Acme Corp"
+                value={organization}
+                onChangeText={setOrganization}
+                editable={!loading}
+                error={errors.organization || undefined}
+              />
+            )}
+
+            {accountType === 'create' && (
+              <PremiumInput
+                label="New Organization Name"
+                placeholder="Acme Corp"
+                value={organization}
+                onChangeText={setOrganization}
+                editable={!loading}
+                error={errors.organization || undefined}
+              />
+            )}
 
                 {accountType === 'join' && (
                   <View className="mb-4">
@@ -408,8 +486,6 @@ export default function RegisterScreen() {
                     </View>
                   </>
                 )}
-              </>
-            )}
 
             <PremiumInput
               label="Password"

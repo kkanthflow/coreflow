@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { TabScreenWrapper } from '@/components/ui/tab-screen-wrapper';
 import {
   View, Text, ScrollView, StyleSheet, Pressable,
   Animated, StatusBar, RefreshControl,
@@ -69,7 +70,23 @@ function AnimatedBar({ value, total, color, label }: { value: number; total: num
   );
 }
 
-function StatCard({ label, value, icon, color, sub }: { label: string; value: string | number; icon: string; color: string; sub?: string }) {
+function StatCard({
+  label,
+  value,
+  icon,
+  color,
+  sub,
+  bob = false,
+  bobDelay = 0,
+}: {
+  label: string;
+  value: string | number;
+  icon: string;
+  color: string;
+  sub?: string;
+  bob?: boolean;
+  bobDelay?: number;
+}) {
   const colors = useColors();
   const C = {
     bg: colors.background,
@@ -100,7 +117,7 @@ function StatCard({ label, value, icon, color, sub }: { label: string; value: st
 
   return (
     <Animated.View style={{ flex: 1, transform: [{ scale: scaleAnim }], opacity: fadeAnim }}>
-      <GlassCard glowColor={color} padding={16} radius={18} style={{ alignItems: 'flex-start' }}>
+      <GlassCard bob={bob} bobDelay={bobDelay} glowColor={color} padding={16} radius={18} style={{ alignItems: 'flex-start' }}>
         <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: `${color}25`, alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
           <Ionicons name={icon as any} size={18} color={color} />
         </View>
@@ -139,6 +156,7 @@ export default function AnalyticsScreen() {
   const [orgCurrency, setOrgCurrency] = useState('USD');
   const headerAnim = useRef(new Animated.Value(-16)).current;
   const headerFade = useRef(new Animated.Value(0)).current;
+  const isFirstLoad = useRef(true);
 
   const [orgStats, setOrgStats] = useState({
     totalProjects: 0, completedProjects: 0,
@@ -160,7 +178,9 @@ export default function AnalyticsScreen() {
 
   const fetchAnalytics = useCallback(async () => {
     if (!user?.organizationId) { setLoading(false); return; }
-    setLoading(true);
+    if (isFirstLoad.current) {
+      setLoading(true);
+    }
     try {
       const { data: orgData } = await supabase
         .from('organizations')
@@ -210,6 +230,7 @@ export default function AnalyticsScreen() {
     } finally {
       setLoading(false);
       setRefreshing(false);
+      isFirstLoad.current = false;
     }
   }, [user?.organizationId, user?.id, isManagement]);
 
@@ -241,6 +262,7 @@ export default function AnalyticsScreen() {
   ];
 
   return (
+    <TabScreenWrapper>
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={C.bg} />
 
@@ -284,17 +306,17 @@ export default function AnalyticsScreen() {
               {/* Org KPIs */}
               <Text style={[styles.sectionTitle, { color: C.text }]}>Workspace Health</Text>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-                <StatCard label="Projects" value={orgStats.totalProjects} icon="folder" color={C.primary} sub={`${orgStats.completedProjects} done`} />
-                <StatCard label="Tasks" value={orgStats.totalTasks} icon="checkmark-circle" color={C.info} sub={`${orgStats.doneTasks} done`} />
+                <StatCard bob={true} bobDelay={0} label="Projects" value={orgStats.totalProjects} icon="folder" color={C.primary} sub={`${orgStats.completedProjects} done`} />
+                <StatCard bob={true} bobDelay={150} label="Tasks" value={orgStats.totalTasks} icon="checkmark-circle" color={C.info} sub={`${orgStats.doneTasks} done`} />
               </View>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
-                <StatCard label="Revenue" value={formatCurrency(orgStats.paidValue, orgCurrency)} icon="cash" color={C.success} />
-                <StatCard label="Outstanding" value={formatCurrency(orgStats.pendingValue, orgCurrency)} icon="hourglass" color={C.warning} />
+                <StatCard bob={true} bobDelay={300} label="Revenue" value={formatCurrency(orgStats.paidValue, orgCurrency)} icon="cash" color={C.success} />
+                <StatCard bob={true} bobDelay={450} label="Outstanding" value={formatCurrency(orgStats.pendingValue, orgCurrency)} icon="hourglass" color={C.warning} />
               </View>
 
               {/* Progress bars */}
               <Text style={[styles.sectionTitle, { color: C.text }]}>Completion Rates</Text>
-              <GlassCard padding={20} radius={20} style={{ marginBottom: 24 }}>
+              <GlassCard bob={true} bobDelay={100} padding={20} radius={20} style={{ marginBottom: 24 }}>
                 <AnimatedBar value={orgStats.completedProjects} total={orgStats.totalProjects} color={C.primary} label="Project Completion" />
                 <AnimatedBar value={orgStats.doneTasks} total={orgStats.totalTasks} color={C.info} label="Task Completion" />
                 <AnimatedBar value={orgStats.inProgressTasks} total={orgStats.totalTasks} color={C.warning} label="In Progress" />
@@ -302,7 +324,7 @@ export default function AnalyticsScreen() {
 
               {/* Health rings */}
               <Text style={[styles.sectionTitle, { color: C.text }]}>Visual Health</Text>
-              <GlassCard padding={20} radius={20} style={{ marginBottom: 24 }}>
+              <GlassCard bob={true} bobDelay={200} padding={20} radius={20} style={{ marginBottom: 24 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-around', alignItems: 'center' }}>
                   <HealthRing
                     progress={orgStats.totalProjects > 0 ? (orgStats.completedProjects / orgStats.totalProjects) * 100 : 0}
@@ -321,7 +343,7 @@ export default function AnalyticsScreen() {
 
               {/* Finance breakdown */}
               <Text style={[styles.sectionTitle, { color: C.text }]}>Finance & Billing</Text>
-              <GlassCard glowColor={C.success} padding={20} radius={20} style={{ marginBottom: 24 }}>
+              <GlassCard bob={true} bobDelay={300} glowColor={C.success} padding={20} radius={20} style={{ marginBottom: 24 }}>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
                   <Text style={{ color: C.textSec, fontSize: 13, fontWeight: '600' }}>Total Invoices</Text>
                   <Text style={{ color: C.text, fontSize: 15, fontWeight: '800' }}>{orgStats.totalInvoices}</Text>
@@ -358,16 +380,16 @@ export default function AnalyticsScreen() {
               </View>
 
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 10 }}>
-                <StatCard label="Total" value={personalStats.total} icon="list" color={C.info} />
-                <StatCard label="Done" value={personalStats.done} icon="checkmark-circle" color={C.success} />
+                <StatCard bob={true} bobDelay={0} label="Total" value={personalStats.total} icon="list" color={C.info} />
+                <StatCard bob={true} bobDelay={150} label="Done" value={personalStats.done} icon="checkmark-circle" color={C.success} />
               </View>
               <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
-                <StatCard label="In Progress" value={personalStats.inProgress} icon="play" color={C.warning} />
-                <StatCard label="Review" value={personalStats.review} icon="eye" color={C.purple} />
+                <StatCard bob={true} bobDelay={300} label="In Progress" value={personalStats.inProgress} icon="play" color={C.warning} />
+                <StatCard bob={true} bobDelay={450} label="Review" value={personalStats.review} icon="eye" color={C.purple} />
               </View>
 
               <Text style={[styles.sectionTitle, { color: C.text }]}>Task Breakdown</Text>
-              <GlassCard padding={20} radius={20} style={{ marginBottom: 24 }}>
+              <GlassCard bob={true} bobDelay={100} padding={20} radius={20} style={{ marginBottom: 24 }}>
                 <AnimatedBar value={personalStats.done}       total={personalStats.total} color={C.success} label="Completed" />
                 <AnimatedBar value={personalStats.inProgress} total={personalStats.total} color={C.warning} label="In Progress" />
                 <AnimatedBar value={personalStats.review}     total={personalStats.total} color={C.purple}  label="Under Review" />
@@ -378,6 +400,7 @@ export default function AnalyticsScreen() {
         </View>
       </ScrollView>
     </View>
+    </TabScreenWrapper>
   );
 }
 

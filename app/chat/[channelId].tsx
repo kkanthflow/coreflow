@@ -500,6 +500,47 @@ export default function ChannelChatScreen() {
     }
   };
 
+  const handleDeleteMessage = useCallback((messageId: string) => {
+    const msg = messages.find((m) => m.id === messageId);
+    if (!msg) return;
+
+    const isOwner = msg.sender_id === user?.id;
+    const isAdmin = user?.role === 'admin' || user?.role === 'owner';
+
+    const options: any[] = [{ text: 'Cancel', style: 'cancel' }];
+
+    if (isOwner || isAdmin) {
+      options.push({
+        text: 'Delete for everyone',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            const { error } = await supabase
+              .from('chat_messages')
+              .delete()
+              .eq('id', messageId);
+            if (error) throw error;
+            setMessages((prev) => prev.filter((m) => m.id !== messageId));
+          } catch (err: any) {
+            Alert.alert('Error', err.message || 'Failed to delete message.');
+          }
+        },
+      });
+    }
+
+    if (isOwner) {
+      options.unshift({
+        text: 'Delete for me',
+        onPress: () => {
+          // Locally remove — message still exists in DB for others
+          setMessages((prev) => prev.filter((m) => m.id !== messageId));
+        },
+      });
+    }
+
+    Alert.alert('Delete Message', 'Choose how you want to delete this message.', options);
+  }, [messages, user]);
+
   const handleSend = async () => {
     if (!inputText.trim() || sending) return;
     const textToSend = inputText.trim();
@@ -681,8 +722,9 @@ export default function ChannelChatScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1 }}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
     >
       <ScreenContainer>
         {/* Header */}
@@ -783,6 +825,7 @@ export default function ChannelChatScreen() {
                   message={item}
                   onReply={setReplyToMessage}
                   onReact={handleReact}
+                  onDelete={handleDeleteMessage}
                   isRead={isRead}
                 />
               </View>

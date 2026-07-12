@@ -44,7 +44,7 @@ export default function NewProjectScreen() {
   const [orgUsers, setOrgUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const canCreate = hasPermission(user?.role, 'create_projects');
+  const canCreate = hasPermission(user, 'create_projects');
 
   useEffect(() => {
     if (!canCreate) {

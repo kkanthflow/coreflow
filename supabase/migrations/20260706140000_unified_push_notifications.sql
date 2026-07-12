@@ -192,7 +192,10 @@ BEGIN
   -- Invoice Created (Notify organization owners)
   IF TG_OP = 'INSERT' THEN
     FOR org_owner IN
-      SELECT id FROM public.users WHERE organization_id = NEW.organization_id AND role IN ('managing_director', 'ceo', 'cto')
+      SELECT u.id 
+      FROM public.users u
+      JOIN public.user_organizations uo ON u.id = uo.user_id
+      WHERE uo.org_id = NEW.organization_id AND u.role IN ('managing_director', 'ceo', 'cto')
     LOOP
       INSERT INTO public.notifications (user_id, title, message, type, entity_id, entity_type, action_url, is_read)
       VALUES (
@@ -210,7 +213,10 @@ BEGIN
     -- Invoice Paid
     IF NEW.status = 'paid' AND OLD.status != 'paid' THEN
       FOR org_owner IN
-        SELECT id FROM public.users WHERE organization_id = NEW.organization_id AND role IN ('managing_director', 'ceo', 'cto')
+        SELECT u.id 
+        FROM public.users u
+        JOIN public.user_organizations uo ON u.id = uo.user_id
+        WHERE uo.org_id = NEW.organization_id AND u.role IN ('managing_director', 'ceo', 'cto')
       LOOP
         INSERT INTO public.notifications (user_id, title, message, type, entity_id, entity_type, action_url, is_read)
         VALUES (

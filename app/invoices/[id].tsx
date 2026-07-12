@@ -67,6 +67,12 @@ interface Invoice {
     gst_number?: string | null;
     address?: string | null;
   } | null;
+  owner?: {
+    full_name: string;
+    email: string;
+    phone?: string | null;
+    location?: string | null;
+  } | null;
 }
 
 export default function InvoiceDetailScreen() {
@@ -94,7 +100,7 @@ export default function InvoiceDetailScreen() {
     try {
       const { data, error } = await supabase
         .from('invoices')
-        .select('*, clients(*), invoice_items(*), invoice_payments(*), organizations(name, gst_number, address)')
+        .select('*, clients(*), invoice_items(*), invoice_payments(*), organizations(name, gst_number, address), owner:owner_id(full_name, email, phone, location)')
         .eq('id', id)
         .eq('is_deleted', false)
         .single();
@@ -294,6 +300,13 @@ export default function InvoiceDetailScreen() {
     const style = invoice.template_style || 'classic';
     const symbol = getCurrencyDetails(invoice.currency).symbol;
 
+    const hasOrg = !!invoice.organizations;
+    const issuerName = hasOrg ? invoice.organizations!.name : (invoice.owner?.full_name || '-');
+    const issuerContact = hasOrg 
+      ? `GSTIN: ${invoice.organizations!.gst_number || '-'}` 
+      : `${invoice.owner?.email || ''} ${invoice.owner?.phone ? `| ${invoice.owner.phone}` : ''}`;
+    const issuerAddress = hasOrg ? (invoice.organizations!.address || '-') : (invoice.owner?.location || '-');
+
     const itemsRows = invoice.invoice_items.map((it, idx) => `
       <tr>
         <td>${idx + 1}</td>
@@ -378,8 +391,8 @@ export default function InvoiceDetailScreen() {
           <div class="invoice-header" style="display: flex; justify-content: space-between; align-items: center;">
             <div>
               ${vr.logo_url ? `<img src="${vr.logo_url}" style="max-height: 50px; margin-bottom: 10px; display: block;" />` : ''}
-              <h2 style="margin: 0;">${invoice.organizations?.name || '-'}</h2>
-              <p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">GSTIN: ${invoice.organizations?.gst_number || '-'}</p>
+              <h2 style="margin: 0;">${issuerName}</h2>
+              <p style="margin: 4px 0 0 0; font-size: 12px; color: #666;">${issuerContact}</p>
             </div>
             <div style="text-align: right;">
               <p style="margin: 0 0 5px 0;">Invoice Number: <strong>${invoice.invoice_number}</strong></p>
@@ -390,9 +403,9 @@ export default function InvoiceDetailScreen() {
           <div class="grid" style="margin-top: 30px;">
             <div class="col">
               <h3>Issuer Info</h3>
-              <p><strong>${invoice.organizations?.name || '-'}</strong></p>
-              <p>GSTIN: ${invoice.organizations?.gst_number || '-'}</p>
-              <p>${invoice.organizations?.address || '-'}</p>
+              <p><strong>${issuerName}</strong></p>
+              <p>${issuerContact}</p>
+              <p>${issuerAddress}</p>
             </div>
             <div class="col" style="text-align: right;">
               <h3>Client Details</h3>
@@ -561,9 +574,10 @@ export default function InvoiceDetailScreen() {
 
           <Pressable
             onPress={handlePrintPDF}
-            className="px-4 py-2 rounded-xl justify-center items-center bg-emerald-500"
+            className="flex-row items-center px-3.5 py-2 rounded-xl justify-center bg-emerald-500"
           >
-            <Text className="text-white font-bold text-xs">Print PDF</Text>
+            <Ionicons name="share-social-outline" size={14} color="#FFF" style={{ marginRight: 6 }} />
+            <Text className="text-white font-bold text-xs">Share PDF</Text>
           </Pressable>
         </View>
       </View>
@@ -598,9 +612,13 @@ export default function InvoiceDetailScreen() {
         <View className="flex-row mb-6">
           <View className="flex-1 p-4 rounded-3xl border border-border mr-3" style={{ backgroundColor: colors.surface }}>
             <Text className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2">Billed From</Text>
-            <Text className="text-sm font-bold text-foreground mb-0.5">{invoice.organizations?.name || '-'}</Text>
-            <Text className="text-xs text-muted mb-0.5">GSTIN: {invoice.organizations?.gst_number || '-'}</Text>
-            <Text className="text-xs text-muted">{invoice.organizations?.address || '-'}</Text>
+            <Text className="text-sm font-bold text-foreground mb-0.5">{invoice.organizations?.name || invoice.owner?.full_name || '-'}</Text>
+            <Text className="text-xs text-muted mb-0.5">
+              {invoice.organizations 
+                ? `GSTIN: ${invoice.organizations.gst_number || '-'}` 
+                : `${invoice.owner?.email || ''} ${invoice.owner?.phone ? `| ${invoice.owner.phone}` : ''}`}
+            </Text>
+            <Text className="text-xs text-muted">{invoice.organizations?.address || invoice.owner?.location || '-'}</Text>
           </View>
           <View className="flex-1 p-4 rounded-3xl border border-border" style={{ backgroundColor: colors.surface }}>
             <Text className="text-[10px] font-bold text-muted uppercase tracking-wider mb-2">Billed To</Text>
@@ -660,6 +678,16 @@ export default function InvoiceDetailScreen() {
             <Text className="text-base font-bold text-primary">{formatCurrency(invoice.balance_due, invoice.currency)}</Text>
           </View>
         </View>
+
+        {/* Share Invoice Button */}
+        <Pressable
+          onPress={handlePrintPDF}
+          className="flex-row items-center justify-center p-4 rounded-2xl mb-6 bg-emerald-500"
+          style={{ shadowColor: '#10B981', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.15, shadowRadius: 8, elevation: 3 }}
+        >
+          <Ionicons name="share-social" size={18} color="#FFF" style={{ marginRight: 8 }} />
+          <Text className="text-white font-bold text-sm">Share Invoice (PDF)</Text>
+        </Pressable>
 
         {/* Payments list */}
         <View className="mb-6">

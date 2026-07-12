@@ -9,6 +9,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { RoleBadge } from '@/components/ui/role-badge';
 import { getRoleColor } from '@/lib/_core/theme';
 import { useThemeContext } from '@/lib/theme-provider';
+import { hasPermission } from '@/lib/permissions';
 
 interface Member {
   id: string;
@@ -26,6 +27,21 @@ export default function HierarchyScreen() {
   const router = useRouter();
   const [members, setMembers] = useState<Member[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Block independent freelancers — they are not part of an org
+  const canViewHierarchy = hasPermission(user, 'view_team_directory');
+  if (!canViewHierarchy) {
+    return (
+      <ScreenContainer edges={['top', 'bottom', 'left', 'right']} style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: colors.background }}>
+        <Ionicons name="lock-closed" size={48} color={colors.error} style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 20, fontWeight: '800', color: colors.foreground, marginBottom: 8 }}>Access Restricted</Text>
+        <Text style={{ fontSize: 14, color: colors.muted, textAlign: 'center' }}>Organization hierarchy is only available to team members.</Text>
+        <Pressable onPress={() => router.back()} style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: colors.primary, borderRadius: 14 }}>
+          <Text style={{ color: '#fff', fontWeight: '700' }}>Go Back</Text>
+        </Pressable>
+      </ScreenContainer>
+    );
+  }
 
   // Expanded departments state
   const [expandedDepts, setExpandedDepts] = useState<Record<string, boolean>>({

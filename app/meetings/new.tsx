@@ -241,7 +241,7 @@ export default function NewMeetingScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{ flex: 1, backgroundColor: colors.background }}
     >
       <Stack.Screen options={{ presentation: 'modal', headerShown: false }} />

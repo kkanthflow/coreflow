@@ -16,6 +16,19 @@ export default function DepartmentsScreen() {
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  if (!user?.organizationId) {
+    return (
+      <ScreenContainer edges={['top', 'bottom', 'left', 'right']} style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32, backgroundColor: colors.background }}>
+        <Ionicons name="lock-closed" size={48} color={colors.error} style={{ marginBottom: 16 }} />
+        <Text style={{ fontSize: 20, fontWeight: '800', color: colors.foreground, marginBottom: 8 }}>Access Restricted</Text>
+        <Text style={{ fontSize: 14, color: colors.muted, textAlign: 'center' }}>Departments are only available to organization members.</Text>
+        <Pressable onPress={() => router.back()} style={{ marginTop: 24, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: colors.primary, borderRadius: 14 }}>
+          <Text style={{ color: '#fff', fontWeight: '700' }}>Go Back</Text>
+        </Pressable>
+      </ScreenContainer>
+    );
+  }
+
   const fetchDepartments = useCallback(async () => {
     if (!user?.organizationId) { setLoading(false); return; }
     setLoading(true);
@@ -70,7 +83,7 @@ export default function DepartmentsScreen() {
     }, [fetchDepartments])
   );
 
-  const canManageDept = hasPermission(user?.role, 'manage_departments');
+  const canManageDept = hasPermission(user, 'manage_departments');
 
   return (
     <ScreenContainer>

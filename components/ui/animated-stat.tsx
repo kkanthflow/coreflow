@@ -27,19 +27,14 @@ export function AnimatedStat({
 }: AnimatedStatProps) {
   const colors = useColors();
   const animValue = useRef(new Animated.Value(0)).current;
-  const scaleAnim = useRef(new Animated.Value(0.8)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
   const displayValue = useRef(0);
   const [displayText, setDisplayText] = React.useState('0');
 
   const accentColor = color || colors.primary;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: 1, tension: 200, friction: 8, useNativeDriver: true }),
-      Animated.timing(opacityAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
-    ]).start();
-
     Animated.timing(animValue, {
       toValue: value,
       duration: 1200,

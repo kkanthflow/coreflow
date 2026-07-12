@@ -394,6 +394,11 @@ export default function NewInvoiceScreen() {
       const orgId = myOrgs && myOrgs.length > 0 ? myOrgs[0].org_id : null;
 
       // 1. Prepare Invoice values
+      const year = new Date().getFullYear();
+      const timestampSuffix = Date.now().toString().slice(-5);
+      const randomSuffix = Math.floor(100 + Math.random() * 900);
+      const generatedInvoiceNumber = `CF-${year}-${timestampSuffix}${randomSuffix}`;
+
       const invoiceData = {
         organization_id: orgId,
         owner_id: user!.id,
@@ -415,6 +420,8 @@ export default function NewInvoiceScreen() {
         status: 'sent',
         visual_recreation: visualRecreation,
         template_style: visualRecreation ? 'custom' : 'classic',
+        // Only set invoice_number on create, keep existing on edit
+        ...(!editId && { invoice_number: generatedInvoiceNumber }),
       };
 
       let invoiceId = '';
@@ -497,7 +504,7 @@ export default function NewInvoiceScreen() {
       <Stack.Screen options={{ presentation: 'modal', headerShown: false }} />
       
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 20 : 0}
       >
@@ -525,7 +532,7 @@ export default function NewInvoiceScreen() {
             {isSaving ? (
               <ActivityIndicator size="small" color="#FFF" />
             ) : (
-              <Text className="text-white font-bold text-sm">Save Draft</Text>
+              <Text className="text-white font-bold text-sm">Save Invoice</Text>
             )}
           </Pressable>
         </View>
@@ -832,7 +839,7 @@ export default function NewInvoiceScreen() {
       {/* Client Modal */}
       <Modal visible={isClientModalVisible} transparent animationType="slide">
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
           style={{ flex: 1 }}
         >
           <View className="flex-1 justify-end bg-black/50">
@@ -918,7 +925,7 @@ export default function NewInvoiceScreen() {
       {/* Organization Setup Modal */}
       <Modal visible={isOrgModalVisible} transparent animationType="slide">
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
           style={{ flex: 1 }}
         >
           <View className="flex-1 justify-end bg-black/50">

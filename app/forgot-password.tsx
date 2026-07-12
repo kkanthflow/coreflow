@@ -81,11 +81,17 @@ export default function ForgotPasswordScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1"
     >
       <ScreenContainer className="justify-between p-6">
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
+        <ScrollView 
+          style={{ flex: 1 }} 
+          keyboardShouldPersistTaps="handled" 
+          keyboardDismissMode="on-drag" 
+          showsVerticalScrollIndicator={false} 
+          contentContainerStyle={{ flexGrow: 1 }}
+        >
           {/* Header */}
           <View className="mt-12 mb-8">
             <Text className="text-4xl font-bold text-foreground mb-2">Reset Password</Text>
