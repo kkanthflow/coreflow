@@ -150,13 +150,12 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Race condition guard: for brand-new accounts (created < 15s ago),
       // if org membership is missing retry — register.tsx may still be writing to DB.
-      // This is the key fix for the black/white screen after sign-up.
-      // Note: Freelancers do not have organization memberships, so skip retrying for them.
-      const isFreelancer = data.role === 'freelancer';
+      // Only skip for purely independent freelancers (no org link).
+      const isIndependentOnly = data.role === 'freelancer' && data.freelancer_type === 'independent';
       const diff = Date.now() - new Date(data.created_at).getTime();
-      const isNewAccount = data.created_at && diff > -10000 && diff < 15000;
+      const isNewAccount = data.created_at && diff >= 0 && diff < 15000;
       
-      if (!hasOrg && !isFreelancer && isNewAccount && attempt < 20) {
+      if (!hasOrg && !isIndependentOnly && isNewAccount && attempt < 20) {
         console.warn(`[AuthContext] New account with no org yet, retrying in 100ms... (attempt ${attempt})`);
         await new Promise(resolve => setTimeout(resolve, 100));
         return fetchProfile(userId, attempt + 1, force);
@@ -213,7 +212,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
         permissions: resolveWorkspacePermissions('independent', ['freelancer']),
       };
 
-      const orgWorkspaces: Workspace[] = orgMemberships
+      // Build org workspaces: prefer user_organizations, fall back to workspaces table
+      // (covers org-linked freelancers who have workspace_members but no user_organizations row)
+      let orgWorkspaces: Workspace[] = orgMemberships
         .map((mem) => {
           const org = mem.organizations;
           if (!org) return null;
@@ -230,6 +231,35 @@ export function AuthProvider({ children }: AuthProviderProps) {
           };
         })
         .filter(Boolean) as Workspace[];
+
+      // Fallback: query workspaces table for org workspaces this user belongs to
+      if (orgWorkspaces.length === 0) {
+        const { data: wsData } = await supabase
+          .from('workspaces')
+          .select('id, name, type, organization_id')
+          .eq('type', 'organization')
+          .neq('status', 'deleted');
+
+        if (wsData && wsData.length > 0) {
+          // Filter to only workspaces this user is a member of
+          const { data: memberWs } = await supabase
+            .from('workspace_members')
+            .select('workspace_id')
+            .eq('user_id', userId)
+            .eq('status', 'active');
+
+          const memberWsIds = new Set((memberWs || []).map((m: any) => m.workspace_id));
+          orgWorkspaces = wsData
+            .filter((ws: any) => memberWsIds.has(ws.id))
+            .map((ws: any) => ({
+              id: ws.organization_id || ws.id,
+              name: ws.name,
+              type: 'organization' as WorkspaceType,
+              roles: [data.role === 'freelancer' ? 'freelancer' : data.role],
+              permissions: resolveWorkspacePermissions('organization', [data.role === 'freelancer' ? 'freelancer' : data.role]),
+            }));
+        }
+      }
 
       // Org members default to their org workspace; purely independent users default to independent.
       const hasOrgMembership = orgWorkspaces.length > 0;
