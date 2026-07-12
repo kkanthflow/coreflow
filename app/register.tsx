@@ -154,6 +154,59 @@ export default function RegisterScreen() {
       
       if (!userId) throw new Error('Failed to get user ID after registration');
 
+      // ── Helper: find or create the organization workspace and add the user ─────
+      const joinOrgWorkspace = async (orgDbId: string) => {
+        // Find existing org workspace
+        const { data: existingWs } = await supabase
+          .from('workspaces')
+          .select('id')
+          .eq('organization_id', orgDbId)
+          .eq('type', 'organization')
+          .maybeSingle();
+
+        let wsId = existingWs?.id;
+
+        // Create if missing (e.g. org was just created)
+        if (!wsId) {
+          const { data: newWs } = await supabase
+            .from('workspaces')
+            .insert({ name: cleanOrgName + ' Organization', type: 'organization', owner_id: userId, organization_id: orgDbId, status: 'active' })
+            .select('id')
+            .single();
+          wsId = newWs?.id;
+        }
+
+        if (wsId) {
+          await supabase
+            .from('workspace_members')
+            .upsert({ workspace_id: wsId, user_id: userId, status: 'active' }, { onConflict: 'workspace_id,user_id' });
+        }
+      };
+
+      // ── Helper: create personal independent workspace ──────────────────────────
+      const createIndependentWorkspace = async () => {
+        const { data: existingWs } = await supabase
+          .from('workspaces')
+          .select('id')
+          .eq('owner_id', userId)
+          .eq('type', 'independent')
+          .maybeSingle();
+
+        if (!existingWs) {
+          const { data: newWs } = await supabase
+            .from('workspaces')
+            .insert({ name: fullName + ' Freelancing', type: 'independent', owner_id: userId, status: 'active' })
+            .select('id')
+            .single();
+
+          if (newWs?.id) {
+            await supabase
+              .from('workspace_members')
+              .insert({ workspace_id: newWs.id, user_id: userId, status: 'active' });
+          }
+        }
+      };
+
       if (accountType === 'freelancer') {
         if (freelancerWorkType === 'organization' && existingOrg) {
           orgId = existingOrg.id;
@@ -174,6 +227,12 @@ export default function RegisterScreen() {
             await supabase.auth.signOut();
             throw updateError;
           }
+
+          // Seed hierarchy: organization workspace + personal independent workspace
+          await supabase.from('freelancer_profiles').upsert({ id: userId, freelancer_type: 'organization' }, { onConflict: 'id' });
+          await joinOrgWorkspace(orgId);
+          await createIndependentWorkspace();
+
         } else {
           // Independent freelancer (no organization link)
           const { error: updateError } = await supabase
@@ -185,10 +244,9 @@ export default function RegisterScreen() {
             throw updateError;
           }
 
-          // Seed freelancer_profiles for independent workspace support
-          await supabase
-            .from('freelancer_profiles')
-            .upsert({ id: userId, freelancer_type: 'independent' }, { onConflict: 'id' });
+          // Seed hierarchy: personal independent workspace only
+          await supabase.from('freelancer_profiles').upsert({ id: userId, freelancer_type: 'independent' }, { onConflict: 'id' });
+          await createIndependentWorkspace();
         }
       } else {
         if (accountType === 'join' && existingOrg) {
@@ -208,6 +266,11 @@ export default function RegisterScreen() {
             await supabase.auth.signOut();
             throw updateError;
           }
+
+          // Seed hierarchy: organization workspace + personal independent workspace
+          await joinOrgWorkspace(orgId);
+          await createIndependentWorkspace();
+
         } else if (accountType === 'create') {
           const { data: newOrg, error: createOrgError } = await supabase
             .from('organizations')
@@ -234,6 +297,10 @@ export default function RegisterScreen() {
             await supabase.auth.signOut();
             throw updateError;
           }
+
+          // Seed hierarchy: new org workspace (owner creates it) + personal independent workspace
+          await joinOrgWorkspace(orgId);
+          await createIndependentWorkspace();
         }
       }
 
