@@ -249,17 +249,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
             .eq('status', 'active');
 
           const memberWsIds = new Set((memberWs || []).map((m: any) => m.workspace_id));
-          orgWorkspaces = wsData
-            .filter((ws: any) => memberWsIds.has(ws.id))
-            .map((ws: any) => ({
+
+          // Try to get actual org role from user_organizations for each workspace
+          for (const ws of wsData.filter((w: any) => memberWsIds.has(w.id))) {
+            let orgRole = data.role; // fallback
+            if (ws.organization_id) {
+              const { data: uoRow } = await supabase
+                .from('user_organizations')
+                .select('role')
+                .eq('user_id', userId)
+                .eq('org_id', ws.organization_id)
+                .maybeSingle();
+              if (uoRow?.role) orgRole = uoRow.role;
+            }
+            orgWorkspaces.push({
               id: ws.organization_id || ws.id,
               name: ws.name,
               type: 'organization' as WorkspaceType,
-              roles: [data.role === 'freelancer' ? 'freelancer' : data.role],
-              permissions: resolveWorkspacePermissions('organization', [data.role === 'freelancer' ? 'freelancer' : data.role]),
-            }));
+              roles: [orgRole],
+              permissions: resolveWorkspacePermissions('organization', [orgRole]),
+            });
+          }
         }
       }
+
+      console.log('[AuthContext] orgMemberships:', orgMemberships.length, 'orgWorkspaces:', orgWorkspaces.length, orgWorkspaces.map(w => `${w.name}[${w.roles}]`));
 
       // Org members default to their org workspace; purely independent users default to independent.
       const hasOrgMembership = orgWorkspaces.length > 0;
@@ -268,18 +282,23 @@ export function AuthProvider({ children }: AuthProviderProps) {
         : [independentWS];                    // independent only for solo freelancers
       setAvailableWorkspaces(workspacesList);
 
-      // Restore active workspace — but never restore a stale 'independent' ID for org members
+      // Restore active workspace
       const savedActiveId = await AsyncStorage.getItem('active_workspace_id');
-      const staleSavedForOrgMember = hasOrgMembership && savedActiveId === 'independent';
-      const matched =
-        (!staleSavedForOrgMember && workspacesList.find(w => w.id === savedActiveId)) ||
-        workspacesList.find(w => w.id === data.default_workspace_id) ||
-        workspacesList[0];
-      // Clear the stale saved ID so next login also defaults correctly
-      if (staleSavedForOrgMember) {
+      // For org members: ignore saved 'independent' AND ignore default_workspace_id='independent'
+      const isOrgMember = hasOrgMembership;
+      const validSaved = savedActiveId && savedActiveId !== 'independent' 
+        ? workspacesList.find(w => w.id === savedActiveId) 
+        : null;
+      const validDefault = data.default_workspace_id && !(isOrgMember && data.default_workspace_id === 'independent')
+        ? workspacesList.find(w => w.id === data.default_workspace_id)
+        : null;
+      const matched = validSaved || validDefault || workspacesList[0];
+      // Clear stale saved ID
+      if (isOrgMember && savedActiveId === 'independent') {
         AsyncStorage.removeItem('active_workspace_id').catch(() => {});
       }
       setActiveWorkspace(matched);
+      console.log('[AuthContext] Active workspace:', matched?.name, 'type:', matched?.type, 'roles:', matched?.roles, 'perms:', matched?.permissions?.length);
 
       console.log('[AuthContext] User and workspaces loaded. Active:', matched?.name);
       return true;
