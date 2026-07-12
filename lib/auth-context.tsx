@@ -231,14 +231,19 @@ export function AuthProvider({ children }: AuthProviderProps) {
         })
         .filter(Boolean) as Workspace[];
 
-      const workspacesList: Workspace[] = [independentWS, ...orgWorkspaces];
+      // Org members default to their org workspace; purely independent users default to independent.
+      const hasOrgMembership = orgWorkspaces.length > 0;
+      const workspacesList: Workspace[] = hasOrgMembership
+        ? [...orgWorkspaces, independentWS]   // org first for org members
+        : [independentWS];                    // independent only for solo freelancers
       setAvailableWorkspaces(workspacesList);
 
       // Restore active workspace
       const savedActiveId = await AsyncStorage.getItem('active_workspace_id');
-      const matched = workspacesList.find(w => w.id === savedActiveId) || 
-                      workspacesList.find(w => w.id === data.default_workspace_id) || 
-                      workspacesList[0];
+      const matched =
+        workspacesList.find(w => w.id === savedActiveId) ||
+        workspacesList.find(w => w.id === data.default_workspace_id) ||
+        workspacesList[0];
       setActiveWorkspace(matched);
 
       console.log('[AuthContext] User and workspaces loaded. Active:', matched?.name);
