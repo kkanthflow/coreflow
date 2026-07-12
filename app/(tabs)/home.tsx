@@ -379,7 +379,7 @@ function MainHomeScreen() {
         }
         rightComponent={
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-            <RoleBadge role={(isIndie ? 'freelancer' : user.role) as any} size="sm" />
+            <RoleBadge role={(isIndie ? 'freelancer' : (activeWorkspace?.roles?.[0] || user.role)) as any} size="sm" />
             <Pressable
               onPress={() => router.push('/notifications' as any)}
               style={[styles.notifBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
