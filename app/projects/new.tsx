@@ -21,7 +21,7 @@ import { PremiumSelect } from '@/components/ui/premium-select';
 import { DatePicker } from '@/components/ui/date-picker';
 
 export default function NewProjectScreen() {
-  const { user } = useAuth();
+  const { user, activeWorkspace, hasWorkspacePermission } = useAuth();
   const colors = useColors();
   const router = useRouter();
 
@@ -44,7 +44,8 @@ export default function NewProjectScreen() {
   const [orgUsers, setOrgUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const canCreate = hasPermission(user, 'create_projects');
+  const isIndie = activeWorkspace?.type === 'independent';
+  const canCreate = isIndie || hasWorkspacePermission('project.create') || hasPermission(user, 'create_projects');
 
   useEffect(() => {
     if (!canCreate) {
@@ -54,12 +55,14 @@ export default function NewProjectScreen() {
       return;
     }
 
-    if (user?.organizationId) {
+    const activeOrgId = isIndie ? null : (activeWorkspace?.id === 'independent' ? null : activeWorkspace?.id) || user?.organizationId || null;
+
+    if (activeOrgId) {
       // Fetch departments
       supabase
         .from('departments')
         .select('id, name')
-        .eq('org_id', user.organizationId)
+        .eq('org_id', activeOrgId)
         .eq('is_deleted', false)
         .then(({ data }) => {
           if (data) setDepartments(data);
@@ -75,7 +78,7 @@ export default function NewProjectScreen() {
             full_name
           )
         `)
-        .eq('org_id', user.organizationId)
+        .eq('org_id', activeOrgId)
         .then(({ data }) => {
           if (data) {
             const list = data
@@ -89,14 +92,15 @@ export default function NewProjectScreen() {
           }
         });
     }
-  }, [user, canCreate]);
+  }, [user, activeWorkspace, canCreate]);
 
   const handleCreate = async () => {
     if (!title.trim()) {
       Alert.alert('Validation Error', 'Project title is required.');
       return;
     }
-    if (!user?.organizationId) { setLoading(false); return; }
+
+    const activeOrgId = isIndie ? null : (activeWorkspace?.id === 'independent' ? null : activeWorkspace?.id) || user?.organizationId || null;
 
     setLoading(true);
 
@@ -104,7 +108,7 @@ export default function NewProjectScreen() {
       const { data, error } = await supabase
         .from('projects')
         .insert({
-          org_id: user.organizationId,
+          org_id: activeOrgId,
           department_id: departmentId || undefined,
           title: title.trim(),
           description: description.trim() || undefined,
@@ -113,7 +117,7 @@ export default function NewProjectScreen() {
           owner_id: ownerId || undefined,
           due_date: dueDate.toISOString().split('T')[0],
           start_date: startDate.toISOString().split('T')[0],
-          created_by: user.id,
+          created_by: user?.id,
         })
         .select('id')
         .single();
@@ -130,7 +134,7 @@ export default function NewProjectScreen() {
             project_id: data.id,
             user_id: ownerId,
             role: 'owner',
-            added_by: user.id,
+            added_by: user?.id,
           });
         } else if (user?.id) {
           memberInserts.push({
@@ -143,12 +147,12 @@ export default function NewProjectScreen() {
 
         // Add other selected members
         selectedMemberIds.forEach(memberId => {
-          if (memberId !== ownerId && memberId !== user.id) {
+          if (memberId !== ownerId && memberId !== user?.id) {
             memberInserts.push({
               project_id: data.id,
               user_id: memberId,
               role: 'member',
-              added_by: user.id,
+              added_by: user?.id,
             });
           }
         });

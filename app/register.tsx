@@ -184,6 +184,11 @@ export default function RegisterScreen() {
             await supabase.auth.signOut();
             throw updateError;
           }
+
+          // Seed freelancer_profiles for independent workspace support
+          await supabase
+            .from('freelancer_profiles')
+            .upsert({ id: userId, freelancer_type: 'independent' }, { onConflict: 'id' });
         }
       } else {
         if (accountType === 'join' && existingOrg) {
@@ -289,7 +294,13 @@ export default function RegisterScreen() {
             Setting up your workspace...
           </Text>
           <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', paddingHorizontal: 40 }}>
-            Creating your account and organization
+            {accountType === 'freelancer' && freelancerWorkType === 'independent'
+              ? 'Setting up your independent freelancing workspace...'
+              : accountType === 'freelancer'
+              ? 'Linking you to your organization...'
+              : accountType === 'create'
+              ? 'Creating your account and organization...'
+              : 'Joining the organization...'}
           </Text>
         </View>
       )}

@@ -45,7 +45,7 @@ interface ProjectMember {
 // ─── Screen ───────────────────────────────────────────────────────────────────
 export default function ProjectDetailScreen() {
   const { id } = useLocalSearchParams();
-  const { user } = useAuth();
+  const { user, activeWorkspace, hasWorkspacePermission } = useAuth();
   const colors = useColors();
   const router = useRouter();
 
@@ -75,14 +75,33 @@ export default function ProjectDetailScreen() {
   const [showAssignModal, setShowAssignModal] = useState(false);
 
   // ── Permissions ──────────────────────────────────────────────────────────────
-  const canManageProject = hasPermission(user, 'manage_projects');
-  const canCreateTasks = hasPermission(user, 'create_tasks');
+  const isIndie = activeWorkspace?.type === 'independent';
+  const isOwnerOrCreator = project?.owner_id === user?.id || project?.created_by === user?.id;
+
+  const canManageProject =
+    isIndie ||
+    hasWorkspacePermission('project.manage') ||
+    hasPermission(user, 'manage_projects') ||
+    isOwnerOrCreator;
+
+  const canCreateTasks =
+    isIndie ||
+    hasWorkspacePermission('project.manage') ||
+    hasPermission(user, 'create_tasks') ||
+    isOwnerOrCreator;
+
   const canDeleteProject =
+    isIndie ||
+    (hasWorkspacePermission('project.manage') && isOwnerOrCreator) ||
     hasPermission(user, 'manage_organization') ||
-    hasPermission(user, 'manage_departments');
+    hasPermission(user, 'manage_departments') ||
+    isOwnerOrCreator;
+
   // assign_projects: owner, administrator, director, senior_manager, manager
   const canAssignMembers =
-    hasPermission(user, 'assign_projects') &&
+    !isIndie &&
+    (hasWorkspacePermission('project.manage') ||
+      hasPermission(user, 'assign_projects')) &&
     (hasPermission(user, 'manage_organization') ||
       hasPermission(user, 'manage_departments') ||
       project?.owner_id === user?.id);
