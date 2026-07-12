@@ -268,12 +268,17 @@ export function AuthProvider({ children }: AuthProviderProps) {
         : [independentWS];                    // independent only for solo freelancers
       setAvailableWorkspaces(workspacesList);
 
-      // Restore active workspace
+      // Restore active workspace — but never restore a stale 'independent' ID for org members
       const savedActiveId = await AsyncStorage.getItem('active_workspace_id');
+      const staleSavedForOrgMember = hasOrgMembership && savedActiveId === 'independent';
       const matched =
-        workspacesList.find(w => w.id === savedActiveId) ||
+        (!staleSavedForOrgMember && workspacesList.find(w => w.id === savedActiveId)) ||
         workspacesList.find(w => w.id === data.default_workspace_id) ||
         workspacesList[0];
+      // Clear the stale saved ID so next login also defaults correctly
+      if (staleSavedForOrgMember) {
+        AsyncStorage.removeItem('active_workspace_id').catch(() => {});
+      }
       setActiveWorkspace(matched);
 
       console.log('[AuthContext] User and workspaces loaded. Active:', matched?.name);
