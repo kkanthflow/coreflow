@@ -80,7 +80,7 @@ function MenuRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
 }
 
 export default function MenuScreen() {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, activeWorkspace } = useAuth();
   const router  = useRouter();
   const colors  = useColors();
   const colorScheme = useColorScheme();
@@ -301,7 +301,7 @@ export default function MenuScreen() {
                     <Text style={{ color: C.textSec, fontSize: 13, fontWeight: '500' }}>{user.organizationName}</Text>
                   </View>
                 ) : null}
-                <RoleBadge role={user.role as any} size="sm" />
+                <RoleBadge role={(activeWorkspace?.roles?.[0] || user.role) as any} size="sm" />
               </View>
               <Pressable onPress={() => router.push(`/team/${user.id}` as any)}>
                 <View style={{ width: 36, height: 36, borderRadius: 11, backgroundColor: '#FF6B4A20', alignItems: 'center', justifyContent: 'center' }}>
