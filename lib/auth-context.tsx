@@ -234,40 +234,49 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
       // Fallback: query workspaces table for org workspaces this user belongs to
       if (orgWorkspaces.length === 0) {
-        const { data: wsData } = await supabase
-          .from('workspaces')
-          .select('id, name, type, organization_id')
-          .eq('type', 'organization')
-          .neq('status', 'deleted');
+        // Query active workspace memberships for this user in parallel
+        const { data: memberWs } = await supabase
+          .from('workspace_members')
+          .select('workspace_id')
+          .eq('user_id', userId)
+          .eq('status', 'active');
 
-        if (wsData && wsData.length > 0) {
-          // Filter to only workspaces this user is a member of
-          const { data: memberWs } = await supabase
-            .from('workspace_members')
-            .select('workspace_id')
-            .eq('user_id', userId)
-            .eq('status', 'active');
+        const memberWsIds = (memberWs || []).map((m: any) => m.workspace_id);
 
-          const memberWsIds = new Set((memberWs || []).map((m: any) => m.workspace_id));
+        if (memberWsIds.length > 0) {
+          // Fetch workspaces matching these IDs in a single query
+          const { data: wsData } = await supabase
+            .from('workspaces')
+            .select('id, name, type, organization_id')
+            .eq('type', 'organization')
+            .neq('status', 'deleted')
+            .in('id', memberWsIds);
 
-          // Try to get actual org role from user_organizations for each workspace
-          for (const ws of wsData.filter((w: any) => memberWsIds.has(w.id))) {
-            let orgRole = data.role; // fallback
-            if (ws.organization_id) {
-              const { data: uoRow } = await supabase
+          if (wsData && wsData.length > 0) {
+            const orgIds = wsData.map((w: any) => w.organization_id).filter(Boolean);
+            
+            // Batch fetch roles from user_organizations in a single query instead of a loop (No N+1 queries)
+            let userOrgs: any[] = [];
+            if (orgIds.length > 0) {
+              const { data: uoRows } = await supabase
                 .from('user_organizations')
-                .select('role')
+                .select('org_id, role')
                 .eq('user_id', userId)
-                .eq('org_id', ws.organization_id)
-                .maybeSingle();
-              if (uoRow?.role) orgRole = uoRow.role;
+                .in('org_id', orgIds);
+              userOrgs = uoRows || [];
             }
-            orgWorkspaces.push({
-              id: ws.organization_id || ws.id,
-              name: ws.name,
-              type: 'organization' as WorkspaceType,
-              roles: [orgRole],
-              permissions: resolveWorkspacePermissions('organization', [orgRole]),
+
+            const orgRoleMap = new Map(userOrgs.map(uo => [uo.org_id, uo.role]));
+
+            orgWorkspaces = wsData.map((ws: any) => {
+              const orgRole = (ws.organization_id && orgRoleMap.get(ws.organization_id)) || data.role;
+              return {
+                id: ws.organization_id || ws.id,
+                name: ws.name,
+                type: 'organization' as WorkspaceType,
+                roles: [orgRole],
+                permissions: resolveWorkspacePermissions('organization', [orgRole]),
+              };
             });
           }
         }
