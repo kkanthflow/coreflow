@@ -45,14 +45,23 @@ export default function MemberProfileScreen() {
       if (data && !error) {
         setMember(data);
 
-        // Fetch freelancer profile details
-        const { data: freelancerProfile } = await supabase
-          .from('freelancer_profiles')
-          .select('*')
-          .eq('id', id)
-          .maybeSingle();
+        // Fetch user's workspaces and organization memberships to determine display mode
+        const [orgMems, projMems, workspacesRes] = await Promise.all([
+          supabase.from('user_organizations').select('role, organizations(name)').eq('user_id', id),
+          supabase.from('project_members').select('projects(title)').eq('user_id', id),
+          supabase.from('workspace_members').select('workspace_id, workspaces(id, name, type)').eq('user_id', id).eq('status', 'active')
+        ]);
 
-        const isIndie = freelancerProfile?.freelancer_type === 'independent';
+        const orgMemsData = (orgMems?.data || []) as any[];
+        const projMemsData = (projMems?.data || []) as any[];
+        const workspaceMemberships = (workspacesRes?.data || []) as any[];
+
+        // Filter and find if the user has an organization workspace membership
+        const orgWorkspacesList = workspaceMemberships
+          .map(wm => wm.workspaces)
+          .filter(ws => ws && ws.type === 'organization');
+
+        const isIndie = orgWorkspacesList.length === 0;
 
         if (isIndie) {
           const [clientsRes, projectsRes, invoicesRes] = await Promise.all([
@@ -65,23 +74,19 @@ export default function MemberProfileScreen() {
             projects: projectsRes.count || 0,
             invoices: invoicesRes.count || 0,
             assignedProjects: [],
-            workspaces: [freelancerProfile?.portfolio || 'Independent Freelancing'],
+            workspaces: ['Independent Freelancing'],
             roles: ['Independent Freelancer']
           });
         } else {
-          // Organization mode
-          const [orgMems, projMems] = await Promise.all([
-            supabase.from('user_organizations').select('role, organizations(name)').eq('user_id', id),
-            supabase.from('project_members').select('projects(title)').eq('user_id', id)
-          ]);
-
-          const orgMemsData = (orgMems?.data || []) as any[];
-          const projMemsData = (projMems?.data || []) as any[];
-
+          // Organization / Corporate mode
           const projectTitles = projMemsData.map((pm: any) => pm.projects?.title).filter(Boolean);
-          const workspaceNames = orgMemsData.map((om: any) => om.organizations?.name).filter(Boolean);
+          const workspaceNames = orgWorkspacesList.map((ws: any) => ws.name).filter(Boolean);
           const rolesList = orgMemsData.map((om: any) => om.role).filter(Boolean);
-          if (data.role) rolesList.push(data.role);
+          
+          if (rolesList.length === 0) {
+            // Default workspace role fallbacks
+            rolesList.push(data.role === 'freelancer' ? 'Collaborator' : data.role);
+          }
 
           setStats({
             clients: 0,
