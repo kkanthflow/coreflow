@@ -352,7 +352,7 @@ export default function ChatScreen() {
         )}
       </Animated.View>
 
-      {loading ? (
+      {loading && channels.length === 0 ? (
         <View style={{ paddingHorizontal: 20 }}>
           <ShimmerCard />
           <ShimmerCard />
@@ -362,7 +362,7 @@ export default function ChatScreen() {
         <FlatList
           data={filtered}
           keyExtractor={i => i.id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130 }}
           showsVerticalScrollIndicator={false}
           renderItem={({ item }) => (
             <ChannelListItem

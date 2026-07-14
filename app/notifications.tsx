@@ -161,6 +161,22 @@ export default function NotificationsScreen() {
     }
   };
 
+  const handleClearAll = async () => {
+    if (!user || notifications.length === 0) return;
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .delete()
+        .eq('user_id', user.id);
+
+      if (!error) {
+        setNotifications([]);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const handleNotificationPress = (notification: DbNotification) => {
     if (!notification.is_read) {
       handleMarkAsRead(notification.id);
@@ -239,11 +255,18 @@ export default function NotificationsScreen() {
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Notifications</Text>
         </View>
 
-        {notifications.some(n => !n.is_read) && (
-          <Pressable onPress={handleMarkAllAsRead}>
-            <Text style={[styles.markAll, { color: colors.primary }]}>Mark all read</Text>
-          </Pressable>
-        )}
+        <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+          {notifications.some(n => !n.is_read) && (
+            <Pressable onPress={handleMarkAllAsRead}>
+              <Text style={[styles.markAll, { color: colors.primary }]}>Mark all read</Text>
+            </Pressable>
+          )}
+          {notifications.length > 0 && (
+            <Pressable onPress={handleClearAll}>
+              <Text style={[styles.markAll, { color: colors.error }]}>Clear all</Text>
+            </Pressable>
+          )}
+        </View>
       </View>
 
       {/* Filter Tabs */}

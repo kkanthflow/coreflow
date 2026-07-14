@@ -110,6 +110,8 @@ function MainHomeScreen() {
   const isFirstLoad = useRef(true);
   const [isWorkspaceModalVisible, setIsWorkspaceModalVisible] = useState(false);
 
+  const [isCacheLoaded, setIsCacheLoaded] = useState(false);
+
   useEffect(() => {
     Animated.parallel([
       Animated.timing(headerAnim, { toValue: 0, duration: 600, useNativeDriver: true }),
@@ -132,7 +134,9 @@ function MainHomeScreen() {
           setLoading(false);
           isFirstLoad.current = false;
         }
-      } catch (e) { /* silent */ }
+      } catch (e) { /* silent */ } finally {
+        setIsCacheLoaded(true);
+      }
     };
     loadCachedData();
   }, []);
@@ -229,11 +233,21 @@ function MainHomeScreen() {
     }
   }, [user, activeWorkspace]);
 
-  useFocusEffect(useCallback(() => { if (isAuthenticated && user) fetchAll(); }, [isAuthenticated, user?.id, fetchAll]));
+  useFocusEffect(useCallback(() => { if (isAuthenticated && user && isCacheLoaded) fetchAll(); }, [isAuthenticated, user?.id, isCacheLoaded, fetchAll]));
 
   const onRefresh = () => { setRefreshing(true); fetchAll(); };
 
-  if (isLoading || loading) {
+  const hasCachedData = 
+    stats.upcoming > 0 || 
+    stats.pending > 0 || 
+    stats.clients > 0 || 
+    stats.projectsCount > 0 || 
+    stats.invoicesCount > 0 || 
+    stats.teamMembers > 0 ||
+    projects.length > 0 || 
+    todoTasks.length > 0;
+
+  if (isLoading || !isCacheLoaded || (loading && !hasCachedData)) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
         <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={colors.background} />
@@ -365,16 +379,41 @@ function MainHomeScreen() {
       
       <CollapsibleHeaderWrapper
         scrollY={scrollY}
-        title={`${greeting()}, ${firstName} 👋`}
+        title={
+          <View style={{ gap: 2 }}>
+            <Text style={{ fontSize: 13, color: colors.muted, fontWeight: '600' }}>
+              {greeting()} 👋
+            </Text>
+            <Text style={{ fontSize: 24, color: colors.foreground, fontWeight: '800' }}>
+              {user.fullName || 'Krishna Kanth'}
+            </Text>
+          </View>
+        }
         subtitle={
           <Pressable
             onPress={() => setIsWorkspaceModalVisible(true)}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+            style={({ pressed }) => [
+              {
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 8,
+                backgroundColor: colors.card,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderRadius: 16,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                marginTop: 6,
+                alignSelf: 'flex-start',
+                opacity: pressed ? 0.85 : 1,
+                transform: [{ scale: pressed ? 0.98 : 1 }],
+              }
+            ]}
           >
-            <Text style={{ fontSize: 13, color: colors.muted, fontWeight: '600' }}>
-              {activeWorkspace?.name || 'Personal Workspace'}
+            <Text style={{ fontSize: 13, color: colors.foreground, fontWeight: '700' }}>
+              {activeWorkspace?.name || 'LeakQoara Enterprise'}
             </Text>
-            <Ionicons name="chevron-down" size={14} color={colors.muted} />
+            <Ionicons name="chevron-down" size={14} color={colors.primary} />
           </Pressable>
         }
         rightComponent={
@@ -399,10 +438,10 @@ function MainHomeScreen() {
         scrollEventThrottle={16}
         onScroll={scrollHandler}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 130 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
-        <View style={{ height: 110 + insets.top }} />
+        <View style={{ height: 145 + insets.top }} />
 
         <View style={styles.content}>
           <Reanimated.View entering={FadeInDown.delay(100).duration(500).springify()}>
@@ -418,24 +457,33 @@ function MainHomeScreen() {
           <Reanimated.View entering={FadeInDown.delay(200).duration(500).springify()}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Overview</Text>
             <View style={{ flexDirection: 'row', gap: 12, marginBottom: 28, justifyContent: 'space-between' }}>
-              <PremiumKPI
-                data={kpiData1}
-                icon={<Ionicons name={isIndie ? "people" : "calendar"} size={18} color={isIndie ? "#34D399" : "#FF6B4A"} />}
-                onPress={() => router.push(isIndie ? ('/clients' as any) : ('/(tabs)/meetings' as any))}
-                isLoading={isLoading || loading}
-              />
-              <PremiumKPI
-                data={kpiData2}
-                icon={<Ionicons name={isIndie ? "folder-open" : "people"} size={18} color="#4DA3FF" />}
-                onPress={() => router.push(isIndie ? ('/(tabs)/projects' as any) : ('/team/directory' as any))}
-                isLoading={isLoading || loading}
-              />
-              <PremiumKPI
-                data={kpiData3}
-                icon={<Ionicons name={isIndie ? "cash" : "hourglass"} size={18} color={isIndie ? "#FBBF24" : "#FFC542"} />}
-                onPress={() => router.push(isIndie ? ('/invoices' as any) : ('/(tabs)/meetings' as any))}
-                isLoading={isLoading || loading}
-              />
+              <FloatingWrapper bob={true} bobDelay={0} bobDepth={3} style={{ width: '31%', minWidth: 105, maxWidth: 130 }}>
+                <PremiumKPI
+                  data={kpiData1}
+                  icon={<Ionicons name={isIndie ? "people" : "calendar"} size={18} color={isIndie ? "#34D399" : "#FF6B4A"} />}
+                  onPress={() => router.push(isIndie ? ('/clients' as any) : ('/(tabs)/meetings' as any))}
+                  isLoading={isLoading || loading}
+                  style={{ width: '100%', minWidth: undefined, maxWidth: undefined }}
+                />
+              </FloatingWrapper>
+              <FloatingWrapper bob={true} bobDelay={150} bobDepth={3} style={{ width: '31%', minWidth: 105, maxWidth: 130 }}>
+                <PremiumKPI
+                  data={kpiData2}
+                  icon={<Ionicons name={isIndie ? "folder-open" : "people"} size={18} color="#4DA3FF" />}
+                  onPress={() => router.push(isIndie ? ('/(tabs)/projects' as any) : ('/team/directory' as any))}
+                  isLoading={isLoading || loading}
+                  style={{ width: '100%', minWidth: undefined, maxWidth: undefined }}
+                />
+              </FloatingWrapper>
+              <FloatingWrapper bob={true} bobDelay={300} bobDepth={3} style={{ width: '31%', minWidth: 105, maxWidth: 130 }}>
+                <PremiumKPI
+                  data={kpiData3}
+                  icon={<Ionicons name={isIndie ? "cash" : "hourglass"} size={18} color={isIndie ? "#FBBF24" : "#FFC542"} />}
+                  onPress={() => router.push(isIndie ? ('/invoices' as any) : ('/(tabs)/meetings' as any))}
+                  isLoading={isLoading || loading}
+                  style={{ width: '100%', minWidth: undefined, maxWidth: undefined }}
+                />
+              </FloatingWrapper>
             </View>
           </Reanimated.View>
 
@@ -614,66 +662,68 @@ function QuickActionCard({ action, index }: { action: any; index: number }) {
       entering={FadeInDown.delay(index * 60 + 300).duration(500).springify().mass(0.8)}
       style={{ width: '47.5%', minWidth: 135 }}
     >
-      <AnimatedPressable
-        scaleTo={0.93}
-        onPressIn={() => setIsPressed(true)}
-        onPressOut={() => setIsPressed(false)}
-        onPress={action.onPress}
-        accessibilityRole="button"
-        accessibilityLabel={`${action.label}, ${action.sub || ''}`}
-        style={{
-          height: 64,
-          borderRadius: 32,
-          borderWidth: 1,
-          borderColor: isPressed ? '#43E8D8' : 'rgba(255, 255, 255, 0.08)',
-          backgroundColor: '#131C33',
-          overflow: 'hidden',
-          shadowColor: isPressed ? '#43E8D8' : '#000000',
-          shadowOffset: { width: 0, height: isPressed ? 10 : 8 },
-          shadowOpacity: isPressed ? 0.24 : 0.18,
-          shadowRadius: isPressed ? 18 : 12,
-          elevation: isPressed ? 8 : 4,
-        }}
-      >
-        <LinearGradient
-          colors={isPressed ? ['#1B294A', '#243A66'] : ['#131C33', '#1B2946']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={[StyleSheet.absoluteFill, { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20 }]}
+      <FloatingWrapper bob={true} bobDelay={index * 150} bobDepth={3}>
+        <AnimatedPressable
+          scaleTo={0.93}
+          onPressIn={() => setIsPressed(true)}
+          onPressOut={() => setIsPressed(false)}
+          onPress={action.onPress}
+          accessibilityRole="button"
+          accessibilityLabel={`${action.label}, ${action.sub || ''}`}
+          style={{
+            height: 64,
+            borderRadius: 32,
+            borderWidth: 1,
+            borderColor: isPressed ? colors.primary : 'rgba(255, 255, 255, 0.08)',
+            backgroundColor: '#131C33',
+            overflow: 'hidden',
+            shadowColor: isPressed ? colors.primary : '#000000',
+            shadowOffset: { width: 0, height: isPressed ? 10 : 8 },
+            shadowOpacity: isPressed ? 0.24 : 0.18,
+            shadowRadius: isPressed ? 18 : 12,
+            elevation: isPressed ? 8 : 4,
+          }}
         >
-          {/* Icon wrapper */}
-          <Reanimated.View 
-            style={[
-              {
-                width: 36,
-                height: 36,
-                borderRadius: 18,
-                backgroundColor: 'rgba(67, 232, 216, 0.08)',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginRight: 12,
-              },
-              iconAnimatedStyle
-            ]}
+          <LinearGradient
+            colors={isPressed ? ['#1B294A', '#243A66'] : ['#131C33', '#1B2946']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[StyleSheet.absoluteFill, { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20 }]}
           >
-            <Ionicons name={action.icon} size={22} color="#43E8D8" />
-          </Reanimated.View>
+            {/* Icon wrapper */}
+            <Reanimated.View 
+              style={[
+                {
+                  width: 36,
+                  height: 36,
+                  borderRadius: 18,
+                  backgroundColor: `${colors.primary}15`,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginRight: 12,
+                },
+                iconAnimatedStyle
+              ]}
+            >
+              <Ionicons name={action.icon} size={22} color={colors.primary} />
+            </Reanimated.View>
 
-          {/* Label centered vertically beside icon */}
-          <Text
-            style={{
-              color: '#FFFFFF',
-              fontSize: 15,
-              fontWeight: '600',
-              flex: 1,
-            }}
-            numberOfLines={1}
-            ellipsizeMode="tail"
-          >
-            {action.label}
-          </Text>
-        </LinearGradient>
-      </AnimatedPressable>
+            {/* Label centered vertically beside icon */}
+            <Text
+              style={{
+                color: '#FFFFFF',
+                fontSize: 15,
+                fontWeight: '600',
+                flex: 1,
+              }}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {action.label}
+            </Text>
+          </LinearGradient>
+        </AnimatedPressable>
+      </FloatingWrapper>
     </Reanimated.View>
   );
 }

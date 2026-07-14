@@ -264,6 +264,7 @@ export default function MenuScreen() {
     const adminItems: MenuItem[] = [];
     if (canManageRoles)  adminItems.push({ id: 'roles', label: 'Manage Roles', icon: 'shield-checkmark-outline', color: C.error, onPress: () => router.push('/admin/roles' as any) });
     if (canViewAuditLog) {
+      adminItems.push({ id: 'security', label: 'Security Center', icon: 'shield-outline', color: C.primary, onPress: () => router.push('/admin/security' as any) });
       adminItems.push({ id: 'audit', label: 'Audit Log', icon: 'list-outline', color: C.warning, onPress: () => router.push('/admin/audit' as any) });
       adminItems.push({ id: 'test-accounts', label: 'Test Accounts', icon: 'trash-bin-outline', color: C.error, onPress: () => router.push('/admin/test-accounts' as any) });
     }
@@ -278,7 +279,7 @@ export default function MenuScreen() {
     <TabScreenWrapper>
     <View style={{ flex: 1, backgroundColor: C.bg }}>
       <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={C.bg} />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 130 }}>
 
         {/* Header */}
         <Animated.View style={[styles.header, { opacity: fadAnim, transform: [{ translateY: slidAnim }] }]}>

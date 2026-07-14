@@ -61,7 +61,7 @@ export default function MemberProfileScreen() {
           .map(wm => wm.workspaces)
           .filter(ws => ws && ws.type === 'organization');
 
-        const isIndie = orgWorkspacesList.length === 0;
+        const isIndie = data.role === 'freelancer' && data.freelancer_type === 'independent';
 
         if (isIndie) {
           const [clientsRes, projectsRes, invoicesRes] = await Promise.all([
@@ -80,7 +80,9 @@ export default function MemberProfileScreen() {
         } else {
           // Organization / Corporate mode
           const projectTitles = projMemsData.map((pm: any) => pm.projects?.title).filter(Boolean);
-          const workspaceNames = orgWorkspacesList.map((ws: any) => ws.name).filter(Boolean);
+          const workspaceNames = orgWorkspacesList.length > 0 
+            ? orgWorkspacesList.map((ws: any) => ws.name).filter(Boolean)
+            : orgMemsData.map((om: any) => om.organizations?.name).filter(Boolean);
           const rolesList = orgMemsData.map((om: any) => om.role).filter(Boolean);
           
           if (rolesList.length === 0) {
@@ -93,7 +95,7 @@ export default function MemberProfileScreen() {
             projects: 0,
             invoices: 0,
             assignedProjects: projectTitles,
-            workspaces: workspaceNames,
+            workspaces: Array.from(new Set(workspaceNames)),
             roles: Array.from(new Set(rolesList))
           });
         }

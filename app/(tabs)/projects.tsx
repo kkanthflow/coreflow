@@ -286,7 +286,7 @@ export default function ProjectsScreen() {
         />
       </Animated.View>
 
-      {loading ? (
+      {loading && projects.length === 0 ? (
         <View style={{ paddingHorizontal: 20 }}>
           <ShimmerCard />
           <ShimmerCard />
@@ -296,7 +296,7 @@ export default function ProjectsScreen() {
         <FlatList
           data={filtered}
           keyExtractor={i => i.id}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 100 }}
+          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130 }}
           renderItem={({ item, index }) => (
             <ProjectCard project={item} index={index} onPress={() => router.push(`/projects/${item.id}` as any)} />
           )}

@@ -3,9 +3,9 @@ const path = require('path');
 const { Client } = require('pg');
 require('dotenv').config();
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-const dbUrl = "postgres://postgres.rltygdzldplkmwuqfadm:Krishna0okanth%23%40@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres";
+const dbUrl = process.env.DATABASE_URL;
 if (!dbUrl) {
-  console.error('DATABASE_URL is not defined in .env');
+  console.error('DATABASE_URL is not defined in environment variables');
   process.exit(1);
 }
 

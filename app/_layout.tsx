@@ -5,11 +5,13 @@ import { Stack, useRouter, useSegments, useRootNavigationState } from "expo-rout
 import { StatusBar } from "expo-status-bar";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import "react-native-reanimated";
-import { Platform, View, ActivityIndicator, StyleSheet, Text, Pressable, AppState, AppStateStatus } from "react-native";
+import Reanimated, { ZoomIn } from "react-native-reanimated";
+import { Platform, View, ActivityIndicator, StyleSheet, Text, Pressable, AppState, AppStateStatus, Alert, Modal } from "react-native";
 import * as LocalAuthentication from 'expo-local-authentication';
 import * as SecureStore from 'expo-secure-store';
 import { Ionicons } from '@expo/vector-icons';
+import * as Linking from 'expo-linking';
+import NetInfo from '@react-native-community/netinfo';
 
 import "@/lib/_core/nativewind-pressable";
 import { ThemeProvider, useThemeContext } from "@/lib/theme-provider";
@@ -69,6 +71,203 @@ export const unstable_settings = {
 
 import { useColors } from "@/hooks/use-colors";
 
+// Global Alert Interceptor Singleton
+export class GlobalAlertManager {
+  private static showAlertListener: ((title: string, message?: string, buttons?: any[]) => void) | null = null;
+
+  static register(listener: (title: string, message?: string, buttons?: any[]) => void) {
+    this.showAlertListener = listener;
+  }
+
+  static unregister() {
+    this.showAlertListener = null;
+  }
+
+  static show(title: string, message?: string, buttons?: any[]) {
+    if (this.showAlertListener) {
+      this.showAlertListener(title, message, buttons);
+    } else {
+      originalAlert(title, message, buttons);
+    }
+  }
+}
+
+const originalAlert = Alert.alert;
+Alert.alert = (title: string, message?: string, buttons?: any[]) => {
+  GlobalAlertManager.show(title, message, buttons);
+};
+
+function GlobalAlert() {
+  const [visible, setVisible] = useState(false);
+  const [title, setTitle] = useState('');
+  const [message, setMessage] = useState('');
+  const [buttons, setButtons] = useState<any[]>([]);
+  const colors = useColors();
+
+  useEffect(() => {
+    GlobalAlertManager.register((t, m, b) => {
+      setTitle(t);
+      setMessage(m || '');
+      setButtons(b || []);
+      setVisible(true);
+    });
+    return () => {
+      GlobalAlertManager.unregister();
+    };
+  }, []);
+
+  // Monitor network status globally
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener((state) => {
+      if (state.isConnected === false) {
+        Alert.alert(
+          'Internet Connection Error',
+          'Your device is offline. Please check your internet connection and try again.'
+        );
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (!visible) return null;
+
+  const isSuccess = title.toLowerCase().includes('success') || title.toLowerCase().includes('complete') || title.toLowerCase().includes('done') || title.toLowerCase().includes('generated') || title.toLowerCase().includes('updated');
+  const isError = title.toLowerCase().includes('error') || title.toLowerCase().includes('failed') || title.toLowerCase().includes('invalid');
+
+  return (
+    <Modal
+      transparent
+      animationType="fade"
+      visible={visible}
+      onRequestClose={() => setVisible(false)}
+    >
+      <Pressable 
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.6)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 24,
+        }}
+        onPress={() => setVisible(false)}
+      >
+        <Reanimated.View
+          entering={ZoomIn.springify().mass(0.8).damping(12).stiffness(160)}
+          style={{
+            width: '90%',
+            maxWidth: 340,
+            borderRadius: 24,
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            borderWidth: 1,
+            padding: 24,
+            alignItems: 'center',
+            shadowColor: '#000000',
+            shadowOffset: { width: 0, height: 12 },
+            shadowOpacity: 0.3,
+            shadowRadius: 20,
+            elevation: 24,
+          }}
+        >
+          <View
+            style={{
+              width: 56,
+              height: 56,
+              borderRadius: 28,
+              backgroundColor: isSuccess ? `${colors.success}15` : isError ? `${colors.error}15` : `${colors.primary}15`,
+              alignItems: 'center',
+              justifyContent: 'center',
+              marginBottom: 16,
+            }}
+          >
+            <Ionicons 
+              name={isSuccess ? "checkmark-circle-outline" : isError ? "alert-circle-outline" : "information-circle-outline"} 
+              size={32} 
+              color={isSuccess ? colors.success : isError ? colors.error : colors.primary} 
+            />
+          </View>
+
+          <Text
+            style={{
+              fontSize: 18,
+              fontWeight: '800',
+              color: colors.foreground,
+              marginBottom: 8,
+              textAlign: 'center',
+            }}
+          >
+            {title}
+          </Text>
+
+          {message ? (
+            <Text
+              style={{
+                fontSize: 14,
+                color: colors.muted,
+                textAlign: 'center',
+                marginBottom: 20,
+                lineHeight: 20,
+              }}
+            >
+              {message}
+            </Text>
+          ) : null}
+
+          <View style={{ width: '100%', gap: 10 }}>
+            {buttons && buttons.length > 0 ? (
+              buttons.map((btn, idx) => (
+                <Pressable
+                  key={idx}
+                  onPress={() => {
+                    setVisible(false);
+                    if (btn.onPress) btn.onPress();
+                  }}
+                  style={({ pressed }) => [
+                    {
+                      width: '100%',
+                      paddingVertical: 12,
+                      borderRadius: 14,
+                      backgroundColor: btn.style === 'destructive' ? colors.error : colors.primary,
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      opacity: pressed ? 0.85 : 1,
+                      transform: [{ scale: pressed ? 0.98 : 1 }],
+                    }
+                  ]}
+                >
+                  <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>
+                    {btn.text}
+                  </Text>
+                </Pressable>
+              ))
+            ) : (
+              <Pressable
+                onPress={() => setVisible(false)}
+                style={({ pressed }) => [
+                  {
+                    width: '100%',
+                    paddingVertical: 12,
+                    borderRadius: 14,
+                    backgroundColor: colors.primary,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    opacity: pressed ? 0.85 : 1,
+                    transform: [{ scale: pressed ? 0.98 : 1 }],
+                  }
+                ]}
+              >
+                <Text style={{ color: '#FFFFFF', fontWeight: '700', fontSize: 14 }}>
+                  Okay
+                </Text>
+              </Pressable>
+            )}
+          </View>
+        </Reanimated.View>
+      </Pressable>
+    </Modal>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 // AuthGate: Lives inside the navigation tree so useRouter() works correctly.
 // Watches auth state and handles ALL navigation decisions centrally.
@@ -81,18 +280,28 @@ function AuthGate() {
   const segments = useSegments();
   const rootNavigationState = useRootNavigationState();
   const stuckTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSyncedUserTheme = useRef<string | null>(null);
 
-  // Sync user theme preference to theme provider
+  // Sync user theme preference to theme provider only when user preference changes
   useEffect(() => {
-    if (user?.preferences?.theme) {
-      if (user.preferences.theme !== colorScheme) {
-        setColorScheme(user.preferences.theme as any);
-      }
+    if (user?.preferences?.theme && user.preferences.theme !== lastSyncedUserTheme.current) {
+      lastSyncedUserTheme.current = user.preferences.theme;
+      setColorScheme(user.preferences.theme as any);
     }
-  }, [user?.preferences?.theme, colorScheme, setColorScheme]);
+  }, [user?.preferences?.theme, setColorScheme]);
 
   // Check for OTA updates silently — notifies user if one is available
   useOTAUpdates();
+
+  // Trigger background bootstrap queue when authenticated and user context is loaded
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      const { bootstrapQueue } = require("@/lib/bootstrapQueue");
+      bootstrapQueue.run().catch((e: any) => {
+        console.error('[AuthGate] Failed to run bootstrap queue:', e);
+      });
+    }
+  }, [isAuthenticated, user]);
 
   // Fallback timeout for stuck profile loading
   useEffect(() => {
@@ -276,20 +485,67 @@ export default function RootLayout() {
       console.error("[RootLayout] Failed to initialize Manus runtime:", e);
     }
     
-    // Request notification permissions
+    // Request notification permissions (delayed to prevent blocking first-render main thread)
     if (Platform.OS !== 'web') {
-      try {
-        Notifications.requestPermissionsAsync().then(({ status }) => {
-          if (status !== 'granted') {
-            console.log('Notification permissions not granted');
-          }
-        }).catch((e) => {
-          console.error("[RootLayout] Failed to request notifications permission:", e);
-        });
-      } catch (e) {
-        console.error("[RootLayout] Notifications permission request threw synchronously:", e);
-      }
+      setTimeout(() => {
+        try {
+          Notifications.requestPermissionsAsync().then(({ status }) => {
+            if (status !== 'granted') {
+              console.log('Notification permissions not granted');
+            }
+          }).catch((e) => {
+            console.error("[RootLayout] Failed to request notifications permission:", e);
+          });
+        } catch (e) {
+          console.error("[RootLayout] Notifications permission request threw synchronously:", e);
+        }
+      }, 1500);
     }
+  }, []);
+
+  // Capture deep links to login/set OAuth session
+  useEffect(() => {
+    const handleUrl = async (url: string) => {
+      if (!url) return;
+      
+      const hashIndex = url.indexOf('#');
+      const queryIndex = url.indexOf('?');
+      const paramPart = hashIndex !== -1 ? url.substring(hashIndex + 1) : (queryIndex !== -1 ? url.substring(queryIndex + 1) : '');
+      
+      if (!paramPart) return;
+
+      const params = new URLSearchParams(paramPart.replace(/#/g, '&').replace(/\?/g, '&'));
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+
+      if (accessToken && refreshToken) {
+        try {
+          const { error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken,
+          });
+          if (!error) {
+            router.replace('/home' as any);
+          }
+        } catch (e) {
+          console.error('[RootLayout] Failed to set deep-linked session:', e);
+        }
+      }
+    };
+
+    // Get initial URL if the app was opened via deep link
+    Linking.getInitialURL().then((url) => {
+      if (url) handleUrl(url);
+    });
+
+    // Listen for new deep links while the app is running
+    const subscription = Linking.addEventListener('url', (event) => {
+      handleUrl(event.url);
+    });
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
 
   // Set up global real-time chat push notification scheduler
@@ -554,6 +810,7 @@ export default function RootLayout() {
                   Must be inside Stack (navigation tree) to use useRouter/useSegments */}
               <AuthGate />
               <AppNavigator />
+              <GlobalAlert />
               <StatusBar style="auto" />
               </QueryClientProvider>
             </trpc.Provider>

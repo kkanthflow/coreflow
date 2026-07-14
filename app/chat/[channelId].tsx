@@ -10,6 +10,9 @@ import {
   Platform,
   Alert,
 } from 'react-native';
+import { GestureDetector, Gesture } from 'react-native-gesture-handler';
+import { runOnJS } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
 import { ScreenContainer } from '@/components/screen-container';
 import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
@@ -20,6 +23,7 @@ import { PremiumInput } from '@/components/ui/premium-input';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
+import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync } from 'expo-audio';
 import {
   initializeUserKeys,
   generateRandomSymmetricKey,
@@ -45,6 +49,12 @@ export default function ChannelChatScreen() {
   const [isOtherUserOnline, setIsOtherUserOnline] = useState<boolean>(false);
   const [otherMember, setOtherMember] = useState<any | null>(null);
   const [channelSymmetricKey, setChannelSymmetricKey] = useState<string | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [isLocked, setIsLocked] = useState(false);
+  const [showLockPrompt, setShowLockPrompt] = useState(false);
+  const recordingTimerRef = useRef<any>(null);
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   const listRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -541,6 +551,155 @@ export default function ChannelChatScreen() {
     Alert.alert('Delete Message', 'Choose how you want to delete this message.', options);
   }, [messages, user]);
 
+  const startRecording = async () => {
+    try {
+      const { status } = await requestRecordingPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Denied', 'Microphone permission is required to record voice messages.');
+        return;
+      }
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds(prev => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error('Failed to start recording', error);
+      Alert.alert('Error', 'Could not access microphone.');
+    }
+  };
+
+  const stopAndSendRecording = async () => {
+    try {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+      await audioRecorder.stop();
+      setIsRecording(false);
+      setIsLocked(false);
+      setShowLockPrompt(false);
+
+      const uri = audioRecorder.uri;
+      if (!uri) return;
+
+      setSending(true);
+
+      // Upload audio file to Supabase Storage
+      const response = await fetch(uri);
+      const blob = await response.blob();
+      
+      const fileName = `voice_${Date.now()}.m4a`;
+      const path = `${user?.organizationId || 'chat'}/voice/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('project-files')
+        .upload(path, blob, {
+          contentType: 'audio/m4a',
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('project-files')
+        .getPublicUrl(path);
+
+      const audioUrl = urlData?.publicUrl || '';
+
+      // Send chat message with file_url and type
+      const optimisticMsgId = `optimistic-${Math.random()}`;
+      const optimisticMessage = {
+        id: optimisticMsgId,
+        channel_id: channelId,
+        sender_id: user?.id,
+        content: '[Voice Message]',
+        file_url: audioUrl,
+        file_type: 'voice',
+        file_name: fileName,
+        created_at: new Date().toISOString(),
+        sender: {
+          full_name: user?.fullName || 'Me',
+          avatar_url: user?.avatarUrl,
+        },
+        message_reads: [],
+        reactions: [],
+        reply_message: null,
+        reply_to_id: null,
+        isOptimistic: true,
+      };
+
+      setMessages((prev) => [...prev, optimisticMessage]);
+
+      const { data, error: dbError } = await supabase
+        .from('chat_messages')
+        .insert({
+          channel_id: channelId,
+          sender_id: user?.id,
+          content: '[Voice Message]',
+          file_url: audioUrl,
+          file_type: 'voice',
+          file_name: fileName,
+        })
+        .select('*')
+        .single();
+
+      if (dbError) throw dbError;
+
+    } catch (error: any) {
+      console.error('Failed to send voice message', error);
+      Alert.alert('Error', error.message || 'Failed to send voice message.');
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const cancelRecording = async () => {
+    try {
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+      await audioRecorder.stop();
+      setIsRecording(false);
+      setIsLocked(false);
+      setShowLockPrompt(false);
+    } catch (e) { /* ignore */ }
+  };
+
+  const micGesture = Gesture.Pan()
+    .minDistance(5)
+    .onStart(() => {
+      // Trigger haptic feedback
+      runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+      // Start recording
+      runOnJS(startRecording)();
+      runOnJS(setIsLocked)(false);
+      runOnJS(setShowLockPrompt)(true);
+    })
+    .onUpdate((event) => {
+      // If dragged up by 50px, lock the recording
+      if (event.translationY < -50) {
+        runOnJS(setIsLocked)(true);
+        runOnJS(setShowLockPrompt)(false);
+      }
+      // If dragged left by 60px, cancel the recording
+      if (event.translationX < -60) {
+        runOnJS(cancelRecording)();
+        runOnJS(setShowLockPrompt)(false);
+      }
+    })
+    .onEnd(() => {
+      // On release, if not locked, stop and send. If locked, keep recording
+      runOnJS((locked: boolean) => {
+        setShowLockPrompt(false);
+        if (!locked) {
+          stopAndSendRecording();
+        }
+      })(isLocked);
+    });
+
   const handleSend = async () => {
     if (!inputText.trim() || sending) return;
     const textToSend = inputText.trim();
@@ -891,32 +1050,93 @@ export default function ChannelChatScreen() {
             },
           ]}
         >
-          <PremiumInput
-            placeholder="Type a message..."
-            value={inputText}
-            onChangeText={handleTextChange}
-            containerClassName="flex-1 mr-3"
-            editable={!sending}
-          />
-          <Pressable
-            onPress={handleSend}
-            disabled={!inputText.trim() || sending}
-            style={[
-              styles.sendBtn,
-              {
-                backgroundColor: inputText.trim()
-                  ? colors.primary
-                  : colors.border,
-                opacity: sending ? 0.7 : 1,
-              },
-            ]}
-          >
-            {sending ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
+          {isRecording ? (
+            isLocked ? (
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.error }} />
+                  <Text style={{ color: colors.foreground, fontWeight: '700', fontSize: 14 }}>
+                    Recording {Math.floor(recordingSeconds / 60).toString().padStart(2, '0')}:{(recordingSeconds % 60).toString().padStart(2, '0')}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+                  <Pressable onPress={cancelRecording} style={{ padding: 8 }}>
+                    <Ionicons name="trash" size={20} color={colors.error} />
+                  </Pressable>
+                  <Pressable onPress={stopAndSendRecording} style={{ padding: 8, backgroundColor: colors.primary, borderRadius: 18, width: 36, height: 36, alignItems: 'center', justifyContent: 'center' }}>
+                    <Ionicons name="checkmark" size={20} color="#FFFFFF" />
+                  </Pressable>
+                </View>
+              </View>
             ) : (
-              <Ionicons name="send" size={16} color="#FFFFFF" />
-            )}
-          </Pressable>
+              <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingRight: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.error }} />
+                  <Text style={{ color: colors.foreground, fontWeight: '700', fontSize: 14 }}>
+                    {Math.floor(recordingSeconds / 60).toString().padStart(2, '0')}:{(recordingSeconds % 60).toString().padStart(2, '0')}
+                  </Text>
+                </View>
+                <Text style={{ color: colors.muted, fontSize: 12, flex: 1, textAlign: 'center', marginHorizontal: 8 }} numberOfLines={1}>
+                  Swipe up to lock / Swipe left to cancel
+                </Text>
+                <GestureDetector gesture={micGesture}>
+                  <View
+                    style={[
+                      styles.sendBtn,
+                      {
+                        backgroundColor: colors.primary,
+                      },
+                    ]}
+                  >
+                    <Ionicons name="mic" size={18} color="#FFFFFF" />
+                  </View>
+                </GestureDetector>
+              </View>
+            )
+          ) : (
+            <>
+              <PremiumInput
+                placeholder="Type a message..."
+                value={inputText}
+                onChangeText={handleTextChange}
+                containerClassName="flex-1 mr-3"
+                editable={!sending}
+              />
+              {inputText.trim() ? (
+                <Pressable
+                  onPress={handleSend}
+                  disabled={sending}
+                  style={[
+                    styles.sendBtn,
+                    {
+                      backgroundColor: colors.primary,
+                      opacity: sending ? 0.7 : 1,
+                    },
+                  ]}
+                >
+                  {sending ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Ionicons name="send" size={16} color="#FFFFFF" />
+                  )}
+                </Pressable>
+              ) : (
+                <GestureDetector gesture={micGesture}>
+                  <View
+                    style={[
+                      styles.sendBtn,
+                      {
+                        backgroundColor: colors.primary,
+                        opacity: sending ? 0.7 : 1,
+                      },
+                    ]}
+                  >
+                    <Ionicons name="mic" size={18} color="#FFFFFF" />
+                  </View>
+                </GestureDetector>
+              )}
+            </>
+          )}
         </View>
       </ScreenContainer>
     </KeyboardAvoidingView>

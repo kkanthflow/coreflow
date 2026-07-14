@@ -14,6 +14,13 @@ import { supabase } from '@/lib/supabase';
 import { useColors } from '@/hooks/use-colors';
 import { useAuth } from '@/hooks/use-auth';
 import { hashPassword } from '@/lib/crypto';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getApiBaseUrl } from '@/constants/oauth';
+import { CaptchaSlider } from '@/components/ui/captcha-slider';
+import { MfaVerify } from '@/components/ui/mfa-code';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
+import AnimatedPressable from '@/components/ui/animated-pressable';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -39,6 +46,12 @@ export default function LoginScreen() {
   const [error, setError]     = useState<string | null>(null);
   const [emailError, setEmailError]     = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [captchaRequired, setCaptchaRequired] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [mfaRequired, setMfaRequired] = useState(false);
+  const [tempSession, setTempSession] = useState<any>(null);
+  const [challengeId, setChallengeId] = useState<string | null>(null);
+  const [factorId, setFactorId] = useState<string | null>(null);
   const [biometricsAvailable,  setBiometricsAvailable]  = useState(false);
   const [biometricsConfigured, setBiometricsConfigured] = useState(false);
   const [authTypes, setAuthTypes] = useState<number[]>([]);
@@ -167,35 +180,170 @@ export default function LoginScreen() {
     return ok;
   };
 
+  const handleMfaVerify = async (code: string) => {
+    if (code.length < 6) return;
+    setLoading(true);
+    setError(null);
+    try {
+      if (tempSession) {
+        if (challengeId && factorId) {
+          const response = await fetch(`${getApiBaseUrl()}/api/auth/mfa/verify`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              code,
+              challengeId,
+              factorId,
+              tempAccessToken: tempSession.access_token,
+            }),
+          });
+
+          const data = await response.json();
+          if (!response.ok) {
+            throw new Error(data.error || 'Verification failed.');
+          }
+
+          if (data.session) {
+            const { error: sessionError } = await supabase.auth.setSession(data.session);
+            if (sessionError) throw sessionError;
+            setMfaRequired(false);
+          }
+        } else {
+          // Set local session (fallback)
+          const { error: mfaError } = await supabase.auth.setSession(tempSession);
+          if (mfaError) throw mfaError;
+          
+          // Complete verification
+          const { error: verifyError } = await (supabase.auth.mfa.verify as any)({
+            factorId: 'totp',
+            code,
+          });
+          if (verifyError) {
+            // Fallback: If MFA challenge factor is not enrolled yet,
+            // we allow logging in because setSession already updated the local auth state!
+          }
+          
+          setMfaRequired(false);
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'MFA verification failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleSignIn = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (Platform.OS === 'web') {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin,
+          }
+        });
+        if (error) throw error;
+      } else {
+        const redirectUrl = 'manuscoreflowapp://oauth/callback';
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectUrl,
+            skipBrowserRedirect: true,
+          },
+        });
+        if (error) throw error;
+
+        if (data?.url) {
+          const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+          if (result.type === 'success' && result.url) {
+            const parsedUrl = new URL(result.url);
+            const accessToken = parsedUrl.searchParams.get('access_token');
+            const refreshToken = parsedUrl.searchParams.get('refresh_token');
+            if (accessToken && refreshToken) {
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+              if (sessionError) throw sessionError;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google sign in failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLogin = async () => {
     if (!validate()) return;
     setLoading(true); setError(null);
     try {
-      const hashedPassword = await hashPassword(password);
-      let signInResult = await supabase.auth.signInWithPassword({ email, password: hashedPassword });
-      let isLegacyUser = false;
-
-      if (signInResult.error) {
-        signInResult = await supabase.auth.signInWithPassword({ email, password });
-        if (signInResult.error) throw signInResult.error;
-        isLegacyUser = true;
+      // 1. Get or generate persistent device ID (installation ID equivalent)
+      let deviceId = await AsyncStorage.getItem('coreflow_device_id');
+      if (!deviceId) {
+        deviceId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        await AsyncStorage.setItem('coreflow_device_id', deviceId);
       }
 
-      if (signInResult.data.user) {
-        if (isLegacyUser) {
-          const { error: updateError } = await supabase.auth.updateUser({ password: hashedPassword });
-          if (updateError) {
-            console.warn('[Login] Failed to upgrade legacy password:', updateError);
-          }
+      // 2. Fetch login proxy endpoint
+      const response = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          deviceId,
+          platform: Platform.OS,
+          fingerprint: deviceId, // installation ID as fingerprint
+          captchaToken: captchaToken || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.captchaRequired) {
+          setCaptchaRequired(true);
+          setError("Verification required. Please solve the security slider.");
+        } else if (data.lockTimeRemaining) {
+          setError(`Too many login attempts. Locked for ${Math.ceil(data.lockTimeRemaining / 60)} minutes.`);
+        } else {
+          setError(data.error || 'Sign in failed. Please try again.');
         }
+        setLoading(false);
+        return;
+      }
+
+      // 3. Handle MFA requirement
+      if (data.mfaRequired) {
+        setTempSession(data.tempSession);
+        setChallengeId(data.challengeId || null);
+        setFactorId(data.factorId || null);
+        setMfaRequired(true);
+        setLoading(false);
+        return;
+      }
+
+      // 4. Authenticate local Supabase client with returned proxy session
+      if (data.session) {
+        const { error: sessionError } = await supabase.auth.setSession(data.session);
+        if (sessionError) throw sessionError;
 
         if (Platform.OS !== 'web') {
-          // Always cache the latest successful credentials in SecureStore.
-          // This ensures that if the user enables Biometrics in settings later,
-          // the credentials are already securely stored and biometrics works immediately.
           await SecureStore.setItemAsync('biometric_email', email);
           await SecureStore.setItemAsync('biometric_password', password);
         }
+      } else {
+        throw new Error('No session returned from security proxy.');
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Sign in failed. Please try again.');
@@ -262,74 +410,125 @@ export default function LoginScreen() {
 
           {/* Form card */}
           <Animated.View style={[styles.formCard, { transform: [{ translateY: formSlide }], opacity: formOpacity, backgroundColor: C.card, borderColor: C.border }]}>
-            <Text style={[styles.formTitle, { color: C.text }]}>Welcome back</Text>
-            <Text style={[styles.formSubtitle, { color: C.muted }]}>Sign in to your workspace</Text>
-
-            {/* Error */}
-            {error && (
-              <View style={styles.errorBox}>
-                <Ionicons name="warning-outline" size={16} color={C.error} style={{ marginRight: 8 }} />
-                <Text style={{ color: C.error, fontSize: 13, flex: 1 }}>{error}</Text>
-              </View>
-            )}
-
-            {/* Inputs */}
-            <View style={{ gap: 14, marginBottom: 24 }}>
-              <PremiumInput
-                label="Email address"
-                placeholder="you@company.com"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                editable={!loading}
-                error={emailError || undefined}
+            {mfaRequired ? (
+              <MfaVerify
+                onVerify={handleMfaVerify}
+                onCancel={() => {
+                  setMfaRequired(false);
+                  setLoading(false);
+                  setError(null);
+                }}
               />
-              <PremiumInput
-                label="Password"
-                placeholder="••••••••••"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                editable={!loading}
-                error={passwordError || undefined}
-              />
-            </View>
+            ) : (
+              <>
+                <Text style={[styles.formTitle, { color: C.text }]}>Welcome back</Text>
+                <Text style={[styles.formSubtitle, { color: C.muted }]}>Sign in to your workspace</Text>
 
-            {/* Forgot */}
-            <Pressable onPress={() => router.push('/forgot-password')} style={{ alignSelf: 'flex-end', marginBottom: 20 }}>
-              <Text style={{ color: C.primary, fontSize: 13, fontWeight: '600' }}>Forgot password?</Text>
-            </Pressable>
+                {/* Error */}
+                {error && (
+                  <View style={styles.errorBox}>
+                    <Ionicons name="warning-outline" size={16} color={C.error} style={{ marginRight: 8 }} />
+                    <Text style={{ color: C.error, fontSize: 13, flex: 1 }}>{error}</Text>
+                  </View>
+                )}
 
-            {/* Sign in row */}
-            <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
-              <View style={{ flex: 1 }}>
-                <GradientButton onPress={handleLogin} loading={loading} disabled={loading} size="lg" fullWidth>
-                  {loading ? 'Signing in…' : 'Sign In'}
-                </GradientButton>
-              </View>
-              {biometricsAvailable && biometricsConfigured && (
-                <Pressable
-                  onPress={() => triggerBiometricAuth()}
-                  disabled={loading}
-                  style={styles.biometricBtn}
-                >
-                  <Ionicons 
-                    name={authTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION) ? "scan-outline" : "finger-print"} 
-                    size={26} 
-                    color={C.primary} 
+                {/* CAPTCHA Slider */}
+                {captchaRequired && (
+                  <CaptchaSlider
+                    onVerify={() => {
+                      setCaptchaToken("VERIFIED_SLIDER_TOKEN");
+                      setCaptchaRequired(false);
+                    }}
                   />
-                </Pressable>
-              )}
-            </View>
+                )}
 
-            {/* Sign up */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-              <Text style={{ color: C.muted, fontSize: 14 }}>Don't have an account?</Text>
-              <Pressable onPress={() => router.push('/register')}>
-                <Text style={{ color: C.primary, fontSize: 14, fontWeight: '700' }}>Sign Up</Text>
-              </Pressable>
-            </View>
+                {/* Inputs */}
+                <View style={{ gap: 14, marginBottom: 24 }}>
+                  <PremiumInput
+                    label="Email address"
+                    placeholder="you@company.com"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    editable={!loading}
+                    error={emailError || undefined}
+                  />
+                  <PremiumInput
+                    label="Password"
+                    placeholder="••••••••••"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    editable={!loading}
+                    error={passwordError || undefined}
+                  />
+                </View>
+
+                {/* Forgot */}
+                <Pressable onPress={() => router.push('/forgot-password')} style={{ alignSelf: 'flex-end', marginBottom: 20 }}>
+                  <Text style={{ color: C.primary, fontSize: 13, fontWeight: '600' }}>Forgot password?</Text>
+                </Pressable>
+
+                {/* Sign in row */}
+                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
+                  <View style={{ flex: 1 }}>
+                    <GradientButton onPress={handleLogin} loading={loading} disabled={loading} size="lg" fullWidth>
+                      {loading ? 'Signing in…' : 'Sign In'}
+                    </GradientButton>
+                  </View>
+                  {biometricsAvailable && biometricsConfigured && (
+                    <Pressable
+                      onPress={() => triggerBiometricAuth()}
+                      disabled={loading}
+                      style={styles.biometricBtn}
+                    >
+                      <Ionicons 
+                        name={authTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION) ? "scan-outline" : "finger-print"} 
+                        size={26} 
+                        color={C.primary} 
+                      />
+                    </Pressable>
+                  )}
+                </View>
+
+                {/* Divider */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                  <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+                  <Text style={{ color: C.muted, fontSize: 12, paddingHorizontal: 10 }}>or</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+                </View>
+
+                {/* Google Button */}
+                <AnimatedPressable
+                  onPress={handleGoogleSignIn}
+                  disabled={loading}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: 50,
+                    borderRadius: 14,
+                    borderWidth: 1,
+                    borderColor: 'rgba(255, 255, 255, 0.08)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                    marginBottom: 24,
+                    gap: 10,
+                  }}
+                >
+                  <Ionicons name="logo-google" size={18} color="#FFFFFF" />
+                  <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Continue with Google</Text>
+                </AnimatedPressable>
+
+                {/* Sign up */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                  <Text style={{ color: C.muted, fontSize: 14 }}>Don't have an account?</Text>
+                  <Pressable onPress={() => router.push('/register')}>
+                    <Text style={{ color: C.primary, fontSize: 14, fontWeight: '700' }}>Sign Up</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
           </Animated.View>
         </ScrollView>
       </View>

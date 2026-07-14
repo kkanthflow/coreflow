@@ -396,7 +396,7 @@ export default function FreelancerPortalScreen() {
                 </Pressable>
 
                 <Pressable
-                  onPress={() => router.push('/invoices' as any)}
+                  onPress={() => router.push('/clients' as any)}
                   style={[styles.actionButton, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 >
                   <View style={[styles.actionIconWrapper, { backgroundColor: `${colors.info}15` }]}>
@@ -648,7 +648,7 @@ const styles = StyleSheet.create({
   },
   scrollContainer: {
     paddingHorizontal: 24,
-    paddingBottom: 32,
+    paddingBottom: 130,
   },
   statsContainer: {
     flexDirection: 'row',

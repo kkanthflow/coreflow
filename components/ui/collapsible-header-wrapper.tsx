@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface CollapsibleHeaderProps {
   scrollY: SharedValue<number>;
-  title: string;
+  title: string | React.ReactNode;
   subtitle?: string | React.ReactNode;
   rightComponent?: React.ReactNode;
 }
@@ -24,8 +24,8 @@ export function CollapsibleHeaderWrapper({
   const colors = useColors();
   const insets = useSafeAreaInsets();
   
-  const headerMinHeight = 60 + insets.top;
-  const headerMaxHeight = 110 + insets.top;
+  const headerMinHeight = 70 + insets.top;
+  const headerMaxHeight = 145 + insets.top;
   const scrollDistance = headerMaxHeight - headerMinHeight;
 
   const headerStyle = useAnimatedStyle(() => {
@@ -98,16 +98,20 @@ export function CollapsibleHeaderWrapper({
     >
       <View style={styles.headerRow}>
         <View style={styles.textContainer}>
-          <Animated.Text
-            style={[
-              styles.title,
-              { color: colors.foreground },
-              titleStyle,
-            ]}
-            numberOfLines={1}
-          >
-            {title}
-          </Animated.Text>
+          {typeof title === 'string' ? (
+            <Animated.Text
+              style={[
+                styles.title,
+                { color: colors.foreground },
+                titleStyle,
+              ]}
+              numberOfLines={1}
+            >
+              {title}
+            </Animated.Text>
+          ) : (
+            title
+          )}
           {subtitle ? (
             <Animated.View style={[subtitleStyle, { overflow: 'hidden' }]}>
               {typeof subtitle === 'string' ? (

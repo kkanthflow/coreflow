@@ -69,11 +69,11 @@ export default function InvoiceDashboard() {
         }
       }
 
-      // 2. Fetch Invoices
       let invQuery = supabase
         .from('invoices')
         .select('*, clients(name, company_name)')
-        .eq('is_deleted', false);
+        .eq('is_deleted', false)
+        .neq('status', 'draft');
 
       if (orgId) {
         invQuery = invQuery.eq('organization_id', orgId);
@@ -356,9 +356,8 @@ export default function InvoiceDashboard() {
               )}
             </View>
 
-            {/* Filter buttons */}
             <ScrollView horizontal showsHorizontalScrollIndicator={false} className="py-1">
-              {['all', 'draft', 'sent', 'paid', 'partially_paid', 'overdue'].map((status) => {
+              {['all', 'sent', 'paid', 'partially_paid', 'overdue'].map((status) => {
                 const isSelected = statusFilter === status;
                 const statusInfo = getStatusColor(status);
                 return (

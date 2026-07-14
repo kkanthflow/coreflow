@@ -417,7 +417,7 @@ export default function NewInvoiceScreen() {
         is_recurring: isRecurring,
         recurring_frequency: isRecurring ? recurringFrequency : null,
         creator_id: user!.id,
-        status: 'sent',
+        status: orgId ? 'sent' : 'draft',
         visual_recreation: visualRecreation,
         template_style: visualRecreation ? 'custom' : 'classic',
         // Only set invoice_number on create, keep existing on edit

@@ -10,6 +10,9 @@ import { useAuth } from '@/hooks/use-auth';
 import { useColors } from '@/hooks/use-colors';
 import { SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { hashPassword } from '@/lib/crypto';
+import AnimatedPressable from '@/components/ui/animated-pressable';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -79,6 +82,52 @@ export default function RegisterScreen() {
     return isValid;
   };
 
+  const handleGoogleSignUp = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (Platform.OS === 'web') {
+        const { error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: window.location.origin,
+          }
+        });
+        if (error) throw error;
+      } else {
+        const redirectUrl = 'manuscoreflowapp://oauth/callback';
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo: redirectUrl,
+            skipBrowserRedirect: true,
+          },
+        });
+        if (error) throw error;
+
+        if (data?.url) {
+          const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+          if (result.type === 'success' && result.url) {
+            const parsedUrl = new URL(result.url);
+            const accessToken = parsedUrl.searchParams.get('access_token');
+            const refreshToken = parsedUrl.searchParams.get('refresh_token');
+            if (accessToken && refreshToken) {
+              const { error: sessionError } = await supabase.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken,
+              });
+              if (sessionError) throw sessionError;
+            }
+          }
+        }
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google sign up failed.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRegister = async () => {
     if (!validateForm()) {
       return;
@@ -113,9 +162,6 @@ export default function RegisterScreen() {
         }
       }
 
-      // Hash password client-side
-      const hashedPassword = await hashPassword(password);
-
       // 2. Sign up the user
       let userId = null;
       const metaRole = accountType === 'freelancer'
@@ -124,7 +170,7 @@ export default function RegisterScreen() {
 
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email,
-        password: hashedPassword,
+        password: password,
         options: {
           data: {
             full_name: fullName,
@@ -135,14 +181,9 @@ export default function RegisterScreen() {
 
       if (signUpError) {
         if (signUpError.message.includes('User already registered')) {
-          let signInResult = await supabase.auth.signInWithPassword({ email, password: hashedPassword });
+          let signInResult = await supabase.auth.signInWithPassword({ email, password: password });
           if (signInResult.error) {
-            signInResult = await supabase.auth.signInWithPassword({ email, password });
-            if (signInResult.error) throw new Error('This email is already registered. Please sign in instead.');
-            
-            if (signInResult.data.user) {
-              await supabase.auth.updateUser({ password: hashedPassword });
-            }
+            throw new Error('This email is already registered. Please sign in instead.');
           }
           userId = signInResult.data.user?.id;
         } else {
@@ -658,6 +699,34 @@ export default function RegisterScreen() {
           >
             {loading ? 'Creating Account...' : 'Create Account'}
           </PremiumButton>
+
+          {/* Divider */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+            <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+            <Text style={{ color: colors.muted, fontSize: 12, paddingHorizontal: 10 }}>or</Text>
+            <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+          </View>
+
+          {/* Google Button */}
+          <AnimatedPressable
+            onPress={handleGoogleSignUp}
+            disabled={loading}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'center',
+              height: 50,
+              borderRadius: 14,
+              borderWidth: 1,
+              borderColor: 'rgba(255, 255, 255, 0.08)',
+              backgroundColor: 'rgba(255, 255, 255, 0.02)',
+              marginBottom: 24,
+              gap: 10,
+            }}
+          >
+            <Ionicons name="logo-google" size={18} color="#FFFFFF" />
+            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Continue with Google</Text>
+          </AnimatedPressable>
 
           {/* Sign In Link */}
           <View className="flex-row items-center justify-center gap-2">
