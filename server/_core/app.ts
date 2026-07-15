@@ -68,6 +68,36 @@ export function createExpressApp() {
   registerOAuthRoutes(app);
   registerAuthProxyRoutes(app);
 
+  app.post("/api/notifications/send-push", async (req, res) => {
+    const authHeader = req.headers.authorization;
+    const authSecret = "cf_internal_push_secret_2026";
+    if (!authHeader || authHeader !== `Bearer ${authSecret}`) {
+      res.status(401).json({ error: "Unauthorized access" });
+      return;
+    }
+
+    const { id, user_id, title, message, type, entity_type, entity_id, action_url } = req.body;
+    if (!id || !user_id || !title || !message) {
+      res.status(400).json({ error: "Missing required payload parameters" });
+      return;
+    }
+
+    const { dispatchFCMPush } = require("./notification");
+    
+    dispatchFCMPush({
+      id,
+      userId: user_id,
+      title,
+      message,
+      type,
+      entityType: entity_type,
+      entityId: entity_id,
+      actionUrl: action_url,
+    });
+
+    res.json({ success: true, status: "queued" });
+  });
+
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: Date.now() });
   });

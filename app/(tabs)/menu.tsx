@@ -112,6 +112,16 @@ export default function MenuScreen() {
   const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
+  const [devModeEnabled, setDevModeEnabled] = useState(false);
+  const devTapCount = useRef(0);
+
+  const handleDevModeTap = () => {
+    devTapCount.current += 1;
+    if (devTapCount.current >= 5) {
+      setDevModeEnabled(true);
+      Alert.alert('Developer Mode', 'Developer diagnostic screens are now enabled.');
+    }
+  };
 
   const checkDiagnostics = async () => {
     if (Platform.OS === 'web') {
@@ -129,33 +139,31 @@ export default function MenuScreen() {
         setPushToken('no-permission');
         setIsSynced(false);
         if (user?.id) {
+          const devId = await require('expo-secure-store').getItemAsync('cf_device_id');
           await supabase
             .from('user_push_tokens')
             .delete()
-            .eq('user_id', user.id);
+            .eq('user_id', user.id)
+            .eq('device_id', devId || 'default');
         }
         return;
       }
 
-      const Constants = require('expo-constants').default;
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-      
-      const tokenData = await Notifications.getExpoPushTokenAsync(
-        projectId ? { projectId } : undefined
-      );
+      const tokenData = await Notifications.getDevicePushTokenAsync();
       const token = tokenData.data;
       setPushToken(token || 'failed');
 
       if (token && user?.id) {
+        const devId = await require('expo-secure-store').getItemAsync('cf_device_id');
         const { data, error } = await supabase
           .from('user_push_tokens')
           .select('token')
           .eq('user_id', user.id)
-          .eq('token', token)
+          .eq('device_id', devId || 'default')
           .maybeSingle();
 
         if (error) throw error;
-        setIsSynced(!!data);
+        setIsSynced(!!data && data.token === token);
       } else {
         setIsSynced(false);
       }
@@ -181,18 +189,25 @@ export default function MenuScreen() {
         return;
       }
 
-      const Constants = require('expo-constants').default;
-      const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
-      
-      const tokenData = await Notifications.getExpoPushTokenAsync(
-        projectId ? { projectId } : undefined
-      );
+      const tokenData = await Notifications.getDevicePushTokenAsync();
       const token = tokenData.data;
 
       if (token) {
+        const devId = await require('expo-secure-store').getItemAsync('cf_device_id');
+        const Constants = require('expo-constants').default;
+        const appVersion = Constants.expoConfig?.version || '1.0.0';
+
         const { error } = await supabase
           .from('user_push_tokens')
-          .upsert({ user_id: user.id, token });
+          .upsert({
+            user_id: user.id,
+            device_id: devId || 'default',
+            token,
+            platform: Platform.OS,
+            app_version: appVersion,
+            is_enabled: true,
+            last_seen_at: new Date().toISOString(),
+          });
         
         if (error) throw error;
         alert('Device registered successfully!');
@@ -320,7 +335,7 @@ export default function MenuScreen() {
           </GlassCard>
 
           {/* Push Diagnostics Card */}
-          {Platform.OS !== 'web' && (
+          {Platform.OS !== 'web' && devModeEnabled && (
             <GlassCard bob={true} bobDelay={150} padding={16} radius={20} style={{ marginBottom: 24 }}>
               <Text style={{ color: C.text, fontSize: 15, fontWeight: '800', marginBottom: 12 }}>
                 Push Notifications Diagnostic
@@ -333,9 +348,9 @@ export default function MenuScreen() {
                   </Text>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Text style={{ color: C.textSec, fontSize: 13 }}>Expo Token</Text>
-                  <Text style={{ color: pushToken.startsWith('ExponentPushToken') ? C.success : C.error, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
-                    {pushToken.startsWith('ExponentPushToken') ? 'GENERATED' : pushToken.toUpperCase()}
+                  <Text style={{ color: C.textSec, fontSize: 13 }}>FCM Token</Text>
+                  <Text style={{ color: (pushToken.length > 20 && !pushToken.includes(' ')) ? C.success : C.error, fontSize: 13, fontWeight: '700' }} numberOfLines={1}>
+                    {(pushToken.length > 20 && !pushToken.includes(' ')) ? 'GENERATED' : pushToken.toUpperCase()}
                   </Text>
                 </View>
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -406,6 +421,13 @@ export default function MenuScreen() {
           >
             <Ionicons name="trash-outline" size={20} color="#EF4444" />
             <Text style={{ color: '#EF4444', fontSize: 16, fontWeight: '700' }}>Delete Account</Text>
+          </Pressable>
+
+          {/* Version footer for developer mode toggle */}
+          <Pressable onPress={handleDevModeTap} style={{ marginTop: 8, padding: 12 }}>
+            <Text style={{ color: C.muted, fontSize: 12, textAlign: 'center' }}>
+              Version 1.0.0 {devModeEnabled ? '(Developer Mode)' : ''}
+            </Text>
           </Pressable>
         </View>
       </ScrollView>

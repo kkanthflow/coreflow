@@ -31,6 +31,16 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { useOTAUpdates } from '@/hooks/use-ota-updates';
 import { supabase } from "@/lib/supabase";
 import { scheduleMeetingLocalNotifications } from '@/lib/notifications-helper';
+import * as Crypto from 'expo-crypto';
+
+async function getOrInitDeviceId(): Promise<string> {
+  let deviceId = await SecureStore.getItemAsync('cf_device_id');
+  if (!deviceId) {
+    deviceId = Crypto.randomUUID();
+    await SecureStore.setItemAsync('cf_device_id', deviceId);
+  }
+  return deviceId;
+}
 
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
@@ -688,8 +698,31 @@ export default function RootLayout() {
       if (Platform.OS === 'web') return;
       try {
         if (Platform.OS === 'android') {
+          // Chat Channel (High Importance, lights, vibration)
+          await Notifications.setNotificationChannelAsync('chat', {
+            name: 'Chat Messages',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#FF231F7C',
+            showBadge: true,
+          });
+          // Meetings Channel
+          await Notifications.setNotificationChannelAsync('meetings', {
+            name: 'Meetings',
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#FF231F7C',
+            showBadge: true,
+          });
+          // Tasks Channel
+          await Notifications.setNotificationChannelAsync('tasks', {
+            name: 'Tasks',
+            importance: Notifications.AndroidImportance.DEFAULT,
+            showBadge: true,
+          });
+          // Fallback Default Channel
           await Notifications.setNotificationChannelAsync('default', {
-            name: 'default',
+            name: 'Default Alerts',
             importance: Notifications.AndroidImportance.MAX,
             vibrationPattern: [0, 250, 250, 250],
             lightColor: '#FF231F7C',
@@ -704,24 +737,36 @@ export default function RootLayout() {
           finalStatus = status;
         }
         if (finalStatus !== 'granted') {
+          const devId = await getOrInitDeviceId();
           await supabase
             .from('user_push_tokens')
             .delete()
-            .eq('user_id', userId);
+            .eq('user_id', userId)
+            .eq('device_id', devId);
           return;
         }
 
-        // Try to get Expo Push Token using project ID from Constants
-        const Constants = require('expo-constants').default;
-        const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId ?? "2774c41f-4987-4393-9fee-12eb5e3ab9eb";
-        
-        const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
-        const token = tokenData.data;
+        // Get direct native device FCM / APNs token instead of Expo token
+        const deviceTokenData = await Notifications.getDevicePushTokenAsync();
+        const nativeToken = deviceTokenData.data;
 
-        if (token) {
+        if (nativeToken) {
+          const deviceId = await getOrInitDeviceId();
+          const Constants = require('expo-constants').default;
+          const appVersion = Constants.expoConfig?.version || '1.0.0';
+
           await supabase
             .from('user_push_tokens')
-            .upsert({ user_id: userId, token });
+            .upsert({
+              user_id: userId,
+              device_id: deviceId,
+              token: nativeToken,
+              platform: Platform.OS,
+              app_version: appVersion,
+              is_enabled: true,
+              last_seen_at: new Date().toISOString(),
+            });
+          console.log('[FCM] Successfully registered native push token for device:', deviceId);
         }
       } catch (err) {
         console.warn('Failed to register push token:', err);
@@ -734,6 +779,29 @@ export default function RootLayout() {
         setupRealtimeSubscription(session.user.id);
         registerAndSavePushToken(session.user.id);
         scheduleMeetingLocalNotifications(session.user.id);
+      }
+    });
+
+    // Listen for push token refreshes dynamically
+    const tokenRefreshSubscription = Notifications.addPushTokenListener(async (tokenData) => {
+      const sessionRes = await supabase.auth.getSession();
+      const userId = sessionRes.data.session?.user?.id;
+      if (userId && tokenData.data) {
+        const deviceId = await getOrInitDeviceId();
+        const Constants = require('expo-constants').default;
+        const appVersion = Constants.expoConfig?.version || '1.0.0';
+        await supabase
+          .from('user_push_tokens')
+          .upsert({
+            user_id: userId,
+            device_id: deviceId,
+            token: tokenData.data,
+            platform: Platform.OS,
+            app_version: appVersion,
+            is_enabled: true,
+            last_seen_at: new Date().toISOString(),
+          });
+        console.log('[FCM] Auto-refreshed push token in database.');
       }
     });
 
@@ -752,6 +820,7 @@ export default function RootLayout() {
 
     return () => {
       tapSubscription.remove();
+      tokenRefreshSubscription.remove();
       authSubscription.unsubscribe();
       if (chatChannel) {
         supabase.removeChannel(chatChannel);
