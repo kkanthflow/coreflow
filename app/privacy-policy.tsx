@@ -78,6 +78,8 @@ export default function PrivacyPolicyScreen() {
             <Text style={[styles.bulletPoint, { color: colors.foreground }]}>• <Text style={{ fontWeight: 'bold' }}>Financial Data:</Text> Clients, invoices, items, rates, taxes, currencies, payments, and receipts.</Text>
             <Text style={[styles.bulletPoint, { color: colors.foreground }]}>• <Text style={{ fontWeight: 'bold' }}>Departments & Employees:</Text> Structure, color, lead user, and reassignments.</Text>
             <Text style={[styles.bulletPoint, { color: colors.foreground }]}>• <Text style={{ fontWeight: 'bold' }}>Chat Metadata:</Text> Chat channels, memberships, mutes, read receipts, and E2EE keys.</Text>
+            <Text style={[styles.bulletPoint, { color: colors.foreground }]}>• <Text style={{ fontWeight: 'bold' }}>Voice Messages:</Text> Audio recording files captured by the microphone, transient local device cache files, and transcripts or files stored in organization cloud storage buckets.</Text>
+            <Text style={[styles.bulletPoint, { color: colors.foreground }]}>• <Text style={{ fontWeight: 'bold' }}>Push Notifications:</Text> Unique hardware and installation device IDs, operating system platforms, last seen timestamps, app versions, and Firebase Cloud Messaging (FCM) push tokens.</Text>
             <Text style={[styles.bulletPoint, { color: colors.foreground }]}>• <Text style={{ fontWeight: 'bold' }}>Workspace Audit Logs:</Text> Event activity (e.g. role changes, department deletions) with actor IDs.</Text>
           </View>
 

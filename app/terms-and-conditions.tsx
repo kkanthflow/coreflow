@@ -91,6 +91,9 @@ export default function TermsAndConditionsScreen() {
           <Text style={[styles.paragraph, { color: colors.foreground }]}>
             You agree not to upload illegal or malicious content, attempt to bypass Supabase database Row-Level Security (RLS), launch denial-of-service attacks, or reverse-engineer the CoreFlow mobile application.
           </Text>
+          <Text style={[styles.paragraph, { color: colors.foreground }]}>
+            By using Voice Messages, you authorize the app to access your device microphone to capture audio and store recordings in your workspace storage. Users assume full liability for the content of voice recordings. By enabling Push Notifications, you agree to receive automated notifications dispatched via Firebase Cloud Messaging based on your organization configurations.
+          </Text>
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>6. Subscription & Billing Terms</Text>
           <Text style={[styles.paragraph, { color: colors.foreground }]}>
