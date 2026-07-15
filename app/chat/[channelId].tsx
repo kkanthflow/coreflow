@@ -595,16 +595,26 @@ export default function ChannelChatScreen() {
 
       setSending(true);
 
-      // Upload audio file to Supabase Storage
-      const response = await fetch(uri);
-      const blob = await response.blob();
-      
       const fileName = `voice_${Date.now()}.m4a`;
       const path = `${user?.organizationId || 'chat'}/voice/${fileName}`;
 
+      let fileBody: any;
+      if (Platform.OS === 'web') {
+        const response = await fetch(uri);
+        fileBody = await response.blob();
+      } else {
+        const formData = new FormData();
+        formData.append('file', {
+          uri: uri,
+          name: fileName,
+          type: 'audio/m4a',
+        } as any);
+        fileBody = formData;
+      }
+
       const { error: uploadError } = await supabase.storage
         .from('project-files')
-        .upload(path, blob, {
+        .upload(path, fileBody, {
           contentType: 'audio/m4a',
           upsert: true,
         });
