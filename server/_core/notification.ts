@@ -129,7 +129,16 @@ let fcmApp: any = null;
 function getFirebaseAdmin() {
   if (fcmApp) return fcmApp;
 
-  const serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT;
+  let serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT;
+  const b64Key = process.env.FIREBASE_SERVICE_ACCOUNT_B64;
+  if (b64Key && !serviceAccountString) {
+    try {
+      serviceAccountString = Buffer.from(b64Key, "base64").toString("utf8");
+    } catch (e) {
+      console.error("[FCM] Failed to decode base64 service account credentials:", e);
+    }
+  }
+
   if (!serviceAccountString) {
     const fs = require("fs");
     const path = require("path");
