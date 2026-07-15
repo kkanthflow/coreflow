@@ -65,45 +65,55 @@ ALTER TABLE public.device_security ENABLE ROW LEVEL SECURITY;
 
 -- Helper macro/expression for checking if the user is an administrator
 -- Admins can view security tables
+DROP POLICY IF EXISTS "Admins can view login attempts" ON public.login_attempts;
 CREATE POLICY "Admins can view login attempts" ON public.login_attempts
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM public.users u
       WHERE u.id = auth.uid()::uuid AND u.role IN ('managing_director'::user_role, 'ceo'::user_role, 'cto'::user_role)
     )
-  );
+  )
+  ;
 
+DROP POLICY IF EXISTS "Admins can view security events" ON public.security_events;
 CREATE POLICY "Admins can view security events" ON public.security_events
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM public.users u
       WHERE u.id = auth.uid()::uuid AND u.role IN ('managing_director'::user_role, 'ceo'::user_role, 'cto'::user_role)
     )
-  );
+  )
+  ;
 
+DROP POLICY IF EXISTS "Admins can view rate limit locks" ON public.rate_limit_locks;
 CREATE POLICY "Admins can view rate limit locks" ON public.rate_limit_locks
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM public.users u
       WHERE u.id = auth.uid()::uuid AND u.role IN ('managing_director'::user_role, 'ceo'::user_role, 'cto'::user_role)
     )
-  );
+  )
+  ;
 
+DROP POLICY IF EXISTS "Admins can delete rate limit locks" ON public.rate_limit_locks;
 CREATE POLICY "Admins can delete rate limit locks" ON public.rate_limit_locks
   FOR DELETE USING (
     EXISTS (
       SELECT 1 FROM public.users u
       WHERE u.id = auth.uid()::uuid AND u.role IN ('managing_director'::user_role, 'ceo'::user_role, 'cto'::user_role)
     )
-  );
+  )
+  ;
 
+DROP POLICY IF EXISTS "Admins can view device security" ON public.device_security;
 CREATE POLICY "Admins can view device security" ON public.device_security
   FOR SELECT USING (
     EXISTS (
       SELECT 1 FROM public.users u
       WHERE u.id = auth.uid()::uuid AND u.role IN ('managing_director'::user_role, 'ceo'::user_role, 'cto'::user_role)
     )
-  );
+  )
+  ;
 
 -- Service role has full access to perform checks and log attempts
 GRANT ALL ON public.login_attempts TO service_role;
