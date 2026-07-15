@@ -551,6 +551,15 @@ export default function ChannelChatScreen() {
     Alert.alert('Delete Message', 'Choose how you want to delete this message.', options);
   }, [messages, user]);
 
+  const triggerHapticFeedback = async () => {
+    try {
+      if (Platform.OS === 'web') return;
+      await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    } catch (e) {
+      console.warn('Haptics failed:', e);
+    }
+  };
+
   const startRecording = async () => {
     try {
       const { status } = await requestRecordingPermissionsAsync();
@@ -672,7 +681,7 @@ export default function ChannelChatScreen() {
     .minDistance(5)
     .onStart(() => {
       // Trigger haptic feedback
-      runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Light);
+      runOnJS(triggerHapticFeedback)();
       // Start recording
       runOnJS(startRecording)();
       runOnJS(setIsLocked)(false);
