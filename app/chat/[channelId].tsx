@@ -66,7 +66,7 @@ export default function ChannelChatScreen() {
   const [isLocked, setIsLocked] = useState(false);
   const [showLockPrompt, setShowLockPrompt] = useState(false);
   const recordingTimerRef = useRef<any>(null);
-  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderRef = useRef<any>(null);
 
   const listRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -572,6 +572,38 @@ export default function ChannelChatScreen() {
     }
   };
 
+  const getPlatformRecordingOptions = () => {
+    const common = {
+      extension: '.m4a',
+      sampleRate: 44100,
+      numberOfChannels: 2,
+      bitRate: 128000,
+      isMeteringEnabled: false,
+    };
+    if (Platform.OS === 'android') {
+      return {
+        ...common,
+        outputFormat: 'mpeg4',
+        audioEncoder: 'aac',
+      };
+    } else if (Platform.OS === 'ios') {
+      return {
+        ...common,
+        outputFormat: 'aac ',
+        audioQuality: 0x7f,
+        linearPCMBitDepth: 16,
+        linearPCMIsBigEndian: false,
+        linearPCMIsFloat: false,
+      };
+    } else {
+      return {
+        ...common,
+        mimeType: 'audio/webm',
+        bitsPerSecond: 128000,
+      };
+    }
+  };
+
   const startRecording = async () => {
     try {
       const isDummy = (AudioModule as any)?.AudioRecorder?.name === 'DummyRecorder';
@@ -587,8 +619,11 @@ export default function ChannelChatScreen() {
         Alert.alert('Permission Denied', 'Microphone permission is required to record voice messages.');
         return;
       }
-      await audioRecorder.prepareToRecordAsync();
-      audioRecorder.record();
+      if (!recorderRef.current) {
+        recorderRef.current = new AudioModule.AudioRecorder(getPlatformRecordingOptions());
+      }
+      await recorderRef.current.prepareToRecordAsync();
+      recorderRef.current.record();
       setIsRecording(true);
       setRecordingSeconds(0);
       recordingTimerRef.current = setInterval(() => {
@@ -605,12 +640,14 @@ export default function ChannelChatScreen() {
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
       }
-      await audioRecorder.stop();
+      if (recorderRef.current) {
+        await recorderRef.current.stop();
+      }
       setIsRecording(false);
       setIsLocked(false);
       setShowLockPrompt(false);
 
-      const uri = audioRecorder.uri;
+      const uri = recorderRef.current?.uri;
       if (!uri) return;
 
       setSending(true);
@@ -656,40 +693,41 @@ export default function ChannelChatScreen() {
         sender_id: user?.id,
         content: '[Voice Message]',
         file_url: audioUrl,
-        file_type: 'voice',
-        file_name: fileName,
+        file_type: 'audio',
         created_at: new Date().toISOString(),
         sender: {
+          id: user?.id,
           full_name: user?.fullName || 'Me',
           avatar_url: user?.avatarUrl,
         },
-        message_reads: [],
-        reactions: [],
-        reply_message: null,
-        reply_to_id: null,
-        isOptimistic: true,
       };
 
-      setMessages((prev) => [...prev, optimisticMessage]);
+      setMessages((prev) => [optimisticMessage, ...prev]);
 
-      const { data, error: dbError } = await supabase
-        .from('chat_messages')
+      const { data: newMsg, error: sendError } = await supabase
+        .from('messages')
         .insert({
           channel_id: channelId,
           sender_id: user?.id,
           content: '[Voice Message]',
           file_url: audioUrl,
-          file_type: 'voice',
-          file_name: fileName,
+          file_type: 'audio',
         })
-        .select('*')
+        .select(`
+          *,
+          sender:users!messages_sender_id_fkey(id, full_name, avatar_url)
+        `)
         .single();
 
-      if (dbError) throw dbError;
+      if (sendError) throw sendError;
 
-    } catch (error: any) {
-      console.error('Failed to send voice message', error);
-      Alert.alert('Error', error.message || 'Failed to send voice message.');
+      // Replace optimistic message
+      setMessages((prev) =>
+        prev.map((m) => (m.id === optimisticMsgId ? newMsg : m))
+      );
+    } catch (err: any) {
+      console.error('Failed to send voice message:', err);
+      Alert.alert('Error', err.message || 'Failed to send voice message.');
     } finally {
       setSending(false);
     }
@@ -700,7 +738,9 @@ export default function ChannelChatScreen() {
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
       }
-      await audioRecorder.stop();
+      if (recorderRef.current) {
+        await recorderRef.current.stop();
+      }
       setIsRecording(false);
       setIsLocked(false);
       setShowLockPrompt(false);
