@@ -8,6 +8,11 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 
 export function createExpressApp() {
+  // Fallback JWT_SECRET to SUPABASE_JWT_SECRET if available
+  if (!process.env.JWT_SECRET && process.env.SUPABASE_JWT_SECRET) {
+    process.env.JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
+  }
+
   // Validate mandatory secrets on startup
   const mandatorySecrets = [
     "DATABASE_URL",
