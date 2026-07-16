@@ -342,7 +342,14 @@ function AuthGate() {
 
     // Handle fine-grained redirects WITHIN the authenticated stack
     if (isAuthenticated) {
-      if (isIndex || onAuthScreens || onFreelancerPortal) {
+      const isSetupComplete = user && (user.organizationId || user.freelancerType === 'independent' || user.role === 'freelancer');
+      
+      if (!isSetupComplete && user) {
+        // Redirect to register screen to finish workspace/org configuration
+        if (currentSegment !== 'register') {
+          router.replace('/register');
+        }
+      } else if (isIndex || onAuthScreens || onFreelancerPortal) {
         router.replace('/(tabs)/home' as any);
       }
     } else {

@@ -17,7 +17,7 @@ import * as Linking from 'expo-linking';
 export default function RegisterScreen() {
   const router = useRouter();
   const colors = useColors();
-  const { refreshUser } = useAuth();
+  const { user, isAuthenticated, refreshUser } = useAuth();
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
@@ -41,35 +41,37 @@ export default function RegisterScreen() {
     const newErrors: Record<string, string | null> = {};
     let isValid = true;
 
-    if (!fullName) {
-      newErrors.fullName = 'Full name is required';
-      isValid = false;
+    if (!isAuthenticated) {
+      if (!fullName) {
+        newErrors.fullName = 'Full name is required';
+        isValid = false;
+      }
+
+      if (!email) {
+        newErrors.email = 'Email is required';
+        isValid = false;
+      } else if (!email.includes('@')) {
+        newErrors.email = 'Please enter a valid email';
+        isValid = false;
+      }
+
+      if (!password) {
+        newErrors.password = 'Password is required';
+        isValid = false;
+      } else if (password.length < 6) {
+        newErrors.password = 'Password must be at least 6 characters';
+        isValid = false;
+      }
+
+      if (password !== confirmPassword) {
+        newErrors.confirmPassword = 'Passwords do not match';
+        isValid = false;
+      }
     }
 
     const needsOrg = accountType !== 'freelancer' || (accountType === 'freelancer' && freelancerWorkType === 'organization');
     if (needsOrg && !organization) {
       newErrors.organization = 'Organization is required';
-      isValid = false;
-    }
-
-    if (!email) {
-      newErrors.email = 'Email is required';
-      isValid = false;
-    } else if (!email.includes('@')) {
-      newErrors.email = 'Please enter a valid email';
-      isValid = false;
-    }
-
-    if (!password) {
-      newErrors.password = 'Password is required';
-      isValid = false;
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-      isValid = false;
-    }
-
-    if (password !== confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
       isValid = false;
     }
 
@@ -162,35 +164,41 @@ export default function RegisterScreen() {
         }
       }
 
-      // 2. Sign up the user
+      // 2. Sign up the user or use active OAuth session
       let userId = null;
       const metaRole = accountType === 'freelancer'
         ? 'freelancer'
         : (accountType === 'create' ? 'owner' : role);
 
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password: password,
-        options: {
-          data: {
-            full_name: fullName,
-            role: metaRole,
-          }
-        }
-      });
+      const finalFullName = isAuthenticated && user ? (user.fullName || fullName) : fullName;
 
-      if (signUpError) {
-        if (signUpError.message.includes('User already registered')) {
-          let signInResult = await supabase.auth.signInWithPassword({ email, password: password });
-          if (signInResult.error) {
-            throw new Error('This email is already registered. Please sign in instead.');
-          }
-          userId = signInResult.data.user?.id;
-        } else {
-          throw signUpError;
-        }
+      if (isAuthenticated && user) {
+        userId = user.id;
       } else {
-        userId = authData.user?.id;
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email,
+          password: password,
+          options: {
+            data: {
+              full_name: finalFullName,
+              role: metaRole,
+            }
+          }
+        });
+
+        if (signUpError) {
+          if (signUpError.message.includes('User already registered')) {
+            let signInResult = await supabase.auth.signInWithPassword({ email, password: password });
+            if (signInResult.error) {
+              throw new Error('This email is already registered. Please sign in instead.');
+            }
+            userId = signInResult.data.user?.id;
+          } else {
+            throw signUpError;
+          }
+        } else {
+          userId = authData.user?.id;
+        }
       }
       
       if (!userId) throw new Error('Failed to get user ID after registration');
@@ -236,7 +244,7 @@ export default function RegisterScreen() {
         if (!existingWs) {
           const { data: newWs } = await supabase
             .from('workspaces')
-            .insert({ name: fullName + ' Freelancing', type: 'independent', owner_id: userId, status: 'active' })
+            .insert({ name: finalFullName + ' Freelancing', type: 'independent', owner_id: userId, status: 'active' })
             .select('id')
             .single();
 
@@ -423,8 +431,12 @@ export default function RegisterScreen() {
         >
           {/* Header */}
           <View className="mt-12 mb-8">
-            <Text className="text-4xl font-bold text-foreground mb-2">Create Account</Text>
-            <Text className="text-base text-muted">Join CoreFlow today</Text>
+            <Text className="text-4xl font-bold text-foreground mb-2">
+              {isAuthenticated ? 'Setup Workspace' : 'Create Account'}
+            </Text>
+            <Text className="text-base text-muted">
+              {isAuthenticated ? 'Complete your workspace configuration to continue' : 'Join CoreFlow today'}
+            </Text>
           </View>
 
           {/* Error Message */}
@@ -437,25 +449,29 @@ export default function RegisterScreen() {
           {/* Form */}
           <View className="gap-4 mb-8">
 
-            <PremiumInput
-              label="Full Name"
-              placeholder="John Doe"
-              value={fullName}
-              onChangeText={setFullName}
-              editable={!loading}
-              error={errors.fullName || undefined}
-            />
+            {!isAuthenticated && (
+              <>
+                <PremiumInput
+                  label="Full Name"
+                  placeholder="John Doe"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  editable={!loading}
+                  error={errors.fullName || undefined}
+                />
 
-            <PremiumInput
-              label="Email"
-              placeholder="your@email.com"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              editable={!loading}
-              error={errors.email || undefined}
-            />
+                <PremiumInput
+                  label="Email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  editable={!loading}
+                  error={errors.email || undefined}
+                />
+              </>
+            )}
 
             {/* Account Type Selector */}
             <View className="mb-4">
@@ -606,25 +622,29 @@ export default function RegisterScreen() {
                   </>
                 )}
 
-            <PremiumInput
-              label="Password"
-              placeholder="••••••••"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              editable={!loading}
-              error={errors.password || undefined}
-            />
+            {!isAuthenticated && (
+              <>
+                <PremiumInput
+                  label="Password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  editable={!loading}
+                  error={errors.password || undefined}
+                />
 
-            <PremiumInput
-              label="Confirm Password"
-              placeholder="••••••••"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              editable={!loading}
-              error={errors.confirmPassword || undefined}
-            />
+                <PremiumInput
+                  label="Confirm Password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  secureTextEntry
+                  editable={!loading}
+                  error={errors.confirmPassword || undefined}
+                />
+              </>
+            )}
           </View>
 
           {/* Consent Checkbox */}
@@ -697,49 +717,55 @@ export default function RegisterScreen() {
             loading={loading}
             className="w-full mb-4"
           >
-            {loading ? 'Creating Account...' : 'Create Account'}
+            {loading 
+              ? (isAuthenticated ? 'Setting up workspace...' : 'Creating Account...') 
+              : (isAuthenticated ? 'Finish Setup' : 'Create Account')}
           </PremiumButton>
 
-          {/* Divider */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-            <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
-            <Text style={{ color: colors.muted, fontSize: 12, paddingHorizontal: 10 }}>or</Text>
-            <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
-          </View>
+          {!isAuthenticated && (
+            <>
+              {/* Divider */}
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
+                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+                <Text style={{ color: colors.muted, fontSize: 12, paddingHorizontal: 10 }}>or</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.08)' }} />
+              </View>
 
-          {/* Google Button */}
-          <AnimatedPressable
-            onPress={handleGoogleSignUp}
-            disabled={loading}
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: 50,
-              borderRadius: 14,
-              borderWidth: 1,
-              borderColor: 'rgba(255, 255, 255, 0.08)',
-              backgroundColor: 'rgba(255, 255, 255, 0.02)',
-              marginBottom: 24,
-              gap: 10,
-            }}
-          >
-            <Ionicons name="logo-google" size={18} color="#FFFFFF" />
-            <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Continue with Google</Text>
-          </AnimatedPressable>
+              {/* Google Button */}
+              <AnimatedPressable
+                onPress={handleGoogleSignUp}
+                disabled={loading}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: 50,
+                  borderRadius: 14,
+                  borderWidth: 1,
+                  borderColor: 'rgba(255, 255, 255, 0.08)',
+                  backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                  marginBottom: 24,
+                  gap: 10,
+                }}
+              >
+                <Ionicons name="logo-google" size={18} color="#FFFFFF" />
+                <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Continue with Google</Text>
+              </AnimatedPressable>
 
-          {/* Sign In Link */}
-          <View className="flex-row items-center justify-center gap-2">
-            <Text className="text-base text-muted">Already have an account?</Text>
-            <PremiumButton
-              variant="ghost"
-              size="sm"
-              onPress={handleSignIn}
-              disabled={loading}
-            >
-              Sign In
-            </PremiumButton>
-          </View>
+              {/* Sign In Link */}
+              <View className="flex-row items-center justify-center gap-2">
+                <Text className="text-base text-muted">Already have an account?</Text>
+                <PremiumButton
+                  variant="ghost"
+                  size="sm"
+                  onPress={handleSignIn}
+                  disabled={loading}
+                >
+                  Sign In
+                </PremiumButton>
+              </View>
+            </>
+          )}
         </ScrollView>
       </ScreenContainer>
     </KeyboardAvoidingView>
