@@ -165,6 +165,12 @@ export function ChatBubble({ message, onReply, onReact, onDelete, isRead }: Chat
     setMenuVisible(false);
   };
 
+  const handlePress = () => {
+    if (onDelete && (isMe || user?.role === 'admin' || user?.role === 'owner')) {
+      onDelete(message.id);
+    }
+  };
+
   const animatedBubbleStyle = useAnimatedStyle(() => ({
     transform: [
       { scale: bubbleScale.value },
@@ -178,8 +184,9 @@ export function ChatBubble({ message, onReply, onReact, onDelete, isRead }: Chat
   }));
 
   const replyIconStyle = useAnimatedStyle(() => {
-    const scale = Math.max(0.5, Math.min(1.2, swipeX.value / 50));
-    const opacity = Math.min(1, swipeX.value / 40);
+    const absX = Math.abs(swipeX.value);
+    const scale = Math.max(0.5, Math.min(1.2, absX / 50));
+    const opacity = Math.min(1, absX / 40);
     return {
       transform: [{ scale }],
       opacity,
@@ -187,13 +194,13 @@ export function ChatBubble({ message, onReply, onReact, onDelete, isRead }: Chat
   });
 
   const panGesture = Gesture.Pan()
-    .activeOffsetX([0, 10])
+    .activeOffsetX([-10, 0])
     .failOffsetY([-10, 10])
     .onUpdate((event) => {
-      swipeX.value = Math.max(0, Math.min(100, event.translationX));
+      swipeX.value = Math.min(0, Math.max(-100, event.translationX));
     })
     .onEnd(() => {
-      if (swipeX.value > 65) {
+      if (swipeX.value < -65) {
         if (onReply) {
           runOnJS(onReply)(message);
         }
@@ -211,7 +218,7 @@ export function ChatBubble({ message, onReply, onReact, onDelete, isRead }: Chat
           style={[
             {
               position: 'absolute',
-              left: 16,
+              right: 16,
               top: '50%',
               marginTop: -16,
               width: 32,
@@ -227,7 +234,7 @@ export function ChatBubble({ message, onReply, onReact, onDelete, isRead }: Chat
         >
           <Ionicons name="arrow-undo-outline" size={18} color={colors.primary} />
         </Reanimated.View>
-
+ 
         <Reanimated.View
           entering={FadeInDown.springify().mass(0.6).damping(14).stiffness(160)}
           style={[styles.wrapper, { flexDirection: isMe ? 'row-reverse' : 'row' }, swipedBubbleStyle]}
@@ -238,7 +245,7 @@ export function ChatBubble({ message, onReply, onReact, onDelete, isRead }: Chat
               <Text style={styles.avatarText}>{initials}</Text>
             </View>
           )}
-
+ 
           {/* Message Box */}
           <View style={[styles.messageBox, { alignItems: isMe ? 'flex-end' : 'flex-start' }]}>
             {!isMe && (
@@ -246,8 +253,9 @@ export function ChatBubble({ message, onReply, onReact, onDelete, isRead }: Chat
                 {message.sender?.full_name || 'System'}
               </Text>
             )}
-
+ 
             <Pressable
+              onPress={handlePress}
               onLongPress={handleLongPress}
               onPressIn={handlePressIn}
               onPressOut={handlePressOut}
