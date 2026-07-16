@@ -10,9 +10,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { hasPermission } from '@/lib/permissions';
 
+import { LinearGradient } from 'expo-linear-gradient';
+
 export default function MemberProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { user } = useAuth();
+  const { user, activeWorkspace } = useAuth();
   const colors = useColors();
   const router = useRouter();
 
@@ -146,7 +148,7 @@ export default function MemberProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View className="px-6 pt-6 pb-4 flex-row items-center justify-between">
-          <View className="flex-row items-center">
+          <View className="flex-row items-center flex-1">
             <Pressable 
               onPress={() => router.back()}
               className="w-10 h-10 rounded-full items-center justify-center mr-3"
@@ -154,7 +156,7 @@ export default function MemberProfileScreen() {
             >
               <Ionicons name="arrow-back" size={20} color={colors.foreground} />
             </Pressable>
-            <Text className="text-xl font-bold text-foreground">Member Profile</Text>
+            <Text className="text-base font-bold text-foreground text-center flex-1 mr-10">Premium Enterprise Header</Text>
           </View>
           {user?.id === member.id && (
             <Pressable 
@@ -171,40 +173,73 @@ export default function MemberProfileScreen() {
           )}
         </View>
 
-        {/* Profile Info */}
-        <View className="px-6 py-6 items-center">
-          <View className="relative mb-6">
-            {member.avatar_url ? (
-              <Image source={{ uri: member.avatar_url }} className="w-32 h-32 rounded-full" />
-            ) : (
-              <View className="w-32 h-32 rounded-full items-center justify-center bg-primary/20">
-                <Text className="text-primary font-bold text-5xl">
-                  {member.full_name?.charAt(0) || '?'}
+        {/* Profile Info Card styled after design image */}
+        <View style={styles.glassCard}>
+          <LinearGradient
+            colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)']}
+            style={styles.gradientCard}
+          >
+            {/* Decorative background shapes */}
+            <View style={styles.decoCircle1} />
+            <View style={styles.decoCircle2} />
+
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+              {/* Avatar Column */}
+              <View style={styles.avatarContainer}>
+                {member.avatar_url ? (
+                  <Image source={{ uri: member.avatar_url }} style={styles.avatarImage} />
+                ) : (
+                  <View style={[styles.avatarPlaceholder, { backgroundColor: `${colors.primary}20` }]}>
+                    <Text style={[styles.avatarPlaceholderText, { color: colors.primary }]}>
+                      {member.full_name?.charAt(0) || '?'}
+                    </Text>
+                  </View>
+                )}
+                {/* Active/Online indicator status badge */}
+                <View style={[styles.onlineDot, { borderColor: colors.background }]} />
+              </View>
+
+              {/* Text Info Column */}
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={[styles.profileName, { color: colors.foreground }]}>
+                  {member.full_name}
+                </Text>
+                <Text style={[styles.profileTitle, { color: colors.muted }]}>
+                  {stats.roles[0] || 'Member'}
+                </Text>
+                <Text style={[styles.profileOrg, { color: colors.muted }]}>
+                  {stats.workspaces[0] || activeWorkspace?.name || 'LeakQoara'} • {member.department || 'Engineering'}
                 </Text>
               </View>
-            )}
-            <View className="absolute bottom-1 right-2 w-6 h-6 rounded-full bg-success border-4" style={{ borderColor: colors.background }} />
-          </View>
-          
-          <Text className="text-2xl font-bold text-foreground mb-2">{member.full_name}</Text>
-          
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, justifyContent: 'center', marginVertical: 8 }}>
-            {stats.roles.map((r: string) => (
-              <RoleBadge key={r} role={r as any} size="sm" />
-            ))}
-          </View>
-          
-          {stats.workspaces.length > 0 && (
-            <Text className="text-base text-muted mt-1 font-medium">
-              Workspaces: {stats.workspaces.join(', ')}
-            </Text>
-          )}
+            </View>
+          </LinearGradient>
+        </View>
 
-          {member.department && (
-            <Text className="text-base text-muted mt-1 font-medium">
-              Department: {member.department}
-            </Text>
-          )}
+        {/* Action Menu List styled after design image */}
+        <View className="px-6 mb-6">
+          <Pressable className="flex-row items-center justify-between p-4 rounded-2xl border border-border mb-3" style={{ backgroundColor: colors.surface }}>
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+              <Text className="text-base text-foreground font-semibold">Premier on shade</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Pressable>
+
+          <Pressable className="flex-row items-center justify-between p-4 rounded-2xl border border-border mb-3" style={{ backgroundColor: colors.surface }}>
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="people-outline" size={20} color={colors.primary} />
+              <Text className="text-base text-foreground font-semibold">Recut fraction</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Pressable>
+
+          <Pressable className="flex-row items-center justify-between p-4 rounded-2xl border border-border" style={{ backgroundColor: colors.surface }}>
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="business-outline" size={20} color={colors.primary} />
+              <Text className="text-base text-foreground font-semibold">Divergre Oustrations</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Pressable>
         </View>
 
         {/* Dynamic Scoped Stats / Assignments */}
@@ -364,3 +399,88 @@ export default function MemberProfileScreen() {
     </ScreenContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  glassCard: {
+    marginHorizontal: 24,
+    borderRadius: 24,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 8,
+    marginBottom: 24,
+  },
+  gradientCard: {
+    padding: 24,
+    position: 'relative',
+    backgroundColor: '#1E293B',
+  },
+  decoCircle1: {
+    position: 'absolute',
+    top: -50,
+    right: -30,
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+  },
+  decoCircle2: {
+    position: 'absolute',
+    bottom: -60,
+    left: -40,
+    width: 160,
+    height: 160,
+    borderRadius: 80,
+    backgroundColor: 'rgba(255,255,255,0.02)',
+  },
+  avatarContainer: {
+    position: 'relative',
+  },
+  avatarImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  avatarPlaceholder: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  avatarPlaceholderText: {
+    fontSize: 32,
+    fontWeight: '800',
+  },
+  onlineDot: {
+    position: 'absolute',
+    bottom: 2,
+    right: 2,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#10B981',
+    borderWidth: 3,
+  },
+  profileName: {
+    fontSize: 22,
+    fontWeight: '800',
+    letterSpacing: -0.5,
+  },
+  profileTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  profileOrg: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+});
