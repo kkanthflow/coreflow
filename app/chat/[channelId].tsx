@@ -23,7 +23,19 @@ import { PremiumInput } from '@/components/ui/premium-input';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
-import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync } from 'expo-audio';
+import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync, AudioModule } from 'expo-audio';
+
+// Mock AudioRecorder if the native module is not linked/available in the current client build
+if (AudioModule && !AudioModule.AudioRecorder) {
+  (AudioModule as any).AudioRecorder = class DummyRecorder {
+    constructor() {}
+    prepareToRecordAsync() { return Promise.resolve(); }
+    record() {}
+    stop() { return Promise.resolve(); }
+    getStatus() { return { canRecord: false, isRecording: false, durationMillis: 0 }; }
+    addListener() { return { remove: () => {} }; }
+  } as any;
+}
 import {
   initializeUserKeys,
   generateRandomSymmetricKey,
@@ -562,6 +574,14 @@ export default function ChannelChatScreen() {
 
   const startRecording = async () => {
     try {
+      const isDummy = (AudioModule as any)?.AudioRecorder?.name === 'DummyRecorder';
+      if (isDummy) {
+        Alert.alert(
+          'Preview Build Compiling',
+          'Voice messaging requires native audio features. Your custom preview build is currently building in the background. Please wait for the build to complete and install the updated build.'
+        );
+        return;
+      }
       const { status } = await requestRecordingPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Denied', 'Microphone permission is required to record voice messages.');
@@ -1121,27 +1141,25 @@ export default function ChannelChatScreen() {
                 containerClassName="flex-1 mr-3"
                 editable={!sending}
               />
-              {inputText.trim() ? (
-                <Pressable
-                  onPress={handleSend}
-                  disabled={sending}
-                  style={[
-                    styles.sendBtn,
-                    {
-                      backgroundColor: colors.primary,
-                      opacity: sending ? 0.7 : 1,
-                    },
-                  ]}
-                >
-                  {sending ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Ionicons name="send" size={16} color="#FFFFFF" />
-                  )}
-                </Pressable>
-              ) : (
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                 <GestureDetector gesture={micGesture}>
                   <View
+                    style={[
+                      styles.sendBtn,
+                      {
+                        backgroundColor: '#4B5563',
+                        opacity: sending ? 0.7 : 1,
+                      },
+                    ]}
+                  >
+                    <Ionicons name="mic" size={18} color="#FFFFFF" />
+                  </View>
+                </GestureDetector>
+
+                {inputText.trim() ? (
+                  <Pressable
+                    onPress={handleSend}
+                    disabled={sending}
                     style={[
                       styles.sendBtn,
                       {
@@ -1150,10 +1168,14 @@ export default function ChannelChatScreen() {
                       },
                     ]}
                   >
-                    <Ionicons name="mic" size={18} color="#FFFFFF" />
-                  </View>
-                </GestureDetector>
-              )}
+                    {sending ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Ionicons name="send" size={16} color="#FFFFFF" />
+                    )}
+                  </Pressable>
+                ) : null}
+              </View>
             </>
           )}
         </View>
