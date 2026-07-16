@@ -1174,6 +1174,21 @@ export default function ChannelChatScreen() {
             )
           ) : (
             <>
+              <GestureDetector gesture={micGesture}>
+                <View
+                  style={[
+                    styles.sendBtn,
+                    {
+                      backgroundColor: '#4B5563',
+                      opacity: sending ? 0.7 : 1,
+                      marginRight: 8,
+                    },
+                  ]}
+                >
+                  <Ionicons name="mic" size={18} color="#FFFFFF" />
+                </View>
+              </GestureDetector>
+
               <PremiumInput
                 placeholder="Type a message..."
                 value={inputText}
@@ -1181,41 +1196,24 @@ export default function ChannelChatScreen() {
                 containerClassName="flex-1 mr-3"
                 editable={!sending}
               />
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <GestureDetector gesture={micGesture}>
-                  <View
-                    style={[
-                      styles.sendBtn,
-                      {
-                        backgroundColor: '#4B5563',
-                        opacity: sending ? 0.7 : 1,
-                      },
-                    ]}
-                  >
-                    <Ionicons name="mic" size={18} color="#FFFFFF" />
-                  </View>
-                </GestureDetector>
 
-                {inputText.trim() ? (
-                  <Pressable
-                    onPress={handleSend}
-                    disabled={sending}
-                    style={[
-                      styles.sendBtn,
-                      {
-                        backgroundColor: colors.primary,
-                        opacity: sending ? 0.7 : 1,
-                      },
-                    ]}
-                  >
-                    {sending ? (
-                      <ActivityIndicator size="small" color="#FFFFFF" />
-                    ) : (
-                      <Ionicons name="send" size={16} color="#FFFFFF" />
-                    )}
-                  </Pressable>
-                ) : null}
-              </View>
+              <Pressable
+                onPress={handleSend}
+                disabled={sending || !inputText.trim()}
+                style={[
+                  styles.sendBtn,
+                  {
+                    backgroundColor: colors.primary,
+                    opacity: sending || !inputText.trim() ? 0.4 : 1,
+                  },
+                ]}
+              >
+                {sending ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Ionicons name="send" size={16} color="#FFFFFF" />
+                )}
+              </Pressable>
             </>
           )}
         </View>
