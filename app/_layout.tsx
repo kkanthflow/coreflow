@@ -45,10 +45,15 @@ async function getOrInitDeviceId(): Promise<string> {
 Notifications.setNotificationHandler({
   handleNotification: async (notification) => {
     try {
-      const senderId = notification.request.content.data?.senderId as string | undefined;
+      const data = notification.request.content.data;
+      const senderId = data?.senderId as string | undefined;
+      const notifType = data?.type as string | undefined;
+      const entityId = data?.entity_id as string | undefined;
+
       const sessionRes = await supabase.auth.getSession();
       const currentUserId = sessionRes.data.session?.user?.id;
 
+      // Always suppress self-sent notifications
       if (senderId && currentUserId && senderId.toLowerCase() === currentUserId.toLowerCase()) {
         return {
           shouldShowAlert: false,
@@ -58,8 +63,20 @@ Notifications.setNotificationHandler({
           shouldShowList: false,
         };
       }
+
+      // Suppress foreground FCM chat notifications if the user is actively viewing that channel
+      // The Realtime listener handles foreground chat notifications instead
+      if (notifType === 'chat' && entityId && (global as any).activeChannelId === entityId) {
+        return {
+          shouldShowAlert: false,
+          shouldPlaySound: false,
+          shouldSetBadge: false,
+          shouldShowBanner: false,
+          shouldShowList: false,
+        };
+      }
     } catch (e) {
-      console.warn('[NotificationHandler] Error checking self-message:', e);
+      console.warn('[NotificationHandler] Error in notification handler:', e);
     }
 
     return {
@@ -71,6 +88,7 @@ Notifications.setNotificationHandler({
     };
   },
 });
+
 
 const DEFAULT_WEB_INSETS: EdgeInsets = { top: 0, right: 0, bottom: 0, left: 0 };
 const DEFAULT_WEB_FRAME: Rect = { x: 0, y: 0, width: 0, height: 0 };

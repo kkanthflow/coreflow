@@ -205,6 +205,8 @@ export type PushNotificationData = {
   entityType?: string;
   entityId?: string;
   actionUrl?: string;
+  /** For chat messages: the sender's user ID. Used to exclude the sender's own devices from receiving a push. */
+  senderId?: string;
 };
 
 export function dispatchFCMPush(data: PushNotificationData) {
@@ -247,11 +249,17 @@ export function dispatchFCMPush(data: PushNotificationData) {
         }
       }
 
-      // 2. Fetch all active push tokens for this user
-      const tokensResult = await pool.query(
-        "SELECT token, device_id, platform FROM public.user_push_tokens WHERE user_id = $1 AND is_enabled = true",
-        [data.userId]
-      );
+      // 2. Fetch all active push tokens for this user, excluding the sender's own devices
+      let tokensQuery = "SELECT token, device_id, platform FROM public.user_push_tokens WHERE user_id = $1 AND is_enabled = true";
+      let tokensParams: any[] = [data.userId];
+
+      if (data.senderId && data.senderId !== data.userId) {
+        // For chat: also exclude any tokens registered to the sender (shouldn't happen but extra safety)
+        tokensQuery += " AND token NOT IN (SELECT token FROM public.user_push_tokens WHERE user_id = $2)";
+        tokensParams.push(data.senderId);
+      }
+
+      const tokensResult = await pool.query(tokensQuery, tokensParams);
 
       const deviceTokens = tokensResult.rows;
       if (deviceTokens.length === 0) {

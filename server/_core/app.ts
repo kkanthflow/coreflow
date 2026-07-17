@@ -84,7 +84,7 @@ export function createExpressApp() {
       return;
     }
 
-    const { id, user_id, title, message, type, entity_type, entity_id, action_url } = req.body;
+    const { id, user_id, title, message, type, entity_type, entity_id, action_url, sender_id } = req.body;
     if (!id || !user_id || !title || !message) {
       res.status(400).json({ error: "Missing required payload parameters" });
       return;
@@ -101,6 +101,7 @@ export function createExpressApp() {
       entityType: entity_type,
       entityId: entity_id,
       actionUrl: action_url,
+      senderId: sender_id || undefined,
     });
 
     res.json({ success: true, status: "queued" });
