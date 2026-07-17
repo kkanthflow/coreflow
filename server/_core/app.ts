@@ -17,14 +17,17 @@ export function createExpressApp() {
   const mandatorySecrets = [
     "DATABASE_URL",
     "JWT_SECRET",
-    "BUILT_IN_FORGE_API_URL",
-    "BUILT_IN_FORGE_API_KEY",
   ];
   
   for (const secret of mandatorySecrets) {
     if (!process.env[secret]) {
       throw new Error(`[CRITICAL] Server startup failed: Missing mandatory environment variable "${secret}".`);
     }
+  }
+
+  // Warn about optional AI Forge features if keys are missing
+  if (!process.env.BUILT_IN_FORGE_API_URL || !process.env.BUILT_IN_FORGE_API_KEY) {
+    console.warn("[WARN] Optional AI features (voice transcription, image generation) are disabled: BUILT_IN_FORGE_API_URL or BUILT_IN_FORGE_API_KEY is missing.");
   }
 
   const app = express();
