@@ -68,11 +68,11 @@ export function MemberAssignModal({
         .from('user_organizations')
         .select(`
           user_id,
-          users:users!user_organizations_user_id_fkey!inner(
+          users:user_id(
             id, full_name, email, role, avatar_url
           )
         `)
-        .eq('organization_id', orgId);
+        .eq('org_id', orgId);
 
       // Fetch already-assigned active members
       const { data: assigned } = await supabase
@@ -350,7 +350,7 @@ export function MemberAssignModal({
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1, backgroundColor: colors.background }}
       >
         {/* Header */}

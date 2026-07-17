@@ -29,7 +29,7 @@ const schemeFromBundleId = `manus${timestamp}`;
 const env = {
   // App branding - update these values directly (do not use env vars)
   appName: "CoreFlow",
-  appSlug: "coreflow",
+  appSlug: "krid",
   // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
   // Leave empty to use the default icon from assets/images/icon.png
   logoUrl: "",
@@ -41,6 +41,7 @@ const env = {
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
+  owner: "pond12345s-team",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
@@ -168,7 +169,7 @@ const config: ExpoConfig = {
   },
   extra: {
     eas: {
-      projectId: "4c5173e9-30a8-474f-9fb7-cab0c9dbf3da"
+      projectId: "e345d05e-49d4-4a7f-a79b-a4104dec17d5"
     }
   }
 };
