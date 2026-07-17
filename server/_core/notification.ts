@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { ENV } from "./env";
-const admin = require("firebase-admin");
+import { initializeApp, getApps, cert, App } from "firebase-admin/app";
+import { getMessaging, MulticastMessage } from "firebase-admin/messaging";
 import { Pool } from "pg";
 
 export type NotificationPayload = {
@@ -125,10 +126,21 @@ function getDbPool(): Pool {
   return dbPool;
 }
 
-let fcmApp: any = null;
-function getFirebaseAdmin() {
+let fcmApp: App | null = null;
+
+function getFirebaseApp(): App | null {
+  // Return cached app if already initialized in this process
   if (fcmApp) return fcmApp;
 
+  // Guard against duplicate initialization on warm Vercel lambdas
+  const existingApps = getApps();
+  if (existingApps.length > 0) {
+    fcmApp = existingApps[0];
+    console.log("[FCM] Reusing existing Firebase app instance.");
+    return fcmApp;
+  }
+
+  // Resolve service account credentials
   let serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT;
   const b64Key = process.env.FIREBASE_SERVICE_ACCOUNT_B64;
   if (b64Key && !serviceAccountString) {
@@ -144,26 +156,26 @@ function getFirebaseAdmin() {
     const path = require("path");
     const localKeyPath = path.join(process.cwd(), "coreflow-2af5c-cc11e0599b34.json");
     if (fs.existsSync(localKeyPath)) {
-      const localKey = JSON.parse(fs.readFileSync(localKeyPath, "utf8"));
-      fcmApp = admin.initializeApp({
-        credential: admin.credential.cert(localKey),
-      });
-      console.log("[FCM] Firebase Admin SDK initialized successfully via local service account key.");
-      return fcmApp;
+      try {
+        const localKey = JSON.parse(fs.readFileSync(localKeyPath, "utf8"));
+        fcmApp = initializeApp({ credential: cert(localKey) });
+        console.log("[FCM] Firebase app initialized via local service account key.");
+        return fcmApp;
+      } catch (e) {
+        console.error("[FCM] Failed to initialize Firebase app from local key:", e);
+      }
     }
-    console.warn("[FCM] FIREBASE_SERVICE_ACCOUNT environment variable is not set and local service account key is missing.");
+    console.warn("[FCM] FIREBASE_SERVICE_ACCOUNT env var is not set and local key file is missing.");
     return null;
   }
 
   try {
     const serviceAccount = JSON.parse(serviceAccountString);
-    fcmApp = admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    console.log("[FCM] Firebase Admin SDK initialized successfully via environment variable.");
+    fcmApp = initializeApp({ credential: cert(serviceAccount) });
+    console.log("[FCM] Firebase app initialized via environment variable.");
     return fcmApp;
   } catch (err) {
-    console.error("[FCM] Failed to parse FIREBASE_SERVICE_ACCOUNT JSON:", err);
+    console.error("[FCM] Failed to initialize Firebase app:", err);
     return null;
   }
 }
@@ -212,16 +224,18 @@ export type PushNotificationData = {
 export function dispatchFCMPush(data: PushNotificationData) {
   pushQueue.enqueue(async () => {
     const pool = getDbPool();
-    const fb = getFirebaseAdmin();
+    const app = getFirebaseApp();
 
-    if (!fb) {
-      console.error("[FCM] Firebase Admin SDK is not initialized. Cannot dispatch push.");
+    if (!app) {
+      console.error("[FCM] Firebase app is not initialized. Cannot dispatch push.");
       await pool.query(
-        "UPDATE public.notifications SET delivery_status = 'failed', delivery_error = 'Firebase SDK not initialized' WHERE id = $1",
+        "UPDATE public.notifications SET delivery_status = 'failed', delivery_error = 'Firebase app not initialized' WHERE id = $1",
         [data.id]
       );
       return;
     }
+
+    const messaging = getMessaging(app);
 
     try {
       // 1. Check user notification preferences before sending
@@ -277,9 +291,14 @@ export function dispatchFCMPush(data: PushNotificationData) {
         [data.id]
       );
 
-      // 3. Build payload for Firebase
+      // 3. Extract token strings from device rows
       const tokens = deviceTokens.map((t) => t.token);
-      const payload: any = {
+      console.log(`[FCM] Dispatching to ${tokens.length} device(s) for user ${data.userId}`);
+
+
+
+      // 4. Build and send multicast message using firebase-admin v14 modular API
+      const multicastMessage: MulticastMessage = {
         tokens,
         notification: {
           title: data.title,
@@ -287,23 +306,31 @@ export function dispatchFCMPush(data: PushNotificationData) {
         },
         data: {
           id: data.id,
-          type: data.type,
+          type: data.type || "",
           entity_type: data.entityType || "",
           entity_id: data.entityId || "",
           action_url: data.actionUrl || "",
+          sender_id: data.senderId || "",
         },
         android: {
           priority: "high",
           notification: {
-            channelId: data.type === "chat" ? "chat" : data.type === "meeting" ? "meetings" : data.type === "task" ? "tasks" : "default",
+            channelId: data.type === "chat" ? "chat" : data.type === "meeting" ? "meetings" : data.type === "task" || data.type === "task_assigned" ? "tasks" : "default",
             sound: "default",
-            clickAction: "default",
+            clickAction: "FLUTTER_NOTIFICATION_CLICK",
+          },
+        },
+        apns: {
+          payload: {
+            aps: {
+              sound: "default",
+              badge: 1,
+            },
           },
         },
       };
 
-      // 4. Send multicast message
-      const response = await sendWithRetry(fb, payload);
+      const response = await sendWithRetry(messaging, multicastMessage);
 
       // 5. Audit results and self-heal unregistered tokens
       const tokensToDelete: string[] = [];
@@ -356,18 +383,18 @@ export function dispatchFCMPush(data: PushNotificationData) {
 }
 
 async function sendWithRetry(
-  fb: any,
-  payload: any,
+  messaging: ReturnType<typeof getMessaging>,
+  payload: MulticastMessage,
   attempt = 1
 ): Promise<any> {
   try {
-    return await fb.messaging().sendEachForMulticast(payload);
+    return await messaging.sendEachForMulticast(payload);
   } catch (error: any) {
     const isTransient = error.code === "messaging/internal-error" || error.code === "messaging/server-unavailable";
     if (isTransient && attempt < 3) {
       const delay = Math.pow(2, attempt) * 1000;
       await new Promise((resolve) => setTimeout(resolve, delay));
-      return sendWithRetry(fb, payload, attempt + 1);
+      return sendWithRetry(messaging, payload, attempt + 1);
     }
     throw error;
   }
