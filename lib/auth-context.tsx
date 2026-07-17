@@ -182,7 +182,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
           ? primaryOrg.organizations[0]
           : null) as { id: string; name: string } | null;
 
-      const newUser = {
+      // newUser is built after orgWorkspaces resolution so organizationId is always populated.
+      // (will be updated below once orgWorkspaces fallback is resolved)
+      const newUser: any = {
         id: data.id,
         email: data.email,
         fullName: data.full_name,
@@ -200,8 +202,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
         preferences,
       };
 
-      setUser(newUser);
-      AsyncStorage.setItem('cached_user_profile', JSON.stringify(newUser)).catch(() => {});
+      // Do NOT call setUser here yet — we wait until after orgWorkspaces fallback
+      // so we can backfill organizationId if needed.
 
       // Build available workspaces
       const independentWS: Workspace = {
@@ -283,6 +285,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
 
       console.log('[AuthContext] orgMemberships:', orgMemberships.length, 'orgWorkspaces:', orgWorkspaces.length, orgWorkspaces.map(w => `${w.name}[${w.roles}]`));
+
+      // Backfill organizationId from the first org workspace if it wasn't set from user_organizations.
+      // This covers the fallback path (workspace_members) where orgData is null.
+      if (!newUser.organizationId && orgWorkspaces.length > 0) {
+        const firstOrgWs = orgWorkspaces[0];
+        if (firstOrgWs.id !== 'independent') {
+          newUser.organizationId = firstOrgWs.id;
+          newUser.organizationName = firstOrgWs.name?.replace(' Organization', '') || firstOrgWs.name;
+          console.log('[AuthContext] Backfilled organizationId from workspace:', newUser.organizationId);
+        }
+      }
+
+      // Now set user with the complete organizationId (including fallback)
+      setUser(newUser);
+      AsyncStorage.setItem('cached_user_profile', JSON.stringify(newUser)).catch(() => {});
 
       // Org members default to their org workspace; purely independent users default to independent.
       const hasOrgMembership = orgWorkspaces.length > 0;

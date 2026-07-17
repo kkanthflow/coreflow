@@ -149,7 +149,7 @@ const STATUS_FILTERS = [
 ];
 
 export default function ProjectsScreen() {
-  const { user } = useAuth();
+  const { user, activeWorkspace } = useAuth();
   const router   = useRouter();
   const colors   = useColors();
   const colorScheme = useColorScheme();
@@ -186,8 +186,15 @@ export default function ProjectsScreen() {
   }, []);
 
   const fetchProjects = useCallback(async () => {
-    const isIndependent = user?.role === 'freelancer' && user?.freelancerType === 'independent';
-    if (!user?.organizationId && !isIndependent) { setLoading(false); return; }
+    const isIndependent = user?.role === 'freelancer' && user?.freelancerType === 'independent'
+      && activeWorkspace?.type === 'independent';
+
+    // Resolve the effective org ID — same logic as new.tsx to ensure consistency
+    const effectiveOrgId = activeWorkspace && activeWorkspace.id !== 'independent'
+      ? activeWorkspace.id
+      : user?.organizationId || null;
+
+    if (!effectiveOrgId && !isIndependent) { setLoading(false); return; }
     setLoading(true);
     try {
       let query = supabase
@@ -198,12 +205,13 @@ export default function ProjectsScreen() {
         .order('created_at', { ascending: false });
 
       if (isIndependent) {
-        query = query.eq('owner_id', user.id);
+        query = query.eq('owner_id', user!.id);
       } else {
-        query = query.eq('org_id', user.organizationId);
+        query = query.eq('org_id', effectiveOrgId!);
       }
 
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) console.error('Projects fetch error:', error);
 
       setProjects((data || []).map((p: any) => {
         const tasks = p.tasks || [];
@@ -215,7 +223,7 @@ export default function ProjectsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user, activeWorkspace]);
 
   useFocusEffect(useCallback(() => { fetchProjects(); }, [fetchProjects]));
 
