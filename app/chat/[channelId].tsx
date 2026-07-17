@@ -24,18 +24,6 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import { useAudioRecorder, RecordingPresets, requestRecordingPermissionsAsync, AudioModule } from 'expo-audio';
-
-// Mock AudioRecorder if the native module is not linked/available in the current client build
-if (AudioModule && !AudioModule.AudioRecorder) {
-  (AudioModule as any).AudioRecorder = class DummyRecorder {
-    constructor() {}
-    prepareToRecordAsync() { return Promise.resolve(); }
-    record() {}
-    stop() { return Promise.resolve(); }
-    getStatus() { return { canRecord: false, isRecording: false, durationMillis: 0 }; }
-    addListener() { return { remove: () => {} }; }
-  } as any;
-}
 import {
   initializeUserKeys,
   generateRandomSymmetricKey,
@@ -66,7 +54,8 @@ export default function ChannelChatScreen() {
   const [isLocked, setIsLocked] = useState(false);
   const [showLockPrompt, setShowLockPrompt] = useState(false);
   const recordingTimerRef = useRef<any>(null);
-  const recorderRef = useRef<any>(null);
+  // Use the proper expo-audio hook for recording
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
 
   const listRef = useRef<FlatList>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -572,58 +561,17 @@ export default function ChannelChatScreen() {
     }
   };
 
-  const getPlatformRecordingOptions = () => {
-    const common = {
-      extension: '.m4a',
-      sampleRate: 44100,
-      numberOfChannels: 2,
-      bitRate: 128000,
-      isMeteringEnabled: false,
-    };
-    if (Platform.OS === 'android') {
-      return {
-        ...common,
-        outputFormat: 'mpeg4',
-        audioEncoder: 'aac',
-      };
-    } else if (Platform.OS === 'ios') {
-      return {
-        ...common,
-        outputFormat: 'aac ',
-        audioQuality: 0x7f,
-        linearPCMBitDepth: 16,
-        linearPCMIsBigEndian: false,
-        linearPCMIsFloat: false,
-      };
-    } else {
-      return {
-        ...common,
-        mimeType: 'audio/webm',
-        bitsPerSecond: 128000,
-      };
-    }
-  };
+
 
   const startRecording = async () => {
     try {
-      const isDummy = (AudioModule as any)?.AudioRecorder?.name === 'DummyRecorder';
-      if (isDummy) {
-        Alert.alert(
-          'Preview Build Compiling',
-          'Voice messaging requires native audio features. Your custom preview build is currently building in the background. Please wait for the build to complete and install the updated build.'
-        );
-        return;
-      }
       const { status } = await requestRecordingPermissionsAsync();
       if (status !== 'granted') {
         Alert.alert('Permission Denied', 'Microphone permission is required to record voice messages.');
         return;
       }
-      if (!recorderRef.current) {
-        recorderRef.current = new AudioModule.AudioRecorder(getPlatformRecordingOptions());
-      }
-      await recorderRef.current.prepareToRecordAsync();
-      recorderRef.current.record();
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
       setIsRecording(true);
       setRecordingSeconds(0);
       recordingTimerRef.current = setInterval(() => {
@@ -640,14 +588,12 @@ export default function ChannelChatScreen() {
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
       }
-      if (recorderRef.current) {
-        await recorderRef.current.stop();
-      }
+      await audioRecorder.stop();
       setIsRecording(false);
       setIsLocked(false);
       setShowLockPrompt(false);
 
-      const uri = recorderRef.current?.uri;
+      const uri = audioRecorder.uri;
       if (!uri) return;
 
       setSending(true);
@@ -705,7 +651,7 @@ export default function ChannelChatScreen() {
       setMessages((prev) => [optimisticMessage, ...prev]);
 
       const { data: newMsg, error: sendError } = await supabase
-        .from('messages')
+        .from('chat_messages')
         .insert({
           channel_id: channelId,
           sender_id: user?.id,
@@ -715,7 +661,7 @@ export default function ChannelChatScreen() {
         })
         .select(`
           *,
-          sender:users!messages_sender_id_fkey(id, full_name, avatar_url)
+          sender:users!chat_messages_sender_id_fkey(id, full_name, avatar_url)
         `)
         .single();
 
@@ -738,9 +684,7 @@ export default function ChannelChatScreen() {
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
       }
-      if (recorderRef.current) {
-        await recorderRef.current.stop();
-      }
+      await audioRecorder.stop();
       setIsRecording(false);
       setIsLocked(false);
       setShowLockPrompt(false);

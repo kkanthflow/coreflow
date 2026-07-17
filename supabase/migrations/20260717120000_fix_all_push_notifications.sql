@@ -10,7 +10,8 @@
 -- ─────────────────────────────────────────────────────────────────────────────
 
 -- 1. Add sender_id column to notifications for self-message suppression
-ALTER TABLE public.notifications ADD COLUMN IF NOT EXISTS sender_id UUID REFERENCES public.users(id) ON DELETE SET NULL;
+ALTER TABLE public.notifications
+ADD COLUMN IF NOT EXISTS sender_id UUID REFERENCES public.users (id) ON DELETE SET NULL;
 
 -- 2. Fix chat message trigger: insert notifications with sender_id + entity info
 CREATE OR REPLACE FUNCTION public.on_new_chat_message()
@@ -62,8 +63,12 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
 ALTER FUNCTION public.on_new_chat_message() SET search_path = public, pg_temp;
-GRANT EXECUTE ON FUNCTION public.on_new_chat_message() TO authenticated, service_role;
+
+GRANT
+EXECUTE ON FUNCTION public.on_new_chat_message () TO authenticated,
+service_role;
 
 -- 3. Fix task assignment trigger: add entity_id, entity_type, action_url
 CREATE OR REPLACE FUNCTION public.notify_task_assignee()
@@ -89,8 +94,12 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
 ALTER FUNCTION public.notify_task_assignee() SET search_path = public, pg_temp;
-GRANT EXECUTE ON FUNCTION public.notify_task_assignee() TO authenticated, service_role;
+
+GRANT
+EXECUTE ON FUNCTION public.notify_task_assignee () TO authenticated,
+service_role;
 
 -- 4. Fix meeting notifications trigger (add proper entity info)
 CREATE OR REPLACE FUNCTION public.notify_meeting_attendees()
@@ -139,11 +148,16 @@ BEGIN
   RETURN COALESCE(NEW, OLD);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
 ALTER FUNCTION public.notify_meeting_attendees() SET search_path = public, pg_temp;
-GRANT EXECUTE ON FUNCTION public.notify_meeting_attendees() TO authenticated, service_role;
+
+GRANT
+EXECUTE ON FUNCTION public.notify_meeting_attendees () TO authenticated,
+service_role;
 
 -- Re-register meeting trigger
 DROP TRIGGER IF EXISTS tr_notify_meeting_attendees ON public.meetings;
+
 CREATE TRIGGER tr_notify_meeting_attendees
   AFTER INSERT OR UPDATE ON public.meetings
   FOR EACH ROW
@@ -183,11 +197,16 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
 ALTER FUNCTION public.on_new_notification_inserted() SET search_path = public, pg_temp;
-GRANT EXECUTE ON FUNCTION public.on_new_notification_inserted() TO authenticated, service_role;
+
+GRANT
+EXECUTE ON FUNCTION public.on_new_notification_inserted () TO authenticated,
+service_role;
 
 -- Ensure trigger is registered (in case it was dropped)
 DROP TRIGGER IF EXISTS tr_push_notification_on_insert ON public.notifications;
+
 CREATE TRIGGER tr_push_notification_on_insert
   AFTER INSERT ON public.notifications
   FOR EACH ROW
@@ -274,10 +293,15 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
 ALTER FUNCTION public.notify_invoice_updates() SET search_path = public, pg_temp;
-GRANT EXECUTE ON FUNCTION public.notify_invoice_updates() TO authenticated, service_role;
+
+GRANT
+EXECUTE ON FUNCTION public.notify_invoice_updates () TO authenticated,
+service_role;
 
 DROP TRIGGER IF EXISTS tr_notify_invoice_updates ON public.invoices;
+
 CREATE TRIGGER tr_notify_invoice_updates
   AFTER INSERT OR UPDATE ON public.invoices
   FOR EACH ROW
@@ -309,10 +333,15 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+
 ALTER FUNCTION public.notify_project_member_added() SET search_path = public, pg_temp;
-GRANT EXECUTE ON FUNCTION public.notify_project_member_added() TO authenticated, service_role;
+
+GRANT
+EXECUTE ON FUNCTION public.notify_project_member_added () TO authenticated,
+service_role;
 
 DROP TRIGGER IF EXISTS tr_notify_project_member_added ON public.project_members;
+
 CREATE TRIGGER tr_notify_project_member_added
   AFTER INSERT ON public.project_members
   FOR EACH ROW
