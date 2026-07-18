@@ -122,11 +122,16 @@ export default function MeetingDetailsScreen() {
                 
               await Promise.all(notificationPromises);
 
-              router.back();
+              setTimeout(() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/(tabs)/home');
+                }
+              }, 100);
             } catch (err) {
               console.error('Error cancelling meeting:', err);
               Alert.alert('Error', 'Failed to cancel the meeting.');
-            } finally {
               setIsCancelling(false);
             }
           }
