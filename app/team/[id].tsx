@@ -156,7 +156,9 @@ export default function MemberProfileScreen() {
             >
               <Ionicons name="arrow-back" size={20} color={colors.foreground} />
             </Pressable>
-            <Text className="text-base font-bold text-foreground text-center flex-1 mr-10">Premium Enterprise Header</Text>
+            <Text className="text-base font-bold text-foreground text-center flex-1 mr-10">
+              {user?.id === member.id ? 'My Profile' : 'Member Profile'}
+            </Text>
           </View>
           {user?.id === member.id && (
             <Pressable 
@@ -217,29 +219,43 @@ export default function MemberProfileScreen() {
 
         {/* Action Menu List styled after design image */}
         <View className="px-6 mb-6">
-          <Pressable className="flex-row items-center justify-between p-4 rounded-2xl border border-border mb-3" style={{ backgroundColor: colors.surface }}>
-            <View className="flex-row items-center gap-3">
-              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
-              <Text className="text-base text-foreground font-semibold">Premier on shade</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-          </Pressable>
+          {user?.id === member.id ? (
+            <>
+              <Pressable onPress={() => router.push('/settings')} className="flex-row items-center justify-between p-4 rounded-2xl border border-border mb-3" style={{ backgroundColor: colors.surface }}>
+                <View className="flex-row items-center gap-3">
+                  <Ionicons name="settings-outline" size={20} color={colors.primary} />
+                  <Text className="text-base text-foreground font-semibold">Settings</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+              </Pressable>
 
-          <Pressable className="flex-row items-center justify-between p-4 rounded-2xl border border-border mb-3" style={{ backgroundColor: colors.surface }}>
-            <View className="flex-row items-center gap-3">
-              <Ionicons name="people-outline" size={20} color={colors.primary} />
-              <Text className="text-base text-foreground font-semibold">Recut fraction</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-          </Pressable>
+              <Pressable onPress={() => router.push('/notifications')} className="flex-row items-center justify-between p-4 rounded-2xl border border-border mb-3" style={{ backgroundColor: colors.surface }}>
+                <View className="flex-row items-center gap-3">
+                  <Ionicons name="notifications-outline" size={20} color={colors.primary} />
+                  <Text className="text-base text-foreground font-semibold">Notifications</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+              </Pressable>
 
-          <Pressable className="flex-row items-center justify-between p-4 rounded-2xl border border-border" style={{ backgroundColor: colors.surface }}>
-            <View className="flex-row items-center gap-3">
-              <Ionicons name="business-outline" size={20} color={colors.primary} />
-              <Text className="text-base text-foreground font-semibold">Divergre Oustrations</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-          </Pressable>
+              <Pressable onPress={() => router.push('/settings/privacy')} className="flex-row items-center justify-between p-4 rounded-2xl border border-border" style={{ backgroundColor: colors.surface }}>
+                <View className="flex-row items-center gap-3">
+                  <Ionicons name="lock-closed-outline" size={20} color={colors.primary} />
+                  <Text className="text-base text-foreground font-semibold">Privacy & Security</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <Pressable onPress={() => router.push(`/chat/new?userId=${member.id}` as any)} className="flex-row items-center justify-between p-4 rounded-2xl border border-border mb-3" style={{ backgroundColor: colors.surface }}>
+                <View className="flex-row items-center gap-3">
+                  <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
+                  <Text className="text-base text-foreground font-semibold">Send Message</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+              </Pressable>
+            </>
+          )}
         </View>
 
         {/* Dynamic Scoped Stats / Assignments */}
