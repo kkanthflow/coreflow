@@ -38,7 +38,7 @@ export default function NewMeetingScreen() {
   const colors = useColors();
   const router = useRouter();
   const { editId } = useLocalSearchParams<{ editId: string }>();
-  const { user } = useAuth();
+  const { user, activeWorkspace } = useAuth();
   const insets = useSafeAreaInsets();
 
   const [title, setTitle] = useState('');
@@ -134,6 +134,9 @@ export default function NewMeetingScreen() {
             description: description.trim() || null,
             start_time: startTime.toISOString(),
             end_time: endTime.toISOString(),
+            meeting_link_type: linkType,
+            meeting_link: (linkType !== 'coreflow' && linkType !== 'none') ? meetingLink : null,
+            location: linkType === 'none' ? location : null,
           })
           .eq('id', editId);
 
@@ -149,10 +152,14 @@ export default function NewMeetingScreen() {
         const { data: meetingData, error: meetingError } = await supabase
           .from('meetings')
           .insert({
+            workspace_id: activeWorkspace?.id,
             title: title.trim(),
             description: description.trim() || null,
             host_id: user?.id,
-            room_name: `cf-meeting-${Math.random().toString(36).substring(2, 10)}`,
+            room_name: linkType === 'coreflow' ? `cf-meeting-${Math.random().toString(36).substring(2, 10)}` : null,
+            meeting_link_type: linkType,
+            meeting_link: (linkType !== 'coreflow' && linkType !== 'none') ? meetingLink : null,
+            location: linkType === 'none' ? location : null,
             start_time: startTime.toISOString(),
             end_time: endTime.toISOString(),
             status: 'scheduled',
