@@ -6,6 +6,7 @@ import { registerStorageProxy } from "./storageProxy";
 import { registerAuthProxyRoutes } from "../security/authProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
+import meetingsRouter from "../meetings/meetings.routes";
 
 export function createExpressApp() {
   // Fallback JWT_SECRET to SUPABASE_JWT_SECRET if available
@@ -75,6 +76,7 @@ export function createExpressApp() {
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   registerAuthProxyRoutes(app);
+  app.use('/api/meetings', meetingsRouter);
 
   app.post("/api/notifications/send-push", async (req, res) => {
     const authHeader = req.headers.authorization;

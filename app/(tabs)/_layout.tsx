@@ -344,11 +344,11 @@ const styles = StyleSheet.create({
   },
   labelWrapper: {
     position: "absolute",
-    bottom: -16,
+    bottom: 12, // Moved from -16 to 12 to keep it inside the footer bounds
     alignItems: "center",
   },
   label: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "800",
     letterSpacing: 0.2,
   },

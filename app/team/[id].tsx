@@ -25,6 +25,11 @@ export default function MemberProfileScreen() {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [fullName, setFullName] = useState('');
   const [isUpdating, setIsUpdating] = useState(false);
+  
+  // Enterprise Profile Modals
+  const [isStatusModalVisible, setIsStatusModalVisible] = useState(false);
+  const [isEmailModalVisible, setIsEmailModalVisible] = useState(false);
+  const [isJoinedModalVisible, setIsJoinedModalVisible] = useState(false);
 
   const [stats, setStats] = useState<any>({
     clients: 0,
@@ -156,16 +161,11 @@ export default function MemberProfileScreen() {
             >
               <Ionicons name="arrow-back" size={20} color={colors.foreground} />
             </Pressable>
-            <Text className="text-base font-bold text-foreground text-center flex-1 mr-10">
-              {user?.id === member.id ? 'My Profile' : 'Member Profile'}
-            </Text>
+            <Text className="text-base font-bold text-foreground text-center flex-1 mr-10">Premium Enterprise Header</Text>
           </View>
           {user?.id === member.id && (
             <Pressable 
-              onPress={() => {
-                setFullName(member.full_name || '');
-                setIsEditModalVisible(true);
-              }}
+              onPress={() => router.push('/profile/edit' as any)}
               className="px-4 py-2 rounded-xl flex-row items-center gap-1.5"
               style={{ backgroundColor: colors.surface }}
             >
@@ -176,7 +176,7 @@ export default function MemberProfileScreen() {
         </View>
 
         {/* Profile Info Card styled after design image */}
-        <View style={styles.glassCard}>
+        <Pressable onPress={() => router.push(`/profile/details?id=${member.id}` as any)} style={styles.glassCard}>
           <LinearGradient
             colors={['rgba(255,255,255,0.08)', 'rgba(255,255,255,0.03)']}
             style={styles.gradientCard}
@@ -198,7 +198,9 @@ export default function MemberProfileScreen() {
                   </View>
                 )}
                 {/* Active/Online indicator status badge */}
-                <View style={[styles.onlineDot, { borderColor: colors.background }]} />
+                <Pressable onPress={() => setIsStatusModalVisible(true)} hitSlop={10}>
+                  <View style={[styles.onlineDot, { borderColor: colors.background, backgroundColor: member.presence_status === 'offline' ? '#6b7280' : member.presence_status === 'away' ? '#eab308' : member.presence_status === 'dnd' ? '#ef4444' : '#22c55e' }]} />
+                </Pressable>
               </View>
 
               {/* Text Info Column */}
@@ -215,47 +217,33 @@ export default function MemberProfileScreen() {
               </View>
             </View>
           </LinearGradient>
-        </View>
+        </Pressable>
 
         {/* Action Menu List styled after design image */}
         <View className="px-6 mb-6">
-          {user?.id === member.id ? (
-            <>
-              <Pressable onPress={() => router.push('/settings')} className="flex-row items-center justify-between p-4 rounded-2xl border border-border mb-3" style={{ backgroundColor: colors.surface }}>
-                <View className="flex-row items-center gap-3">
-                  <Ionicons name="settings-outline" size={20} color={colors.primary} />
-                  <Text className="text-base text-foreground font-semibold">Settings</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-              </Pressable>
+          <Pressable onPress={() => router.push('/security' as any)} className="flex-row items-center justify-between p-4 rounded-2xl border border-border mb-3" style={{ backgroundColor: colors.surface }}>
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.primary} />
+              <Text className="text-base text-foreground font-semibold">Privacy & Security</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Pressable>
 
-              <Pressable onPress={() => router.push('/notifications')} className="flex-row items-center justify-between p-4 rounded-2xl border border-border mb-3" style={{ backgroundColor: colors.surface }}>
-                <View className="flex-row items-center gap-3">
-                  <Ionicons name="notifications-outline" size={20} color={colors.primary} />
-                  <Text className="text-base text-foreground font-semibold">Notifications</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-              </Pressable>
+          <Pressable onPress={() => router.push('/organization' as any)} className="flex-row items-center justify-between p-4 rounded-2xl border border-border mb-3" style={{ backgroundColor: colors.surface }}>
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="people-outline" size={20} color={colors.primary} />
+              <Text className="text-base text-foreground font-semibold">Team & Organization</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Pressable>
 
-              <Pressable onPress={() => router.push('/settings/privacy')} className="flex-row items-center justify-between p-4 rounded-2xl border border-border" style={{ backgroundColor: colors.surface }}>
-                <View className="flex-row items-center gap-3">
-                  <Ionicons name="lock-closed-outline" size={20} color={colors.primary} />
-                  <Text className="text-base text-foreground font-semibold">Privacy & Security</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-              </Pressable>
-            </>
-          ) : (
-            <>
-              <Pressable onPress={() => router.push(`/chat/new?userId=${member.id}` as any)} className="flex-row items-center justify-between p-4 rounded-2xl border border-border mb-3" style={{ backgroundColor: colors.surface }}>
-                <View className="flex-row items-center gap-3">
-                  <Ionicons name="chatbubbles-outline" size={20} color={colors.primary} />
-                  <Text className="text-base text-foreground font-semibold">Send Message</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.muted} />
-              </Pressable>
-            </>
-          )}
+          <Pressable onPress={() => router.push('/workspaces' as any)} className="flex-row items-center justify-between p-4 rounded-2xl border border-border" style={{ backgroundColor: colors.surface }}>
+            <View className="flex-row items-center gap-3">
+              <Ionicons name="business-outline" size={20} color={colors.primary} />
+              <Text className="text-base text-foreground font-semibold">Organizations & Workspaces</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+          </Pressable>
         </View>
 
         {/* Dynamic Scoped Stats / Assignments */}
@@ -295,7 +283,7 @@ export default function MemberProfileScreen() {
         <View className="px-6 mb-8">
           <Text className="text-lg font-bold text-foreground mb-4">Contact Information</Text>
           <View className="p-4 rounded-2xl border border-border" style={{ backgroundColor: colors.surface }}>
-            <View className="flex-row items-center mb-4">
+            <Pressable onPress={() => setIsEmailModalVisible(true)} className="flex-row items-center mb-4">
               <View className="w-10 h-10 rounded-full items-center justify-center bg-primary/10 mr-4">
                 <Ionicons name="mail-outline" size={20} color={colors.primary} />
               </View>
@@ -303,9 +291,9 @@ export default function MemberProfileScreen() {
                 <Text className="text-xs text-muted font-bold uppercase tracking-wider mb-1">Email</Text>
                 <Text className="text-base text-foreground font-medium">{member.email}</Text>
               </View>
-            </View>
+            </Pressable>
             
-            <View className="flex-row items-center">
+            <Pressable onPress={() => setIsJoinedModalVisible(true)} className="flex-row items-center">
               <View className="w-10 h-10 rounded-full items-center justify-center bg-primary/10 mr-4">
                 <Ionicons name="time-outline" size={20} color={colors.primary} />
               </View>
@@ -315,7 +303,7 @@ export default function MemberProfileScreen() {
                   {new Date(member.created_at).toLocaleDateString()}
                 </Text>
               </View>
-            </View>
+            </Pressable>
           </View>
         </View>
 
@@ -339,78 +327,94 @@ export default function MemberProfileScreen() {
         )}
       </ScrollView>
 
-      {/* Edit Profile Modal */}
-      {isEditModalVisible && (
-        <View style={[StyleSheet.absoluteFill, { zIndex: 9999 }]} className="justify-end bg-black/50">
-          <KeyboardAvoidingView
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            style={{ flex: 1, justifyContent: 'flex-end' }}
-          >
-            <Pressable style={{ flex: 1 }} onPress={() => { if (!isUpdating) setIsEditModalVisible(false); }} />
-            <View className="p-6 rounded-t-3xl border-t border-border" style={{ backgroundColor: colors.background }}>
-              <View className="flex-row justify-between items-center mb-4">
-                <Text className="text-lg font-bold text-foreground">Edit Profile</Text>
-                <Pressable
-                  onPress={() => { if (!isUpdating) setIsEditModalVisible(false); }}
-                  className="w-8 h-8 rounded-full items-center justify-center"
-                  style={{ backgroundColor: colors.surface }}
-                >
-                  <Ionicons name="close" size={20} color={colors.foreground} />
-                </Pressable>
-              </View>
-              
-              <Text className="text-xs text-muted mb-4">
-                Update your public profile display name.
-              </Text>
-
-              <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">Full Name *</Text>
-              <TextInput
-                placeholder="Krishnakanth"
-                placeholderTextColor={colors.muted}
-                value={fullName}
-                onChangeText={setFullName}
-                editable={!isUpdating}
-                className="px-4 py-3 rounded-2xl border border-border text-base text-foreground mb-6"
-                style={{ backgroundColor: colors.surface }}
-              />
-
+      {/* Online Status Modal */}
+      {isStatusModalVisible && (
+        <Modal transparent visible animationType="fade" onRequestClose={() => setIsStatusModalVisible(false)}>
+          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} onPress={() => setIsStatusModalVisible(false)} />
+          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.foreground, marginBottom: 16 }}>Set Status</Text>
+            {[
+              { id: 'online', label: 'Online', color: '#22c55e', icon: 'ellipse' },
+              { id: 'away', label: 'Away', color: '#eab308', icon: 'time' },
+              { id: 'dnd', label: 'Do Not Disturb', color: '#ef4444', icon: 'remove-circle' },
+              { id: 'offline', label: 'Offline', color: '#6b7280', icon: 'ellipse-outline' },
+            ].map(status => (
               <Pressable
+                key={status.id}
+                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}
                 onPress={async () => {
-                  if (!fullName.trim()) {
-                    Alert.alert('Validation Error', 'Full Name is required.');
-                    return;
-                  }
-                  setIsUpdating(true);
                   try {
-                    const { error } = await supabase
-                      .from('users')
-                      .update({ full_name: fullName.trim() })
-                      .eq('id', user?.id);
-
-                    if (error) throw error;
-
-                    Alert.alert('Success', 'Profile updated successfully.');
-                    setIsEditModalVisible(false);
-                    fetchMemberProfile();
-                  } catch (e: any) {
-                    Alert.alert('Error', e.message || 'Could not update profile.');
-                  } finally {
-                    setIsUpdating(false);
+                    await supabase.from('users').update({ presence_status: status.id }).eq('id', member.id);
+                    setMember({ ...member, presence_status: status.id });
+                  } catch (err) {
+                    console.error(err);
                   }
+                  setIsStatusModalVisible(false);
                 }}
-                disabled={isUpdating}
-                className="p-4 rounded-2xl items-center justify-center"
-                style={{ backgroundColor: colors.primary, opacity: isUpdating ? 0.6 : 1 }}
               >
-                {isUpdating ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text className="text-white font-bold text-base">Save Changes</Text>
-                )}
+                <Ionicons name={status.icon as any} size={20} color={status.color} style={{ marginRight: 12 }} />
+                <Text style={{ fontSize: 16, color: colors.foreground }}>{status.label}</Text>
+                {member.presence_status === status.id && <Ionicons name="checkmark" size={20} color={colors.primary} style={{ marginLeft: 'auto' }} />}
               </Pressable>
+            ))}
+          </View>
+        </Modal>
+      )}
+
+      {/* Email Bottom Sheet */}
+      {isEmailModalVisible && (
+        <Modal transparent visible animationType="slide" onRequestClose={() => setIsEmailModalVisible(false)}>
+          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} onPress={() => setIsEmailModalVisible(false)} />
+          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 48 }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.foreground, marginBottom: 8 }}>Email Actions</Text>
+            <Text style={{ fontSize: 14, color: colors.muted, marginBottom: 24 }}>{member.email}</Text>
+            
+            <Pressable className="flex-row items-center p-4 rounded-xl mb-3" style={{ backgroundColor: colors.surface }}>
+              <Ionicons name="copy-outline" size={20} color={colors.primary} style={{ marginRight: 12 }} />
+              <Text className="text-base text-foreground font-semibold">Copy Email Address</Text>
+            </Pressable>
+            <Pressable className="flex-row items-center p-4 rounded-xl mb-3" style={{ backgroundColor: colors.surface }}>
+              <Ionicons name="mail-outline" size={20} color={colors.primary} style={{ marginRight: 12 }} />
+              <Text className="text-base text-foreground font-semibold">Send Email</Text>
+            </Pressable>
+            <Pressable className="flex-row items-center p-4 rounded-xl mb-3" style={{ backgroundColor: colors.surface }}>
+              <Ionicons name="checkmark-circle-outline" size={20} color={colors.primary} style={{ marginRight: 12 }} />
+              <Text className="text-base text-foreground font-semibold">Verify Email</Text>
+            </Pressable>
+            <Pressable onPress={() => {
+              setIsEmailModalVisible(false);
+              router.push('/profile/edit' as any);
+            }} className="flex-row items-center p-4 rounded-xl" style={{ backgroundColor: colors.surface }}>
+              <Ionicons name="create-outline" size={20} color={colors.primary} style={{ marginRight: 12 }} />
+              <Text className="text-base text-foreground font-semibold">Change Email</Text>
+            </Pressable>
+          </View>
+        </Modal>
+      )}
+
+      {/* Joined Date Details */}
+      {isJoinedModalVisible && (
+        <Modal transparent visible animationType="fade" onRequestClose={() => setIsJoinedModalVisible(false)}>
+          <Pressable style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(0,0,0,0.5)' }]} onPress={() => setIsJoinedModalVisible(false)} />
+          <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 48 }}>
+            <Text style={{ fontSize: 18, fontWeight: 'bold', color: colors.foreground, marginBottom: 24 }}>Account History</Text>
+            
+            <View className="flex-row items-center justify-between py-4 border-b border-border">
+              <Text style={{ color: colors.muted, fontSize: 14 }}>Member Since</Text>
+              <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: '600' }}>{new Date(member.created_at).toLocaleDateString()}</Text>
             </View>
-          </KeyboardAvoidingView>
-        </View>
+            <View className="flex-row items-center justify-between py-4 border-b border-border">
+              <Text style={{ color: colors.muted, fontSize: 14 }}>Account Age</Text>
+              <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: '600' }}>
+                {Math.max(1, Math.floor((new Date().getTime() - new Date(member.created_at).getTime()) / (1000 * 3600 * 24)))} Days
+              </Text>
+            </View>
+            <View className="flex-row items-center justify-between py-4">
+              <Text style={{ color: colors.muted, fontSize: 14 }}>Registration Method</Text>
+              <Text style={{ color: colors.foreground, fontSize: 14, fontWeight: '600' }}>Email Authentication</Text>
+            </View>
+          </View>
+        </Modal>
       )}
     </ScreenContainer>
   );
