@@ -155,6 +155,41 @@ export default function NewMeetingScreen() {
 
         if (meetingError) throw meetingError;
         meetingId = meetingData.id;
+        
+        // --- E2EE Key Generation for new meetings ---
+        try {
+          const { generateRandomSymmetricKey, initializeUserKeys, encryptKeyForRecipient } = await import('@/lib/crypto');
+          const symKey = generateRandomSymmetricKey();
+          
+          // Encrypt for host
+          const myPubKey = await initializeUserKeys(user!.id);
+          const myEncryptedKey = await encryptKeyForRecipient(symKey, myPubKey);
+          
+          const keysToInsert = [{
+            meeting_id: meetingId,
+            user_id: user!.id,
+            encrypted_key: myEncryptedKey
+          }];
+          
+          // Try to encrypt for all other attendees (if they have public keys)
+          for (const attendeeId of selectedAttendees) {
+            if (attendeeId !== user!.id) {
+              const { data: theirKeyData } = await supabase.from('user_public_keys').select('public_key').eq('user_id', attendeeId).single();
+              if (theirKeyData?.public_key) {
+                const theirEncryptedKey = await encryptKeyForRecipient(symKey, theirKeyData.public_key);
+                keysToInsert.push({
+                  meeting_id: meetingId,
+                  user_id: attendeeId,
+                  encrypted_key: theirEncryptedKey
+                });
+              }
+            }
+          }
+          
+          await supabase.from('meeting_keys').insert(keysToInsert);
+        } catch (e) {
+          console.error("Failed to generate/distribute meeting keys", e);
+        }
       }
 
       // Insert creator as an accepted attendee
