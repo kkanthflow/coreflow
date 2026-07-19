@@ -9,6 +9,7 @@ import { useAuth } from '@/hooks/use-auth';
 import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import { initializeUserKeys, decryptKeyWithSender } from '@/lib/crypto';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const { width } = Dimensions.get('window');
 
@@ -141,9 +142,45 @@ export default function MeetingRoomScreen() {
 function MeetingUI() {
   const room = useRoomContext();
   const router = useRouter();
+  const { id } = useLocalSearchParams();
   const { localParticipant } = useLocalParticipant();
+  const { session } = useAuth();
+  const insets = useSafeAreaInsets();
   // Filter for camera tracks to build the grid
   const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare]);
+
+  const [waitingUsers, setWaitingUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    // Fetch waiting users
+    const fetchWaiting = async () => {
+      const { data } = await supabase
+        .from('meeting_participants')
+        .select('*, users(full_name, email)')
+        .eq('meeting_id', id)
+        .eq('admission_status', 'waiting');
+      if (data) setWaitingUsers(data);
+    };
+    fetchWaiting();
+
+    const channel = supabase
+      .channel(`host_waiting_${id}`)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'meeting_participants', filter: `meeting_id=eq.${id}` },
+        () => fetchWaiting()
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [id]);
+
+  const admitUser = async (userId: string) => {
+    await supabase.from('meeting_participants').update({ admission_status: 'admitted' }).eq('meeting_id', id).eq('user_id', userId);
+  };
+  const denyUser = async (userId: string) => {
+    await supabase.from('meeting_participants').update({ admission_status: 'rejected' }).eq('meeting_id', id).eq('user_id', userId);
+  };
 
   const handleLeave = () => {
     room.disconnect();
@@ -173,6 +210,24 @@ function MeetingUI() {
           <Text className="text-[#A1A1AA] text-xs">Encrypted</Text>
         </View>
       </View>
+
+      {/* Waiting Room Banner */}
+      {waitingUsers.length > 0 && (
+        <View className="absolute z-20 left-4 right-4 bg-[#2563EB] rounded-xl p-4 shadow-xl border border-blue-400" style={{ top: insets.top + 60 }}>
+          <Text className="text-white font-bold text-base mb-2">
+            {waitingUsers.length} {waitingUsers.length === 1 ? 'person is' : 'people are'} waiting to join
+          </Text>
+          {waitingUsers.map(u => (
+            <View key={u.user_id} className="flex-row justify-between items-center mb-2">
+              <Text className="text-white">{u.users?.full_name || u.users?.email || 'Unknown'}</Text>
+              <View className="flex-row gap-2">
+                <Pressable onPress={() => denyUser(u.user_id)} className="bg-red-500/80 px-3 py-1 rounded-full"><Text className="text-white text-xs font-bold">Deny</Text></Pressable>
+                <Pressable onPress={() => admitUser(u.user_id)} className="bg-white px-3 py-1 rounded-full"><Text className="text-blue-600 text-xs font-bold">Admit</Text></Pressable>
+              </View>
+            </View>
+          ))}
+        </View>
+      )}
       
       {/* Main Video Grid */}
       <View className="flex-1 px-2 pt-28 pb-32">
