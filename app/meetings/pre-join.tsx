@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, Pressable, Platform } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Camera, CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
@@ -11,9 +11,10 @@ import { supabase } from '@/lib/supabase';
 
 export default function PreJoinScreen() {
   const router = useRouter();
+  const { id } = useLocalSearchParams<{ id: string }>();
   const { session, activeWorkspace } = useAuth();
   
-  const [meetingId, setMeetingId] = useState('');
+  const [meetingId, setMeetingId] = useState(id || '');
   const [cameraEnabled, setCameraEnabled] = useState(true);
   const [micEnabled, setMicEnabled] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
