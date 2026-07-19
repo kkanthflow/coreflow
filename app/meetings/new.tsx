@@ -55,6 +55,13 @@ export default function NewMeetingScreen() {
   const [location, setLocation] = useState('');
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   
+  // Set default attendee to creator if not editing
+  useEffect(() => {
+    if (!editId && user?.id && selectedAttendees.length === 0) {
+      setSelectedAttendees([user.id]);
+    }
+  }, [user, editId]);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -344,9 +351,15 @@ export default function NewMeetingScreen() {
         )}
 
         <AttendeePicker
+          label="Attendees (Ask to invite other users)"
           selectedIds={selectedAttendees}
           onSelect={(id) => setSelectedAttendees(prev => [...prev, id])}
-          onRemove={(id) => setSelectedAttendees(prev => prev.filter(i => i !== id))}
+          onRemove={(id) => {
+            if (id === user?.id) {
+              return; // Creator must be an attendee
+            }
+            setSelectedAttendees(prev => prev.filter(i => i !== id));
+          }}
         />
 
         {error && !error.includes('title') && (
