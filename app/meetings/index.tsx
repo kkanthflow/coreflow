@@ -134,16 +134,7 @@ export default function MeetingsDashboard() {
             <Pressable 
               key={meeting.id}
               onPress={() => {
-                if (meeting.meeting_link_type === 'coreflow') {
-                  router.push({
-                    pathname: '/meetings/room' as any,
-                    params: { id: meeting.id, camera: '1', mic: '1' }
-                  });
-                } else if (meeting.meeting_link_type === 'none') {
-                  // do nothing or show details
-                } else {
-                  // external link could be opened here or go to details
-                }
+                router.push(`/meetings/${meeting.id}` as any);
               }}
               className="bg-[#18181B] border border-white/5 rounded-[20px] p-4 mb-3 flex-row items-center active:bg-[#27272A]"
             >

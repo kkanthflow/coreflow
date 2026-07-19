@@ -141,7 +141,7 @@ export default function MeetingDetailsScreen() {
   };
 
   const handleJoinLink = () => {
-    if (meeting?.meeting_link_type === 'coreflow') {
+    if (meeting?.room_name) {
       router.push(`/meetings/pre-join?id=${meeting.id}` as any);
     } else if (meeting?.meeting_link) {
       Linking.openURL(meeting.meeting_link).catch(() => {
@@ -232,20 +232,20 @@ export default function MeetingDetailsScreen() {
             
             <View className="flex-row items-center mb-4">
               <View className="w-10 h-10 rounded-full bg-muted/20 items-center justify-center mr-3">
-                <Ionicons name={meeting.meeting_link_type === 'none' ? 'location-outline' : 'videocam-outline'} size={20} color={colors.foreground} />
+                <Ionicons name={meeting.room_name || meeting.meeting_link ? 'videocam-outline' : 'location-outline'} size={20} color={colors.foreground} />
               </View>
               <View className="flex-1">
                 <Text className="text-xs text-muted mb-0.5">
-                  {meeting.meeting_link_type === 'none' ? 'Location' : 'Platform'}
+                  {meeting.room_name || meeting.meeting_link ? 'Platform' : 'Location'}
                 </Text>
-                {meeting.meeting_link_type === 'none' ? (
+                {!meeting.room_name && !meeting.meeting_link ? (
                   <Text className="text-base font-semibold text-foreground">{meeting.location || 'TBD'}</Text>
                 ) : (
                   <View className="flex-row items-center justify-between">
                     <Text className="text-base font-semibold text-foreground capitalize">
-                      {meeting.meeting_link_type?.replace('_', ' ')}
+                      {meeting.room_name ? 'CoreFlow Native' : 'External Link'}
                     </Text>
-                    {(meeting.meeting_link_type === 'coreflow' || meeting.meeting_link) && !meeting.is_cancelled && !isMeetingPast && (
+                    {(meeting.room_name || meeting.meeting_link) && !meeting.is_cancelled && !isMeetingPast && (
                       <Pressable onPress={handleJoinLink} className="bg-primary px-4 py-1.5 rounded-full">
                         <Text className="text-white text-sm font-bold">Join</Text>
                       </Pressable>
