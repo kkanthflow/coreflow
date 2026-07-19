@@ -1,17 +1,24 @@
 // Depending on how DB is accessed, maybe supabase-admin? We will use Supabase client.
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.EXPO_PUBLIC_SUPABASE_URL as string,
-  process.env.SUPABASE_SERVICE_ROLE_KEY as string
-);
+let supabaseClient: ReturnType<typeof createClient> | null = null;
+function getSupabase() {
+  if (!supabaseClient) {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for meetings service");
+    supabaseClient = createClient(
+      process.env.EXPO_PUBLIC_SUPABASE_URL as string,
+      process.env.SUPABASE_SERVICE_ROLE_KEY as string
+    );
+  }
+  return supabaseClient;
+}
 
 export class MeetingsService {
   static async createMeeting(data: any) {
     // Generate a unique room name for LiveKit
     const roomName = `cf-meeting-${Math.random().toString(36).substring(2, 10)}`;
 
-    const { data: meeting, error } = await supabase
+    const { data: meeting, error } = await getSupabase()
       .from('meetings')
       .insert({
         host_id: data.hostId,
@@ -29,7 +36,7 @@ export class MeetingsService {
     if (error) throw error;
 
     // Create Settings
-    const { error: settingsError } = await supabase
+    const { error: settingsError } = await getSupabase()
       .from('meeting_settings')
       .insert({
         meeting_id: meeting.id,
@@ -39,7 +46,7 @@ export class MeetingsService {
     if (settingsError) throw settingsError;
 
     // Add Host as participant with 'host' role
-    await supabase.from('meeting_participants').insert({
+    await getSupabase().from('meeting_participants').insert({
       meeting_id: meeting.id,
       user_id: data.hostId,
       role: 'host',
@@ -53,7 +60,7 @@ export class MeetingsService {
   }
 
   static async getMeetingById(id: string) {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('meetings')
       .select('*, meeting_settings(*)')
       .eq('id', id)
@@ -64,7 +71,7 @@ export class MeetingsService {
   }
 
   static async trackParticipant(meetingId: string, userId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await getSupabase()
       .from('meeting_participants')
       .select('*')
       .eq('meeting_id', meetingId)
@@ -73,7 +80,7 @@ export class MeetingsService {
 
     if (!data) {
       // Create invited participant row if they weren't explicitly invited
-      await supabase.from('meeting_participants').insert({
+      await getSupabase().from('meeting_participants').insert({
         meeting_id: meetingId,
         user_id: userId,
         status: 'joined',
@@ -81,7 +88,7 @@ export class MeetingsService {
       });
     } else {
       // Update status to joined
-      await supabase
+      await getSupabase()
         .from('meeting_participants')
         .update({ status: 'joined', joined_at: new Date().toISOString() })
         .eq('id', data.id);

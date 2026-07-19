@@ -35,7 +35,7 @@ CREATE TRIGGER tr_notify_meeting_participant_inserted
   AFTER INSERT ON public.meeting_participants
   FOR EACH ROW
   EXECUTE PROCEDURE public.notify_meeting_attendee_inserted();
-
+.
 
 -- Fix notify_meeting_attendees
 CREATE OR REPLACE FUNCTION public.notify_meeting_attendees()
