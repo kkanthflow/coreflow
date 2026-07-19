@@ -1,8 +1,8 @@
 // Depending on how DB is accessed, maybe supabase-admin? We will use Supabase client.
 import { createClient } from '@supabase/supabase-js';
 
-let supabaseClient: ReturnType<typeof createClient> | null = null;
-function getSupabase() {
+let supabaseClient: any = null;
+function getSupabase(): any {
   if (!supabaseClient) {
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for meetings service");
     supabaseClient = createClient(
