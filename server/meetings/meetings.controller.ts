@@ -33,7 +33,7 @@ export class MeetingsController {
   static async getMeetingDetails(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const meeting = await MeetingsService.getMeetingById(id);
+      const meeting = await (MeetingsService.getMeetingById(id) as any);
       if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
       res.json({ meeting });
     } catch (error: any) {
@@ -47,7 +47,7 @@ export class MeetingsController {
       const { user } = req as any;
       const { id } = req.params;
       
-      const meeting = await MeetingsService.getMeetingById(id);
+      const meeting = await (MeetingsService.getMeetingById(id) as any);
       if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
 
       // Verify permissions (e.g. check if user is invited or in workspace)

@@ -1882,14 +1882,21 @@ import { Router } from "express";
 
 // server/meetings/meetings.service.ts
 import { createClient as createClient3 } from "@supabase/supabase-js";
-var supabase2 = createClient3(
-  process.env.EXPO_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+var supabaseClient = null;
+function getSupabase() {
+  if (!supabaseClient) {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for meetings service");
+    supabaseClient = createClient3(
+      process.env.EXPO_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+  }
+  return supabaseClient;
+}
 var MeetingsService = class {
   static async createMeeting(data) {
     const roomName = `cf-meeting-${Math.random().toString(36).substring(2, 10)}`;
-    const { data: meeting, error } = await supabase2.from("meetings").insert({
+    const { data: meeting, error } = await getSupabase().from("meetings").insert({
       host_id: data.hostId,
       workspace_id: data.workspaceId,
       title: data.title,
@@ -1900,12 +1907,12 @@ var MeetingsService = class {
       status: "scheduled"
     }).select().single();
     if (error) throw error;
-    const { error: settingsError } = await supabase2.from("meeting_settings").insert({
+    const { error: settingsError } = await getSupabase().from("meeting_settings").insert({
       meeting_id: meeting.id,
       ...data.settings
     });
     if (settingsError) throw settingsError;
-    await supabase2.from("meeting_participants").insert({
+    await getSupabase().from("meeting_participants").insert({
       meeting_id: meeting.id,
       user_id: data.hostId,
       role: "host",
@@ -1917,21 +1924,21 @@ var MeetingsService = class {
     return meeting;
   }
   static async getMeetingById(id) {
-    const { data, error } = await supabase2.from("meetings").select("*, meeting_settings(*)").eq("id", id).single();
+    const { data, error } = await getSupabase().from("meetings").select("*, meeting_settings(*)").eq("id", id).single();
     if (error) throw error;
     return data;
   }
   static async trackParticipant(meetingId, userId) {
-    const { data, error } = await supabase2.from("meeting_participants").select("*").eq("meeting_id", meetingId).eq("user_id", userId).single();
+    const { data, error } = await getSupabase().from("meeting_participants").select("*").eq("meeting_id", meetingId).eq("user_id", userId).single();
     if (!data) {
-      await supabase2.from("meeting_participants").insert({
+      await getSupabase().from("meeting_participants").insert({
         meeting_id: meetingId,
         user_id: userId,
         status: "joined",
         joined_at: (/* @__PURE__ */ new Date()).toISOString()
       });
     } else {
-      await supabase2.from("meeting_participants").update({ status: "joined", joined_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", data.id);
+      await getSupabase().from("meeting_participants").update({ status: "joined", joined_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", data.id);
     }
   }
 };

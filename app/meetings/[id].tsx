@@ -141,7 +141,9 @@ export default function MeetingDetailsScreen() {
   };
 
   const handleJoinLink = () => {
-    if (meeting?.meeting_link) {
+    if (meeting?.meeting_link_type === 'coreflow') {
+      router.push(`/meetings/pre-join?id=${meeting.id}` as any);
+    } else if (meeting?.meeting_link) {
       Linking.openURL(meeting.meeting_link).catch(() => {
         Alert.alert('Error', 'Failed to open meeting link.');
       });
@@ -243,7 +245,7 @@ export default function MeetingDetailsScreen() {
                     <Text className="text-base font-semibold text-foreground capitalize">
                       {meeting.meeting_link_type?.replace('_', ' ')}
                     </Text>
-                    {meeting.meeting_link && !meeting.is_cancelled && !isMeetingPast && (
+                    {(meeting.meeting_link_type === 'coreflow' || meeting.meeting_link) && !meeting.is_cancelled && !isMeetingPast && (
                       <Pressable onPress={handleJoinLink} className="bg-primary px-4 py-1.5 rounded-full">
                         <Text className="text-white text-sm font-bold">Join</Text>
                       </Pressable>
