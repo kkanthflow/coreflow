@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, FlatList, Dimensions, Platform } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, FlatList, Dimensions, Platform, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useTracks, useParticipant } from '@livekit/react-native';
 import { Track, ExternalE2EEKeyProvider, RoomOptions } from 'livekit-client';
@@ -50,20 +50,27 @@ export default function MeetingRoomScreen() {
           .eq('user_id', session.user.id)
           .single();
 
-        if (keyError) throw new Error('Could not fetch meeting key. Are you invited?');
+        if (!keyError && keyData?.encrypted_key) {
+          try {
+            const myPubKey = await initializeUserKeys(session.user.id);
+            const decryptedKeyStr = await decryptKeyWithSender(keyData.encrypted_key, myPubKey);
 
-        const myPubKey = await initializeUserKeys(session.user.id);
-        const decryptedKeyStr = await decryptKeyWithSender(keyData.encrypted_key, myPubKey);
+            const keyProvider = new ExternalE2EEKeyProvider();
+            await keyProvider.setKey(decryptedKeyStr);
 
-        const keyProvider = new ExternalE2EEKeyProvider();
-        await keyProvider.setKey(decryptedKeyStr);
-
-        setE2eeOptions({
-          e2ee: {
-            keyProvider,
-            worker: undefined as any,
+            setE2eeOptions({
+              e2ee: {
+                keyProvider,
+                worker: undefined as any,
+              }
+            });
+            console.log('E2EE enabled for this meeting.');
+          } catch (cryptoError) {
+            console.error('Failed to initialize E2EE keys:', cryptoError);
           }
-        });
+        } else {
+          console.log('No meeting key found, proceeding without E2EE.');
+        }
 
         const tk = await getLiveKitToken(id as string, session.access_token);
         setIsWaiting(false);
@@ -72,7 +79,8 @@ export default function MeetingRoomScreen() {
         if (e.type === 'waiting_room') {
           setIsWaiting(true);
         } else {
-          console.error(e);
+          console.error('Connection error:', e);
+          Alert.alert('Connection Error', e.message || 'Failed to connect to the meeting.');
         }
       }
     }
