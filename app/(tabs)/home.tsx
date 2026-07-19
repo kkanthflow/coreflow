@@ -182,7 +182,7 @@ function MainHomeScreen() {
         const orgId = activeWorkspace?.id === 'independent' ? null : activeWorkspace?.id;
         const [meetingsVal, pendingVal, memberCountVal, projectsVal] = await Promise.all([
           supabase.from('meetings').select('id', { count: 'exact', head: true }).gt('start_time', now).is('is_cancelled', false),
-          supabase.from('meeting_attendees').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('rsvp_status', 'pending'),
+          supabase.from('meeting_participants').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('status', 'invited'),
           orgId
             ? supabase.from('user_organizations').select('user_id', { count: 'exact', head: true }).eq('org_id', orgId)
             : Promise.resolve({ count: 0 }),

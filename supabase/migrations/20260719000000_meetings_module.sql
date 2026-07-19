@@ -1,7 +1,13 @@
 -- 20260719000000_meetings_module.sql
 -- Complete schema for CoreFlow Meetings Module
 
--- Meetings Core Table
+DROP TABLE IF EXISTS meeting_analytics CASCADE;
+DROP TABLE IF EXISTS meeting_notes CASCADE;
+DROP TABLE IF EXISTS meeting_recordings CASCADE;
+DROP TABLE IF EXISTS meeting_events CASCADE;
+DROP TABLE IF EXISTS meeting_devices CASCADE;
+DROP TABLE IF EXISTS meeting_participants CASCADE;
+DROP TABLE IF EXISTS meeting_settings CASCADE;
 DROP TABLE IF EXISTS meetings CASCADE;
 
 CREATE TABLE meetings (

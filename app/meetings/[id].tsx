@@ -30,11 +30,11 @@ export default function MeetingDetailsScreen() {
         .from('meetings')
         .select(`
           *,
-          creator:creator_id(id, full_name, avatar_url, email, role),
-          attendees:meeting_attendees(
+          host:host_id(id, full_name, avatar_url, email, role),
+          attendees:meeting_participants(
             id, 
             user_id, 
-            rsvp_status, 
+            status, 
             user:users(id, full_name, avatar_url, email, role)
           )
         `)
@@ -63,8 +63,8 @@ export default function MeetingDetailsScreen() {
     setIsUpdatingRSVP(true);
     try {
       const { error } = await supabase
-        .from('meeting_attendees')
-        .update({ rsvp_status: status })
+        .from('meeting_participants')
+        .update({ status: status })
         .eq('meeting_id', meeting.id)
         .eq('user_id', user.id);
 
@@ -74,7 +74,7 @@ export default function MeetingDetailsScreen() {
       setMeeting((prev: any) => ({
         ...prev,
         attendees: prev.attendees.map((a: any) => 
-          a.user_id === user.id ? { ...a, rsvp_status: status } : a
+          a.user_id === user.id ? { ...a, status: status } : a
         )
       }));
 
@@ -158,16 +158,16 @@ export default function MeetingDetailsScreen() {
 
   if (!meeting) return null;
 
-  const isCreator = meeting.creator_id === user?.id;
+  const isCreator = meeting.host_id === user?.id;
   const isAdmin = ['managing_director', 'ceo', 'cto', 'hr'].includes(user?.role || '');
   const canModify = isCreator || isAdmin;
   
   const myAttendeeRecord = meeting.attendees.find((a: any) => a.user_id === user?.id);
-  const myRsvp = myAttendeeRecord?.rsvp_status;
+  const myRsvp = myAttendeeRecord?.status;
 
-  const acceptedCount = meeting.attendees.filter((a: any) => a.rsvp_status === 'accepted').length;
-  const pendingCount = meeting.attendees.filter((a: any) => a.rsvp_status === 'pending').length;
-  const declinedCount = meeting.attendees.filter((a: any) => a.rsvp_status === 'declined').length;
+  const acceptedCount = meeting.attendees.filter((a: any) => a.status === 'accepted').length;
+  const pendingCount = meeting.attendees.filter((a: any) => a.status === 'pending').length;
+  const declinedCount = meeting.attendees.filter((a: any) => a.status === 'declined').length;
 
   const meetingDate = new Date(meeting.start_time);
   const isMeetingPast = isPast(meetingDate);
@@ -254,16 +254,16 @@ export default function MeetingDetailsScreen() {
             </View>
 
             <View className="flex-row items-center">
-              {meeting.creator?.avatar_url ? (
-                <Image source={{ uri: meeting.creator.avatar_url }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 12 }} />
+              {meeting.host?.avatar_url ? (
+                <Image source={{ uri: meeting.host.avatar_url }} style={{ width: 40, height: 40, borderRadius: 20, marginRight: 12 }} />
               ) : (
                 <View className="w-10 h-10 rounded-full bg-primary/20 items-center justify-center mr-3">
-                  <Text className="text-primary font-bold text-lg">{meeting.creator?.full_name?.charAt(0) || '?'}</Text>
+                  <Text className="text-primary font-bold text-lg">{meeting.host?.full_name?.charAt(0) || '?'}</Text>
                 </View>
               )}
               <View>
                 <Text className="text-xs text-muted mb-0.5">Organizer</Text>
-                <Text className="text-base font-semibold text-foreground">{meeting.creator?.full_name}</Text>
+                <Text className="text-base font-semibold text-foreground">{meeting.host?.full_name}</Text>
               </View>
             </View>
           </View>
@@ -327,7 +327,7 @@ export default function MeetingDetailsScreen() {
                     <View className="ml-3 flex-1">
                       <View className="flex-row items-center">
                         <Text className="text-sm font-semibold text-foreground mr-2">{attendee.user?.full_name}</Text>
-                        {attendee.user_id === meeting.creator_id && (
+                        {attendee.user_id === meeting.host_id && (
                           <View className="bg-primary/20 px-1.5 py-0.5 rounded">
                             <Text className="text-[10px] font-bold text-primary">Organizer</Text>
                           </View>
@@ -339,17 +339,17 @@ export default function MeetingDetailsScreen() {
                   
                   <View className={clsx(
                     "px-2 py-1 rounded",
-                    attendee.rsvp_status === 'accepted' ? 'bg-success/10' :
-                    attendee.rsvp_status === 'declined' ? 'bg-error/10' :
-                    attendee.rsvp_status === 'tentative' ? 'bg-warning/10' : 'bg-muted/10'
+                    attendee.status === 'accepted' ? 'bg-success/10' :
+                    attendee.status === 'declined' ? 'bg-error/10' :
+                    attendee.status === 'tentative' ? 'bg-warning/10' : 'bg-muted/10'
                   )}>
                     <Text className={clsx(
                       "text-xs font-bold capitalize",
-                      attendee.rsvp_status === 'accepted' ? 'text-success' :
-                      attendee.rsvp_status === 'declined' ? 'text-error' :
-                      attendee.rsvp_status === 'tentative' ? 'text-warning' : 'text-muted'
+                      attendee.status === 'accepted' ? 'text-success' :
+                      attendee.status === 'declined' ? 'text-error' :
+                      attendee.status === 'tentative' ? 'text-warning' : 'text-muted'
                     )}>
-                      {attendee.rsvp_status}
+                      {attendee.status}
                     </Text>
                   </View>
                 </View>

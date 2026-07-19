@@ -25,6 +25,7 @@ const DURATION_OPTIONS = [
 ];
 
 const LINK_TYPE_OPTIONS = [
+  { label: 'CoreFlow Video', value: 'coreflow' },
   { label: 'Google Meet', value: 'google_meet' },
   { label: 'Microsoft Teams', value: 'teams' },
   { label: 'Zoom', value: 'zoom' },
@@ -49,7 +50,7 @@ export default function NewMeetingScreen() {
     return d;
   });
   const [duration, setDuration] = useState('30');
-  const [linkType, setLinkType] = useState('google_meet');
+  const [linkType, setLinkType] = useState('coreflow');
   const [meetingLink, setMeetingLink] = useState('');
   const [location, setLocation] = useState('');
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
@@ -126,10 +127,6 @@ export default function NewMeetingScreen() {
             description: description.trim() || null,
             start_time: startTime.toISOString(),
             end_time: endTime.toISOString(),
-            duration_minutes: durationMinutes,
-            meeting_link: linkType === 'none' ? null : meetingLink.trim(),
-            meeting_link_type: linkType === 'none' ? null : linkType,
-            location: location.trim() || null,
           })
           .eq('id', editId);
 
@@ -137,7 +134,7 @@ export default function NewMeetingScreen() {
 
         // Delete old attendees
         await supabase
-          .from('meeting_attendees')
+          .from('meeting_participants')
           .delete()
           .eq('meeting_id', editId);
       } else {
@@ -147,13 +144,11 @@ export default function NewMeetingScreen() {
           .insert({
             title: title.trim(),
             description: description.trim() || null,
-            creator_id: user?.id,
+            host_id: user?.id,
+            room_name: `cf-meeting-${Math.random().toString(36).substring(2, 10)}`,
             start_time: startTime.toISOString(),
             end_time: endTime.toISOString(),
-            duration_minutes: durationMinutes,
-            meeting_link: linkType === 'none' ? null : meetingLink.trim(),
-            meeting_link_type: linkType === 'none' ? null : linkType,
-            location: location.trim() || null,
+            status: 'scheduled',
           })
           .select('id')
           .single();
@@ -167,7 +162,12 @@ export default function NewMeetingScreen() {
         {
           meeting_id: meetingId,
           user_id: user?.id,
-          rsvp_status: 'accepted',
+          role: 'host',
+          status: 'accepted',
+          can_share_screen: true,
+          can_record: true,
+          can_present: true,
+          can_invite: true,
         },
       ];
 
@@ -177,13 +177,18 @@ export default function NewMeetingScreen() {
           attendeesToInsert.push({
             meeting_id: meetingId,
             user_id: attendeeId,
-            rsvp_status: 'pending',
+            role: 'participant',
+            status: 'invited',
+            can_share_screen: false,
+            can_record: false,
+            can_present: false,
+            can_invite: false,
           });
         }
       });
 
       const { error: attendeesError } = await supabase
-        .from('meeting_attendees')
+        .from('meeting_participants')
         .insert(attendeesToInsert);
 
       if (attendeesError) throw attendeesError;
@@ -309,7 +314,7 @@ export default function NewMeetingScreen() {
           onSelect={setLinkType}
         />
 
-        {linkType !== 'none' && linkType !== 'custom' && (
+        {linkType !== 'none' && linkType !== 'custom' && linkType !== 'coreflow' && (
           <PremiumInput
             label="Meeting Link"
             placeholder={`Paste ${LINK_TYPE_OPTIONS.find(o => o.value === linkType)?.label} link here`}

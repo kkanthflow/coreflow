@@ -66,7 +66,7 @@ function MeetingCard({
   const startTime = new Date(meeting.start_time);
   const endTime   = new Date(meeting.end_time);
   const isLive    = now >= startTime && now <= endTime;
-  const isMine    = meeting.creator_id === userId;
+  const isMine    = meeting.host_id === userId;
 
   const statusColor = meeting.is_cancelled ? C.error : isLive ? C.warning : startTime > now ? C.success : C.muted;
   const statusLabel = meeting.is_cancelled ? 'Cancelled' : isLive ? 'Live Now' : startTime > now ? 'Upcoming' : 'Past';
@@ -150,17 +150,17 @@ function MeetingCard({
             {/* Footer */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                {meeting.creator?.avatar_url ? (
-                  <Image source={{ uri: meeting.creator.avatar_url }} style={{ width: 22, height: 22, borderRadius: 11 }} />
+                {meeting.host?.avatar_url ? (
+                  <Image source={{ uri: meeting.host.avatar_url }} style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: C.border }} />
                 ) : (
                   <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${C.primary}30`, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: C.primary, fontSize: 9, fontWeight: '800' }}>
-                      {meeting.creator?.full_name?.charAt(0) || '?'}
+                    <Text style={{ color: C.primary, fontSize: 12, fontWeight: '700' }}>
+                      {meeting.host?.full_name?.charAt(0) || '?'}
                     </Text>
                   </View>
                 )}
                 <Text style={{ color: C.muted, fontSize: 12 }}>
-                  {isMine ? 'You created this' : meeting.creator?.full_name}
+                  {isMine ? 'You created this' : meeting.host?.full_name}
                 </Text>
               </View>
 
@@ -224,7 +224,7 @@ export default function MeetingsScreen() {
     try {
       let query = supabase
         .from('meetings')
-        .select('*, creator:creator_id(id, full_name, avatar_url), attendees:meeting_attendees(user_id, rsvp_status)')
+        .select('*, host:host_id(id, full_name, avatar_url), attendees:meeting_participants(user_id, status)')
         .order('start_time', { ascending: tab === 'upcoming' });
 
       const { data, error } = await query;

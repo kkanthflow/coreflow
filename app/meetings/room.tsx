@@ -1,27 +1,63 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Pressable, ActivityIndicator, TextInput, FlatList } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, FlatList, Dimensions, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LiveKitRoom, useRoomContext, VideoTrack, AudioTrack, useParticipantTracks, useLocalParticipant, useTracks, useDataChannel } from '@livekit/react-native';
-import { Track } from 'livekit-client';
-import { Ionicons } from '@expo/vector-icons';
+import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useTracks, useParticipant } from '@livekit/react-native';
+import { Track, ExternalE2EEKeyProvider, RoomOptions } from 'livekit-client';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Users, MessageSquare, MoreHorizontal } from 'lucide-react-native';
+import { BlurView } from 'expo-blur';
 import { useAuth } from '@/hooks/use-auth';
+import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
+import { supabase } from '@/lib/supabase';
+import { initializeUserKeys, decryptKeyWithSender } from '@/lib/crypto';
 
-// In a real app, this would be fetched from your backend endpoint: /api/meetings/:id/join
+const { width } = Dimensions.get('window');
+
 const getLiveKitToken = async (roomId: string, token: string) => {
-  return 'dummy_token';
+  const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+  const res = await fetch(`${baseUrl}/api/meetings/${roomId}/join`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+  if (!res.ok) throw new Error('Failed to fetch token from backend');
+  const data = await res.json();
+  return data.token;
 };
 
 export default function MeetingRoomScreen() {
   const { id, camera, mic } = useLocalSearchParams();
   const { session } = useAuth();
-  
   const [token, setToken] = useState<string | null>(null);
+  const [e2eeOptions, setE2eeOptions] = useState<RoomOptions | null>(null);
   const serverUrl = process.env.EXPO_PUBLIC_LIVEKIT_URL || 'wss://dummy.livekit.cloud';
 
   useEffect(() => {
     async function connect() {
       if (!session?.access_token) return;
       try {
+        const { data: keyData, error: keyError } = await supabase
+          .from('meeting_keys')
+          .select('encrypted_key')
+          .eq('meeting_id', id)
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (keyError) throw new Error('Could not fetch meeting key. Are you invited?');
+
+        const myPubKey = await initializeUserKeys(session.user.id);
+        const decryptedKeyStr = await decryptKeyWithSender(keyData.encrypted_key, myPubKey);
+
+        const keyProvider = new ExternalE2EEKeyProvider();
+        await keyProvider.setKey(decryptedKeyStr);
+
+        setE2eeOptions({
+          e2ee: {
+            keyProvider,
+            worker: undefined as any,
+          }
+        });
+
         const tk = await getLiveKitToken(id as string, session.access_token);
         setToken(tk);
       } catch (e) {
@@ -31,11 +67,11 @@ export default function MeetingRoomScreen() {
     connect();
   }, [id, session]);
 
-  if (!token) {
+  if (!token || !e2eeOptions) {
     return (
-      <View style={styles.loadingContainer}>
+      <View className="flex-1 bg-[#09090B] justify-center items-center">
         <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={styles.loadingText}>Connecting to secure room...</Text>
+        <Text className="text-[#A1A1AA] mt-4 text-base">Joining secure room...</Text>
       </View>
     );
   }
@@ -47,6 +83,7 @@ export default function MeetingRoomScreen() {
       connect={true}
       audio={mic === '1'}
       video={camera === '1'}
+      options={e2eeOptions}
     >
       <MeetingUI />
     </LiveKitRoom>
@@ -57,294 +94,139 @@ function MeetingUI() {
   const room = useRoomContext();
   const router = useRouter();
   const { localParticipant } = useLocalParticipant();
+  // Filter for camera tracks to build the grid
   const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare]);
-
-  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const handleLeave = () => {
     room.disconnect();
     router.replace('/meetings' as any);
   };
 
-  const toggleMic = () => {
-    localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled);
-  };
-
-  const toggleCamera = () => {
-    localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled);
-  };
-
-  const toggleScreenShare = () => {
-    localParticipant.setScreenShareEnabled(!localParticipant.isScreenShareEnabled);
+  const getGridStyle = (): any => {
+    const count = tracks.length;
+    if (count === 0 || count === 1) return { width: '100%', height: '100%' };
+    if (count === 2) return { width: '100%', height: '49%' };
+    if (count === 3 || count === 4) return { width: '49%', height: '49%' };
+    // Responsive grid for 5+
+    return { width: '48%', height: width * 0.6 };
   };
 
   return (
-    <View style={styles.roomContainer}>
-      <View style={styles.header}>
-        <Text style={styles.title}>CoreFlow Meeting</Text>
-        <Text style={styles.subtitle}>{room.name}</Text>
+    <View className="flex-1 bg-[#09090B]">
+      {/* Top Overlay */}
+      <View className="absolute top-12 left-0 right-0 z-10 px-6 flex-row justify-between items-center">
+        <View className="flex-row items-center space-x-2">
+          <View className="bg-[#18181B]/80 px-3 py-1.5 rounded-full border border-white/10 flex-row items-center">
+            <View className="w-2 h-2 rounded-full bg-[#22C55E] mr-2" />
+            <Text className="text-white text-sm font-semibold">{room.name || 'Meeting'}</Text>
+          </View>
+        </View>
+        <View className="bg-[#18181B]/80 px-3 py-1.5 rounded-full border border-white/10">
+          <Text className="text-[#A1A1AA] text-xs">Encrypted</Text>
+        </View>
       </View>
       
-      <View style={styles.mainContent}>
-        {/* Video Grid */}
-        <View style={styles.videoGrid}>
-          {tracks.length === 0 ? (
-            <View style={styles.placeholderVideo}>
-              <Ionicons name="person" size={64} color="#374151" />
-              <Text style={styles.participantName}>Waiting for others to join...</Text>
+      {/* Main Video Grid */}
+      <View className="flex-1 px-2 pt-28 pb-32">
+        {tracks.length === 0 ? (
+          <View className="flex-1 justify-center items-center">
+            <View className="w-24 h-24 rounded-full bg-[#18181B] items-center justify-center mb-4 border border-white/5">
+              <Users size={32} color="#A1A1AA" />
             </View>
-          ) : (
-            <FlatList
-              data={tracks}
-              keyExtractor={(item) => item.participant.identity + item.source}
-              renderItem={({ item }) => (
-                <View style={styles.videoWrapper}>
-                   <VideoTrack trackRef={item} style={styles.videoElement} />
-                   <Text style={styles.videoLabel}>{item.participant.name || item.participant.identity}</Text>
-                </View>
-              )}
-            />
-          )}
-        </View>
-
-        {/* Chat Sidebar Overlay */}
-        {isChatOpen && (
-          <View style={styles.chatOverlay}>
-             <View style={styles.chatHeader}>
-                <Text style={styles.chatTitle}>In-Meeting Chat</Text>
-                <Pressable onPress={() => setIsChatOpen(false)}>
-                  <Ionicons name="close" size={24} color="#fff" />
-                </Pressable>
-             </View>
-             <ChatComponent />
+            <Text className="text-[#A1A1AA] text-base">Waiting for others to join...</Text>
+          </View>
+        ) : (
+          <View className="flex-1 flex-row flex-wrap justify-between content-start gap-y-2">
+            {tracks.map((track) => (
+              <View key={track.participant.identity + track.source} style={getGridStyle()}>
+                <ParticipantTile trackRef={track} />
+              </View>
+            ))}
           </View>
         )}
       </View>
 
-      <View style={styles.controlsBar}>
-        <Pressable style={[styles.controlBtn, !localParticipant.isMicrophoneEnabled && styles.controlBtnOff]} onPress={toggleMic}>
-          <Ionicons name={localParticipant.isMicrophoneEnabled ? "mic" : "mic-off"} size={24} color="#fff" />
-        </Pressable>
-        <Pressable style={[styles.controlBtn, !localParticipant.isCameraEnabled && styles.controlBtnOff]} onPress={toggleCamera}>
-          <Ionicons name={localParticipant.isCameraEnabled ? "videocam" : "videocam-off"} size={24} color="#fff" />
-        </Pressable>
-        <Pressable style={[styles.controlBtn, !localParticipant.isScreenShareEnabled && styles.controlBtnOff]} onPress={toggleScreenShare}>
-          <Ionicons name="share-outline" size={24} color="#fff" />
-        </Pressable>
-        <Pressable style={[styles.controlBtn, isChatOpen && styles.controlBtnActive]} onPress={() => setIsChatOpen(!isChatOpen)}>
-          <Ionicons name="chatbubble-outline" size={24} color="#fff" />
-        </Pressable>
-        <Pressable style={[styles.controlBtn, styles.leaveBtn]} onPress={handleLeave}>
-          <Ionicons name="call" size={24} color="#fff" />
-        </Pressable>
+      {/* Floating Bottom Toolbar */}
+      <View className="absolute bottom-8 left-4 right-4 z-20">
+        <View className="rounded-full overflow-hidden shadow-2xl border border-white/10 bg-transparent">
+          <BlurView intensity={Platform.OS === 'ios' ? 60 : 100} tint="dark" className="flex-row justify-evenly items-center py-4 px-2">
+            
+            <Pressable 
+              onPress={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
+              className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant.isMicrophoneEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
+            >
+              {localParticipant.isMicrophoneEnabled ? <Mic size={20} color="#FFFFFF" /> : <MicOff size={20} color="#EF4444" />}
+            </Pressable>
+
+            <Pressable 
+              onPress={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
+              className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant.isCameraEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
+            >
+              {localParticipant.isCameraEnabled ? <Video size={20} color="#FFFFFF" /> : <VideoOff size={20} color="#EF4444" />}
+            </Pressable>
+
+            <Pressable className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
+              <MonitorUp size={20} color="#FFFFFF" />
+            </Pressable>
+
+            <Pressable className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
+              <MessageSquare size={20} color="#FFFFFF" />
+            </Pressable>
+            
+            <Pressable className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
+              <MoreHorizontal size={20} color="#FFFFFF" />
+            </Pressable>
+
+            <Pressable onPress={handleLeave} className="w-12 h-12 rounded-full items-center justify-center bg-[#EF4444]">
+              <PhoneOff size={20} color="#FFFFFF" />
+            </Pressable>
+
+          </BlurView>
+        </View>
       </View>
     </View>
   );
 }
 
-function ChatComponent() {
-  const [messages, setMessages] = useState<{sender: string, text: string}[]>([]);
-  const [inputText, setInputText] = useState('');
-  const { send } = useDataChannel('chat', (msg) => {
-    const decoder = new TextDecoder();
-    const text = decoder.decode(msg.payload);
-    setMessages(prev => [...prev, { sender: msg.participant?.name || 'Unknown', text }]);
-  });
+function ParticipantTile({ trackRef }: { trackRef: any }) {
+  const participantState = useParticipant(trackRef.participant);
+  const isSpeaking = participantState.isSpeaking;
+  const participant = trackRef.participant;
 
-  const handleSend = () => {
-    if (!inputText.trim()) return;
-    const encoder = new TextEncoder();
-    send(encoder.encode(inputText.trim()), { reliable: true });
-    setMessages(prev => [...prev, { sender: 'You', text: inputText.trim() }]);
-    setInputText('');
-  };
+  // Active speaker animation
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      borderColor: isSpeaking ? '#22C55E' : 'rgba(255,255,255,0.08)',
+      borderWidth: isSpeaking ? 2 : 1,
+      transform: [
+        { scale: withTiming(isSpeaking ? 1.02 : 1, { duration: 200, easing: Easing.out(Easing.ease) }) }
+      ]
+    };
+  }, [isSpeaking]);
 
   return (
-    <View style={styles.chatContainer}>
-      <FlatList
-        data={messages}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.chatMsg}>
-            <Text style={styles.chatSender}>{item.sender}</Text>
-            <Text style={styles.chatText}>{item.text}</Text>
+    <Animated.View className="flex-1 bg-[#18181B] rounded-[20px] overflow-hidden relative shadow-lg" style={animatedStyle}>
+      {trackRef.publication?.isMuted ? (
+        <View className="flex-1 items-center justify-center bg-[#18181B]">
+          <View className="w-16 h-16 rounded-full bg-[#27272A] items-center justify-center">
+            <Text className="text-white text-xl font-bold">
+              {(participant.name || participant.identity).charAt(0).toUpperCase()}
+            </Text>
           </View>
+        </View>
+      ) : (
+        <VideoTrack trackRef={trackRef} style={{ flex: 1 }} />
+      )}
+      
+      {/* Participant Info Overlay */}
+      <View className="absolute bottom-3 left-3 flex-row items-center bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-md">
+        {!participant.isMicrophoneEnabled && (
+          <MicOff size={14} color="#EF4444" style={{ marginRight: 6 }} />
         )}
-      />
-      <View style={styles.chatInputRow}>
-        <TextInput
-          style={styles.chatInput}
-          placeholder="Type a message..."
-          placeholderTextColor="#9CA3AF"
-          value={inputText}
-          onChangeText={setInputText}
-        />
-        <Pressable onPress={handleSend} style={styles.chatSendBtn}>
-          <Ionicons name="send" size={20} color="#fff" />
-        </Pressable>
+        <Text className="text-white text-xs font-semibold" numberOfLines={1}>
+          {participant.name || participant.identity}
+        </Text>
       </View>
-    </View>
+    </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: '#121212',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    color: '#9CA3AF',
-    marginTop: 16,
-    fontSize: 16,
-  },
-  roomContainer: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  header: {
-    padding: 24,
-    paddingTop: 60,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  subtitle: {
-    color: '#9CA3AF',
-    fontSize: 14,
-  },
-  mainContent: {
-    flex: 1,
-    flexDirection: 'row',
-  },
-  videoGrid: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 16,
-    paddingTop: 120,
-  },
-  placeholderVideo: {
-    width: '100%',
-    aspectRatio: 3/4,
-    backgroundColor: '#1F2937',
-    borderRadius: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  participantName: {
-    color: '#9CA3AF',
-    marginTop: 16,
-    fontSize: 16,
-  },
-  videoWrapper: {
-    width: '100%',
-    aspectRatio: 16/9,
-    backgroundColor: '#1F2937',
-    borderRadius: 16,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
-  videoElement: {
-    flex: 1,
-  },
-  videoLabel: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    color: '#fff',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
-    fontSize: 12,
-  },
-  chatOverlay: {
-    width: 300,
-    backgroundColor: '#1F2937',
-    borderLeftWidth: 1,
-    borderColor: '#374151',
-  },
-  chatHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: 60,
-    borderBottomWidth: 1,
-    borderColor: '#374151',
-  },
-  chatTitle: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  chatContainer: {
-    flex: 1,
-    padding: 16,
-  },
-  chatMsg: {
-    marginBottom: 12,
-  },
-  chatSender: {
-    color: '#9CA3AF',
-    fontSize: 12,
-    marginBottom: 4,
-  },
-  chatText: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  chatInputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  chatInput: {
-    flex: 1,
-    backgroundColor: '#111827',
-    color: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    marginRight: 8,
-  },
-  chatSendBtn: {
-    backgroundColor: '#2563EB',
-    padding: 12,
-    borderRadius: 8,
-  },
-  controlsBar: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 24,
-    paddingBottom: 40,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    gap: 16,
-  },
-  controlBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#374151',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  controlBtnOff: {
-    backgroundColor: '#4B5563',
-  },
-  controlBtnActive: {
-    backgroundColor: '#2563EB',
-  },
-  leaveBtn: {
-    backgroundColor: '#EF4444',
-  }
-});

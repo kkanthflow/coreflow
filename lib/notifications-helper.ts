@@ -13,7 +13,7 @@ export async function scheduleMeetingLocalNotifications(userId: string) {
     const now = new Date();
     // Fetch upcoming accepted meetings
     const { data: attendeesData, error } = await supabase
-      .from('meeting_attendees')
+      .from('meeting_participants')
       .select(`
         meeting:meeting_id (
           id,
@@ -23,7 +23,7 @@ export async function scheduleMeetingLocalNotifications(userId: string) {
         )
       `)
       .eq('user_id', userId)
-      .eq('rsvp_status', 'accepted');
+      .eq('status', 'accepted');
 
     if (error || !attendeesData) {
       console.warn('Failed to fetch meetings for notification scheduling:', error);

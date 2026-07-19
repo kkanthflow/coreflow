@@ -1,15 +1,26 @@
 import { Router } from 'express';
 import { MeetingsController } from './meetings.controller.js';
-// import { requireAuth } from '../_core/auth.middleware'; // Replace with actual auth middleware
+import { sdk } from '../_core/sdk.js';
 
 const router = Router();
 
-// Secure all routes with authentication middleware (assuming it exists in coreflow)
-// router.use(requireAuth); 
+// Authentication middleware
+const requireAuth = async (req: any, res: any, next: any) => {
+  try {
+    const user = await sdk.authenticateRequest(req);
+    req.user = user;
+    next();
+  } catch (error) {
+    res.status(401).json({ error: 'Unauthorized' });
+  }
+};
 
-router.post('/', MeetingsController.createMeeting);
-router.get('/:id', MeetingsController.getMeetingDetails);
-router.post('/:id/join', MeetingsController.joinMeeting);
+// Secured user endpoints
+router.post('/', requireAuth, MeetingsController.createMeeting);
+router.get('/:id', requireAuth, MeetingsController.getMeetingDetails);
+router.post('/:id/join', requireAuth, MeetingsController.joinMeeting);
+
+// Public webhook endpoint (LiveKit authenticates via its own webhook secret)
 router.post('/webhook/livekit', MeetingsController.liveKitWebhook);
 
 export default router;
