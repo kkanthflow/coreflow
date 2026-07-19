@@ -50,8 +50,13 @@ export class MeetingsController {
       const meeting = await (MeetingsService.getMeetingById(id) as any);
       if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
 
-      // Verify permissions (e.g. check if user is invited or in workspace)
-      // For now, allow workspace members
+      // Get participant record
+      const participant = await MeetingsService.trackParticipant(meeting.id, user.id);
+
+      if (participant.role !== 'host' && participant.admission_status !== 'admitted') {
+        return res.status(403).json({ error: 'waiting_room', admission_status: participant.admission_status });
+      }
+
       const participantName = user.user_metadata?.full_name || user.email;
 
       // Generate LiveKit Token
@@ -66,8 +71,7 @@ export class MeetingsController {
         }
       );
 
-      // Track participant in DB
-      await MeetingsService.trackParticipant(meeting.id, user.id);
+      // Tracking participant is already done above
 
       res.json({ token, roomUrl: process.env.LIVEKIT_API_URL });
     } catch (error: any) {

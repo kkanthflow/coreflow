@@ -20,8 +20,13 @@ const getLiveKitToken = async (roomId: string, token: string) => {
       Authorization: `Bearer ${token}`
     }
   });
-  if (!res.ok) throw new Error('Failed to fetch token from backend');
   const data = await res.json();
+  if (!res.ok) {
+    if (data.error === 'waiting_room') {
+      throw { type: 'waiting_room' };
+    }
+    throw new Error('Failed to fetch token from backend');
+  }
   return data.token;
 };
 
@@ -30,6 +35,7 @@ export default function MeetingRoomScreen() {
   const { session } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [e2eeOptions, setE2eeOptions] = useState<RoomOptions | null>(null);
+  const [isWaiting, setIsWaiting] = useState(false);
   const serverUrl = process.env.EXPO_PUBLIC_LIVEKIT_URL || 'wss://dummy.livekit.cloud';
 
   useEffect(() => {
@@ -59,13 +65,55 @@ export default function MeetingRoomScreen() {
         });
 
         const tk = await getLiveKitToken(id as string, session.access_token);
+        setIsWaiting(false);
         setToken(tk);
-      } catch (e) {
-        console.error(e);
+      } catch (e: any) {
+        if (e.type === 'waiting_room') {
+          setIsWaiting(true);
+        } else {
+          console.error(e);
+        }
       }
     }
     connect();
+
+    // Subscribe to admission_status changes if waiting
+    const channel = supabase
+      .channel(`waiting_room_${id}_${session?.user?.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'meeting_participants',
+          filter: `meeting_id=eq.${id}`,
+        },
+        (payload) => {
+          if (payload.new.user_id === session?.user?.id && payload.new.admission_status === 'admitted') {
+            setIsWaiting(false);
+            connect(); // Try connecting again
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [id, session]);
+
+  if (isWaiting) {
+    return (
+      <View className="flex-1 bg-[#09090B] justify-center items-center px-8">
+        <Users size={64} color="#3B82F6" className="mb-6" />
+        <Text className="text-white text-2xl font-bold mb-3 text-center">Waiting Room</Text>
+        <Text className="text-[#A1A1AA] text-base text-center mb-8">
+          You'll join the meeting when the host admits you.
+        </Text>
+        <ActivityIndicator size="small" color="#2563EB" />
+      </View>
+    );
+  }
 
   if (!token || !e2eeOptions) {
     return (
