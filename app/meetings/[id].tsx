@@ -102,7 +102,7 @@ export default function MeetingDetailsScreen() {
             try {
               const { error } = await supabase
                 .from('meetings')
-                .update({ is_cancelled: true })
+                .update({ status: 'cancelled' })
                 .eq('id', meeting.id);
 
               if (error) throw error;
@@ -188,7 +188,7 @@ export default function MeetingDetailsScreen() {
         )}
 
       <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        {meeting.is_cancelled && (
+        {meeting.status === 'cancelled' && (
           <View className="bg-error/10 px-6 py-3 border-b border-error/20 flex-row items-center">
             <Ionicons name="warning" size={20} color={colors.error} />
             <Text className="text-error font-semibold ml-2">This meeting has been cancelled</Text>
@@ -198,7 +198,7 @@ export default function MeetingDetailsScreen() {
         <View className="px-6 pt-6 pb-4">
           <Text className={clsx(
             "text-2xl font-bold mb-2",
-            meeting.is_cancelled ? "text-muted line-through" : "text-foreground"
+            meeting.status === 'cancelled' ? "text-muted line-through" : "text-foreground"
           )}>
             {meeting.title}
           </Text>
@@ -245,7 +245,7 @@ export default function MeetingDetailsScreen() {
                     <Text className="text-base font-semibold text-foreground capitalize">
                       {meeting.room_name ? 'CoreFlow Native' : 'External Link'}
                     </Text>
-                    {(meeting.room_name || meeting.meeting_link) && !meeting.is_cancelled && !isMeetingPast && (
+                    {(meeting.room_name || meeting.meeting_link) && meeting.status !== 'cancelled' && !isMeetingPast && (
                       <Pressable onPress={handleJoinLink} className="bg-primary px-4 py-1.5 rounded-full">
                         <Text className="text-white text-sm font-bold">Join</Text>
                       </Pressable>
@@ -271,7 +271,7 @@ export default function MeetingDetailsScreen() {
           </View>
 
           {/* RSVP Section (Only if attendee and not cancelled and not past) */}
-          {!meeting.is_cancelled && !isMeetingPast && myAttendeeRecord && !isCreator && (
+          {meeting.status !== 'cancelled' && !isMeetingPast && myAttendeeRecord && !isCreator && (
             <View className="mb-8">
               <Text className="text-base font-bold text-foreground mb-3">Your RSVP</Text>
               <View className="flex-row gap-2">
