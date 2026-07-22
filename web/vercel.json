@@ -1,3 +1,6 @@
 {
-  "name": "coreflow-meeting"
+  "name": "coreflow-meeting",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
