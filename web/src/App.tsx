@@ -9,6 +9,7 @@ function App() {
         <Routes>
           <Route path="/meetings/:id" element={<PreJoin />} />
           <Route path="/meetings/:id/room" element={<MeetingRoom />} />
+          <Route path="/" element={<div className="flex items-center justify-center min-h-screen">CoreFlow Meetings</div>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
