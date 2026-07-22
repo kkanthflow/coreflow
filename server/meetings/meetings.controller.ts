@@ -51,7 +51,7 @@ export class MeetingsController {
       if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
 
       // Get participant record
-      const participant = await MeetingsService.trackParticipant(meeting.id, user.id);
+      const participant = await MeetingsService.trackParticipant(meeting.id, user.id, meeting.host_id);
 
       if (participant.role !== 'host' && participant.admission_status !== 'admitted') {
         return res.status(403).json({ error: 'waiting_room', admission_status: participant.admission_status });

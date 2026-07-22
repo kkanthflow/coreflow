@@ -70,7 +70,9 @@ export class MeetingsService {
     return data;
   }
 
-  static async trackParticipant(meetingId: string, userId: string) {
+  static async trackParticipant(meetingId: string, userId: string, hostId: string) {
+    const isHost = userId === hostId;
+
     const { data, error } = await getSupabase()
       .from('meeting_participants')
       .select('*')
@@ -84,22 +86,26 @@ export class MeetingsService {
         meeting_id: meetingId,
         user_id: userId,
         status: 'joined',
-        admission_status: 'waiting', // they wait by default when joining uninvited
+        role: isHost ? 'host' : 'attendee',
+        admission_status: isHost ? 'admitted' : 'waiting', // host doesn't wait
       }).select().single();
       return newParticipant;
     } else {
-      // If their admission_status is 'none', set to 'waiting'
       let updates: any = { status: 'joined', joined_at: new Date().toISOString() };
-      if (data.admission_status === 'none' && data.role !== 'host') {
+      
+      if (isHost && data.role !== 'host') {
+        updates.role = 'host';
+        updates.admission_status = 'admitted';
+      } else if (data.admission_status === 'none' && data.role !== 'host') {
         updates.admission_status = 'waiting';
       }
+
       const { data: updatedParticipant } = await getSupabase()
         .from('meeting_participants')
         .update(updates)
         .eq('id', data.id)
         .select().single();
-      
-      return updatedParticipant || data;
+      return updatedParticipant;
     }
   }
 }
