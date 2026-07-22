@@ -53,10 +53,9 @@ export class MeetingsController {
       // Get participant record
       const participant = await MeetingsService.trackParticipant(meeting.id, user.id);
 
-      // Temporarily disable waiting room logic since admission_status is not in DB schema yet
-      // if (participant.role !== 'host' && participant.admission_status !== 'admitted') {
-      //   return res.status(403).json({ error: 'waiting_room', admission_status: participant.admission_status });
-      // }
+      if (participant.role !== 'host' && participant.admission_status !== 'admitted') {
+        return res.status(403).json({ error: 'waiting_room', admission_status: participant.admission_status });
+      }
 
       const participantName = user.user_metadata?.full_name || user.email;
 
