@@ -68,8 +68,8 @@ function MeetingCard({
   const isLive    = now >= startTime && now <= endTime;
   const isMine    = meeting.host_id === userId;
 
-  const statusColor = meeting.is_cancelled ? C.error : isLive ? C.warning : startTime > now ? C.success : C.muted;
-  const statusLabel = meeting.is_cancelled ? 'Cancelled' : isLive ? 'Live Now' : startTime > now ? 'Upcoming' : 'Past';
+  const statusColor = meeting.status === 'cancelled' ? C.error : isLive ? C.warning : startTime > now ? C.success : C.muted;
+  const statusLabel = meeting.status === 'cancelled' ? 'Cancelled' : isLive ? 'Live Now' : startTime > now ? 'Upcoming' : 'Past';
 
   const formatTime = (d: string) => {
     const date = new Date(d);
@@ -119,9 +119,9 @@ function MeetingCard({
               <View style={{ flex: 1, marginRight: 10 }}>
                 <Text
                   style={{
-                    color: meeting.is_cancelled ? C.muted : C.text,
+                    color: meeting.status === 'cancelled' ? C.muted : C.text,
                     fontSize: 16, fontWeight: '800',
-                    textDecorationLine: meeting.is_cancelled ? 'line-through' : 'none',
+                    textDecorationLine: meeting.status === 'cancelled' ? 'line-through' : 'none',
                   }}
                   numberOfLines={1}
                 >
@@ -179,7 +179,7 @@ function MeetingCard({
 }
 
 export default function MeetingsScreen() {
-  const { user } = useAuth();
+  const { user, activeWorkspace } = useAuth();
   const router   = useRouter();
   const colors   = useColors();
   const colorScheme = useColorScheme();
@@ -205,6 +205,64 @@ export default function MeetingsScreen() {
   const [loading, setLoading]   = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isStartingInstant, setIsStartingInstant] = useState(false);
+
+  const handleInstantMeeting = async () => {
+    if (!user) return;
+    setIsStartingInstant(true);
+    try {
+      let realWorkspaceId = activeWorkspace?.id === 'independent' ? null : activeWorkspace?.id;
+      if (activeWorkspace?.id && activeWorkspace.id !== 'independent') {
+        const { data: wsData } = await supabase
+          .from('workspaces')
+          .select('id')
+          .eq('organization_id', activeWorkspace.id)
+          .limit(1)
+          .single();
+        if (wsData) {
+          realWorkspaceId = wsData.id;
+        }
+      }
+
+      const roomName = `cf-meeting-${Math.random().toString(36).substring(2, 10)}`;
+      const startTime = new Date();
+      const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+
+      const { data: meetingData, error: meetingError } = await supabase
+        .from('meetings')
+        .insert({
+          workspace_id: realWorkspaceId,
+          title: `${user.fullName || 'User'}'s Instant Meeting`,
+          host_id: user.id,
+          room_name: roomName,
+          meeting_link_type: 'coreflow',
+          start_time: startTime.toISOString(),
+          end_time: endTime.toISOString(),
+          status: 'scheduled',
+        })
+        .select('id')
+        .single();
+
+      if (meetingError) throw meetingError;
+
+      await supabase.from('meeting_participants').insert({
+        meeting_id: meetingData.id,
+        user_id: user.id,
+        role: 'host',
+        status: 'accepted',
+        can_share_screen: true,
+        can_record: true,
+        can_present: true,
+        can_invite: true,
+      });
+
+      router.push(`/meetings/pre-join?id=${meetingData.id}` as any);
+    } catch (e: any) {
+      Alert.alert('Error', e.message || 'Failed to start instant meeting');
+    } finally {
+      setIsStartingInstant(false);
+    }
+  };
   
   const headerFade  = useRef(new Animated.Value(0)).current;
   const headerSlide = useRef(new Animated.Value(-16)).current;
@@ -233,7 +291,8 @@ export default function MeetingsScreen() {
       const now = new Date();
       setMeetings((data || []).filter(m => {
         const s = new Date(m.start_time);
-        return tab === 'upcoming' ? s >= now : s < now;
+        const isCancelled = m.status === 'cancelled';
+        return tab === 'upcoming' ? (s >= now && !isCancelled) : (s < now || isCancelled);
       }));
 
       // Re-schedule meeting notifications locally based on fetched list
@@ -333,9 +392,14 @@ export default function MeetingsScreen() {
                 <Text style={[styles.subtitle, { color: C.muted }]}>{meetings.length} {tab} meeting{meetings.length !== 1 ? 's' : ''}</Text>
               </View>
               {canSchedule && (
-                <GradientButton onPress={() => router.push('/meetings/new')} size="sm">
-                  + Schedule
-                </GradientButton>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  <GradientButton onPress={handleInstantMeeting} size="sm" variant="analytics" loading={isStartingInstant}>
+                    Instant
+                  </GradientButton>
+                  <GradientButton onPress={() => router.push('/meetings/new')} size="sm">
+                    + Schedule
+                  </GradientButton>
+                </View>
               )}
             </>
           )}

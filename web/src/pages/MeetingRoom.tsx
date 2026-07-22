@@ -14,6 +14,19 @@ export default function MeetingRoom() {
   const [serverUrl, setServerUrl] = useState('');
   const [error, setError] = useState('');
 
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const defaultNotesTemplate = `# Meeting Notes\n\n**Agenda:**\n- \n\n**Decisions:**\n- \n\n**Action Items:**\n- `;
+  const [notesText, setNotesText] = useState(() => {
+    const saved = localStorage.getItem(`meeting_notes_${id}`);
+    return saved || defaultNotesTemplate;
+  });
+
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setNotesText(val);
+    localStorage.setItem(`meeting_notes_${id}`, val);
+  };
+
   useEffect(() => {
     if (!name) {
       navigate(`/meetings/${id}`);
@@ -88,7 +101,14 @@ export default function MeetingRoom() {
 
   return (
     <div className="h-screen w-full bg-background flex flex-col relative" data-lk-theme="default">
-      <div className="absolute top-4 right-4 z-50">
+      <div className="absolute top-4 right-4 z-50 flex gap-2">
+        <button 
+          onClick={() => setIsNotesOpen(!isNotesOpen)}
+          className="flex items-center gap-2 bg-slate-800/80 backdrop-blur hover:bg-slate-700 text-white px-4 py-2 rounded-full text-sm font-semibold transition-colors shadow-lg border border-white/10"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+          Notes
+        </button>
         <button 
           onClick={handleShare}
           className="flex items-center gap-2 bg-primary/80 backdrop-blur hover:bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-semibold transition-colors shadow-lg border border-white/10"
@@ -97,17 +117,41 @@ export default function MeetingRoom() {
           Share
         </button>
       </div>
-      <LiveKitRoom
-        video={{ resolution: VideoPresets.h1080 }}
-        audio={{ autoGainControl: true, echoCancellation: true, noiseSuppression: true }}
-        token={token}
-        serverUrl={serverUrl}
-        onDisconnected={() => navigate('/')}
-        className="flex-1"
-      >
-        <VideoConference />
-        <RoomAudioRenderer />
-      </LiveKitRoom>
+      
+      <div className="flex-1 flex w-full h-full">
+        <LiveKitRoom
+          video={{ resolution: VideoPresets.h1080 }}
+          audio={{ autoGainControl: true, echoCancellation: true, noiseSuppression: true }}
+          token={token}
+          serverUrl={serverUrl}
+          onDisconnected={() => navigate('/')}
+          className={`flex-1 transition-all ${isNotesOpen ? 'w-2/3' : 'w-full'}`}
+        >
+          <VideoConference />
+          <RoomAudioRenderer />
+        </LiveKitRoom>
+
+        {isNotesOpen && (
+          <div className="w-1/3 h-full bg-[#09090b] border-l border-white/10 flex flex-col absolute right-0 top-0 bottom-0 z-40">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#09090b]">
+              <h3 className="text-white font-bold text-lg flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
+                My Notes
+              </h3>
+              <button onClick={() => setIsNotesOpen(false)} className="text-gray-400 hover:text-white transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            </div>
+            <textarea
+              className="flex-1 p-4 bg-transparent text-gray-200 outline-none resize-none font-mono text-sm"
+              placeholder="Type your notes here..."
+              value={notesText}
+              onChange={handleNotesChange}
+            />
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }

@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, ActivityIndicator, FlatList, Dimensions, Platform, Alert } from 'react-native';
+import { View, Text, Pressable, ActivityIndicator, FlatList, Dimensions, Platform, Alert, TextInput, Modal, KeyboardAvoidingView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useTracks, useParticipant } from '@livekit/react-native';
 import { Track, ExternalE2EEKeyProvider, RoomOptions, VideoPresets } from 'livekit-client';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Users, MessageSquare, MoreHorizontal } from 'lucide-react-native';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Users, MessageSquare, MoreHorizontal, FileText, X } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '@/hooks/use-auth';
 import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
 import { initializeUserKeys, decryptKeyWithSender } from '@/lib/crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useRef } from 'react';
 
 const { width } = Dimensions.get('window');
 
@@ -159,6 +160,63 @@ function MeetingUI() {
 
   const [waitingUsers, setWaitingUsers] = useState<any[]>([]);
 
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [notesText, setNotesText] = useState('');
+  const [notesId, setNotesId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const saveTimeout = useRef<NodeJS.Timeout | null>(null);
+  const defaultNotesTemplate = `# Meeting Notes\n\n**Agenda:**\n- \n\n**Decisions:**\n- \n\n**Action Items:**\n- `;
+
+  const openNotes = async () => {
+    setIsNotesOpen(true);
+    if (!notesText && session?.user?.id) {
+      const { data, error } = await supabase
+        .from('meeting_notes')
+        .select('*')
+        .eq('meeting_id', id)
+        .eq('author_id', session.user.id)
+        .limit(1)
+        .single();
+      
+      if (data) {
+        setNotesText(data.content);
+        setNotesId(data.id);
+      } else {
+        setNotesText(defaultNotesTemplate);
+      }
+    }
+  };
+
+  const saveNotes = async (text: string) => {
+    if (!session?.user?.id) return;
+    setIsSaving(true);
+    try {
+      if (notesId) {
+        await supabase.from('meeting_notes').update({ content: text, updated_at: new Date().toISOString() }).eq('id', notesId);
+      } else {
+        const { data } = await supabase.from('meeting_notes').insert({
+          meeting_id: id,
+          author_id: session.user.id,
+          content: text
+        }).select('id').single();
+        if (data) setNotesId(data.id);
+      }
+    } catch (e) {
+      console.error('Failed to save notes', e);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleNotesChange = (text: string) => {
+    setNotesText(text);
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      saveNotes(text);
+    }, 1500);
+  };
+
+
   useEffect(() => {
     // Fetch waiting users
     const fetchWaiting = async () => {
@@ -283,6 +341,10 @@ function MeetingUI() {
               <MonitorUp size={20} color="#FFFFFF" />
             </Pressable>
 
+            <Pressable onPress={openNotes} className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
+              <FileText size={20} color="#FFFFFF" />
+            </Pressable>
+            
             <Pressable className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
               <MessageSquare size={20} color="#FFFFFF" />
             </Pressable>
@@ -298,6 +360,33 @@ function MeetingUI() {
           </BlurView>
         </View>
       </View>
+
+      {/* Notes Modal */}
+      <Modal visible={isNotesOpen} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setIsNotesOpen(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-[#09090B]">
+          <View className="flex-row justify-between items-center p-4 border-b border-white/10 mt-2">
+            <View className="flex-row items-center gap-2">
+              <FileText size={24} color="#2563EB" />
+              <Text className="text-white font-bold text-lg">My Notes</Text>
+              {isSaving && <ActivityIndicator size="small" color="#2563EB" />}
+            </View>
+            <Pressable onPress={() => setIsNotesOpen(false)} className="p-2">
+              <X size={24} color="#A1A1AA" />
+            </Pressable>
+          </View>
+          <TextInput
+            className="flex-1 p-4 text-white text-base"
+            multiline
+            textAlignVertical="top"
+            placeholder="Type your notes here..."
+            placeholderTextColor="#71717A"
+            value={notesText}
+            onChangeText={handleNotesChange}
+            style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}
+          />
+        </KeyboardAvoidingView>
+      </Modal>
+
     </View>
   );
 }

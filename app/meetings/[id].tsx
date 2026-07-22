@@ -190,7 +190,7 @@ export default function MeetingDetailsScreen() {
 
   return (
     <ScreenContainer className="flex-1">
-        {canModify && !meeting.is_cancelled && !isMeetingPast ? (
+        {canModify && meeting.status !== 'cancelled' && !isMeetingPast ? (
           <Pressable 
             onPress={() => router.push(`/meetings/new?editId=${meeting.id}` as any)}
             className="p-2 -mr-2"
@@ -379,7 +379,7 @@ export default function MeetingDetailsScreen() {
           </View>
 
           {/* Admin / Creator Controls */}
-          {canModify && !meeting.is_cancelled && !isMeetingPast && (
+          {canModify && meeting.status !== 'cancelled' && !isMeetingPast && (
             <View className="mb-12 mt-4 pt-6 border-t border-border">
               <PremiumButton
                 variant="outline"
