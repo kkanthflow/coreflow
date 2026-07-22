@@ -123,6 +123,24 @@ export default function NewMeetingScreen() {
       const durationMinutes = parseInt(duration, 10);
       const endTime = new Date(startTime.getTime() + durationMinutes * 60000);
 
+      let realWorkspaceId = activeWorkspace?.id === 'independent' ? null : activeWorkspace?.id;
+      
+      if (activeWorkspace?.id && activeWorkspace.id !== 'independent') {
+        // activeWorkspace.id is actually the organization_id, so we need to fetch the real workspace_id
+        const { data: wsData, error: wsError } = await supabase
+          .from('workspaces')
+          .select('id')
+          .eq('organization_id', activeWorkspace.id)
+          .single();
+          
+        if (wsData) {
+          realWorkspaceId = wsData.id;
+        } else {
+          // Fallback if organization_id doesn't match a workspace directly
+          console.warn('Could not find workspace for organization:', activeWorkspace.id, wsError);
+        }
+      }
+
       let meetingId = editId;
 
       if (editId) {
@@ -152,7 +170,7 @@ export default function NewMeetingScreen() {
         const { data: meetingData, error: meetingError } = await supabase
           .from('meetings')
           .insert({
-            workspace_id: activeWorkspace?.id,
+            workspace_id: realWorkspaceId,
             title: title.trim(),
             description: description.trim() || null,
             host_id: user?.id,

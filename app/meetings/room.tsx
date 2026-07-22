@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, FlatList, Dimensions, Platform, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useTracks, useParticipant } from '@livekit/react-native';
-import { Track, ExternalE2EEKeyProvider, RoomOptions } from 'livekit-client';
+import { Track, ExternalE2EEKeyProvider, RoomOptions, VideoPresets } from 'livekit-client';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Users, MessageSquare, MoreHorizontal } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '@/hooks/use-auth';
@@ -138,8 +138,8 @@ export default function MeetingRoomScreen() {
       serverUrl={serverUrl}
       token={token}
       connect={true}
-      audio={mic === '1'}
-      video={camera === '1'}
+      audio={mic === '1' ? { autoGainControl: true, echoCancellation: true, noiseSuppression: true } : false}
+      video={camera === '1' ? { resolution: VideoPresets.h1080 } : false}
       options={e2eeOptions}
     >
       <MeetingUI />
@@ -263,20 +263,23 @@ function MeetingUI() {
           <BlurView intensity={Platform.OS === 'ios' ? 60 : 100} tint="dark" className="flex-row justify-evenly items-center py-4 px-2">
             
             <Pressable 
-              onPress={() => localParticipant.setMicrophoneEnabled(!localParticipant.isMicrophoneEnabled)}
-              className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant.isMicrophoneEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
+              onPress={() => localParticipant?.setMicrophoneEnabled(!localParticipant?.isMicrophoneEnabled)}
+              className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant?.isMicrophoneEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
             >
-              {localParticipant.isMicrophoneEnabled ? <Mic size={20} color="#FFFFFF" /> : <MicOff size={20} color="#EF4444" />}
+              {localParticipant?.isMicrophoneEnabled ? <Mic size={20} color="#FFFFFF" /> : <MicOff size={20} color="#EF4444" />}
             </Pressable>
 
             <Pressable 
-              onPress={() => localParticipant.setCameraEnabled(!localParticipant.isCameraEnabled)}
-              className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant.isCameraEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
+              onPress={() => localParticipant?.setCameraEnabled(!localParticipant?.isCameraEnabled)}
+              className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant?.isCameraEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
             >
-              {localParticipant.isCameraEnabled ? <Video size={20} color="#FFFFFF" /> : <VideoOff size={20} color="#EF4444" />}
+              {localParticipant?.isCameraEnabled ? <Video size={20} color="#FFFFFF" /> : <VideoOff size={20} color="#EF4444" />}
             </Pressable>
 
-            <Pressable className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
+            <Pressable 
+              onPress={() => localParticipant?.setScreenShareEnabled(!localParticipant?.isScreenShareEnabled)}
+              className={`w-12 h-12 rounded-full items-center justify-center ${localParticipant?.isScreenShareEnabled ? 'bg-[#2563EB]' : 'bg-[#18181B]'}`}
+            >
               <MonitorUp size={20} color="#FFFFFF" />
             </Pressable>
 

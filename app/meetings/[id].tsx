@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, Linking } from 'react-native';
+import { View, Text, ScrollView, Pressable, ActivityIndicator, Alert, Linking, Share } from 'react-native';
 import { ScreenContainer } from '@/components/screen-container';
 import { PremiumButton } from '@/components/ui/premium-button';
 import { useAuth } from '@/hooks/use-auth';
@@ -150,6 +150,20 @@ export default function MeetingDetailsScreen() {
     }
   };
 
+  const handleShareMeeting = async () => {
+    if (!meeting) return;
+    const link = `${process.env.EXPO_PUBLIC_WEB_URL || 'https://coreflow-meeting.vercel.app'}/meetings/${meeting.id}`;
+    try {
+      await Share.share({
+        message: `Join my meeting "${meeting.title}" on CoreFlow: ${link}`,
+        url: link,
+        title: meeting.title,
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
+  };
+
   if (isLoading) {
     return (
       <ScreenContainer className="flex-1 justify-center items-center">
@@ -245,11 +259,16 @@ export default function MeetingDetailsScreen() {
                     <Text className="text-base font-semibold text-foreground capitalize">
                       {meeting.room_name ? 'CoreFlow Native' : 'External Link'}
                     </Text>
-                    {(meeting.room_name || meeting.meeting_link) && meeting.status !== 'cancelled' && !isMeetingPast && (
-                      <Pressable onPress={handleJoinLink} className="bg-primary px-4 py-1.5 rounded-full">
-                        <Text className="text-white text-sm font-bold">Join</Text>
+                    <View className="flex-row items-center gap-2">
+                      <Pressable onPress={handleShareMeeting} className="bg-primary/10 px-4 py-1.5 rounded-full">
+                        <Text className="text-primary text-sm font-bold">Share</Text>
                       </Pressable>
-                    )}
+                      {(meeting.room_name || meeting.meeting_link) && meeting.status !== 'cancelled' && !isMeetingPast && (
+                        <Pressable onPress={handleJoinLink} className="bg-primary px-4 py-1.5 rounded-full">
+                          <Text className="text-white text-sm font-bold">Join</Text>
+                        </Pressable>
+                      )}
+                    </View>
                   </View>
                 )}
               </View>

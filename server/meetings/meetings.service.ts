@@ -22,7 +22,7 @@ export class MeetingsService {
       .from('meetings')
       .insert({
         host_id: data.hostId,
-        workspace_id: data.workspaceId,
+        workspace_id: data.workspaceId === 'independent' ? null : data.workspaceId,
         title: data.title,
         description: data.description,
         start_time: data.startTime,
