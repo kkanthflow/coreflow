@@ -1,8 +1,10 @@
 {
   "version": 2,
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/index.ts" }
-  ],
-  "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "echo 'Building static assets...'"
+  "outputDirectory": "web/dist",
+  "installCommand": "npm install --legacy-peer-deps && cd web && npm install --legacy-peer-deps",
+  "buildCommand": "cd web && npm run build",
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index.ts" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
