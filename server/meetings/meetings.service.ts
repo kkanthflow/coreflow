@@ -84,15 +84,11 @@ export class MeetingsService {
         meeting_id: meetingId,
         user_id: userId,
         status: 'joined',
-        admission_status: 'waiting', // they wait by default when joining uninvited
       }).select().single();
       return newParticipant;
     } else {
-      // If their admission_status is 'none', set to 'waiting'
       let updates: any = { status: 'joined', joined_at: new Date().toISOString() };
-      if (data.admission_status === 'none' && data.role !== 'host') {
-        updates.admission_status = 'waiting';
-      }
+      
       const { data: updatedParticipant } = await getSupabase()
         .from('meeting_participants')
         .update(updates)

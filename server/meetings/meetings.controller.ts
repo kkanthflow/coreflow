@@ -53,9 +53,10 @@ export class MeetingsController {
       // Get participant record
       const participant = await MeetingsService.trackParticipant(meeting.id, user.id);
 
-      if (participant.role !== 'host' && participant.admission_status !== 'admitted') {
-        return res.status(403).json({ error: 'waiting_room', admission_status: participant.admission_status });
-      }
+      // Temporarily disable waiting room logic since admission_status is not in DB schema yet
+      // if (participant.role !== 'host' && participant.admission_status !== 'admitted') {
+      //   return res.status(403).json({ error: 'waiting_room', admission_status: participant.admission_status });
+      // }
 
       const participantName = user.user_metadata?.full_name || user.email;
 
@@ -76,7 +77,7 @@ export class MeetingsController {
       res.json({ token, roomUrl: process.env.LIVEKIT_API_URL });
     } catch (error: any) {
       console.error('Error joining meeting:', error);
-      res.status(500).json({ error: 'Failed to join meeting' });
+      res.status(500).json({ error: 'Failed to join meeting', details: error?.message || String(error) });
     }
   }
 

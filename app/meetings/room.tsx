@@ -2,8 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, FlatList, Dimensions, Platform, Alert, TextInput, Modal, KeyboardAvoidingView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useTracks, useParticipant } from '@livekit/react-native';
-import { Track, ExternalE2EEKeyProvider, RoomOptions, VideoPresets } from 'livekit-client';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Users, MessageSquare, MoreHorizontal, FileText, X } from 'lucide-react-native';
+import { Track, ExternalE2EEKeyProvider, RoomOptions, VideoPresets, RoomEvent } from 'livekit-client';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Users, MessageSquare, MoreHorizontal, FileText, X, Send } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '@/hooks/use-auth';
 import Animated, { useAnimatedStyle, withRepeat, withTiming, withSequence, Easing } from 'react-native-reanimated';
@@ -27,7 +27,7 @@ const getLiveKitToken = async (roomId: string, token: string) => {
     if (data.error === 'waiting_room') {
       throw { type: 'waiting_room' };
     }
-    throw new Error('Failed to fetch token from backend');
+    throw new Error(data.details || data.error || 'Failed to fetch token from backend');
   }
   return data.token;
 };
@@ -159,6 +159,71 @@ function MeetingUI() {
   const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare]);
 
   const [waitingUsers, setWaitingUsers] = useState<any[]>([]);
+
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [messages, setMessages] = useState<{ id: string, text: string, sender: string, time: string, isSelf: boolean }[]>([]);
+
+  useEffect(() => {
+    const handleData = (payload: Uint8Array, participant?: any) => {
+      let str = '';
+      try {
+        str = new TextDecoder().decode(payload);
+      } catch (err) {
+        // Fallback for older RN environments without TextDecoder
+        str = String.fromCharCode.apply(null, Array.from(payload));
+      }
+
+      try {
+        const msg = JSON.parse(str);
+        if (msg.type === 'chat') {
+          setMessages(prev => [...prev, {
+            id: Math.random().toString(36).substring(7),
+            text: msg.text,
+            sender: participant?.name || participant?.identity || 'Someone',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            isSelf: false,
+          }]);
+        }
+      } catch (e) {
+        // Not a JSON chat message
+      }
+    };
+    
+    room.on(RoomEvent.DataReceived, handleData);
+    return () => {
+      room.off(RoomEvent.DataReceived, handleData);
+    };
+  }, [room]);
+
+  const sendChatMessage = async () => {
+    if (!chatInput.trim() || !localParticipant) return;
+    
+    const msgObj = { type: 'chat', text: chatInput.trim() };
+    const str = JSON.stringify(msgObj);
+    
+    let data;
+    try {
+      data = new TextEncoder().encode(str);
+    } catch (err) {
+      data = new Uint8Array(str.length);
+      for (let i = 0; i < str.length; i++) data[i] = str.charCodeAt(i);
+    }
+    
+    try {
+      await localParticipant.publishData(data, { reliable: true });
+      setMessages(prev => [...prev, {
+        id: Math.random().toString(36).substring(7),
+        text: msgObj.text,
+        sender: 'Me',
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        isSelf: true,
+      }]);
+      setChatInput('');
+    } catch (e) {
+      console.error('Failed to send message', e);
+    }
+  };
 
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [notesText, setNotesText] = useState('');
@@ -345,7 +410,7 @@ function MeetingUI() {
               <FileText size={20} color="#FFFFFF" />
             </Pressable>
             
-            <Pressable className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
+            <Pressable onPress={() => setIsChatOpen(true)} className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
               <MessageSquare size={20} color="#FFFFFF" />
             </Pressable>
             
@@ -384,6 +449,55 @@ function MeetingUI() {
             onChangeText={handleNotesChange}
             style={{ fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace' }}
           />
+        </KeyboardAvoidingView>
+      </Modal>
+
+      {/* Chat Modal */}
+      <Modal visible={isChatOpen} animationType="slide" presentationStyle="formSheet" onRequestClose={() => setIsChatOpen(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-[#09090B]">
+          <View className="flex-row justify-between items-center p-4 border-b border-white/10 mt-2">
+            <View className="flex-row items-center gap-2">
+              <MessageSquare size={24} color="#2563EB" />
+              <Text className="text-white font-bold text-lg">Meeting Chat</Text>
+            </View>
+            <Pressable onPress={() => setIsChatOpen(false)} className="p-2">
+              <X size={24} color="#A1A1AA" />
+            </Pressable>
+          </View>
+          
+          <FlatList
+            data={messages}
+            keyExtractor={item => item.id}
+            contentContainerStyle={{ padding: 16, gap: 12 }}
+            renderItem={({ item }) => (
+              <View className={`max-w-[80%] rounded-2xl p-3 ${item.isSelf ? 'bg-[#2563EB] self-end' : 'bg-[#27272A] self-start'}`}>
+                <View className="flex-row justify-between items-end mb-1 gap-4">
+                  <Text className={`font-semibold text-xs ${item.isSelf ? 'text-blue-100' : 'text-gray-300'}`}>{item.sender}</Text>
+                  <Text className={`text-[10px] ${item.isSelf ? 'text-blue-200' : 'text-gray-400'}`}>{item.time}</Text>
+                </View>
+                <Text className="text-white text-sm">{item.text}</Text>
+              </View>
+            )}
+            ListEmptyComponent={
+              <View className="flex-1 items-center justify-center py-10">
+                <Text className="text-[#A1A1AA]">No messages yet. Say hi!</Text>
+              </View>
+            }
+          />
+          
+          <View className="p-4 border-t border-white/10 flex-row items-center gap-2 mb-2">
+            <TextInput
+              className="flex-1 bg-[#27272A] text-white p-3 rounded-full"
+              placeholder="Type a message..."
+              placeholderTextColor="#71717A"
+              value={chatInput}
+              onChangeText={setChatInput}
+              onSubmitEditing={sendChatMessage}
+            />
+            <Pressable onPress={sendChatMessage} className="w-12 h-12 rounded-full bg-[#2563EB] items-center justify-center">
+              <Send size={20} color="#FFFFFF" />
+            </Pressable>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
 
