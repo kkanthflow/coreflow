@@ -36,7 +36,8 @@ export default function MeetingRoomScreen() {
   const { id, camera, mic } = useLocalSearchParams();
   const { session } = useAuth();
   const [token, setToken] = useState<string | null>(null);
-  const [e2eeOptions, setE2eeOptions] = useState<RoomOptions | null>(null);
+  const [e2eeOptions, setE2eeOptions] = useState<RoomOptions | undefined>(undefined);
+  const [e2eeInitialized, setE2eeInitialized] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
   const serverUrl = process.env.EXPO_PUBLIC_LIVEKIT_URL || 'wss://dummy.livekit.cloud';
 
@@ -72,6 +73,7 @@ export default function MeetingRoomScreen() {
         } else {
           console.log('No meeting key found, proceeding without E2EE.');
         }
+        setE2eeInitialized(true);
 
         const tk = await getLiveKitToken(id as string, session.access_token);
         setIsWaiting(false);
@@ -125,7 +127,7 @@ export default function MeetingRoomScreen() {
     );
   }
 
-  if (!token || !e2eeOptions) {
+  if (!token || !e2eeInitialized) {
     return (
       <View className="flex-1 bg-[#09090B] justify-center items-center">
         <ActivityIndicator size="large" color="#2563EB" />
