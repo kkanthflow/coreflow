@@ -181,8 +181,18 @@ function getFirebaseApp(): App | null {
     const serviceAccount = JSON.parse(serviceAccountString);
     if (serviceAccount.private_key) {
       let key = serviceAccount.private_key;
+      console.log("[FCM-DEBUG] Original key length:", key.length);
+      console.log("[FCM-DEBUG] Original key start:", key.substring(0, 40));
+      console.log("[FCM-DEBUG] Original key end:", key.substring(key.length - 40));
+      console.log("[FCM-DEBUG] Has literal backslash n:", key.includes('\\n'));
+      console.log("[FCM-DEBUG] Has actual newline:", key.includes('\n'));
+      console.log("[FCM-DEBUG] Number of actual newlines:", (key.match(/\n/g) || []).length);
+      
       key = key.replace(/\\n/g, '\n');
       const lines = key.split('\n').map((l: string) => l.trim()).filter(Boolean);
+      
+      console.log("[FCM-DEBUG] Lines after split:", lines.length);
+      
       if (lines.length <= 3) {
         let body = key.replace(/-----BEGIN PRIVATE KEY-----/gi, '').replace(/-----END PRIVATE KEY-----/gi, '').replace(/\s+/g, '');
         let chunks = body.match(/.{1,64}/g);
@@ -190,8 +200,12 @@ function getFirebaseApp(): App | null {
           serviceAccount.private_key = '-----BEGIN PRIVATE KEY-----\n' + chunks.join('\n') + '\n-----END PRIVATE KEY-----\n';
         }
       } else {
-        serviceAccount.private_key = key;
+        serviceAccount.private_key = '-----BEGIN PRIVATE KEY-----\n' + lines.slice(1, lines.length - 1).join('\n') + '\n-----END PRIVATE KEY-----\n';
       }
+      
+      console.log("[FCM-DEBUG] Final key start:", serviceAccount.private_key.substring(0, 40));
+      console.log("[FCM-DEBUG] Final key end:", serviceAccount.private_key.substring(serviceAccount.private_key.length - 40));
+      console.log("[FCM-DEBUG] Final lines:", (serviceAccount.private_key.match(/\n/g) || []).length);
     }
     fcmApp = initializeApp({ credential: cert(serviceAccount) });
     console.log("[FCM] Firebase app initialized via environment variable.");
