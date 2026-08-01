@@ -1,210 +1,116 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { TabScreenWrapper } from '@/components/ui/tab-screen-wrapper';
-import {
-  View, Text, ScrollView, Pressable, StyleSheet,
-  Animated, StatusBar, RefreshControl, Alert
-} from 'react-native';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-import { useAuth } from '@/hooks/use-auth';
-import { supabase } from '@/lib/supabase';
-import { scheduleMeetingLocalNotifications } from '@/lib/notifications-helper';
-import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { View, Text, Pressable, ScrollView, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
-import { Image } from 'expo-image';
-import { isToday, isTomorrow } from 'date-fns';
-import { safeFormat } from '@/lib/utils';
-import { GlassCard } from '@/components/ui/glass-card';
-import { GradientButton } from '@/components/ui/gradient-button';
-import { ShimmerCard, ShimmerLoader } from '@/components/ui/shimmer-loader';
-import { hasPermission } from '@/lib/permissions';
-import { useColors } from '@/hooks/use-colors';
+import { useAuth } from '@/hooks/use-auth';
+import { Video, CalendarPlus, Key, Users, Calendar, ChevronRight, Clock, Play } from 'lucide-react-native';
+import { supabase } from '@/lib/supabase';
+import Animated, { FadeIn, FadeInUp, FadeInRight, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { Skeleton } from '@/components/ui/skeleton';
+import { TabScreenWrapper } from '@/components/ui/tab-screen-wrapper';
+import { scheduleMeetingLocalNotifications } from '@/lib/notifications-helper';
+import { ActivityIndicator } from 'react-native';
 
-function MeetingCard({
-  meeting,
-  userId,
-  onPress,
-  onLongPress,
-  isSelected,
-  isSelectionMode,
-  index
-}: {
-  meeting: any;
-  userId: string;
-  onPress: () => void;
-  onLongPress: () => void;
-  isSelected: boolean;
-  isSelectionMode: boolean;
-  index: number;
-}) {
-  const colors = useColors();
-  const C = {
-    bg: colors.background,
-    card: colors.card,
-    border: colors.border,
-    primary: colors.primary,
-    secondary: colors.secondary,
-    text: colors.foreground,
-    textSec: colors.secondary_text,
-    muted: colors.muted,
-    success: colors.success,
-    warning: colors.warning,
-    error: colors.error,
-    info: colors.info,
-  };
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-  const slideAnim = useRef(new Animated.Value(24)).current;
-  const fadeAnim  = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(slideAnim, { toValue: 0, duration: 400, delay: index * 70, useNativeDriver: true }),
-      Animated.timing(fadeAnim,  { toValue: 1, duration: 400, delay: index * 70, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  const now       = new Date();
-  const startTime = new Date(meeting.start_time);
-  const endTime   = new Date(meeting.end_time);
-  const isLive    = now >= startTime && now <= endTime;
-  const isMine    = meeting.host_id === userId;
-
-  const statusColor = meeting.status === 'cancelled' ? C.error : isLive ? C.warning : startTime > now ? C.success : C.muted;
-  const statusLabel = meeting.status === 'cancelled' ? 'Cancelled' : isLive ? 'Live Now' : startTime > now ? 'Upcoming' : 'Past';
-
-  const formatTime = (d: string) => {
-    const date = new Date(d);
-    if (isToday(date))    return `Today · ${safeFormat(date, 'h:mm a')}`;
-    if (isTomorrow(date)) return `Tomorrow · ${safeFormat(date, 'h:mm a')}`;
-    return safeFormat(date, 'MMM d · h:mm a');
-  };
+const ActionCard = ({ title, subtitle, icon: Icon, delay, onPress, active, loading }: any) => {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
 
   return (
-    <Animated.View style={{ transform: [{ translateY: slideAnim }], opacity: fadeAnim, marginBottom: 12 }}>
-      <Pressable
-        onPress={onPress}
-        onLongPress={onLongPress}
-        delayLongPress={300}
-        style={({ pressed }) => ({
-          backgroundColor: isSelected ? `${C.primary}10` : C.card,
-          borderRadius: 20,
-          overflow: 'hidden',
-          borderWidth: 1,
-          borderColor: isSelected ? C.primary : pressed ? `${statusColor}40` : C.border,
-          shadowColor: isLive ? C.warning : C.primary,
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: isLive ? 0.3 : pressed ? 0.2 : 0.08,
-          shadowRadius: isLive ? 12 : 8,
-          elevation: isLive ? 6 : 3,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
-        })}
-      >
-        {/* Left accent bar */}
-        <View style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, backgroundColor: isSelected ? C.primary : statusColor }} />
+    <AnimatedPressable
+      entering={FadeInUp.delay(delay).duration(350).springify()}
+      onPressIn={() => {
+        scale.value = withSpring(0.97);
+        if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1);
+      }}
+      onPress={onPress}
+      style={animatedStyle}
+      className={`flex-1 rounded-[24px] p-4 border mb-3 flex-row items-center space-x-4 shadow-lg ${active ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]/30' : 'bg-[#1E2128] border-[rgba(255,255,255,0.06)]'}`}
+    >
+      <View className={`w-12 h-12 rounded-2xl items-center justify-center shadow-md ${active ? 'bg-[#FF6B4A]' : 'bg-[#27272A]'}`}>
+        {loading ? (
+          <ActivityIndicator size="small" color={active ? "#FFFFFF" : "#FF6B4A"} />
+        ) : (
+          <Icon size={22} color={active ? "#FFFFFF" : "#FF6B4A"} />
+        )}
+      </View>
+      <View className="flex-1">
+        <Text className="text-white text-base font-bold">{title}</Text>
+        <Text className="text-[#A1A1AA] text-xs mt-0.5">{subtitle}</Text>
+      </View>
+    </AnimatedPressable>
+  );
+};
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, paddingLeft: 20 }}>
-          {/* Checkbox indicator */}
-          {isSelectionMode && (
-            <View style={{ marginRight: 16, justifyContent: 'center' }}>
-              <Ionicons
-                name={isSelected ? "checkbox" : "square-outline"}
-                size={22}
-                color={isSelected ? C.primary : C.muted}
-              />
+const TimelineCard = ({ meeting, delay }: any) => {
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  const startTime = new Date(meeting.start_time);
+  const endTime = new Date(startTime.getTime() + (meeting.duration_minutes || 30) * 60000);
+  
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const router = useRouter();
+
+  return (
+    <AnimatedPressable
+      entering={FadeInRight.delay(delay).duration(250).springify()}
+      onPressIn={() => {
+        scale.value = withSpring(0.97);
+        if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1);
+      }}
+      onPress={() => router.push(`/meetings/${meeting.id}` as any)}
+      style={animatedStyle}
+      className="bg-[#1E2128] border border-[rgba(255,255,255,0.06)] border-l-4 border-l-[#FF6B4A] rounded-[20px] p-4 mb-4 flex-row justify-between items-center shadow-lg"
+    >
+      <View className="flex-1">
+        <Text className="text-[#A1A1AA] text-xs font-semibold mb-1">
+          {formatTime(meeting.start_time)} - {formatTime(endTime.toISOString())}
+        </Text>
+        <Text className="text-white text-lg font-bold mb-1" numberOfLines={1}>{meeting.title}</Text>
+        {meeting.description && (
+          <Text className="text-[#A1A1AA] text-sm mb-3" numberOfLines={1}>{meeting.description}</Text>
+        )}
+        <View className="flex-row items-center space-x-2 mt-1">
+          <View className="flex-row">
+            <View className="w-6 h-6 rounded-full bg-[#FF6B4A]/20 border border-[#1E2128] items-center justify-center -mr-2 z-20">
+               <Text className="text-[10px] text-[#FF6B4A] font-bold">K</Text>
             </View>
-          )}
-
-          <View style={{ flex: 1 }}>
-            {/* Top row */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
-              <View style={{ flex: 1, marginRight: 10 }}>
-                <Text
-                  style={{
-                    color: meeting.status === 'cancelled' ? C.muted : C.text,
-                    fontSize: 16, fontWeight: '800',
-                    textDecorationLine: meeting.status === 'cancelled' ? 'line-through' : 'none',
-                  }}
-                  numberOfLines={1}
-                >
-                  {meeting.title}
-                </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
-                  <Ionicons name="time-outline" size={13} color={C.primary} />
-                  <Text style={{ color: C.primary, fontSize: 13, fontWeight: '600' }}>{formatTime(meeting.start_time)}</Text>
-                  <Text style={{ color: C.muted, fontSize: 12 }}>· {meeting.duration_minutes}m</Text>
-                </View>
-              </View>
-
-              <View style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, backgroundColor: `${statusColor}20`, borderWidth: 1, borderColor: `${statusColor}30` }}>
-                {isLive && <View style={{ position: 'absolute', top: 4, left: 6, width: 6, height: 6, borderRadius: 3, backgroundColor: C.warning, shadowColor: C.warning, shadowOpacity: 0.8, shadowRadius: 4 }} />}
-                <Text style={{ color: statusColor, fontSize: 11, fontWeight: '800', marginLeft: isLive ? 10 : 0 }}>{statusLabel}</Text>
-              </View>
-            </View>
-
-            {/* Description */}
-            {meeting.description && (
-              <Text style={{ color: C.muted, fontSize: 13, lineHeight: 18, marginBottom: 12 }} numberOfLines={2}>
-                {meeting.description}
-              </Text>
-            )}
-
-            {/* Footer */}
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 10, borderTopWidth: 1, borderTopColor: C.border }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                {meeting.host?.avatar_url ? (
-                  <Image source={{ uri: meeting.host.avatar_url }} style={{ width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: C.border }} />
-                ) : (
-                  <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: `${C.primary}30`, alignItems: 'center', justifyContent: 'center' }}>
-                    <Text style={{ color: C.primary, fontSize: 12, fontWeight: '700' }}>
-                      {meeting.host?.full_name?.charAt(0) || '?'}
-                    </Text>
-                  </View>
-                )}
-                <Text style={{ color: C.muted, fontSize: 12 }}>
-                  {isMine ? 'You created this' : meeting.host?.full_name}
-                </Text>
-              </View>
-
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                <Ionicons name="people-outline" size={14} color={C.muted} />
-                <Text style={{ color: C.muted, fontSize: 12, fontWeight: '600' }}>
-                  {meeting.attendees?.length || 0}
-                </Text>
-              </View>
+            <View className="w-6 h-6 rounded-full bg-[#3B82F6]/20 border border-[#1E2128] items-center justify-center z-10">
+               <Text className="text-[10px] text-[#3B82F6] font-bold">S</Text>
             </View>
           </View>
+          <Text className="text-[#A1A1AA] text-xs ml-3">+2 others</Text>
         </View>
-      </Pressable>
-    </Animated.View>
+      </View>
+      
+      <View className="bg-[#FF6B4A]/10 px-4 py-2 rounded-xl">
+        <Text className="text-[#FF6B4A] font-bold text-sm">Join</Text>
+      </View>
+    </AnimatedPressable>
   );
-}
+};
 
-export default function MeetingsScreen() {
-  const { user, activeWorkspace } = useAuth();
-  const router   = useRouter();
-  const colors   = useColors();
-  const colorScheme = useColorScheme();
-
-  const C = {
-    bg: colors.background,
-    card: colors.card,
-    border: colors.border,
-    primary: colors.primary,
-    secondary: colors.secondary,
-    text: colors.foreground,
-    textSec: colors.secondary_text,
-    muted: colors.muted,
-    success: colors.success,
-    warning: colors.warning,
-    error: colors.error,
-    info: colors.info,
-  };
-
-  const [tab, setTab]         = useState<'upcoming' | 'past'>('upcoming');
-  const [meetings, setMeetings] = useState<any[]>([]);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+export default function MeetingsDashboard() {
+  const router = useRouter();
+  const { session, user, activeWorkspace } = useAuth();
+  const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [past, setPast] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [isStartingInstant, setIsStartingInstant] = useState(false);
 
   const handleInstantMeeting = async () => {
@@ -258,245 +164,140 @@ export default function MeetingsScreen() {
 
       router.push(`/meetings/pre-join?id=${meetingData.id}` as any);
     } catch (e: any) {
-      Alert.alert('Error', e.message || 'Failed to start instant meeting');
+      console.error('Error starting instant meeting:', e);
     } finally {
       setIsStartingInstant(false);
     }
   };
-  
-  const headerFade  = useRef(new Animated.Value(0)).current;
-  const headerSlide = useRef(new Animated.Value(-16)).current;
 
-  const canSchedule = hasPermission(user, 'schedule_meetings');
-  const isSelectionMode = selectedIds.length > 0;
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchMeetings();
+    }, [])
+  );
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(headerFade,  { toValue: 1, duration: 500, useNativeDriver: true }),
-      Animated.timing(headerSlide, { toValue: 0, duration: 500, useNativeDriver: true }),
-    ]).start();
-  }, []);
-
-  const fetchMeetings = useCallback(async () => {
-    if (!user) { setLoading(false); return; }
+  const fetchMeetings = async () => {
     try {
-      let query = supabase
+      const now = new Date().toISOString();
+      const { data: upcomingData } = await supabase
         .from('meetings')
-        .select('*, host:host_id(id, full_name, avatar_url), attendees:meeting_participants(user_id, status)')
-        .order('start_time', { ascending: tab === 'upcoming' });
+        .select('*')
+        .gte('start_time', now)
+        .order('start_time', { ascending: true })
+        .limit(3);
 
-      const { data, error } = await query;
-      if (error) throw error;
+      const { data: pastData } = await supabase
+        .from('meetings')
+        .select('*')
+        .lt('start_time', now)
+        .order('start_time', { ascending: false })
+        .limit(2);
 
-      const now = new Date();
-      setMeetings((data || []).filter(m => {
-        const s = new Date(m.start_time);
-        const isCancelled = m.status === 'cancelled';
-        return tab === 'upcoming' ? (s >= now && !isCancelled) : (s < now || isCancelled);
-      }));
-
-      // Re-schedule meeting notifications locally based on fetched list
-      scheduleMeetingLocalNotifications(user.id);
+      if (upcomingData) setUpcoming(upcomingData);
+      if (pastData) setPast(pastData);
+      
+      if (user?.id) {
+        scheduleMeetingLocalNotifications(user.id);
+      }
     } catch (e) {
-      console.error('Meetings fetch error:', e);
+      console.error(e);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  }, [tab, user]);
-
-  useFocusEffect(useCallback(() => { setLoading(true); fetchMeetings(); }, [fetchMeetings]));
-
-  const onRefresh = () => { setRefreshing(true); fetchMeetings(); };
-
-  const handleCardPress = (meetingId: string) => {
-    if (isSelectionMode) {
-      toggleSelection(meetingId);
-    } else {
-      router.push(`/meetings/${meetingId}` as any);
-    }
-  };
-
-  const toggleSelection = (meetingId: string) => {
-    setSelectedIds(prev => 
-      prev.includes(meetingId) 
-        ? prev.filter(id => id !== meetingId) 
-        : [...prev, meetingId]
-    );
-  };
-
-  const handleClearSelection = () => {
-    setSelectedIds([]);
-  };
-
-  const handleDeleteSelected = () => {
-    if (selectedIds.length === 0) return;
-    Alert.alert(
-      'Delete Meetings',
-      `Are you sure you want to permanently delete the ${selectedIds.length} selected meeting(s)?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setIsDeleting(true);
-            try {
-              const { error } = await supabase
-                .from('meetings')
-                .delete()
-                .in('id', selectedIds);
-
-              if (error) throw error;
-
-              // Refresh list and clear selection
-              setSelectedIds([]);
-              fetchMeetings();
-              Alert.alert('Success', 'Selected meetings deleted successfully.');
-            } catch (err: any) {
-              console.error('Error deleting meetings:', err);
-              Alert.alert('Error', err.message || 'Failed to delete selected meetings.');
-            } finally {
-              setIsDeleting(false);
-            }
-          }
-        }
-      ]
-    );
   };
 
   return (
     <TabScreenWrapper>
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      <StatusBar barStyle={colorScheme === 'dark' ? 'light-content' : 'dark-content'} backgroundColor={C.bg} />
-
-      {/* Header */}
-      <Animated.View style={[styles.header, { opacity: headerFade, transform: [{ translateY: headerSlide }] }]}>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-          {isSelectionMode ? (
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                <Pressable onPress={handleClearSelection} style={styles.headerActionBtn}>
-                  <Ionicons name="close" size={24} color={C.text} />
-                </Pressable>
-                <Text style={[styles.titleSelection, { color: C.text }]}>{selectedIds.length} Selected</Text>
-              </View>
-              <Pressable onPress={handleDeleteSelected} disabled={isDeleting} style={styles.headerActionBtn}>
-                <Ionicons name="trash-outline" size={24} color={C.error} />
-              </Pressable>
-            </View>
-          ) : (
-            <>
-              <View>
-                <Text style={[styles.title, { color: C.text }]}>Meetings</Text>
-                <Text style={[styles.subtitle, { color: C.muted }]}>{meetings.length} {tab} meeting{meetings.length !== 1 ? 's' : ''}</Text>
-              </View>
-              {canSchedule && (
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  <GradientButton onPress={handleInstantMeeting} size="sm" variant="analytics" loading={isStartingInstant}>
-                    Instant
-                  </GradientButton>
-                  <GradientButton onPress={() => router.push('/meetings/new')} size="sm">
-                    + Schedule
-                  </GradientButton>
-                </View>
-              )}
-            </>
-          )}
-        </View>
-
-        {/* Tab toggle */}
-        {!isSelectionMode && (
-          <View style={[styles.tabRow, { backgroundColor: C.card, borderColor: C.border }]}>
-            {(['upcoming', 'past'] as const).map(t => (
-              <Pressable
-                key={t}
-                onPress={() => { setTab(t); setLoading(true); }}
-                style={[styles.tabBtn, tab === t && styles.tabBtnActive]}
-              >
-                <Text style={[styles.tabLabel, { color: tab === t ? '#FFFFFF' : C.muted }, tab === t && styles.tabLabelActive]}>
-                  {t.charAt(0).toUpperCase() + t.slice(1)}
-                </Text>
-              </Pressable>
-            ))}
+      <Animated.View entering={FadeIn.duration(350)} className="flex-1 bg-[#0B0B0D] pt-8 px-6">
+        {/* Header */}
+        <View className="flex-row justify-between items-center mb-8">
+          <View>
+            <Text className="text-white text-3xl font-bold tracking-tight">Meetings</Text>
+            <Text className="text-[#A1A1AA] text-base mt-1">Connect securely</Text>
           </View>
-        )}
-      </Animated.View>
-
-      {loading ? (
-        <View style={{ paddingHorizontal: 20 }}>
-          <ShimmerCard />
-          <ShimmerCard />
-          <ShimmerCard />
+          <Pressable 
+            onPress={() => router.push('/meetings/pre-join')}
+            className="w-12 h-12 rounded-full bg-[#17181D] border border-[rgba(255,255,255,0.06)] items-center justify-center shadow-lg"
+          >
+             <Video size={22} color="#FF6B4A" />
+          </Pressable>
         </View>
-      ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130 }}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.primary} />}
-        >
-          {meetings.length === 0 ? (
-            <View style={styles.emptyState}>
-              <View style={[styles.emptyIcon, { backgroundColor: C.card, borderColor: C.border }]}>
-                <Ionicons name="calendar-outline" size={36} color={C.muted} />
+
+        <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+          {/* Quick Actions */}
+          <View className="mb-8">
+            <ActionCard 
+              title="Instant Meeting" 
+              subtitle="Start instantly" 
+              icon={Play} 
+              delay={0}
+              active={true}
+              loading={isStartingInstant}
+              onPress={handleInstantMeeting} 
+            />
+            <ActionCard 
+              title="Create Meeting" 
+              subtitle="Schedule your meeting" 
+              icon={CalendarPlus} 
+              delay={80}
+              onPress={() => router.push('/meetings/new')} 
+            />
+            <ActionCard 
+              title="Join with Code" 
+              subtitle="Enter meeting code" 
+              icon={Key} 
+              delay={160}
+              onPress={() => router.push('/meetings/pre-join')} 
+            />
+          </View>
+
+          {/* Upcoming Meetings List */}
+          <Animated.View entering={FadeInUp.delay(240).duration(350)}>
+            <Text className="text-white text-xl font-bold mb-4">Upcoming</Text>
+            
+            {loading ? (
+              <View className="space-y-4">
+                <Skeleton className="w-full h-32 rounded-[20px] bg-[#1E2128]" />
+                <Skeleton className="w-full h-32 rounded-[20px] bg-[#1E2128]" />
               </View>
-              <Text style={[styles.emptyTitle, { color: C.text }]}>No {tab} meetings</Text>
-              <Text style={[styles.emptySub, { color: C.muted }]}>
-                {tab === 'upcoming'
-                  ? 'Nothing scheduled yet. Schedule a meeting to get started.'
-                  : 'No past meetings on record.'}
-              </Text>
-            </View>
-          ) : (
-            meetings.map((m, i) => (
-              <MeetingCard
-                key={m.id}
-                meeting={m}
-                userId={user?.id || ''}
-                index={i}
-                isSelected={selectedIds.includes(m.id)}
-                isSelectionMode={isSelectionMode}
-                onPress={() => handleCardPress(m.id)}
-                onLongPress={() => toggleSelection(m.id)}
-              />
-            ))
+            ) : upcoming.length === 0 ? (
+              <Animated.View entering={FadeIn.duration(500)} className="items-center justify-center py-10 bg-[#17181D] rounded-[24px] border border-[rgba(255,255,255,0.06)] shadow-lg">
+                <View className="w-16 h-16 rounded-full bg-[#1E2128] items-center justify-center mb-4">
+                  <Calendar size={28} color="#FF6B4A" />
+                </View>
+                <Text className="text-white text-base font-bold mb-1">No upcoming meetings</Text>
+                <Text className="text-[#A1A1AA] text-sm text-center px-8">Your schedule is clear. Enjoy your day!</Text>
+              </Animated.View>
+            ) : (
+              upcoming.map((meeting, idx) => (
+                <TimelineCard key={meeting.id} meeting={meeting} delay={250 + (idx * 100)} />
+              ))
+            )}
+          </Animated.View>
+
+          {/* Past Meetings List */}
+          {!loading && past.length > 0 && (
+            <Animated.View entering={FadeInUp.delay(400).duration(350)} className="mt-6 mb-10">
+              <Text className="text-white text-lg font-bold mb-4">Past Meetings</Text>
+              {past.map((meeting) => (
+                <Pressable 
+                  key={meeting.id}
+                  onPress={() => router.push(`/meetings/${meeting.id}` as any)}
+                  className="bg-[#17181D] border border-[rgba(255,255,255,0.06)] rounded-[16px] p-4 mb-3 flex-row items-center justify-between"
+                >
+                  <View>
+                    <Text className="text-white font-bold text-sm mb-1">{meeting.title}</Text>
+                    <Text className="text-[#A1A1AA] text-xs">Completed • {meeting.duration_minutes || 30} min</Text>
+                  </View>
+                  <Text className="text-[#FF6B4A] text-xs font-semibold">View Details</Text>
+                </Pressable>
+              ))}
+            </Animated.View>
           )}
+          
+          <View className="h-20" />
         </ScrollView>
-      )}
-    </View>
+      </Animated.View>
     </TabScreenWrapper>
   );
 }
-
-const styles = StyleSheet.create({
-  header: { paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12 },
-  title: { color: '#F5F5FA', fontSize: 34, fontWeight: '800', letterSpacing: -0.5 },
-  titleSelection: { color: '#F5F5FA', fontSize: 22, fontWeight: '800', letterSpacing: -0.5 },
-  subtitle: { color: '#7A7A92', fontSize: 14, marginTop: 4 },
-  tabRow: {
-    flexDirection: 'row', backgroundColor: '#181822',
-    borderRadius: 16, padding: 4,
-    borderWidth: 1, borderColor: '#2A2A3A',
-  },
-  tabBtn: {
-    flex: 1, paddingVertical: 10, borderRadius: 12,
-    alignItems: 'center',
-  },
-  tabBtnActive: {
-    backgroundColor: '#FF6B4A',
-    shadowColor: '#FF6B4A', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4, shadowRadius: 8, elevation: 4,
-  },
-  tabLabel: { color: '#7A7A92', fontSize: 14, fontWeight: '700' },
-  tabLabelActive: { color: '#FFFFFF' },
-  emptyState: { alignItems: 'center', paddingVertical: 80 },
-  emptyIcon: { width: 80, height: 80, borderRadius: 24, backgroundColor: '#181822', alignItems: 'center', justifyContent: 'center', marginBottom: 16, borderWidth: 1, borderColor: '#2A2A3A' },
-  emptyTitle: { color: '#F5F5FA', fontSize: 18, fontWeight: '700', marginBottom: 8 },
-  emptySub: { color: '#7A7A92', fontSize: 14, textAlign: 'center', lineHeight: 20 },
-  headerActionBtn: {
-    padding: 6,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

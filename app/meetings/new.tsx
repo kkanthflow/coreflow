@@ -26,11 +26,6 @@ const DURATION_OPTIONS = [
 
 const LINK_TYPE_OPTIONS = [
   { label: 'CoreFlow Video', value: 'coreflow' },
-  { label: 'Google Meet', value: 'google_meet' },
-  { label: 'Microsoft Teams', value: 'teams' },
-  { label: 'Zoom', value: 'zoom' },
-  { label: 'Jitsi', value: 'jitsi' },
-  { label: 'Custom Link', value: 'custom' },
   { label: 'In-Person (No Link)', value: 'none' },
 ];
 
@@ -232,8 +227,8 @@ export default function NewMeetingScreen() {
           user_id: attendeeId,
           title: editId ? 'Meeting Rescheduled' : 'New Meeting Invitation',
           message: editId 
-            ? `${user?.fullName} rescheduled/updated "${title.trim()}" to ${startTime.toLocaleDateString()} at ${startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
-            : `${user?.fullName} invited you to "${title.trim()}" on ${startTime.toLocaleDateString()} at ${startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
+            ? `${user?.fullName} ${activeWorkspace?.name ? `(${activeWorkspace.name}) ` : ''}rescheduled/updated "${title.trim()}" to ${startTime.toLocaleDateString()} at ${startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            : `${user?.fullName} ${activeWorkspace?.name ? `(${activeWorkspace.name}) ` : ''}invited you to "${title.trim()}" on ${startTime.toLocaleDateString()} at ${startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
           type: 'meeting_invite',
           related_meeting_id: meetingId,
         }));
@@ -346,25 +341,7 @@ export default function NewMeetingScreen() {
           onSelect={setLinkType}
         />
 
-        {linkType !== 'none' && linkType !== 'custom' && linkType !== 'coreflow' && (
-          <PremiumInput
-            label="Meeting Link"
-            placeholder={`Paste ${LINK_TYPE_OPTIONS.find(o => o.value === linkType)?.label} link here`}
-            value={meetingLink}
-            onChangeText={setMeetingLink}
-            autoCapitalize="none"
-          />
-        )}
 
-        {linkType === 'custom' && (
-          <PremiumInput
-            label="Custom Link"
-            placeholder="https://..."
-            value={meetingLink}
-            onChangeText={setMeetingLink}
-            autoCapitalize="none"
-          />
-        )}
 
         {linkType === 'none' && (
           <PremiumInput

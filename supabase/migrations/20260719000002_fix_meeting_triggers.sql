@@ -28,15 +28,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Re-bind trigger to meeting_participants
-DROP TRIGGER IF EXISTS tr_notify_meeting_attendee_inserted ON public.meeting_attendees;
+-- Safely drop old trigger if table exists
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT FROM pg_tables WHERE schemaname = 'public' AND tablename = 'meeting_attendees') THEN
+    EXECUTE 'DROP TRIGGER IF EXISTS tr_notify_meeting_attendee_inserted ON public.meeting_attendees';
+  END IF;
+END $$;
 DROP TRIGGER IF EXISTS tr_notify_meeting_participant_inserted ON public.meeting_participants;
 CREATE TRIGGER tr_notify_meeting_participant_inserted
   AFTER INSERT ON public.meeting_participants
   FOR EACH ROW
   EXECUTE PROCEDURE public.notify_meeting_attendee_inserted();
-.
-
 -- Fix notify_meeting_attendees
 CREATE OR REPLACE FUNCTION public.notify_meeting_attendees()
 RETURNS trigger AS $$

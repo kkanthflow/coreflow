@@ -1,36 +1,136 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Pressable, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, Pressable, ScrollView, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import { useAuth } from '@/hooks/use-auth';
-import { Video, CalendarPlus, Key, Users, Calendar, ChevronRight, Clock } from 'lucide-react-native';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
+import { Video, CalendarPlus, Key, Users, Calendar, ChevronRight, Clock, Play } from 'lucide-react-native';
 import { supabase } from '@/lib/supabase';
+import Animated, { FadeIn, FadeInUp, FadeInRight, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import * as Haptics from 'expo-haptics';
+import { Skeleton } from '@/components/ui/skeleton';
+
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+
+const ActionCard = ({ title, subtitle, icon: Icon, delay, onPress, active }: any) => {
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <AnimatedPressable
+      entering={FadeInUp.delay(delay).duration(350).springify()}
+      onPressIn={() => {
+        scale.value = withSpring(0.97);
+        if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1);
+      }}
+      onPress={onPress}
+      style={animatedStyle}
+      className={`flex-1 rounded-[24px] p-4 border mb-3 flex-row items-center space-x-4 shadow-lg ${active ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]/30' : 'bg-[#1E2128] border-[rgba(255,255,255,0.06)]'}`}
+    >
+      <View className={`w-12 h-12 rounded-2xl items-center justify-center shadow-md ${active ? 'bg-[#FF6B4A]' : 'bg-[#27272A]'}`}>
+        <Icon size={22} color={active ? "#FFFFFF" : "#FF6B4A"} />
+      </View>
+      <View className="flex-1">
+        <Text className="text-white text-base font-bold">{title}</Text>
+        <Text className="text-[#A1A1AA] text-xs mt-0.5">{subtitle}</Text>
+      </View>
+    </AnimatedPressable>
+  );
+};
+
+const TimelineCard = ({ meeting, delay }: any) => {
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  
+  const startTime = new Date(meeting.start_time);
+  const endTime = new Date(startTime.getTime() + (meeting.duration_minutes || 30) * 60000);
+  
+  const scale = useSharedValue(1);
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  const router = useRouter();
+
+  return (
+    <AnimatedPressable
+      entering={FadeInRight.delay(delay).duration(250).springify()}
+      onPressIn={() => {
+        scale.value = withSpring(0.97);
+        if (Platform.OS !== 'web') Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      }}
+      onPressOut={() => {
+        scale.value = withSpring(1);
+      }}
+      onPress={() => router.push(`/meetings/${meeting.id}` as any)}
+      style={animatedStyle}
+      className="bg-[#1E2128] border border-[rgba(255,255,255,0.06)] border-l-4 border-l-[#FF6B4A] rounded-[20px] p-4 mb-4 flex-row justify-between items-center shadow-lg"
+    >
+      <View className="flex-1">
+        <Text className="text-[#A1A1AA] text-xs font-semibold mb-1">
+          {formatTime(meeting.start_time)} - {formatTime(endTime.toISOString())}
+        </Text>
+        <Text className="text-white text-lg font-bold mb-1" numberOfLines={1}>{meeting.title}</Text>
+        {meeting.description && (
+          <Text className="text-[#A1A1AA] text-sm mb-3" numberOfLines={1}>{meeting.description}</Text>
+        )}
+        <View className="flex-row items-center space-x-2 mt-1">
+          <View className="flex-row">
+            {/* Fake attendees for UI demo based on prompt */}
+            <View className="w-6 h-6 rounded-full bg-[#FF6B4A]/20 border border-[#1E2128] items-center justify-center -mr-2 z-20">
+               <Text className="text-[10px] text-[#FF6B4A] font-bold">K</Text>
+            </View>
+            <View className="w-6 h-6 rounded-full bg-[#3B82F6]/20 border border-[#1E2128] items-center justify-center z-10">
+               <Text className="text-[10px] text-[#3B82F6] font-bold">S</Text>
+            </View>
+          </View>
+          <Text className="text-[#A1A1AA] text-xs ml-3">+2 others</Text>
+        </View>
+      </View>
+      
+      <View className="bg-[#FF6B4A]/10 px-4 py-2 rounded-xl">
+        <Text className="text-[#FF6B4A] font-bold text-sm">Join</Text>
+      </View>
+    </AnimatedPressable>
+  );
+};
 
 export default function MeetingsDashboard() {
   const router = useRouter();
   const { session, user } = useAuth();
   const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [past, setPast] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useFocusEffect(
     React.useCallback(() => {
-      fetchUpcomingMeetings();
+      fetchMeetings();
     }, [])
   );
 
-  const fetchUpcomingMeetings = async () => {
+  const fetchMeetings = async () => {
     try {
-      const { data, error } = await supabase
+      const now = new Date().toISOString();
+      const { data: upcomingData } = await supabase
         .from('meetings')
         .select('*')
-        .gte('start_time', new Date().toISOString())
+        .gte('start_time', now)
         .order('start_time', { ascending: true })
-        .limit(5);
+        .limit(3);
 
-      if (!error && data) {
-        setUpcoming(data);
-      }
+      const { data: pastData } = await supabase
+        .from('meetings')
+        .select('*')
+        .lt('start_time', now)
+        .order('start_time', { ascending: false })
+        .limit(2);
+
+      if (upcomingData) setUpcoming(upcomingData);
+      if (pastData) setPast(pastData);
     } catch (e) {
       console.error(e);
     } finally {
@@ -38,119 +138,95 @@ export default function MeetingsDashboard() {
     }
   };
 
-  const formatTime = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
-
   return (
-    <View className="flex-1 bg-[#09090B] pt-16 px-6">
+    <Animated.View entering={FadeIn.duration(350)} className="flex-1 bg-[#0B0B0D] pt-16 px-6">
       {/* Header */}
       <View className="flex-row justify-between items-center mb-8">
         <View>
-          <Text className="text-white text-3xl font-bold">Meetings</Text>
+          <Text className="text-white text-3xl font-bold tracking-tight">Meetings</Text>
           <Text className="text-[#A1A1AA] text-base mt-1">Connect securely</Text>
         </View>
-        <View className="w-12 h-12 rounded-full bg-[#18181B] border border-white/10 items-center justify-center">
-           <Video size={24} color="#2563EB" />
-        </View>
-      </View>
-
-      {/* Action Buttons Grid */}
-      <View className="flex-row justify-between mb-8">
-        {/* Host Instant Meeting */}
         <Pressable 
           onPress={() => router.push('/meetings/pre-join')}
-          className="w-[48%] aspect-square rounded-[24px] overflow-hidden shadow-xl"
+          className="w-12 h-12 rounded-full bg-[#17181D] border border-[rgba(255,255,255,0.06)] items-center justify-center shadow-lg"
         >
-          <LinearGradient
-            colors={['#3B82F6', '#2563EB']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            className="flex-1 p-5 justify-between"
-          >
-            <View className="w-12 h-12 rounded-full bg-white/20 items-center justify-center backdrop-blur-md">
-              <Video size={24} color="#FFFFFF" />
-            </View>
-            <View>
-              <Text className="text-white text-lg font-bold">Host Meeting</Text>
-              <Text className="text-white/80 text-xs mt-1">Start instantly</Text>
-            </View>
-          </LinearGradient>
-        </Pressable>
-
-        <View className="w-[48%] justify-between">
-          {/* Join with Code */}
-          <Pressable 
-            onPress={() => router.push('/meetings/pre-join')}
-            className="w-full h-[47%] bg-[#18181B] rounded-[20px] p-4 border border-white/5 flex-row items-center space-x-3 active:bg-[#27272A] shadow-md"
-          >
-            <View className="w-10 h-10 rounded-full bg-[#27272A] items-center justify-center">
-              <Key size={18} color="#A1A1AA" />
-            </View>
-            <View>
-              <Text className="text-white font-semibold">Join</Text>
-              <Text className="text-[#A1A1AA] text-[11px]">With code</Text>
-            </View>
-          </Pressable>
-
-          {/* Schedule */}
-          <Pressable 
-            onPress={() => router.push('/meetings/new')}
-            className="w-full h-[47%] bg-[#18181B] rounded-[20px] p-4 border border-white/5 flex-row items-center space-x-3 active:bg-[#27272A] shadow-md"
-          >
-            <View className="w-10 h-10 rounded-full bg-[#27272A] items-center justify-center">
-              <CalendarPlus size={18} color="#A1A1AA" />
-            </View>
-            <View>
-              <Text className="text-white font-semibold">Schedule</Text>
-              <Text className="text-[#A1A1AA] text-[11px]">Plan ahead</Text>
-            </View>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* Upcoming Meetings List */}
-      <View className="flex-row items-center justify-between mb-4">
-        <Text className="text-white text-lg font-bold">Upcoming</Text>
-        <Pressable>
-          <Text className="text-[#3B82F6] text-sm font-semibold">View all</Text>
+           <Video size={22} color="#FF6B4A" />
         </Pressable>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        {loading ? (
-          <ActivityIndicator size="small" color="#2563EB" className="mt-8" />
-        ) : upcoming.length === 0 ? (
-          <View className="items-center justify-center mt-12 bg-[#18181B] p-8 rounded-[24px] border border-white/5">
-            <View className="w-16 h-16 rounded-full bg-[#27272A] items-center justify-center mb-4">
-              <Calendar size={28} color="#A1A1AA" />
+        {/* Quick Actions */}
+        <View className="mb-8">
+          <ActionCard 
+            title="Instant Meeting" 
+            subtitle="Start instantly" 
+            icon={Play} 
+            delay={0}
+            active={true}
+            onPress={() => router.push('/meetings/pre-join')} 
+          />
+          <ActionCard 
+            title="Create Meeting" 
+            subtitle="Schedule your meeting" 
+            icon={CalendarPlus} 
+            delay={80}
+            onPress={() => router.push('/meetings/new')} 
+          />
+          <ActionCard 
+            title="Join with Code" 
+            subtitle="Enter meeting code" 
+            icon={Key} 
+            delay={160}
+            onPress={() => router.push('/meetings/pre-join')} 
+          />
+        </View>
+
+        {/* Upcoming Meetings List */}
+        <Animated.View entering={FadeInUp.delay(240).duration(350)}>
+          <Text className="text-white text-xl font-bold mb-4">Upcoming</Text>
+          
+          {loading ? (
+            <View className="space-y-4">
+              <Skeleton className="w-full h-32 rounded-[20px] bg-[#1E2128]" />
+              <Skeleton className="w-full h-32 rounded-[20px] bg-[#1E2128]" />
             </View>
-            <Text className="text-white text-base font-semibold mb-1">No upcoming meetings</Text>
-            <Text className="text-[#A1A1AA] text-sm text-center">Your schedule is clear. Enjoy your day!</Text>
-          </View>
-        ) : (
-          upcoming.map((meeting) => (
-            <Pressable 
-              key={meeting.id}
-              onPress={() => {
-                router.push(`/meetings/${meeting.id}` as any);
-              }}
-              className="bg-[#18181B] border border-white/5 rounded-[20px] p-4 mb-3 flex-row items-center active:bg-[#27272A]"
-            >
-              <View className="w-14 h-14 rounded-2xl bg-[#2563EB]/10 items-center justify-center mr-4">
-                <Clock size={24} color="#3B82F6" />
+          ) : upcoming.length === 0 ? (
+            <Animated.View entering={FadeIn.duration(500)} className="items-center justify-center py-10 bg-[#17181D] rounded-[24px] border border-[rgba(255,255,255,0.06)] shadow-lg">
+              <View className="w-16 h-16 rounded-full bg-[#1E2128] items-center justify-center mb-4">
+                <Calendar size={28} color="#FF6B4A" />
               </View>
-              <View className="flex-1">
-                <Text className="text-white font-bold text-base mb-1" numberOfLines={1}>{meeting.title}</Text>
-                <Text className="text-[#A1A1AA] text-sm">{formatTime(meeting.start_time)} • {meeting.duration_minutes || 30} min</Text>
-              </View>
-              <ChevronRight size={20} color="#A1A1AA" />
-            </Pressable>
-          ))
+              <Text className="text-white text-base font-bold mb-1">No upcoming meetings</Text>
+              <Text className="text-[#A1A1AA] text-sm text-center px-8">Your schedule is clear. Enjoy your day!</Text>
+            </Animated.View>
+          ) : (
+            upcoming.map((meeting, idx) => (
+              <TimelineCard key={meeting.id} meeting={meeting} delay={250 + (idx * 100)} />
+            ))
+          )}
+        </Animated.View>
+
+        {/* Past Meetings List */}
+        {!loading && past.length > 0 && (
+          <Animated.View entering={FadeInUp.delay(400).duration(350)} className="mt-6 mb-10">
+            <Text className="text-white text-lg font-bold mb-4">Past Meetings</Text>
+            {past.map((meeting) => (
+              <Pressable 
+                key={meeting.id}
+                onPress={() => router.push(`/meetings/${meeting.id}` as any)}
+                className="bg-[#17181D] border border-[rgba(255,255,255,0.06)] rounded-[16px] p-4 mb-3 flex-row items-center justify-between"
+              >
+                <View>
+                  <Text className="text-white font-bold text-sm mb-1">{meeting.title}</Text>
+                  <Text className="text-[#A1A1AA] text-xs">Completed • {meeting.duration_minutes || 30} min</Text>
+                </View>
+                <Text className="text-[#FF6B4A] text-xs font-semibold">View Details</Text>
+              </Pressable>
+            ))}
+          </Animated.View>
         )}
-        <View className="h-10" />
+        
+        <View className="h-20" />
       </ScrollView>
-    </View>
+    </Animated.View>
   );
 }

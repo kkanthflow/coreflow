@@ -73,7 +73,7 @@ export class MeetingsController {
 
       // Tracking participant is already done above
 
-      res.json({ token, roomUrl: process.env.LIVEKIT_API_URL });
+      res.json({ token, roomUrl: process.env.LIVEKIT_URL || "wss://coreflow-eo6z5wme.livekit.cloud" });
     } catch (error: any) {
       console.error('Error joining meeting:', error);
       res.status(500).json({ error: 'Failed to join meeting', details: error?.message || String(error) });
@@ -105,7 +105,7 @@ export class MeetingsController {
         }
       );
 
-      res.json({ token, roomUrl: process.env.LIVEKIT_API_URL });
+      res.json({ token, roomUrl: process.env.LIVEKIT_URL || "wss://coreflow-eo6z5wme.livekit.cloud" });
     } catch (error: any) {
       console.error('Error joining meeting as guest:', error);
       res.status(500).json({ error: 'Failed to join meeting as guest' });

@@ -94,7 +94,7 @@ export function createExpressApp() {
 
     const { dispatchFCMPush } = require("./notification");
     
-    dispatchFCMPush({
+    await dispatchFCMPush({
       id,
       userId: user_id,
       title,

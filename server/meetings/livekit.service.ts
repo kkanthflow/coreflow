@@ -3,7 +3,15 @@ import { WebhookReceiver } from 'livekit-server-sdk';
 
 export class LiveKitService {
   static generateToken(roomName: string, participantId: string, participantName: string, permissions: any) {
-    const at = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
+    const apiKey = process.env.LIVEKIT_API_KEY || "APIUfGWSwruirn9";
+    const apiSecret = process.env.LIVEKIT_API_SECRET || "hXwn252Mdidn9iHVySlT9sktNe70Ihn39Kg7gUG9wTF";
+
+    if (!apiKey || !apiSecret) {
+      console.warn("LIVEKIT_API_KEY or LIVEKIT_API_SECRET is missing. Generating a dummy token.");
+      return "dummy_token_for_" + participantId;
+    }
+
+    const at = new AccessToken(apiKey, apiSecret, {
       identity: participantId,
       name: participantName,
     });

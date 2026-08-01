@@ -12,7 +12,8 @@
         "EXPO_PUBLIC_SUPABASE_URL": "https://rltygdzldplkmwuqfadm.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_2JfQZp49VDHRRO9ZjM9T6g_lz5E3BOb",
         "EXPO_PUBLIC_API_BASE_URL": "https://coreflow-one.vercel.app",
-        "OAUTH_SERVER_URL": "https://coreflow-one.vercel.app"
+        "OAUTH_SERVER_URL": "https://coreflow-one.vercel.app",
+        "EXPO_PUBLIC_LIVEKIT_URL": "wss://coreflow-eo6z5wme.livekit.cloud"
       }
     },
     "preview": {
@@ -22,7 +23,8 @@
         "EXPO_PUBLIC_SUPABASE_URL": "https://rltygdzldplkmwuqfadm.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_2JfQZp49VDHRRO9ZjM9T6g_lz5E3BOb",
         "EXPO_PUBLIC_API_BASE_URL": "https://coreflow-one.vercel.app",
-        "OAUTH_SERVER_URL": "https://coreflow-one.vercel.app"
+        "OAUTH_SERVER_URL": "https://coreflow-one.vercel.app",
+        "EXPO_PUBLIC_LIVEKIT_URL": "wss://coreflow-eo6z5wme.livekit.cloud"
       }
     },
     "production": {
@@ -32,7 +34,8 @@
         "EXPO_PUBLIC_SUPABASE_URL": "https://rltygdzldplkmwuqfadm.supabase.co",
         "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_2JfQZp49VDHRRO9ZjM9T6g_lz5E3BOb",
         "EXPO_PUBLIC_API_BASE_URL": "https://coreflow-one.vercel.app",
-        "OAUTH_SERVER_URL": "https://coreflow-one.vercel.app"
+        "OAUTH_SERVER_URL": "https://coreflow-one.vercel.app",
+        "EXPO_PUBLIC_LIVEKIT_URL": "wss://coreflow-eo6z5wme.livekit.cloud"
       }
     }
   },

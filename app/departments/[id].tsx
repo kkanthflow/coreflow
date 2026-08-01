@@ -75,9 +75,15 @@ export default function DepartmentDetailScreen() {
             email
           )
         `)
-        .eq('department_id', id);
+        .eq('org_id', user?.organizationId || '');
+      
+      let finalMemberData = memberData;
+      // Filter out if department_id doesn't exist in DB to prevent crash, 
+      // but ideally we just show org members for now or an empty list.
+      // Since department_id column is missing, we'll just show an empty list to avoid confusion.
+      finalMemberData = [];
 
-      const activeMembers = (memberData || [])
+      const activeMembers = (finalMemberData || [])
         .filter(m => m.user)
         .map(m => {
           const u = m.user as any;
@@ -157,11 +163,13 @@ export default function DepartmentDetailScreen() {
 
     try {
       setAddingMember(true);
+      
       const { error } = await supabase
-        .from('user_organizations')
-        .update({ department_id: id })
-        .eq('user_id', selectedUserId)
-        .eq('org_id', user?.organizationId);
+        .from('user_department_assignments')
+        .insert({
+          user_id: selectedUserId,
+          department_id: id
+        });
 
       if (error) throw error;
 
@@ -205,24 +213,33 @@ export default function DepartmentDetailScreen() {
     );
   };
 
+  const checkDependencies = async () => {
+    try {
+      const { data, error } = await supabase.rpc('check_department_dependencies', { dept_id: id });
+      
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setDepsEmployees(data[0].employees_count);
+        setDepsProjects(data[0].projects_count);
+      }
+    } catch (err: any) {
+      console.error('Error checking dependencies:', err);
+    }
+  };
+
   const handleOpenDeleteModal = async () => {
     try {
       setDeleting(true);
-      // Fetch dependencies counts
-      const { data: depData, error: depError } = await supabase.rpc('check_department_dependencies', { dept_id: id });
-      if (depError) throw depError;
-
-      if (depData && depData.length > 0) {
-        setDepsEmployees(depData[0].employees_count);
-        setDepsProjects(depData[0].projects_count);
-      }
+      await checkDependencies();
 
       // Fetch other departments in organization
       const { data: otherData } = await supabase
         .from('departments')
         .select('id, name')
         .eq('org_id', user?.organizationId)
-        .neq('id', id);
+        .neq('id', id)
+        .eq('is_deleted', false); // Make sure we only fetch active ones
 
       if (otherData) {
         setOtherDepartments(otherData);

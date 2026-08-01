@@ -386,6 +386,8 @@ function BiometricAppLock({ children }: { children: React.ReactNode }) {
   const [authenticating, setAuthenticating] = useState(false);
   const colors = useColors();
   const appState = useRef(AppState.currentState);
+  const backgroundTime = useRef<number | null>(null);
+  const initialLockChecked = useRef(false);
 
   const triggerLock = useCallback(async () => {
     if (Platform.OS === 'web' || !user) return;
@@ -428,12 +430,25 @@ function BiometricAppLock({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      // If returning to active from background, trigger the lock
+      if (nextAppState.match(/inactive|background/)) {
+        if (!backgroundTime.current) {
+          backgroundTime.current = Date.now();
+        }
+      }
+
+      // If returning to active from background, trigger the lock if > 10s elapsed
       if (
         appState.current.match(/inactive|background/) &&
         nextAppState === 'active'
       ) {
-        triggerLock();
+        const timeInBackground = backgroundTime.current ? Date.now() - backgroundTime.current : 0;
+        backgroundTime.current = null; // reset
+
+        // Only lock if the app was in the background for more than 10 seconds
+        // This prevents permission dialogs (camera/mic) from triggering the lock
+        if (timeInBackground > 10000) {
+          triggerLock();
+        }
       }
       appState.current = nextAppState;
     };
@@ -445,11 +460,21 @@ function BiometricAppLock({ children }: { children: React.ReactNode }) {
   }, [triggerLock]);
 
   // Lock the app initially if biometric is configured, but don't block web
+  // We use performance.now() to check if the app just started. If it's a fresh boot, uptime will be low.
+  // If it's a fresh login (e.g., they just entered credentials), uptime will be higher, so we don't lock immediately.
   useEffect(() => {
-    if (user && Platform.OS !== 'web') {
-      triggerLock();
+    if (!user || Platform.OS === 'web') return;
+    
+    if (!initialLockChecked.current) {
+      initialLockChecked.current = true;
+      
+      const uptime = performance.now();
+      if (uptime < 15000) {
+        // App started less than 15 seconds ago, so this is a fresh boot with a remembered session.
+        triggerLock();
+      }
     }
-  }, [user]);
+  }, [user, triggerLock]);
 
   if (isLocked) {
     return (

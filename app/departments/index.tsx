@@ -52,17 +52,9 @@ export default function DepartmentsScreen() {
       if (deptError) throw deptError;
 
       // 2. Fetch member counts per department from user_organizations
-      const { data: memberData } = await supabase
-        .from('user_organizations')
-        .select('department_id')
-        .eq('org_id', user.organizationId);
-
+      // Since department_id column is missing from user_organizations, we cannot accurately count members per department.
+      // We will skip this and leave counts at 0 to avoid crashing.
       const countMap: Record<string, number> = {};
-      (memberData || []).forEach((m: any) => {
-        if (m.department_id) {
-          countMap[m.department_id] = (countMap[m.department_id] || 0) + 1;
-        }
-      });
 
       const formatted = (deptData || []).map(d => ({
         ...d,

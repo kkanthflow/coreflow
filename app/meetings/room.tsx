@@ -136,6 +136,7 @@ export default function MeetingRoomScreen() {
     );
   }
 
+
   return (
     <LiveKitRoom
       serverUrl={serverUrl}
@@ -384,46 +385,48 @@ function MeetingUI() {
 
       {/* Floating Bottom Toolbar */}
       <View className="absolute bottom-8 left-4 right-4 z-20">
-        <View className="rounded-full overflow-hidden shadow-2xl border border-white/10 bg-transparent">
-          <BlurView intensity={Platform.OS === 'ios' ? 60 : 100} tint="dark" className="flex-row justify-evenly items-center py-4 px-2">
-            
-            <Pressable 
-              onPress={() => localParticipant?.setMicrophoneEnabled(!localParticipant?.isMicrophoneEnabled)}
-              className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant?.isMicrophoneEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
-            >
-              {localParticipant?.isMicrophoneEnabled ? <Mic size={20} color="#FFFFFF" /> : <MicOff size={20} color="#EF4444" />}
-            </Pressable>
+        <View className="rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-black/20">
+          <BlurView intensity={Platform.OS === 'ios' ? 60 : 100} tint="dark">
+            <View className="flex-row justify-evenly items-center py-4 px-2">
+              
+              <Pressable 
+                onPress={() => localParticipant?.setMicrophoneEnabled(!localParticipant?.isMicrophoneEnabled)}
+                className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant?.isMicrophoneEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
+              >
+                {localParticipant?.isMicrophoneEnabled ? <Mic size={20} color="#FFFFFF" /> : <MicOff size={20} color="#EF4444" />}
+              </Pressable>
 
-            <Pressable 
-              onPress={() => localParticipant?.setCameraEnabled(!localParticipant?.isCameraEnabled)}
-              className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant?.isCameraEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
-            >
-              {localParticipant?.isCameraEnabled ? <Video size={20} color="#FFFFFF" /> : <VideoOff size={20} color="#EF4444" />}
-            </Pressable>
+              <Pressable 
+                onPress={() => localParticipant?.setCameraEnabled(!localParticipant?.isCameraEnabled)}
+                className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant?.isCameraEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
+              >
+                {localParticipant?.isCameraEnabled ? <Video size={20} color="#FFFFFF" /> : <VideoOff size={20} color="#EF4444" />}
+              </Pressable>
 
-            <Pressable 
-              onPress={() => localParticipant?.setScreenShareEnabled(!localParticipant?.isScreenShareEnabled)}
-              className={`w-12 h-12 rounded-full items-center justify-center ${localParticipant?.isScreenShareEnabled ? 'bg-[#2563EB]' : 'bg-[#18181B]'}`}
-            >
-              <MonitorUp size={20} color="#FFFFFF" />
-            </Pressable>
+              <Pressable 
+                onPress={() => localParticipant?.setScreenShareEnabled(!localParticipant?.isScreenShareEnabled)}
+                className={`w-12 h-12 rounded-full items-center justify-center ${localParticipant?.isScreenShareEnabled ? 'bg-[#2563EB]' : 'bg-[#18181B]'}`}
+              >
+                <MonitorUp size={20} color="#FFFFFF" />
+              </Pressable>
 
-            <Pressable onPress={openNotes} className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
-              <FileText size={20} color="#FFFFFF" />
-            </Pressable>
-            
-            <Pressable onPress={() => setIsChatOpen(true)} className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
-              <MessageSquare size={20} color="#FFFFFF" />
-            </Pressable>
-            
-            <Pressable className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
-              <MoreHorizontal size={20} color="#FFFFFF" />
-            </Pressable>
+              <Pressable onPress={openNotes} className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
+                <FileText size={20} color="#FFFFFF" />
+              </Pressable>
+              
+              <Pressable onPress={() => setIsChatOpen(true)} className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
+                <MessageSquare size={20} color="#FFFFFF" />
+              </Pressable>
+              
+              <Pressable className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
+                <MoreHorizontal size={20} color="#FFFFFF" />
+              </Pressable>
 
-            <Pressable onPress={handleLeave} className="w-12 h-12 rounded-full items-center justify-center bg-[#EF4444]">
-              <PhoneOff size={20} color="#FFFFFF" />
-            </Pressable>
+              <Pressable onPress={handleLeave} className="w-12 h-12 rounded-full items-center justify-center bg-[#EF4444]">
+                <PhoneOff size={20} color="#FFFFFF" />
+              </Pressable>
 
+            </View>
           </BlurView>
         </View>
       </View>

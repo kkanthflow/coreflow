@@ -221,8 +221,7 @@ export type PushNotificationData = {
   senderId?: string;
 };
 
-export function dispatchFCMPush(data: PushNotificationData) {
-  pushQueue.enqueue(async () => {
+export async function dispatchFCMPush(data: PushNotificationData): Promise<void> {
     const pool = getDbPool();
     const app = getFirebaseApp();
 
@@ -317,7 +316,6 @@ export function dispatchFCMPush(data: PushNotificationData) {
           notification: {
             channelId: data.type === "chat" ? "chat" : data.type === "meeting" ? "meetings" : data.type === "task" || data.type === "task_assigned" ? "tasks" : "default",
             sound: "default",
-            clickAction: "FLUTTER_NOTIFICATION_CLICK",
           },
         },
         apns: {
@@ -379,7 +377,6 @@ export function dispatchFCMPush(data: PushNotificationData) {
         [data.id, err.message || "Unknown error"]
       );
     }
-  });
 }
 
 async function sendWithRetry(

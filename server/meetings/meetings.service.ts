@@ -6,7 +6,7 @@ function getSupabase(): any {
   if (!supabaseClient) {
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for meetings service");
     supabaseClient = createClient(
-      process.env.EXPO_PUBLIC_SUPABASE_URL as string,
+      process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL as string,
       process.env.SUPABASE_SERVICE_ROLE_KEY as string
     );
   }

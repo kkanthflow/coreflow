@@ -41,7 +41,6 @@ const env = {
 const config: ExpoConfig = {
   name: env.appName,
   slug: env.appSlug,
-  owner: "pond12345s-team",
   version: "1.0.0",
   orientation: "portrait",
   icon: "./assets/images/icon.png",
@@ -169,9 +168,9 @@ const config: ExpoConfig = {
   },
   extra: {
     eas: {
-      projectId: "e345d05e-49d4-4a7f-a79b-a4104dec17d5"
-    }
-  }
+      projectId: "77490e14-8bd7-4ad6-aa00-2ca53c0afae9",
+    },
+  },
 };
 
 export default config;

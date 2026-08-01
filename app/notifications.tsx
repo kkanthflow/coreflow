@@ -177,6 +177,23 @@ export default function NotificationsScreen() {
     }
   };
 
+  const handleRSVP = async (notificationId: string, meetingId: string, status: 'accepted' | 'declined') => {
+    if (!user) return;
+    try {
+      const { error } = await supabase
+        .from('meeting_participants')
+        .update({ status })
+        .eq('meeting_id', meetingId)
+        .eq('user_id', user.id);
+        
+      if (!error) {
+        handleDelete(notificationId);
+      }
+    } catch (e) {
+      console.error('RSVP Error:', e);
+    }
+  };
+
   const handleNotificationPress = (notification: DbNotification) => {
     if (!notification.is_read) {
       handleMarkAsRead(notification.id);
@@ -357,6 +374,23 @@ export default function NotificationsScreen() {
                 <Text style={[styles.cardTime, { color: colors.muted }]}>
                   {safeFormatDistanceToNow(item.created_at, { addSuffix: true })}
                 </Text>
+
+                {item.type === 'meeting_invite' && item.related_meeting_id && (
+                  <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
+                    <Pressable
+                      onPress={() => handleRSVP(item.id, item.related_meeting_id!, 'accepted')}
+                      style={{ backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}
+                    >
+                      <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700' }}>Accept</Text>
+                    </Pressable>
+                    <Pressable
+                      onPress={() => handleRSVP(item.id, item.related_meeting_id!, 'declined')}
+                      style={{ backgroundColor: `${colors.error}20`, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12 }}
+                    >
+                      <Text style={{ color: colors.error, fontSize: 13, fontWeight: '700' }}>Decline</Text>
+                    </Pressable>
+                  </View>
+                )}
               </View>
 
               <View style={styles.cardActions}>
