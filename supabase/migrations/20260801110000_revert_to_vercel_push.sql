@@ -5,7 +5,7 @@ CREATE OR REPLACE FUNCTION public.on_new_notification_inserted()
 RETURNS trigger AS $$
 BEGIN
   PERFORM net.http_post(
-    url := 'https://coreflow-one.vercel.app/api/notifications/send-push',
+    url := 'https://coreflow-one.vercel.app/api/notifications/send-push'::text,
     headers := json_build_object(
       'Content-Type', 'application/json',
       'Authorization', 'Bearer cf_internal_push_secret_2026'

@@ -113,21 +113,16 @@ export async function notifyOwner(payload: NotificationPayload): Promise<boolean
 // ENTERPRISE FCM DISPATCH PIPELINE
 // ─────────────────────────────────────────────────────────────────────────
 
-let dbPool: Pool | null = null;
-function getDbPool(): Pool {
-  if (!dbPool) {
-    let connString = process.env.DATABASE_URL;
-    if (connString && connString.includes("?")) {
-      connString = connString.split("?")[0];
-    }
-    dbPool = new Pool({
-      connectionString: connString,
-      ssl: {
-        rejectUnauthorized: false,
-      },
-    });
+import { createClient } from "@supabase/supabase-js";
+
+let supabaseClient: ReturnType<typeof createClient> | null = null;
+function getSupabaseAdmin() {
+  if (!supabaseClient) {
+    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+    supabaseClient = createClient(supabaseUrl, supabaseKey);
   }
-  return dbPool;
+  return supabaseClient;
 }
 
 let fcmApp: App | null = null;
@@ -184,6 +179,9 @@ function getFirebaseApp(): App | null {
 
   try {
     const serviceAccount = JSON.parse(serviceAccountString);
+    if (serviceAccount.private_key) {
+      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+    }
     fcmApp = initializeApp({ credential: cert(serviceAccount) });
     console.log("[FCM] Firebase app initialized via environment variable.");
     return fcmApp;
@@ -235,15 +233,15 @@ export type PushNotificationData = {
 };
 
 export async function dispatchFCMPush(data: PushNotificationData): Promise<void> {
-    const pool = getDbPool();
+    const supabase = getSupabaseAdmin() as any;
     const app = getFirebaseApp();
 
     if (!app) {
       console.error("[FCM] Firebase app is not initialized. Cannot dispatch push.");
-      await pool.query(
-        "UPDATE public.notifications SET delivery_status = 'failed', delivery_error = 'Firebase app not initialized' WHERE id = $1",
-        [data.id]
-      );
+      await supabase
+        .from("notifications")
+        .update({ delivery_status: 'failed', delivery_error: 'Firebase app not initialized' })
+        .eq('id', data.id);
       return;
     }
 
@@ -251,14 +249,13 @@ export async function dispatchFCMPush(data: PushNotificationData): Promise<void>
 
     try {
       // 1. Check user notification preferences before sending
-      const prefResult = await pool.query(
-        `SELECT chat_enabled, meetings_enabled, tasks_enabled, finance_enabled, announcements_enabled 
-         FROM public.notification_preferences WHERE user_id = $1`,
-        [data.userId]
-      );
+      const { data: prefRows } = await supabase
+        .from("notification_preferences")
+        .select("chat_enabled, meetings_enabled, tasks_enabled, finance_enabled, announcements_enabled")
+        .eq("user_id", data.userId);
 
-      if (prefResult.rows.length > 0) {
-        const pref = prefResult.rows[0];
+      if (prefRows && prefRows.length > 0) {
+        const pref = prefRows[0];
         const isChatDisabled = data.type === "chat" && !pref.chat_enabled;
         const isMeetingDisabled = data.type === "meeting" && !pref.meetings_enabled;
         const isTaskDisabled = data.type === "task" && !pref.tasks_enabled;
@@ -267,47 +264,54 @@ export async function dispatchFCMPush(data: PushNotificationData): Promise<void>
 
         if (isChatDisabled || isMeetingDisabled || isTaskDisabled || isFinanceDisabled || isAnnouncementDisabled) {
           console.log(`[FCM] Notification skipped for user ${data.userId} due to preference settings.`);
-          await pool.query(
-            "UPDATE public.notifications SET delivery_status = 'failed', delivery_error = 'Skipped by preferences' WHERE id = $1",
-            [data.id]
-          );
+          await supabase
+            .from("notifications")
+            .update({ delivery_status: 'failed', delivery_error: 'Skipped by preferences' })
+            .eq('id', data.id);
           return;
         }
       }
 
       // 2. Fetch all active push tokens for this user, excluding the sender's own devices
-      let tokensQuery = "SELECT token, device_id, platform FROM public.user_push_tokens WHERE user_id = $1 AND is_enabled = true";
-      let tokensParams: any[] = [data.userId];
+      let query = supabase
+        .from("user_push_tokens")
+        .select("token, device_id, platform")
+        .eq("user_id", data.userId)
+        .eq("is_enabled", true);
 
       if (data.senderId && data.senderId !== data.userId) {
-        // For chat: also exclude any tokens registered to the sender (shouldn't happen but extra safety)
-        tokensQuery += " AND token NOT IN (SELECT token FROM public.user_push_tokens WHERE user_id = $2)";
-        tokensParams.push(data.senderId);
+        const { data: senderTokens } = await supabase
+          .from("user_push_tokens")
+          .select("token")
+          .eq("user_id", data.senderId);
+
+        if (senderTokens && senderTokens.length > 0) {
+          const excludeTokens = senderTokens.map((t: any) => t.token);
+          query = query.not("token", "in", `(${excludeTokens.join(',')})`);
+        }
       }
 
-      const tokensResult = await pool.query(tokensQuery, tokensParams);
+      const { data: deviceTokens } = await query;
+      const tokens = (deviceTokens || []).map((t: any) => t.token);
 
-      const deviceTokens = tokensResult.rows;
-      if (deviceTokens.length === 0) {
-        console.log(`[FCM] No active device tokens found for user ${data.userId}.`);
-        await pool.query(
-          "UPDATE public.notifications SET delivery_status = 'failed', delivery_error = 'No active tokens' WHERE id = $1",
-          [data.id]
-        );
+      if (!tokens || tokens.length === 0) {
+        console.log(`[FCM] No devices found for user ${data.userId}`);
+        await supabase
+          .from("notifications")
+          .update({ delivery_status: 'failed', delivery_error: 'No active device tokens found' })
+          .eq('id', data.id);
         return;
       }
 
       // Update notification status to 'sending' and increment attempt count
-      await pool.query(
-        "UPDATE public.notifications SET delivery_status = 'sending', delivery_attempts = delivery_attempts + 1 WHERE id = $1",
-        [data.id]
-      );
+      const { data: nData } = await supabase.from("notifications").select("delivery_attempts").eq("id", data.id).single();
+      const attempts = (nData?.delivery_attempts || 0) + 1;
+      await supabase
+        .from("notifications")
+        .update({ delivery_status: 'sending', delivery_attempts: attempts })
+        .eq('id', data.id);
 
-      // 3. Extract token strings from device rows
-      const tokens = deviceTokens.map((t) => t.token);
       console.log(`[FCM] Dispatching to ${tokens.length} device(s) for user ${data.userId}`);
-
-
 
       // 4. Build and send multicast message using firebase-admin v14 modular API
       const multicastMessage: MulticastMessage = {
@@ -349,7 +353,7 @@ export async function dispatchFCMPush(data: PushNotificationData): Promise<void>
         if (!res.success && res.error) {
           const errorCode = res.error.code;
           const token = tokens[idx];
-          const device = deviceTokens[idx];
+          const device = deviceTokens![idx];
 
           console.warn(`[FCM] Send failed for user ${data.userId} device ${device.device_id}:`, res.error.message);
 
@@ -364,31 +368,31 @@ export async function dispatchFCMPush(data: PushNotificationData): Promise<void>
 
       if (tokensToDelete.length > 0) {
         console.log(`[FCM] Deleting ${tokensToDelete.length} unregistered / invalid tokens.`);
-        await pool.query(
-          "DELETE FROM public.user_push_tokens WHERE token = ANY($1)",
-          [tokensToDelete]
-        );
+        await supabase
+          .from("user_push_tokens")
+          .delete()
+          .in("token", tokensToDelete);
       }
 
       const successCount = response.successCount;
       if (successCount > 0) {
-        await pool.query(
-          "UPDATE public.notifications SET delivery_status = 'sent', delivery_error = null WHERE id = $1",
-          [data.id]
-        );
+        await supabase
+          .from("notifications")
+          .update({ delivery_status: 'delivered', delivery_error: null })
+          .eq('id', data.id);
       } else {
-        await pool.query(
-          "UPDATE public.notifications SET delivery_status = 'failed', delivery_error = 'All token dispatches failed' WHERE id = $1",
-          [data.id]
-        );
+        await supabase
+          .from("notifications")
+          .update({ delivery_status: 'failed', delivery_error: 'All token dispatches failed' })
+          .eq('id', data.id);
       }
 
     } catch (err: any) {
       console.error("[FCM] Critical push dispatch failure:", err);
-      await pool.query(
-        "UPDATE public.notifications SET delivery_status = 'failed', delivery_error = $2 WHERE id = $1",
-        [data.id, err.message || "Unknown error"]
-      );
+      await supabase
+        .from("notifications")
+        .update({ delivery_status: 'failed', delivery_error: err.message || "Unknown error" })
+        .eq('id', data.id);
     }
 }
 
