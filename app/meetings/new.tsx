@@ -231,6 +231,7 @@ export default function NewMeetingScreen() {
             : `${user?.fullName} ${activeWorkspace?.name ? `(${activeWorkspace.name}) ` : ''}invited you to "${title.trim()}" on ${startTime.toLocaleDateString()} at ${startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
           type: 'meeting_invite',
           related_meeting_id: meetingId,
+          sender_id: user?.id,
         }));
 
       if (notificationsToInsert.length > 0) {
