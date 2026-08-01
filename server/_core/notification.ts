@@ -180,7 +180,18 @@ function getFirebaseApp(): App | null {
   try {
     const serviceAccount = JSON.parse(serviceAccountString);
     if (serviceAccount.private_key) {
-      serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      let key = serviceAccount.private_key;
+      key = key.replace(/\\n/g, '\n');
+      const lines = key.split('\n').map((l: string) => l.trim()).filter(Boolean);
+      if (lines.length <= 3) {
+        let body = key.replace(/-----BEGIN PRIVATE KEY-----/gi, '').replace(/-----END PRIVATE KEY-----/gi, '').replace(/\s+/g, '');
+        let chunks = body.match(/.{1,64}/g);
+        if (chunks) {
+          serviceAccount.private_key = '-----BEGIN PRIVATE KEY-----\n' + chunks.join('\n') + '\n-----END PRIVATE KEY-----\n';
+        }
+      } else {
+        serviceAccount.private_key = key;
+      }
     }
     fcmApp = initializeApp({ credential: cert(serviceAccount) });
     console.log("[FCM] Firebase app initialized via environment variable.");
