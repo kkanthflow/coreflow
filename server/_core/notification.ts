@@ -116,8 +116,12 @@ export async function notifyOwner(payload: NotificationPayload): Promise<boolean
 let dbPool: Pool | null = null;
 function getDbPool(): Pool {
   if (!dbPool) {
+    let connString = process.env.DATABASE_URL;
+    if (connString && connString.includes("?")) {
+      connString = connString.split("?")[0];
+    }
     dbPool = new Pool({
-      connectionString: process.env.DATABASE_URL,
+      connectionString: connString,
       ssl: {
         rejectUnauthorized: false,
       },
@@ -148,6 +152,15 @@ function getFirebaseApp(): App | null {
       serviceAccountString = Buffer.from(b64Key, "base64").toString("utf8");
     } catch (e) {
       console.error("[FCM] Failed to decode base64 service account credentials:", e);
+    }
+  }
+
+  // If the provided serviceAccountString is a base64 encoded JSON string, decode it
+  if (serviceAccountString && !serviceAccountString.trim().startsWith("{")) {
+    try {
+      serviceAccountString = Buffer.from(serviceAccountString, "base64").toString("utf8");
+    } catch (e) {
+      console.error("[FCM] Failed to decode FIREBASE_SERVICE_ACCOUNT as base64:", e);
     }
   }
 
