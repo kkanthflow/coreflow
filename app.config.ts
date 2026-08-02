@@ -62,11 +62,10 @@ const config: ExpoConfig = {
     googleServicesFile: "./google-services.json",
     softwareKeyboardLayoutMode: "resize",
     adaptiveIcon: {
-      backgroundColor: "#E6F4FE",
-      foregroundImage: "./assets/images/android-icon-foreground.png",
-      backgroundImage: "./assets/images/android-icon-background.png",
-      monochromeImage: "./assets/images/android-icon-monochrome.png",
+      backgroundColor: "#000000",
+      foregroundImage: "./assets/images/icon.png"
     },
+
     // @ts-ignore
     edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
@@ -77,7 +76,14 @@ const config: ExpoConfig = {
       "USE_FINGERPRINT",
       "USE_FACIAL_RECOGNITION",
       "READ_EXTERNAL_STORAGE",
-      "WRITE_EXTERNAL_STORAGE"
+      "WRITE_EXTERNAL_STORAGE",
+      "CAMERA",
+      "RECORD_AUDIO",
+      "FOREGROUND_SERVICE",
+      "FOREGROUND_SERVICE_MEDIA_PROJECTION",
+      "FOREGROUND_SERVICE_CAMERA",
+      "FOREGROUND_SERVICE_MICROPHONE",
+      "MODIFY_AUDIO_SETTINGS"
     ],
     intentFilters: [
       {
@@ -161,6 +167,14 @@ const config: ExpoConfig = {
         },
       },
     ],
+    [
+      "@config-plugins/react-native-webrtc",
+      {
+        cameraPermission: "Allow $(PRODUCT_NAME) to access your camera",
+        microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone"
+      }
+    ],
+    "./plugins/withLiveKitForegroundService.js",
   ],
   experiments: {
     typedRoutes: true,

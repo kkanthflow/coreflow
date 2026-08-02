@@ -230,7 +230,9 @@ export default function NewMeetingScreen() {
             ? `${user?.fullName} ${activeWorkspace?.name ? `(${activeWorkspace.name}) ` : ''}rescheduled/updated "${title.trim()}" to ${startTime.toLocaleDateString()} at ${startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
             : `${user?.fullName} ${activeWorkspace?.name ? `(${activeWorkspace.name}) ` : ''}invited you to "${title.trim()}" on ${startTime.toLocaleDateString()} at ${startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`,
           type: 'meeting_invite',
-          related_meeting_id: meetingId,
+          entity_id: meetingId,
+          entity_type: 'meeting',
+          action_url: `/meetings/${meetingId}`,
           sender_id: user?.id,
         }));
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, Pressable, ActivityIndicator, FlatList, Dimensions, Platform, Alert, TextInput, Modal, KeyboardAvoidingView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useTracks, useParticipant } from '@livekit/react-native';
+import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useTracks, useParticipant, useParticipants } from '@livekit/react-native';
 import { Track, ExternalE2EEKeyProvider, RoomOptions, VideoPresets, RoomEvent } from 'livekit-client';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Users, MessageSquare, MoreHorizontal, FileText, X, Send } from 'lucide-react-native';
 import { BlurView } from 'expo-blur';
@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { initializeUserKeys, decryptKeyWithSender } from '@/lib/crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRef } from 'react';
+import ReactNativeForegroundService from '@supersami/rn-foreground-service';
 
 const { width } = Dimensions.get('window');
 
@@ -101,6 +102,7 @@ export default function MeetingRoomScreen() {
           filter: `meeting_id=eq.${id}`,
         },
         (payload) => {
+          console.log('Realtime payload:', payload);
           if (payload.new.user_id === session?.user?.id && payload.new.admission_status === 'admitted') {
             setIsWaiting(false);
             connect(); // Try connecting again
@@ -158,8 +160,8 @@ function MeetingUI() {
   const { localParticipant } = useLocalParticipant();
   const { session } = useAuth();
   const insets = useSafeAreaInsets();
-  // Filter for camera tracks to build the grid
-  const tracks = useTracks([Track.Source.Camera, Track.Source.ScreenShare]);
+  // Get all participants instead of just active tracks
+  const participants = useParticipants();
 
   const [waitingUsers, setWaitingUsers] = useState<any[]>([]);
 
@@ -310,19 +312,38 @@ function MeetingUI() {
   }, [id]);
 
   const admitUser = async (userId: string) => {
-    await supabase.from('meeting_participants').update({ admission_status: 'admitted' }).eq('meeting_id', id).eq('user_id', userId);
+    const { error } = await supabase.from('meeting_participants').update({ admission_status: 'admitted' }).eq('meeting_id', id).eq('user_id', userId);
+    if (error) {
+      console.error('Admit error:', error);
+      Alert.alert('Error admitting user', error.message);
+    }
   };
   const denyUser = async (userId: string) => {
-    await supabase.from('meeting_participants').update({ admission_status: 'rejected' }).eq('meeting_id', id).eq('user_id', userId);
+    const { error } = await supabase.from('meeting_participants').update({ admission_status: 'rejected' }).eq('meeting_id', id).eq('user_id', userId);
+    if (error) {
+      console.error('Deny error:', error);
+      Alert.alert('Error denying user', error.message);
+    }
   };
 
   const handleLeave = () => {
-    room.disconnect();
+    ReactNativeForegroundService.stopAll();
     router.replace('/meetings' as any);
   };
 
-  const getGridStyle = (): any => {
-    const count = tracks.length;
+  useEffect(() => {
+    ReactNativeForegroundService.start({
+      id: 144,
+      title: "Meeting Active",
+      message: "You are sharing media in a meeting",
+    });
+
+    return () => {
+      ReactNativeForegroundService.stopAll();
+    };
+  }, []);
+
+  const getGridStyle = (count: number): any => {
     if (count === 0 || count === 1) return { width: '100%', height: '100%' };
     if (count === 2) return { width: '100%', height: '49%' };
     if (count === 3 || count === 4) return { width: '49%', height: '49%' };
@@ -365,7 +386,7 @@ function MeetingUI() {
       
       {/* Main Video Grid */}
       <View className="flex-1 px-2 pt-28 pb-32">
-        {tracks.length === 0 ? (
+        {participants.length === 0 ? (
           <View className="flex-1 justify-center items-center">
             <View className="w-24 h-24 rounded-full bg-[#18181B] items-center justify-center mb-4 border border-white/5">
               <Users size={32} color="#A1A1AA" />
@@ -374,9 +395,9 @@ function MeetingUI() {
           </View>
         ) : (
           <View className="flex-1 flex-row flex-wrap justify-between content-start gap-y-2">
-            {tracks.map((track) => (
-              <View key={track.participant.identity + track.source} style={getGridStyle()}>
-                <ParticipantTile trackRef={track} />
+            {participants.map((participant: any) => (
+              <View key={participant.identity} style={getGridStyle(participants.length)}>
+                <ParticipantTile participant={participant} />
               </View>
             ))}
           </View>
@@ -390,21 +411,39 @@ function MeetingUI() {
             <View className="flex-row justify-evenly items-center py-4 px-2">
               
               <Pressable 
-                onPress={() => localParticipant?.setMicrophoneEnabled(!localParticipant?.isMicrophoneEnabled)}
+                onPress={async () => {
+                  try {
+                    await localParticipant?.setMicrophoneEnabled(!localParticipant?.isMicrophoneEnabled);
+                  } catch (e: any) {
+                    Alert.alert('Permission Denied', 'Could not access microphone.');
+                  }
+                }}
                 className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant?.isMicrophoneEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
               >
                 {localParticipant?.isMicrophoneEnabled ? <Mic size={20} color="#FFFFFF" /> : <MicOff size={20} color="#EF4444" />}
               </Pressable>
 
               <Pressable 
-                onPress={() => localParticipant?.setCameraEnabled(!localParticipant?.isCameraEnabled)}
+                onPress={async () => {
+                  try {
+                    await localParticipant?.setCameraEnabled(!localParticipant?.isCameraEnabled);
+                  } catch (e: any) {
+                    Alert.alert('Permission Denied', 'Could not access camera.');
+                  }
+                }}
                 className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant?.isCameraEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
               >
                 {localParticipant?.isCameraEnabled ? <Video size={20} color="#FFFFFF" /> : <VideoOff size={20} color="#EF4444" />}
               </Pressable>
 
               <Pressable 
-                onPress={() => localParticipant?.setScreenShareEnabled(!localParticipant?.isScreenShareEnabled)}
+                onPress={async () => {
+                  try {
+                    await localParticipant?.setScreenShareEnabled(!localParticipant?.isScreenShareEnabled);
+                  } catch (e: any) {
+                    Alert.alert('Screen Share Error', 'Could not start screen share. Please check permissions.');
+                  }
+                }}
                 className={`w-12 h-12 rounded-full items-center justify-center ${localParticipant?.isScreenShareEnabled ? 'bg-[#2563EB]' : 'bg-[#18181B]'}`}
               >
                 <MonitorUp size={20} color="#FFFFFF" />
@@ -510,10 +549,17 @@ function MeetingUI() {
   );
 }
 
-function ParticipantTile({ trackRef }: { trackRef: any }) {
-  const participantState = useParticipant(trackRef.participant);
+function ParticipantTile({ participant }: { participant: any }) {
+  const participantState = useParticipant(participant);
   const isSpeaking = participantState.isSpeaking;
-  const participant = trackRef.participant;
+  const isCameraMuted = !participantState.cameraPublication || participantState.cameraPublication.isMuted;
+  
+  const trackRef = participantState.cameraPublication ? {
+    participant,
+    source: Track.Source.Camera,
+    publication: participantState.cameraPublication,
+    track: participantState.cameraPublication.track
+  } : null;
 
   // Active speaker animation
   const animatedStyle = useAnimatedStyle(() => {
@@ -528,11 +574,11 @@ function ParticipantTile({ trackRef }: { trackRef: any }) {
 
   return (
     <Animated.View className="flex-1 bg-[#18181B] rounded-[20px] overflow-hidden relative shadow-lg" style={animatedStyle}>
-      {trackRef.publication?.isMuted ? (
+      {isCameraMuted || !trackRef ? (
         <View className="flex-1 items-center justify-center bg-[#18181B]">
           <View className="w-16 h-16 rounded-full bg-[#27272A] items-center justify-center">
             <Text className="text-white text-xl font-bold">
-              {(participant.name || participant.identity).charAt(0).toUpperCase()}
+              {(participant.name || participant.identity || '?').charAt(0).toUpperCase()}
             </Text>
           </View>
         </View>

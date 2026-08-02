@@ -32,6 +32,7 @@ import { useOTAUpdates } from '@/hooks/use-ota-updates';
 import { supabase } from "@/lib/supabase";
 import { scheduleMeetingLocalNotifications } from '@/lib/notifications-helper';
 import * as Crypto from 'expo-crypto';
+import { AutostartWarning } from '@/components/autostart-warning';
 
 async function getOrInitDeviceId(): Promise<string> {
   let deviceId = await SecureStore.getItemAsync('cf_device_id');
@@ -78,13 +79,13 @@ Notifications.setNotificationHandler({
     } catch (e) {
       console.warn('[NotificationHandler] Error in notification handler:', e);
     }
-
+    // As requested: Do not push OS notifications when the app is open (foreground)
     return {
-      shouldShowAlert: true,
-      shouldPlaySound: true,
+      shouldShowAlert: false,
+      shouldPlaySound: true, // Keep sound so they know a message arrived
       shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
+      shouldShowBanner: false,
+      shouldShowList: false,
     };
   },
 });
@@ -930,6 +931,7 @@ export default function RootLayout() {
               <AuthGate />
               <AppNavigator />
               <GlobalAlert />
+              <AutostartWarning />
               <StatusBar style="auto" />
               </QueryClientProvider>
             </trpc.Provider>

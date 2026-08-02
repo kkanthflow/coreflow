@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, Pressable, Platform, StyleSheet } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Camera, CameraView, useCameraPermissions, useMicrophonePermissions } from 'expo-camera';
@@ -14,6 +14,15 @@ export default function PreJoinScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session, activeWorkspace } = useAuth();
+  
+  const [isFocused, setIsFocused] = useState(true);
+  
+  useFocusEffect(
+    useCallback(() => {
+      setIsFocused(true);
+      return () => setIsFocused(false);
+    }, [])
+  );
   
   const [meetingId, setMeetingId] = useState(id || '');
   const [cameraEnabled, setCameraEnabled] = useState(true);
@@ -52,16 +61,26 @@ export default function PreJoinScreen() {
     transform: [{ scale: pulse.value }]
   }));
 
+  const [isJoining, setIsJoining] = useState(false);
+
   const handleJoin = () => {
-    if (!meetingId.trim()) return;
-    router.push({
-      pathname: '/meetings/room' as any,
-      params: { 
-        id: meetingId, 
-        camera: cameraEnabled ? '1' : '0', 
-        mic: micEnabled ? '1' : '0' 
-      }
-    });
+    if (!meetingId.trim() || isJoining) return;
+    
+    setIsJoining(true);
+    // Force unmount the camera hardware before navigating
+    setIsFocused(false);
+    
+    // Wait for the React render cycle to fully unmount the CameraView
+    setTimeout(() => {
+      router.push({
+        pathname: '/meetings/room' as any,
+        params: { 
+          id: meetingId, 
+          camera: cameraEnabled ? '1' : '0', 
+          mic: micEnabled ? '1' : '0' 
+        }
+      });
+    }, 100); // 100ms is plenty of time for React Native to detach the camera surface
   };
 
   const handleStartInstant = async () => {
@@ -124,7 +143,7 @@ export default function PreJoinScreen() {
       {/* Main Section - Camera Preview */}
       <View className="items-center mb-10">
         <View className="w-[75%] aspect-[3/4] bg-[#1E2128] rounded-[24px] overflow-hidden shadow-2xl border border-[rgba(255,255,255,0.06)] relative">
-          {cameraEnabled && camPermission?.granted ? (
+          {(cameraEnabled && camPermission?.granted && isFocused && !isJoining) ? (
             <CameraView style={{ flex: 1 }} facing="front" />
           ) : (
             <View className="flex-1 items-center justify-center bg-[#17181D]">
