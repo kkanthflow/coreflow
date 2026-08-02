@@ -293,7 +293,7 @@ export async function dispatchFCMPush(data: PushNotificationData): Promise<void>
 
         if (senderTokens && senderTokens.length > 0) {
           const excludeTokens = senderTokens.map((t: any) => t.token);
-          query = query.not("token", "in", `(${excludeTokens.join(',')})`);
+          query = query.not("token", "in", excludeTokens);
         }
       }
 
