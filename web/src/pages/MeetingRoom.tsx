@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { LiveKitRoom, RoomAudioRenderer, VideoConference } from '@livekit/components-react';
-import { VideoPresets } from 'livekit-client';
+
 import '@livekit/components-styles';
 
 export default function MeetingRoom() {
@@ -120,8 +120,8 @@ export default function MeetingRoom() {
       
       <div className="flex-1 flex w-full h-full">
         <LiveKitRoom
-          video={{ resolution: VideoPresets.h1080 }}
-          audio={{ autoGainControl: true, echoCancellation: true, noiseSuppression: true }}
+          video={true}
+          audio={true}
           token={token}
           serverUrl={serverUrl}
           connect={true}
