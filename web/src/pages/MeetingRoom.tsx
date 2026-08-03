@@ -21,6 +21,9 @@ export default function MeetingRoom() {
     return saved || defaultNotesTemplate;
   });
 
+  const videoEnabled = searchParams.get('video') === 'true';
+  const audioEnabled = searchParams.get('audio') === 'true';
+
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setNotesText(val);
@@ -120,8 +123,8 @@ export default function MeetingRoom() {
       
       <div className="flex-1 flex w-full h-full">
         <LiveKitRoom
-          video={false}
-          audio={false}
+          video={videoEnabled}
+          audio={audioEnabled}
           token={token}
           serverUrl={serverUrl}
           connect={true}
