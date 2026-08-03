@@ -31,9 +31,9 @@ const ActionCard = ({ title, subtitle, icon: Icon, delay, onPress, active, loadi
       }}
       onPress={onPress}
       style={animatedStyle}
-      className={`flex-1 rounded-[24px] p-4 border mb-3 flex-row items-center space-x-4 shadow-lg ${active ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]/30' : 'bg-[#1E2128] border-[rgba(255,255,255,0.06)]'}`}
+      className={`flex-1 rounded-[24px] p-4 border mb-3 flex-row items-center space-x-4 shadow-lg ${active ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]/30' : 'bg-white dark:bg-[#1E2128] border-gray-200 dark:border-[rgba(255,255,255,0.06)]'}`}
     >
-      <View className={`w-12 h-12 rounded-2xl items-center justify-center shadow-md ${active ? 'bg-[#FF6B4A]' : 'bg-[#27272A]'}`}>
+      <View className={`w-12 h-12 rounded-2xl items-center justify-center shadow-md ${active ? 'bg-[#FF6B4A]' : 'bg-gray-100 dark:bg-[#27272A]'}`}>
         {loading ? (
           <ActivityIndicator size="small" color={active ? "#FFFFFF" : "#FF6B4A"} />
         ) : (
@@ -41,8 +41,8 @@ const ActionCard = ({ title, subtitle, icon: Icon, delay, onPress, active, loadi
         )}
       </View>
       <View className="flex-1">
-        <Text className="text-white text-base font-bold">{title}</Text>
-        <Text className="text-[#A1A1AA] text-xs mt-0.5">{subtitle}</Text>
+        <Text className="text-black dark:text-white text-base font-bold">{title}</Text>
+        <Text className="text-gray-500 dark:text-[#A1A1AA] text-xs mt-0.5">{subtitle}</Text>
       </View>
     </AnimatedPressable>
   );
@@ -75,19 +75,19 @@ const TimelineCard = ({ meeting, delay }: any) => {
       }}
       onPress={() => router.push(`/meetings/${meeting.id}` as any)}
       style={animatedStyle}
-      className="bg-[#1E2128] border border-[rgba(255,255,255,0.06)] border-l-4 border-l-[#FF6B4A] rounded-[20px] p-4 mb-4 flex-row justify-between items-center shadow-lg"
+      className="bg-white dark:bg-[#1E2128] border border-gray-200 dark:border-[rgba(255,255,255,0.06)] border-l-4 border-l-[#FF6B4A] rounded-[20px] p-4 mb-4 flex-row justify-between items-center shadow-lg"
     >
       <View className="flex-1">
-        <Text className="text-[#A1A1AA] text-xs font-semibold mb-1">
+        <Text className="text-gray-500 dark:text-[#A1A1AA] text-xs font-semibold mb-1">
           {formatTime(meeting.start_time)} - {formatTime(endTime.toISOString())}
         </Text>
-        <Text className="text-white text-lg font-bold mb-1" numberOfLines={1}>{meeting.title}</Text>
+        <Text className="text-black dark:text-white text-lg font-bold mb-1" numberOfLines={1}>{meeting.title}</Text>
         {meeting.description && (
-          <Text className="text-[#A1A1AA] text-sm mb-3" numberOfLines={1}>{meeting.description}</Text>
+          <Text className="text-gray-500 dark:text-[#A1A1AA] text-sm mb-3" numberOfLines={1}>{meeting.description}</Text>
         )}
         <View className="flex-row items-center space-x-2 mt-1">
           <View className="flex-row">
-            <View className="w-6 h-6 rounded-full bg-[#FF6B4A]/20 border border-[#1E2128] items-center justify-center -mr-2 z-20">
+            <View className="w-6 h-6 rounded-full bg-[#FF6B4A]/20 border border-white dark:border-[#1E2128] items-center justify-center -mr-2 z-20">
                <Text className="text-[10px] text-[#FF6B4A] font-bold">K</Text>
             </View>
             <View className="w-6 h-6 rounded-full bg-[#3B82F6]/20 border border-[#1E2128] items-center justify-center z-10">
@@ -208,16 +208,16 @@ export default function MeetingsDashboard() {
 
   return (
     <TabScreenWrapper>
-      <Animated.View entering={FadeIn.duration(350)} className="flex-1 bg-[#0B0B0D] pt-8 px-6">
+      <Animated.View entering={FadeIn.duration(350)} className="flex-1 bg-gray-50 dark:bg-[#0B0B0D] pt-8 px-6">
         {/* Header */}
         <View className="flex-row justify-between items-center mb-8">
           <View>
-            <Text className="text-white text-3xl font-bold tracking-tight">Meetings</Text>
-            <Text className="text-[#A1A1AA] text-base mt-1">Connect securely</Text>
+            <Text className="text-black dark:text-white text-3xl font-bold tracking-tight">Meetings</Text>
+            <Text className="text-gray-500 dark:text-[#A1A1AA] text-base mt-1">Connect securely</Text>
           </View>
           <Pressable 
             onPress={() => router.push('/meetings/pre-join')}
-            className="w-12 h-12 rounded-full bg-[#17181D] border border-[rgba(255,255,255,0.06)] items-center justify-center shadow-lg"
+            className="w-12 h-12 rounded-full bg-white dark:bg-[#17181D] border border-gray-200 dark:border-[rgba(255,255,255,0.06)] items-center justify-center shadow-lg"
           >
              <Video size={22} color="#FF6B4A" />
           </Pressable>
@@ -253,20 +253,20 @@ export default function MeetingsDashboard() {
 
           {/* Upcoming Meetings List */}
           <Animated.View entering={FadeInUp.delay(240).duration(350)}>
-            <Text className="text-white text-xl font-bold mb-4">Upcoming</Text>
+            <Text className="text-black dark:text-white text-xl font-bold mb-4">Upcoming</Text>
             
             {loading ? (
               <View className="space-y-4">
-                <Skeleton className="w-full h-32 rounded-[20px] bg-[#1E2128]" />
-                <Skeleton className="w-full h-32 rounded-[20px] bg-[#1E2128]" />
+                <Skeleton className="w-full h-32 rounded-[20px] bg-gray-200 dark:bg-[#1E2128]" />
+                <Skeleton className="w-full h-32 rounded-[20px] bg-gray-200 dark:bg-[#1E2128]" />
               </View>
             ) : upcoming.length === 0 ? (
-              <Animated.View entering={FadeIn.duration(500)} className="items-center justify-center py-10 bg-[#17181D] rounded-[24px] border border-[rgba(255,255,255,0.06)] shadow-lg">
-                <View className="w-16 h-16 rounded-full bg-[#1E2128] items-center justify-center mb-4">
+              <Animated.View entering={FadeIn.duration(500)} className="items-center justify-center py-10 bg-white dark:bg-[#17181D] rounded-[24px] border border-gray-200 dark:border-[rgba(255,255,255,0.06)] shadow-lg">
+                <View className="w-16 h-16 rounded-full bg-gray-100 dark:bg-[#1E2128] items-center justify-center mb-4">
                   <Calendar size={28} color="#FF6B4A" />
                 </View>
-                <Text className="text-white text-base font-bold mb-1">No upcoming meetings</Text>
-                <Text className="text-[#A1A1AA] text-sm text-center px-8">Your schedule is clear. Enjoy your day!</Text>
+                <Text className="text-black dark:text-white text-base font-bold mb-1">No upcoming meetings</Text>
+                <Text className="text-gray-500 dark:text-[#A1A1AA] text-sm text-center px-8">Your schedule is clear. Enjoy your day!</Text>
               </Animated.View>
             ) : (
               upcoming.map((meeting, idx) => (
@@ -278,16 +278,16 @@ export default function MeetingsDashboard() {
           {/* Past Meetings List */}
           {!loading && past.length > 0 && (
             <Animated.View entering={FadeInUp.delay(400).duration(350)} className="mt-6 mb-10">
-              <Text className="text-white text-lg font-bold mb-4">Past Meetings</Text>
+              <Text className="text-black dark:text-white text-lg font-bold mb-4">Past Meetings</Text>
               {past.map((meeting) => (
                 <Pressable 
                   key={meeting.id}
                   onPress={() => router.push(`/meetings/${meeting.id}` as any)}
-                  className="bg-[#17181D] border border-[rgba(255,255,255,0.06)] rounded-[16px] p-4 mb-3 flex-row items-center justify-between"
+                  className="bg-white dark:bg-[#17181D] border border-gray-200 dark:border-[rgba(255,255,255,0.06)] rounded-[16px] p-4 mb-3 flex-row items-center justify-between shadow-sm"
                 >
                   <View>
-                    <Text className="text-white font-bold text-sm mb-1">{meeting.title}</Text>
-                    <Text className="text-[#A1A1AA] text-xs">Completed • {meeting.duration_minutes || 30} min</Text>
+                    <Text className="text-black dark:text-white font-bold text-sm mb-1">{meeting.title}</Text>
+                    <Text className="text-gray-500 dark:text-[#A1A1AA] text-xs">Completed • {meeting.duration_minutes || 30} min</Text>
                   </View>
                   <Text className="text-[#FF6B4A] text-xs font-semibold">View Details</Text>
                 </Pressable>

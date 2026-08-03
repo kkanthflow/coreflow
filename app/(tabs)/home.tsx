@@ -670,6 +670,7 @@ function QuickActionCard({ action, index }: { action: any; index: number }) {
           onPress={action.onPress}
           accessibilityRole="button"
           accessibilityLabel={`${action.label}, ${action.sub || ''}`}
+        >
           <View
             style={{
               height: 64,
