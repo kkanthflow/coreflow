@@ -24,17 +24,28 @@ export default function PreJoin() {
   };
 
   const handleJoin = (values: any) => {
-    const { username, videoEnabled, audioEnabled } = values;
-    if (!username.trim()) return;
-    
-    // Pass choices to the room
-    const query = new URLSearchParams({
-      name: username,
-      video: videoEnabled.toString(),
-      audio: audioEnabled.toString()
-    });
-    
-    navigate(`/meetings/${id}/room?${query.toString()}`);
+    try {
+      console.log('handleJoin called with:', JSON.stringify(values));
+      const username = values?.username ?? '';
+      const videoEnabled = values?.videoEnabled ?? false;
+      const audioEnabled = values?.audioEnabled ?? false;
+      
+      if (!username.trim()) {
+        console.warn('No username provided');
+        return;
+      }
+      
+      const query = new URLSearchParams({
+        name: username,
+        video: String(videoEnabled),
+        audio: String(audioEnabled)
+      });
+      
+      console.log('Navigating to:', `/meetings/${id}/room?${query.toString()}`);
+      navigate(`/meetings/${id}/room?${query.toString()}`);
+    } catch (err) {
+      console.error('handleJoin error:', err);
+    }
   };
 
   return (
@@ -59,11 +70,12 @@ export default function PreJoin() {
         
         <LiveKitPreJoin
           onSubmit={handleJoin}
+          onError={(err) => console.error('PreJoin error:', err)}
           defaults={{
             videoEnabled: true,
             audioEnabled: true,
+            username: '',
           }}
-          className="lk-prejoin"
         />
       </div>
     </div>
