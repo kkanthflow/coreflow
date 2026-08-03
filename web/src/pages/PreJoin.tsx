@@ -1,82 +1,213 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { PreJoin as LiveKitPreJoin } from '@livekit/components-react';
-import '@livekit/components-styles';
 
-const isMobileDevice = () => {
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-};
+const isMobileDevice = () =>
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 export default function PreJoin() {
   const { id } = useParams();
   const navigate = useNavigate();
+
+  const [name, setName] = useState('');
+  const [videoEnabled, setVideoEnabled] = useState(true);
+  const [audioEnabled, setAudioEnabled] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
+  const [cameraError, setCameraError] = useState(false);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
   useEffect(() => {
     setIsMobile(isMobileDevice());
   }, []);
 
-  const handleOpenApp = () => {
-    window.location.href = `coreflow://meetings/${id}`;
-    setTimeout(() => {
-      console.log('App might not be installed.');
-    }, 2000);
-  };
+  // Start/stop camera preview
+  useEffect(() => {
+    let active = true;
 
-  const handleJoin = (values: any) => {
-    try {
-      console.log('handleJoin called with:', JSON.stringify(values));
-      const username = values?.username ?? '';
-      const videoEnabled = values?.videoEnabled ?? false;
-      const audioEnabled = values?.audioEnabled ?? false;
-      
-      if (!username.trim()) {
-        console.warn('No username provided');
+    const startCamera = async () => {
+      if (!videoEnabled) {
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(t => t.stop());
+          streamRef.current = null;
+        }
+        if (videoRef.current) videoRef.current.srcObject = null;
         return;
       }
-      
-      const query = new URLSearchParams({
-        name: username,
-        video: String(videoEnabled),
-        audio: String(audioEnabled)
-      });
-      
-      console.log('Navigating to:', `/meetings/${id}/room?${query.toString()}`);
-      navigate(`/meetings/${id}/room?${query.toString()}`);
-    } catch (err) {
-      console.error('handleJoin error:', err);
-    }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+        setCameraError(false);
+      } catch {
+        if (active) setCameraError(true);
+      }
+    };
+
+    startCamera();
+
+    return () => {
+      active = false;
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+        streamRef.current = null;
+      }
+    };
+  }, [videoEnabled]);
+
+  const handleJoin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+
+    const query = new URLSearchParams({
+      name: name.trim(),
+      video: String(videoEnabled),
+      audio: String(audioEnabled),
+    });
+
+    navigate(`/meetings/${id}/room?${query.toString()}`);
+  };
+
+  const handleOpenApp = () => {
+    window.location.href = `coreflow://meetings/${id}`;
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-background" data-lk-theme="default">
+    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-[#09090b]">
       {isMobile && (
-        <div className="absolute top-0 left-0 right-0 p-4 bg-primary/10 border-b border-primary/20 backdrop-blur-md z-50 flex items-center justify-between">
+        <div className="absolute top-0 left-0 right-0 p-4 bg-blue-600/10 border-b border-blue-500/20 backdrop-blur-md z-50 flex items-center justify-between">
           <div className="text-sm">
-            <p className="font-semibold text-foreground">CoreFlow App</p>
-            <p className="text-muted-foreground text-xs">For the best experience</p>
+            <p className="font-semibold text-white">CoreFlow App</p>
+            <p className="text-gray-400 text-xs">For the best experience</p>
           </div>
-          <button 
+          <button
             onClick={handleOpenApp}
-            className="px-4 py-2 bg-primary text-primary-foreground font-semibold rounded-full text-sm"
+            className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-full text-sm hover:bg-blue-700 transition-colors"
           >
             Open in App
           </button>
         </div>
       )}
 
-      <div className="w-full max-w-2xl p-4 md:p-8 rounded-2xl bg-card border border-border shadow-xl">
-        <h1 className="text-2xl font-bold mb-6 text-center">Join Meeting</h1>
-        
-        <LiveKitPreJoin
-          onSubmit={handleJoin}
-          onError={(err) => console.error('PreJoin error:', err)}
-          defaults={{
-            videoEnabled: true,
-            audioEnabled: true,
-            username: '',
-          }}
-        />
+      <div className="w-full max-w-lg">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.894L15 14" />
+                <rect x="3" y="7" width="12" height="10" rx="2" />
+              </svg>
+            </div>
+            <span className="text-white font-bold text-xl">CoreFlow</span>
+          </div>
+          <h1 className="text-2xl font-bold text-white">Ready to join?</h1>
+          <p className="text-gray-400 text-sm mt-1">Set up your camera and microphone before joining</p>
+        </div>
+
+        {/* Camera Preview */}
+        <div className="relative aspect-video bg-[#1c1c1e] rounded-2xl overflow-hidden border border-white/10 mb-6">
+          {videoEnabled && !cameraError ? (
+            <video
+              ref={videoRef}
+              autoPlay
+              muted
+              playsInline
+              className="w-full h-full object-cover scale-x-[-1]"
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+              <div className="w-16 h-16 rounded-full bg-[#2c2c2e] flex items-center justify-center">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M20 20L4 4M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.894L15 14" />
+                  <rect x="3" y="7" width="12" height="10" rx="2" />
+                </svg>
+              </div>
+              <p className="text-gray-500 text-sm">{cameraError ? 'Camera unavailable' : 'Camera is off'}</p>
+            </div>
+          )}
+
+          {/* Toggle buttons overlay */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3">
+            <button
+              type="button"
+              onClick={() => setAudioEnabled(v => !v)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all backdrop-blur-sm border ${
+                audioEnabled
+                  ? 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                  : 'bg-red-600/90 border-red-500 text-white'
+              }`}
+            >
+              {audioEnabled ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                  <line x1="12" y1="19" x2="12" y2="23" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="1" y1="1" x2="23" y2="23" />
+                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
+                  <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
+                </svg>
+              )}
+              {audioEnabled ? 'Mic On' : 'Mic Off'}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setVideoEnabled(v => !v)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all backdrop-blur-sm border ${
+                videoEnabled
+                  ? 'bg-white/10 border-white/20 text-white hover:bg-white/20'
+                  : 'bg-red-600/90 border-red-500 text-white'
+              }`}
+            >
+              {videoEnabled ? (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.894L15 14" />
+                  <rect x="3" y="7" width="12" height="10" rx="2" />
+                </svg>
+              ) : (
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M16 16l4.553 2.069A1 1 0 0 0 22 17.155V6.845a1 1 0 0 0-1.447-.894L15 8M2 2l20 20M15 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h1" />
+                </svg>
+              )}
+              {videoEnabled ? 'Camera On' : 'Camera Off'}
+            </button>
+          </div>
+        </div>
+
+        {/* Join form */}
+        <form onSubmit={handleJoin} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">
+              Your name <span className="text-red-400">*</span>
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Enter your name to join"
+              required
+              autoFocus
+              className="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all text-base"
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={!name.trim()}
+            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-[#2c2c2e] disabled:text-gray-500 disabled:cursor-not-allowed text-white font-bold rounded-xl px-4 py-4 transition-all text-base shadow-lg shadow-blue-600/20"
+          >
+            {name.trim() ? 'Join Meeting' : 'Enter your name to join'}
+          </button>
+        </form>
       </div>
     </div>
   );
