@@ -120,8 +120,8 @@ export default function MeetingRoom() {
       
       <div className="flex-1 flex w-full h-full">
         <LiveKitRoom
-          video={true}
-          audio={true}
+          video={false}
+          audio={false}
           token={token}
           serverUrl={serverUrl}
           connect={true}
