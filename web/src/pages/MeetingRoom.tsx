@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
 import { MeetingLayout } from '../components/MeetingLayout';
+import { useSingleTabLock } from '../hooks/useSingleTabLock';
 import '@livekit/components-styles';
 
 export default function MeetingRoom() {
@@ -9,6 +10,8 @@ export default function MeetingRoom() {
   const [searchParams] = useSearchParams();
   const name = searchParams.get('name');
   const navigate = useNavigate();
+
+  const { isDuplicate, claimLock } = useSingleTabLock(id);
 
   const [token, setToken] = useState('');
   const [serverUrl, setServerUrl] = useState('');
@@ -56,6 +59,31 @@ export default function MeetingRoom() {
 
     fetchToken();
   }, [id, name]);
+
+  // ── Duplicate Tab State (Single-tab meeting enforcement) ─────────────────────
+  if (isDuplicate) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 bg-[#09090b]">
+        <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-2">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+          </svg>
+        </div>
+        <h2 className="text-white text-xl font-bold">Already in meeting in another tab</h2>
+        <p className="text-gray-400 text-sm text-center max-w-md leading-relaxed">
+          You are already attending this meeting in another tab or browser window. Meetings can only be active in one tab at a time to prevent audio feedback.
+        </p>
+        <button
+          onClick={claimLock}
+          className="mt-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-amber-600/20 text-sm"
+        >
+          Use This Tab Instead
+        </button>
+      </div>
+    );
+  }
 
   // ── Error State ──────────────────────────────────────────────────────────────
   if (error) {
