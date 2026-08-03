@@ -670,25 +670,23 @@ function QuickActionCard({ action, index }: { action: any; index: number }) {
           onPress={action.onPress}
           accessibilityRole="button"
           accessibilityLabel={`${action.label}, ${action.sub || ''}`}
-          style={{
-            height: 64,
-            borderRadius: 32,
-            borderWidth: 1,
-            borderColor: isPressed ? colors.primary : 'rgba(255, 255, 255, 0.08)',
-            backgroundColor: '#131C33',
-            overflow: 'hidden',
-            shadowColor: isPressed ? colors.primary : '#000000',
-            shadowOffset: { width: 0, height: isPressed ? 10 : 8 },
-            shadowOpacity: isPressed ? 0.24 : 0.18,
-            shadowRadius: isPressed ? 18 : 12,
-            elevation: isPressed ? 8 : 4,
-          }}
-        >
-          <LinearGradient
-            colors={isPressed ? ['#1B294A', '#243A66'] : ['#131C33', '#1B2946']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={[StyleSheet.absoluteFill, { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20 }]}
+          <View
+            style={{
+              height: 64,
+              borderRadius: 32,
+              borderWidth: 1,
+              borderColor: isPressed ? colors.primary : colors.border,
+              backgroundColor: isPressed ? `${colors.primary}10` : colors.card,
+              overflow: 'hidden',
+              shadowColor: isPressed ? colors.primary : '#000000',
+              shadowOffset: { width: 0, height: isPressed ? 8 : 4 },
+              shadowOpacity: isPressed ? 0.2 : 0.05,
+              shadowRadius: isPressed ? 12 : 8,
+              elevation: isPressed ? 8 : 2,
+              flexDirection: 'row',
+              alignItems: 'center',
+              paddingHorizontal: 20
+            }}
           >
             {/* Icon wrapper */}
             <Reanimated.View 
@@ -711,7 +709,7 @@ function QuickActionCard({ action, index }: { action: any; index: number }) {
             {/* Label centered vertically beside icon */}
             <Text
               style={{
-                color: '#FFFFFF',
+                color: colors.foreground,
                 fontSize: 15,
                 fontWeight: '600',
                 flex: 1,
@@ -721,7 +719,7 @@ function QuickActionCard({ action, index }: { action: any; index: number }) {
             >
               {action.label}
             </Text>
-          </LinearGradient>
+          </View>
         </AnimatedPressable>
       </FloatingWrapper>
     </Reanimated.View>
