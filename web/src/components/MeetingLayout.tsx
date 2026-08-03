@@ -1,132 +1,117 @@
-import {
-  useParticipants,
-  useTracks,
-  VideoTrack,
-  ControlBar,
-} from '@livekit/components-react';
-import { Track, Participant, TrackPublication } from 'livekit-client';
+import { useState } from 'react';
+import { useRoomContext } from '@livekit/components-react';
+import { StageView } from './StageView';
+import { MeetingControls } from './MeetingControls';
 
-// ─── Participant Tile ──────────────────────────────────────────────────────────
-function ParticipantTile({
-  participant,
-  size = 'normal',
-}: {
-  participant: Participant;
-  size?: 'normal' | 'small';
-}) {
-  const cameraTracks = participant.getTrackPublications();
-  const cameraTrack = [...cameraTracks.values()].find(
-    (t) => t.source === Track.Source.Camera && t.track
-  );
+interface MeetingLayoutProps {
+  meetingId: string;
+}
 
-  const h = size === 'small' ? 'h-[120px] w-[160px]' : 'h-full w-full';
+export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
+  const room = useRoomContext();
+
+  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const defaultNotesTemplate = `# Meeting Notes\n\n**Agenda:**\n- \n\n**Decisions:**\n- \n\n**Action Items:**\n- `;
+  const [notesText, setNotesText] = useState(() => {
+    const saved = localStorage.getItem(`meeting_notes_${meetingId}`);
+    return saved || defaultNotesTemplate;
+  });
+
+  const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const val = e.target.value;
+    setNotesText(val);
+    localStorage.setItem(`meeting_notes_${meetingId}`, val);
+  };
+
+  const handleLeave = () => {
+    room.disconnect();
+  };
+
+  const handleShare = async () => {
+    const url = window.location.origin + `/meetings/${meetingId}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'Join my CoreFlow Meeting', url });
+      } catch {}
+    } else {
+      await navigator.clipboard.writeText(url);
+      alert('Meeting link copied to clipboard!');
+    }
+  };
 
   return (
-    <div className={`relative ${h} rounded-xl overflow-hidden bg-[#1c1c1e] border border-white/5 flex-shrink-0`}>
-      {cameraTrack?.track ? (
-        <VideoTrack
-          trackRef={{ participant, publication: cameraTrack as TrackPublication, source: Track.Source.Camera }}
-          className="w-full h-full object-cover"
-        />
-      ) : (
-        <div className="w-full h-full flex items-center justify-center">
-          <div className="w-12 h-12 rounded-full bg-[#2c2c2e] flex items-center justify-center">
-            <span className="text-white font-semibold text-lg">
-              {(participant.name || participant.identity || '?')[0].toUpperCase()}
-            </span>
+    <div className="h-screen w-full bg-[#09090b] flex flex-col relative overflow-hidden select-none">
+      {/* Top Bar Header */}
+      <div className="h-14 px-6 border-b border-white/10 flex items-center justify-between bg-[#121214] z-30 flex-shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.894L15 14" />
+              <rect x="3" y="7" width="12" height="10" rx="2" />
+            </svg>
           </div>
+          <span className="text-white font-bold text-base tracking-wide">CoreFlow Meeting</span>
         </div>
-      )}
-      <div className="absolute bottom-1 left-2 text-white text-xs font-medium truncate max-w-[140px] drop-shadow-lg">
-        {participant.name || participant.identity}
-        {participant.isLocal && ' (You)'}
-      </div>
-    </div>
-  );
-}
 
-// ─── Screen Share Track type ───────────────────────────────────────────────────
-interface ScreenShareInfo {
-  participant: Participant;
-  publication: TrackPublication;
-}
-
-// ─── Main Layout ──────────────────────────────────────────────────────────────
-export function MeetingLayout() {
-  const participants = useParticipants();
-
-  // Find all screen share tracks
-  const screenShareTracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: false });
-
-  const activeScreenShare: ScreenShareInfo | null =
-    screenShareTracks.length > 0
-      ? {
-          participant: screenShareTracks[0].participant,
-          publication: screenShareTracks[0].publication as TrackPublication,
-        }
-      : null;
-
-  const count = participants.length;
-  const cols =
-    count <= 1 ? 1 :
-    count <= 2 ? 2 :
-    count <= 4 ? 2 :
-    count <= 6 ? 3 : 4;
-
-  return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
-      <div className="flex-1 overflow-hidden">
-        {activeScreenShare ? (
-          <div className="flex h-full w-full gap-2 p-2">
-            {/* Main screen share area */}
-            <div className="flex-1 relative rounded-2xl overflow-hidden bg-black">
-              <VideoTrack
-                trackRef={{
-                  participant: activeScreenShare.participant,
-                  publication: activeScreenShare.publication,
-                  source: Track.Source.ScreenShare,
-                }}
-                className="w-full h-full object-contain"
-              />
-              {/* Presenter label */}
-              <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1.5">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="3" width="20" height="14" rx="2" />
-                  <line x1="8" y1="21" x2="16" y2="21" />
-                  <line x1="12" y1="17" x2="12" y2="21" />
-                </svg>
-                {activeScreenShare.participant.name || activeScreenShare.participant.identity} is presenting
-              </div>
-            </div>
-
-            {/* Participant strip on the right */}
-            <div className="flex flex-col gap-2 overflow-y-auto max-h-full pr-0.5" style={{ width: 172 }}>
-              {participants.map((p) => (
-                <ParticipantTile key={p.identity} participant={p} size="small" />
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div
-            className="h-full w-full p-3 gap-2"
-            style={{
-              display: 'grid',
-              gridTemplateColumns: `repeat(${cols}, 1fr)`,
-              alignContent: 'center',
-            }}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-2 bg-[#27272a] hover:bg-[#3f3f46] text-white px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border border-white/10 shadow"
           >
-            {participants.map((p) => (
-              <div key={p.identity} className="relative aspect-video rounded-xl overflow-hidden bg-[#1c1c1e] border border-white/5">
-                <ParticipantTile participant={p} />
-              </div>
-            ))}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+            Share Meeting
+          </button>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex w-full h-full min-h-0 relative overflow-hidden">
+        {/* Stage View */}
+        <div className={`flex-1 h-full transition-all duration-300 ${isNotesOpen ? 'mr-[360px]' : ''}`}>
+          <StageView />
+        </div>
+
+        {/* Notes Side Drawer */}
+        {isNotesOpen && (
+          <div className="w-[360px] h-full bg-[#121214] border-l border-white/10 flex flex-col absolute right-0 top-0 bottom-0 z-40 shadow-2xl animate-in slide-in-from-right duration-200">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#18181b]">
+              <h3 className="text-white font-bold text-base flex items-center gap-2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                Meeting Notes
+              </h3>
+              <button
+                onClick={() => setIsNotesOpen(false)}
+                className="text-gray-400 hover:text-white p-1 rounded-lg transition-colors"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <textarea
+              className="flex-1 p-4 bg-transparent text-gray-200 outline-none resize-none font-mono text-sm leading-relaxed"
+              placeholder="Type your meeting notes here..."
+              value={notesText}
+              onChange={handleNotesChange}
+            />
           </div>
         )}
       </div>
 
-      <div className="p-2 border-t border-white/10 flex justify-center bg-[#09090b]">
-        <ControlBar controls={{ chat: false, settings: false }} />
-      </div>
+      {/* Control Bar at Bottom */}
+      <MeetingControls
+        isNotesOpen={isNotesOpen}
+        onToggleNotes={() => setIsNotesOpen((v) => !v)}
+        onLeave={handleLeave}
+      />
     </div>
   );
 }
