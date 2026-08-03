@@ -24,14 +24,14 @@ export default function PreJoin() {
   };
 
   const handleJoin = (values: any) => {
-    const { username, userChoices } = values;
+    const { username, videoEnabled, audioEnabled } = values;
     if (!username.trim()) return;
     
     // Pass choices to the room
     const query = new URLSearchParams({
       name: username,
-      video: userChoices.videoEnabled.toString(),
-      audio: userChoices.audioEnabled.toString()
+      video: videoEnabled.toString(),
+      audio: audioEnabled.toString()
     });
     
     navigate(`/meetings/${id}/room?${query.toString()}`);
