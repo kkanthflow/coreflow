@@ -2,7 +2,7 @@ import { AccessToken } from 'livekit-server-sdk';
 import { WebhookReceiver } from 'livekit-server-sdk';
 
 export class LiveKitService {
-  static generateToken(roomName: string, participantId: string, participantName: string, permissions: any) {
+  static async generateToken(roomName: string, participantId: string, participantName: string, permissions: any): Promise<string> {
     const apiKey = process.env.LIVEKIT_API_KEY || "APIUfGWSwruirn9";
     const apiSecret = process.env.LIVEKIT_API_SECRET || "hXwn252Mdidn9iHVySlT9sktNe70Ihn39Kg7gUG9wTF";
 
@@ -24,7 +24,8 @@ export class LiveKitService {
       canPublishData: permissions.canPublishData,
     });
     
-    return at.toJwt();
+    // toJwt() is async in livekit-server-sdk v2.x — must be awaited
+    return await at.toJwt();
   }
 
   static async verifyWebhook(body: any, authHeader?: string) {

@@ -59,8 +59,8 @@ export class MeetingsController {
 
       const participantName = user.user_metadata?.full_name || user.email;
 
-      // Generate LiveKit Token
-      const token = LiveKitService.generateToken(
+      // Generate LiveKit Token (toJwt is async in livekit-server-sdk v2)
+      const token = await LiveKitService.generateToken(
         meeting.room_name,
         user.id,
         participantName,
@@ -93,8 +93,8 @@ export class MeetingsController {
       // Generate random guest ID
       const guestId = `guest_${Math.random().toString(36).substr(2, 9)}`;
 
-      // Generate LiveKit Token
-      const token = LiveKitService.generateToken(
+      // Generate LiveKit Token (toJwt is async in livekit-server-sdk v2)
+      const token = await LiveKitService.generateToken(
         meeting.room_name,
         guestId,
         name,
