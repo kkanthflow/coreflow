@@ -39,17 +39,22 @@ export function MeetingControls({ isNotesOpen, onToggleNotes, onLeave }: Meeting
       if (isScreenSharing) {
         await localParticipant.setScreenShareEnabled(false);
       } else {
-        // LiveKit best practice: Pass options to getDisplayMedia
-        await localParticipant.setScreenShareEnabled(true, {
-          audio: true,
-          selfBrowserSurface: 'exclude',
-          surfaceSwitching: 'include',
-          systemAudio: 'include',
-        } as any);
+        try {
+          // Attempt advanced displayMedia options
+          await localParticipant.setScreenShareEnabled(true, {
+            audio: true,
+            selfBrowserSurface: 'exclude',
+            surfaceSwitching: 'include',
+            systemAudio: 'include',
+          } as any);
+        } catch (advancedErr) {
+          // Fallback to standard screen share if browser rejects constraints
+          console.warn('Advanced displayMedia constraints rejected, trying default screen share:', advancedErr);
+          await localParticipant.setScreenShareEnabled(true);
+        }
       }
     } catch (err) {
-      // User cancelling picker is not an error
-      console.log('Screen share result:', err);
+      console.log('Screen share cancelled or failed:', err);
     } finally {
       setIsTogglingScreen(false);
     }

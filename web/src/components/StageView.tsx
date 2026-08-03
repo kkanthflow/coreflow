@@ -1,4 +1,4 @@
-import { useParticipants, useTracks } from '@livekit/components-react';
+import { useParticipants } from '@livekit/components-react';
 import { Track, TrackPublication, Participant } from 'livekit-client';
 import { ScreenShareView } from './ScreenShareView';
 import { ParticipantGrid } from './ParticipantGrid';
@@ -7,14 +7,15 @@ import { ParticipantTile } from './ParticipantTile';
 export function StageView() {
   const participants = useParticipants();
 
-  // Retrieve active screen share tracks
-  const screenShareTracks = useTracks([Track.Source.ScreenShare], { onlySubscribed: false });
+  // Detect active presenter using participant.isScreenShareEnabled
+  const presenter = participants.find((p) => p.isScreenShareEnabled);
+  const screenSharePub = presenter?.getTrackPublication(Track.Source.ScreenShare);
 
   const activeScreenShare =
-    screenShareTracks.length > 0
+    presenter && screenSharePub
       ? {
-          presenter: screenShareTracks[0].participant as Participant,
-          publication: screenShareTracks[0].publication as TrackPublication,
+          presenter: presenter as Participant,
+          publication: screenSharePub as TrackPublication,
         }
       : null;
 
