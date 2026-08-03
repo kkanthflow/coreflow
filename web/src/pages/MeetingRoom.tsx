@@ -124,6 +124,7 @@ export default function MeetingRoom() {
           audio={{ autoGainControl: true, echoCancellation: true, noiseSuppression: true }}
           token={token}
           serverUrl={serverUrl}
+          connect={true}
           onDisconnected={() => navigate('/')}
           className={`flex-1 transition-all ${isNotesOpen ? 'w-2/3' : 'w-full'}`}
         >
