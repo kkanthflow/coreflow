@@ -68,7 +68,7 @@ export default function MeetingRoom() {
 
     const fetchToken = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_BASE_URL || 'https://coreflow-one.vercel.app';
+        const apiUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'https://coreflow-one.vercel.app';
         const res = await fetch(`${apiUrl}/api/meetings/${id}/join-guest`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
