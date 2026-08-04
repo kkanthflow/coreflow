@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { Participant, TrackPublication, Track } from 'livekit-client';
 import { VideoTrack, useLocalParticipant } from '@livekit/components-react';
 
@@ -10,6 +10,19 @@ interface ScreenShareViewProps {
 export function ScreenShareView({ presenter, publication }: ScreenShareViewProps) {
   const { localParticipant } = useLocalParticipant();
   const isLocalPresenter = presenter.isLocal;
+
+  // Ensure remote subscribers explicitly request high priority for maximum sharpness
+  useEffect(() => {
+    if (!isLocalPresenter && publication) {
+      const pubAny = publication as any;
+      if (typeof pubAny.setPriority === 'function') {
+        pubAny.setPriority('high');
+      }
+      if (typeof pubAny.setSubscribed === 'function') {
+        pubAny.setSubscribed(true);
+      }
+    }
+  }, [isLocalPresenter, publication]);
 
   // Presenter Elapsed Timer
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -48,7 +61,7 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
         {/* Subtle background blur effect */}
         <div className="absolute inset-0 bg-gradient-to-b from-blue-600/10 via-transparent to-transparent pointer-events-none" />
 
-        {/* Icon & Animation */}
+        {/* Icon & Details */}
         <div className="relative z-10 flex flex-col items-center text-center max-w-md">
           <div className="w-20 h-20 rounded-3xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mb-6 shadow-lg shadow-blue-500/10">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -60,14 +73,14 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
 
           <h2 className="text-2xl font-bold text-white mb-2">You are presenting to everyone</h2>
           <p className="text-gray-400 text-sm mb-6">
-            Your screen is currently visible to all participants in this meeting.
+            Your screen is currently visible to all participants in 1080p @ 30 FPS.
           </p>
 
           {/* Details & Timer Pill */}
           <div className="flex items-center gap-3 bg-[#1c1c1e] border border-white/10 rounded-full px-4 py-2 mb-8 shadow-inner">
             <span className="flex items-center gap-1.5 text-xs text-gray-300 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Sharing Screen
+              1080p 30 FPS
             </span>
             <span className="text-white/20">•</span>
             <span className="text-xs font-mono font-bold text-blue-400">
@@ -91,19 +104,24 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
   }
 
   // ── 2. Remote Presenter View ─────────────────────────────────────────────────
+  const trackRef = useMemo(
+    () => ({
+      participant: presenter,
+      publication: publication,
+      source: Track.Source.ScreenShare,
+    }),
+    [presenter, publication]
+  );
+
   return (
-    <div className="w-full h-full relative rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl">
+    <div className="w-full h-full relative rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl flex items-center justify-center">
       <VideoTrack
-        trackRef={{
-          participant: presenter,
-          publication: publication,
-          source: Track.Source.ScreenShare,
-        }}
+        trackRef={trackRef}
         className="w-full h-full object-contain"
       />
 
       {/* Presenter Name Badge */}
-      <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-md text-white text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2 border border-white/10 shadow-lg">
+      <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-md text-white text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2 border border-white/10 shadow-lg z-10">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <rect x="2" y="3" width="20" height="14" rx="2" />
           <line x1="8" y1="21" x2="16" y2="21" />

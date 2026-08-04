@@ -1,6 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
+import type { RoomOptions } from 'livekit-client';
+import { VideoPresets } from 'livekit-client';
 import { MeetingLayout } from '../components/MeetingLayout';
 import { useSingleTabLock } from '../hooks/useSingleTabLock';
 import '@livekit/components-styles';
@@ -22,6 +24,38 @@ export default function MeetingRoom() {
   const audioEnabled = searchParams.get('audio') === 'true';
 
   const fetchedRef = useRef(false);
+
+  // LiveKit Enterprise Room Configuration (Google Meet Parity)
+  const roomOptions: RoomOptions = useMemo(
+    () => ({
+      adaptiveStream: {
+        pixelDensity: 'screen',
+      },
+      dynacast: true,
+      videoCaptureDefaults: {
+        resolution: VideoPresets.h720.resolution,
+      },
+      publishDefaults: {
+        // Single high-quality 1080p @ 30 FPS layer for screen share (no simulcast downscaling for text sharpness)
+        screenShareEncoding: {
+          maxBitrate: 3_500_000,
+          maxFramerate: 30,
+        },
+        screenShareSimulcastLayers: [],
+        videoEncoding: {
+          maxBitrate: 1_500_000,
+          maxFramerate: 30,
+        },
+        videoSimulcastLayers: [
+          VideoPresets.h720,
+          VideoPresets.h360,
+          VideoPresets.h180,
+        ],
+        dtx: true,
+      },
+    }),
+    []
+  );
 
   useEffect(() => {
     if (!name) {
@@ -148,6 +182,7 @@ export default function MeetingRoom() {
       token={token}
       serverUrl={serverUrl}
       connect={true}
+      options={roomOptions}
       onDisconnected={() => setDisconnected(true)}
       onError={(err) => setError(err?.message || 'Connection failed. Please try again.')}
       className="h-screen w-full bg-[#09090b]"

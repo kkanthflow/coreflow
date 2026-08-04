@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react';
 import { Participant, Track, TrackPublication } from 'livekit-client';
 import { VideoTrack } from '@livekit/components-react';
 
@@ -6,7 +7,10 @@ interface ParticipantTileProps {
   size?: 'normal' | 'small';
 }
 
-export function ParticipantTile({ participant, size = 'normal' }: ParticipantTileProps) {
+export const ParticipantTile = memo(function ParticipantTile({
+  participant,
+  size = 'normal',
+}: ParticipantTileProps) {
   const cameraPublications = participant.getTrackPublications();
   const cameraPub = [...cameraPublications.values()].find(
     (t) => t.source === Track.Source.Camera && t.track
@@ -24,6 +28,18 @@ export function ParticipantTile({ participant, size = 'normal' }: ParticipantTil
 
   const heightClass = size === 'small' ? 'h-[110px] w-[150px]' : 'h-full w-full';
 
+  const trackRef = useMemo(
+    () =>
+      cameraPub
+        ? {
+            participant,
+            publication: cameraPub as TrackPublication,
+            source: Track.Source.Camera,
+          }
+        : undefined,
+    [participant, cameraPub]
+  );
+
   return (
     <div
       className={`relative ${heightClass} rounded-xl overflow-hidden bg-[#1c1c1e] border ${
@@ -31,13 +47,9 @@ export function ParticipantTile({ participant, size = 'normal' }: ParticipantTil
       } flex-shrink-0 transition-all duration-300 shadow-md group`}
     >
       {/* Video Feed or Avatar */}
-      {isCameraEnabled && cameraPub ? (
+      {isCameraEnabled && trackRef ? (
         <VideoTrack
-          trackRef={{
-            participant,
-            publication: cameraPub as TrackPublication,
-            source: Track.Source.Camera,
-          }}
+          trackRef={trackRef}
           className={`w-full h-full object-cover ${participant.isLocal ? 'scale-x-[-1]' : ''}`}
         />
       ) : (
@@ -74,4 +86,4 @@ export function ParticipantTile({ participant, size = 'normal' }: ParticipantTil
       </div>
     </div>
   );
-}
+});

@@ -40,17 +40,30 @@ export function MeetingControls({ isNotesOpen, onToggleNotes, onLeave }: Meeting
         await localParticipant.setScreenShareEnabled(false);
       } else {
         try {
-          // Attempt advanced displayMedia options
+          // Dedicated 1080p @ 30 FPS screen share options (matching Google Meet)
           await localParticipant.setScreenShareEnabled(true, {
             audio: true,
             selfBrowserSurface: 'exclude',
             surfaceSwitching: 'include',
             systemAudio: 'include',
+            resolution: {
+              width: 1920,
+              height: 1080,
+              frameRate: 30,
+            },
+            encoding: {
+              maxBitrate: 3_500_000,
+              maxFramerate: 30,
+              priority: 'high',
+            },
+            degradationPreference: 'maintain-resolution',
           } as any);
         } catch (advancedErr) {
-          // Fallback to standard screen share if browser rejects constraints
-          console.warn('Advanced displayMedia constraints rejected, trying default screen share:', advancedErr);
-          await localParticipant.setScreenShareEnabled(true);
+          console.warn('Advanced displayMedia constraints rejected, trying fallback screen share:', advancedErr);
+          await localParticipant.setScreenShareEnabled(true, {
+            audio: true,
+            resolution: { width: 1920, height: 1080, frameRate: 30 },
+          } as any);
         }
       }
     } catch (err) {

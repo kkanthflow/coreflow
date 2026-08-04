@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useRoomContext } from '@livekit/components-react';
 import { StageView } from './StageView';
 import { MeetingControls } from './MeetingControls';
+import { DiagnosticsOverlay } from './DiagnosticsOverlay';
 
 interface MeetingLayoutProps {
   meetingId: string;
@@ -105,6 +106,9 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
           </div>
         )}
       </div>
+
+      {/* Diagnostics Overlay (WebRTC Telemetry) */}
+      <DiagnosticsOverlay />
 
       {/* Control Bar at Bottom */}
       <MeetingControls
