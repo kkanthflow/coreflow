@@ -118,7 +118,7 @@ const config: ExpoConfig = {
       "expo-notifications",
       {
         "icon": "./assets/images/icon.png",
-        "color": "#ffffff"
+        "color": "#2563eb"
       }
     ],
     [
