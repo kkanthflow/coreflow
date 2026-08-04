@@ -32,6 +32,11 @@ export default function MeetingRoom() {
         pixelDensity: 'screen',
       },
       dynacast: true,
+      audioCaptureDefaults: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
       videoCaptureDefaults: {
         resolution: VideoPresets.h720.resolution,
       },
@@ -178,7 +183,7 @@ export default function MeetingRoom() {
   return (
     <LiveKitRoom
       video={videoEnabled}
-      audio={audioEnabled}
+      audio={audioEnabled ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true } : false}
       token={token}
       serverUrl={serverUrl}
       connect={true}

@@ -48,6 +48,11 @@ export default function MeetingRoomScreen() {
         pixelDensity: 'screen',
       },
       dynacast: true,
+      audioCaptureDefaults: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+      },
       videoCaptureDefaults: {
         resolution: VideoPresets.h720.resolution,
       },
