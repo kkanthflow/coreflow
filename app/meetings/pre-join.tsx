@@ -62,6 +62,125 @@ export default function PreJoinScreen() {
   }));
 
   const [isJoining, setIsJoining] = useState(false);
+  const [meetingState, setMeetingState] = useState<'idle' | 'loading' | 'pending' | 'accepted' | 'declined' | 'ended' | 'not_invited'>('idle');
+  const [meetingHostId, setMeetingHostId] = useState<string | null>(null);
+
+  // Fetch meeting & invitation state
+  useEffect(() => {
+    if (!meetingId || !session?.user?.id) {
+      setMeetingState('idle');
+      return;
+    }
+
+    let isMounted = true;
+
+    const checkAccess = async () => {
+      if (isMounted) setMeetingState('loading');
+      
+      try {
+        // 1. Fetch Meeting
+        const { data: meeting, error: meetingError } = await supabase
+          .from('meetings')
+          .select('id, host_id, status, end_time')
+          .eq('id', meetingId)
+          .single();
+
+        if (meetingError || !meeting) {
+          if (isMounted) setMeetingState('not_invited');
+          return;
+        }
+        
+        if (isMounted) setMeetingHostId(meeting.host_id);
+
+        if (meeting.end_time && new Date(meeting.end_time) < new Date()) {
+          if (isMounted) setMeetingState('ended');
+          return;
+        }
+
+        if (meeting.status === 'completed') {
+          if (isMounted) setMeetingState('ended');
+          return;
+        }
+
+        // Host always has access
+        if (meeting.host_id === session.user.id) {
+          if (isMounted) setMeetingState('accepted');
+          return;
+        }
+
+        // 2. Fetch Invitation
+        const { data: inv, error: invError } = await supabase
+          .from('meeting_invitations')
+          .select('status')
+          .eq('meeting_id', meetingId)
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (invError || !inv) {
+          if (isMounted) setMeetingState('not_invited');
+          return;
+        }
+
+        if (isMounted) setMeetingState(inv.status as any);
+
+      } catch (err) {
+        console.error('Error checking access:', err);
+      }
+    };
+
+    checkAccess();
+
+    // 3. Subscribe to realtime updates for the invitation
+    const channel = supabase.channel(`invitation-${meetingId}-${session.user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'meeting_invitations', filter: `meeting_id=eq.${meetingId}` },
+        (payload) => {
+          if (payload.new && payload.new.user_id === session.user.id) {
+            setMeetingState(payload.new.status);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [meetingId, session]);
+
+  const handleAcceptInvitation = async () => {
+    if (!meetingId || !session?.user?.id) return;
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+      await fetch(`${baseUrl}/api/meetings/${meetingId}/invitations/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        }
+      });
+      // Realtime will update the state
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeclineInvitation = async () => {
+    if (!meetingId || !session?.user?.id) return;
+    try {
+      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+      await fetch(`${baseUrl}/api/meetings/${meetingId}/invitations/decline`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleJoin = () => {
     if (!meetingId.trim() || isJoining) return;
@@ -80,7 +199,7 @@ export default function PreJoinScreen() {
           mic: micEnabled ? '1' : '0' 
         }
       });
-    }, 100); // 100ms is plenty of time for React Native to detach the camera surface
+    }, 300); // 300ms is plenty of time for React Native to detach the camera surface
   };
 
   const handleStartInstant = async () => {
@@ -115,14 +234,18 @@ export default function PreJoinScreen() {
 
       if (keyError) console.error('Error inserting meeting key:', keyError);
 
-      router.push({
-        pathname: '/meetings/room' as any,
-        params: { 
-          id: data.meeting.id, 
-          camera: cameraEnabled ? '1' : '0', 
-          mic: micEnabled ? '1' : '0' 
-        }
-      });
+      setIsFocused(false);
+      
+      setTimeout(() => {
+        router.push({
+          pathname: '/meetings/room' as any,
+          params: { 
+            id: data.meeting.id, 
+            camera: cameraEnabled ? '1' : '0', 
+            mic: micEnabled ? '1' : '0' 
+          }
+        });
+      }, 300);
     } catch (e) {
       console.error(e);
     } finally {
@@ -209,15 +332,50 @@ export default function PreJoinScreen() {
         </View>
 
         <Animated.View style={pulseStyle}>
-          <Pressable 
-            onPress={handleJoin}
-            disabled={!meetingId.trim()}
-            className={`rounded-full overflow-hidden ${!meetingId.trim() ? 'opacity-50' : 'opacity-100'}`}
-          >
-            <View className="py-4 items-center justify-center bg-[#FF6B4A]">
-              <Text className="text-white text-lg font-bold">Join Now</Text>
+          {(meetingState === 'pending') && (
+            <View className="space-y-3">
+              <Pressable onPress={handleAcceptInvitation} className="rounded-full overflow-hidden">
+                <View className="py-4 items-center justify-center bg-green-500">
+                  <Text className="text-white text-lg font-bold">Accept Invitation</Text>
+                </View>
+              </Pressable>
+              <Pressable onPress={handleDeclineInvitation} className="rounded-full overflow-hidden mt-3">
+                <View className="py-4 items-center justify-center bg-transparent border border-red-500/50">
+                  <Text className="text-red-500 text-lg font-bold">Decline</Text>
+                </View>
+              </Pressable>
             </View>
-          </Pressable>
+          )}
+
+          {(meetingState === 'declined') && (
+            <View className="py-4 items-center justify-center bg-[#2c2c2e] rounded-full">
+              <Text className="text-gray-400 text-lg font-bold">Invitation Declined</Text>
+            </View>
+          )}
+
+          {(meetingState === 'ended') && (
+            <View className="py-4 items-center justify-center bg-[#2c2c2e] rounded-full">
+              <Text className="text-gray-400 text-lg font-bold">Meeting Ended</Text>
+            </View>
+          )}
+
+          {(meetingState === 'not_invited' && meetingId.trim()) && (
+            <View className="py-4 items-center justify-center bg-[#2c2c2e] rounded-full">
+              <Text className="text-gray-400 text-lg font-bold">Access Denied</Text>
+            </View>
+          )}
+
+          {(meetingState === 'accepted' || meetingState === 'idle' || meetingState === 'loading' || (meetingState === 'not_invited' && !meetingId.trim())) && (
+            <Pressable 
+              onPress={handleJoin}
+              disabled={!meetingId.trim() || meetingState === 'loading'}
+              className={`rounded-full overflow-hidden ${(!meetingId.trim() || meetingState === 'loading') ? 'opacity-50' : 'opacity-100'}`}
+            >
+              <View className="py-4 items-center justify-center bg-[#FF6B4A]">
+                <Text className="text-white text-lg font-bold">{meetingState === 'loading' ? 'Checking Access...' : 'Join Now'}</Text>
+              </View>
+            </Pressable>
+          )}
         </Animated.View>
       </View>
     </Animated.View>

@@ -103,6 +103,7 @@ export default function MeetingsDashboard() {
   const router = useRouter();
   const { session, user } = useAuth();
   const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [active, setActive] = useState<any[]>([]);
   const [past, setPast] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -114,23 +115,19 @@ export default function MeetingsDashboard() {
 
   const fetchMeetings = async () => {
     try {
-      const now = new Date().toISOString();
-      const { data: upcomingData } = await supabase
-        .from('meetings')
-        .select('*')
-        .gte('start_time', now)
-        .order('start_time', { ascending: true })
-        .limit(3);
+      if (!user?.id) return;
 
-      const { data: pastData } = await supabase
+      const { data, error } = await supabase
         .from('meetings')
-        .select('*')
-        .lt('start_time', now)
-        .order('start_time', { ascending: false })
-        .limit(2);
+        .select(`*, meeting_invitations!left(user_id, status)`)
+        .or(`host_id.eq.${user.id},meeting_invitations.user_id.eq.${user.id}`);
 
-      if (upcomingData) setUpcoming(upcomingData);
-      if (pastData) setPast(pastData);
+      if (data) {
+        const unique = Array.from(new Map(data.map(m => [m.id, m])).values());
+        setUpcoming(unique.filter((m: any) => m.status === 'scheduled'));
+        setActive(unique.filter((m: any) => m.status === 'active'));
+        setPast(unique.filter((m: any) => m.status === 'completed' || m.status === 'cancelled'));
+      }
     } catch (e) {
       console.error(e);
     } finally {
@@ -181,8 +178,18 @@ export default function MeetingsDashboard() {
           />
         </View>
 
+        {/* Active Meetings List */}
+        {active.length > 0 && (
+          <Animated.View entering={FadeInUp.delay(200).duration(350)}>
+            <Text className="text-[#FF6B4A] text-xl font-bold mb-4">Active Now</Text>
+            {active.map((meeting, idx) => (
+              <TimelineCard key={meeting.id} meeting={meeting} delay={200 + (idx * 100)} />
+            ))}
+          </Animated.View>
+        )}
+
         {/* Upcoming Meetings List */}
-        <Animated.View entering={FadeInUp.delay(240).duration(350)}>
+        <Animated.View entering={FadeInUp.delay(240).duration(350)} className={active.length > 0 ? "mt-4" : ""}>
           <Text className="text-white text-xl font-bold mb-4">Upcoming</Text>
           
           {loading ? (

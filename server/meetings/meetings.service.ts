@@ -1,5 +1,5 @@
-// Depending on how DB is accessed, maybe supabase-admin? We will use Supabase client.
 import { createClient } from '@supabase/supabase-js';
+import crypto from 'crypto';
 
 let supabaseClient: any = null;
 function getSupabase(): any {
@@ -15,12 +15,13 @@ function getSupabase(): any {
 
 export class MeetingsService {
   static async createMeeting(data: any) {
-    // Generate a unique room name for LiveKit
-    const roomName = `cf-meeting-${Math.random().toString(36).substring(2, 10)}`;
+    const meetingId = crypto.randomUUID();
+    const roomName = `coreflow-${meetingId}`;
 
     const { data: meeting, error } = await getSupabase()
       .from('meetings')
       .insert({
+        id: meetingId,
         host_id: data.hostId,
         workspace_id: data.workspaceId === 'independent' ? null : data.workspaceId,
         title: data.title,
@@ -107,5 +108,41 @@ export class MeetingsService {
         .select().single();
       return updatedParticipant;
     }
+  }
+  static async inviteUser(meetingId: string, userId: string, hostId: string) {
+    const { data, error } = await getSupabase()
+      .from('meeting_invitations')
+      .insert({
+        meeting_id: meetingId,
+        user_id: userId,
+        invited_by: hostId,
+      })
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  static async updateInvitationStatus(meetingId: string, userId: string, status: string) {
+    const { data, error } = await getSupabase()
+      .from('meeting_invitations')
+      .update({ status, accepted_at: status === 'accepted' ? new Date().toISOString() : null })
+      .eq('meeting_id', meetingId)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    if (error) throw error;
+    return data;
+  }
+
+  static async getInvitation(meetingId: string, userId: string) {
+    const { data, error } = await getSupabase()
+      .from('meeting_invitations')
+      .select('*')
+      .eq('meeting_id', meetingId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    if (error) throw error;
+    return data;
   }
 }

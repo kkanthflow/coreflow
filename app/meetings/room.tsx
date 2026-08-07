@@ -4,6 +4,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useParticipant, useParticipants } from '@livekit/react-native';
 import { Track, ExternalE2EEKeyProvider, RoomOptions, VideoPresets, RoomEvent, RemoteTrackPublication } from 'livekit-client';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Users, MessageSquare, MoreHorizontal, FileText, X, Send, Play } from 'lucide-react-native';
+import { Camera } from 'expo-camera';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '@/hooks/use-auth';
 import Animated, { useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
@@ -78,7 +79,34 @@ export default function MeetingRoomScreen() {
     [e2eeOptions]
   );
 
+  const isWaitingRef = useRef(isWaiting);
   useEffect(() => {
+    isWaitingRef.current = isWaiting;
+  }, [isWaiting]);
+
+  // Clean up ghost waiting room status if user leaves while waiting
+  useEffect(() => {
+    return () => {
+      if (isWaitingRef.current && session?.user?.id) {
+        const updateStatus = async () => {
+          try {
+            await supabase
+              .from('meeting_participants')
+              .update({ admission_status: 'left' })
+              .eq('meeting_id', id)
+              .eq('user_id', session.user.id);
+          } catch (e) {}
+        };
+        updateStatus();
+      }
+    };
+  }, [id, session?.user?.id]);
+
+  useEffect(() => {
+    if (!session?.access_token) return;
+
+    let isMounted = true;
+
     async function connect() {
       if (!session?.access_token) return;
       try {
@@ -97,25 +125,27 @@ export default function MeetingRoomScreen() {
             const keyProvider = new ExternalE2EEKeyProvider();
             await keyProvider.setKey(decryptedKeyStr);
 
-            setE2eeOptions({
-              e2ee: {
-                keyProvider,
-                worker: undefined as any,
-              }
-            });
-            console.log('E2EE enabled for this meeting.');
+            if (isMounted) {
+              setE2eeOptions({
+                e2ee: {
+                  keyProvider,
+                  worker: undefined as any,
+                },
+              });
+            }
           } catch (cryptoError) {
             console.error('Failed to initialize E2EE keys:', cryptoError);
           }
-        } else {
-          console.log('No meeting key found, proceeding without E2EE.');
         }
-        setE2eeInitialized(true);
+        if (isMounted) setE2eeInitialized(true);
 
         const tk = await getLiveKitToken(id as string, session.access_token);
-        setIsWaiting(false);
-        setToken(tk);
+        if (isMounted) {
+          setIsWaiting(false);
+          setToken(tk);
+        }
       } catch (e: any) {
+        if (!isMounted) return;
         if (e.type === 'waiting_room') {
           setIsWaiting(true);
         } else {
@@ -124,11 +154,12 @@ export default function MeetingRoomScreen() {
         }
       }
     }
+    
     connect();
 
     // Subscribe to admission_status changes if waiting
     const channel = supabase
-      .channel(`waiting_room_${id}_${session?.user?.id}`)
+      .channel(`waiting_room_${id}_${session.user.id}`)
       .on(
         'postgres_changes',
         {
@@ -138,18 +169,21 @@ export default function MeetingRoomScreen() {
           filter: `meeting_id=eq.${id}`,
         },
         (payload) => {
-          if (payload.new.user_id === session?.user?.id && payload.new.admission_status === 'admitted') {
-            setIsWaiting(false);
-            connect();
+          if (payload.new.user_id === session.user.id && payload.new.admission_status === 'admitted') {
+            if (isMounted) {
+              setIsWaiting(false);
+              connect();
+            }
           }
         }
       )
       .subscribe();
 
     return () => {
+      isMounted = false;
       supabase.removeChannel(channel);
     };
-  }, [id, session]);
+  }, [id, session?.access_token, session?.user?.id]);
 
   if (isWaiting) {
     return (
@@ -191,7 +225,7 @@ function MeetingUI() {
   const room = useRoomContext();
   const router = useRouter();
   const { id } = useLocalSearchParams();
-  const { localParticipant } = useLocalParticipant();
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const { session } = useAuth();
   const insets = useSafeAreaInsets();
   const participants = useParticipants();
@@ -218,9 +252,14 @@ function MeetingUI() {
     const handleData = (payload: Uint8Array, participant?: any) => {
       let str = '';
       try {
-        str = new TextDecoder().decode(payload);
+        if (typeof TextDecoder !== 'undefined') {
+          str = new TextDecoder().decode(payload);
+        } else {
+          // Fallback that avoids stack overflow on large arrays
+          str = payload.reduce((data, byte) => data + String.fromCharCode(byte), '');
+        }
       } catch (err) {
-        str = String.fromCharCode.apply(null, Array.from(payload));
+        str = payload.reduce((data, byte) => data + String.fromCharCode(byte), '');
       }
 
       try {
@@ -327,6 +366,12 @@ function MeetingUI() {
       saveNotes(text);
     }, 1500);
   };
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    };
+  }, []);
 
   useEffect(() => {
     const fetchWaiting = async () => {
@@ -495,38 +540,52 @@ function MeetingUI() {
               <Pressable 
                 onPress={async () => {
                   try {
-                    await localParticipant?.setMicrophoneEnabled(!localParticipant?.isMicrophoneEnabled);
+                    if (!isMicrophoneEnabled) {
+                      const { granted } = await Camera.requestMicrophonePermissionsAsync();
+                      if (!granted) {
+                        Alert.alert('Permission Denied', 'Microphone permission is required.');
+                        return;
+                      }
+                    }
+                    await localParticipant?.setMicrophoneEnabled(!isMicrophoneEnabled);
                   } catch (e: any) {
                     Alert.alert('Permission Denied', 'Could not access microphone.');
                   }
                 }}
-                className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant?.isMicrophoneEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
+                className={`w-12 h-12 rounded-full items-center justify-center ${!isMicrophoneEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
               >
-                {localParticipant?.isMicrophoneEnabled ? <Mic size={20} color="#FFFFFF" /> : <MicOff size={20} color="#EF4444" />}
+                {isMicrophoneEnabled ? <Mic size={20} color="#FFFFFF" /> : <MicOff size={20} color="#EF4444" />}
               </Pressable>
 
               <Pressable 
                 onPress={async () => {
                   try {
-                    await localParticipant?.setCameraEnabled(!localParticipant?.isCameraEnabled);
+                    if (!isCameraEnabled) {
+                      const { granted } = await Camera.requestCameraPermissionsAsync();
+                      if (!granted) {
+                        Alert.alert('Permission Denied', 'Camera permission is required.');
+                        return;
+                      }
+                    }
+                    await localParticipant?.setCameraEnabled(!isCameraEnabled);
                   } catch (e: any) {
                     Alert.alert('Permission Denied', 'Could not access camera.');
                   }
                 }}
-                className={`w-12 h-12 rounded-full items-center justify-center ${!localParticipant?.isCameraEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
+                className={`w-12 h-12 rounded-full items-center justify-center ${!isCameraEnabled ? 'bg-[#27272A]' : 'bg-[#18181B]'}`}
               >
-                {localParticipant?.isCameraEnabled ? <Video size={20} color="#FFFFFF" /> : <VideoOff size={20} color="#EF4444" />}
+                {isCameraEnabled ? <Video size={20} color="#FFFFFF" /> : <VideoOff size={20} color="#EF4444" />}
               </Pressable>
 
               <Pressable 
                 onPress={async () => {
                   try {
-                    await localParticipant?.setScreenShareEnabled(!localParticipant?.isScreenShareEnabled);
+                    await localParticipant?.setScreenShareEnabled(!isScreenShareEnabled);
                   } catch (e: any) {
                     Alert.alert('Screen Share Error', 'Could not start screen share. Please check permissions.');
                   }
                 }}
-                className={`w-12 h-12 rounded-full items-center justify-center ${localParticipant?.isScreenShareEnabled ? 'bg-[#2563EB]' : 'bg-[#18181B]'}`}
+                className={`w-12 h-12 rounded-full items-center justify-center ${isScreenShareEnabled ? 'bg-[#2563EB]' : 'bg-[#18181B]'}`}
               >
                 <MonitorUp size={20} color="#FFFFFF" />
               </Pressable>

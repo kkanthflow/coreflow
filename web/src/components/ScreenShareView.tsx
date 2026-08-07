@@ -24,6 +24,16 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
     }
   }, [isLocalPresenter, publication]);
 
+  // ── 2. Remote Presenter View ─────────────────────────────────────────────────
+  const trackRef = useMemo(
+    () => ({
+      participant: presenter,
+      publication: publication,
+      source: Track.Source.ScreenShare,
+    }),
+    [presenter, publication]
+  );
+
   // Presenter Elapsed Timer
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
@@ -104,15 +114,6 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
   }
 
   // ── 2. Remote Presenter View ─────────────────────────────────────────────────
-  const trackRef = useMemo(
-    () => ({
-      participant: presenter,
-      publication: publication,
-      source: Track.Source.ScreenShare,
-    }),
-    [presenter, publication]
-  );
-
   return (
     <div className="w-full h-full relative rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl flex items-center justify-center">
       <VideoTrack

@@ -1,3 +1,4 @@
+import React from 'react';
 import { Participant } from 'livekit-client';
 import { ParticipantTile } from './ParticipantTile';
 
@@ -5,7 +6,7 @@ interface ParticipantGridProps {
   participants: Participant[];
 }
 
-export function ParticipantGrid({ participants }: ParticipantGridProps) {
+export const ParticipantGrid = React.memo(function ParticipantGrid({ participants }: ParticipantGridProps) {
   const count = participants.length;
 
   const getGridColsClass = () => {
@@ -27,4 +28,4 @@ export function ParticipantGrid({ participants }: ParticipantGridProps) {
       </div>
     </div>
   );
-}
+});

@@ -1,5 +1,4 @@
-import { AccessToken } from 'livekit-server-sdk';
-import { WebhookReceiver } from 'livekit-server-sdk';
+import { AccessToken, RoomServiceClient, WebhookReceiver } from 'livekit-server-sdk';
 
 export class LiveKitService {
   static async generateToken(roomName: string, participantId: string, participantName: string, permissions: any): Promise<string> {
@@ -37,5 +36,25 @@ export class LiveKitService {
     // LiveKit WebhookReceiver requires the raw string body and auth header
     const event = receiver.receive(body, authHeader);
     return event;
+  }
+
+  static async endRoom(roomName: string): Promise<void> {
+    const apiKey = process.env.LIVEKIT_API_KEY || "APIUfGWSwruirn9";
+    const apiSecret = process.env.LIVEKIT_API_SECRET || "hXwn252Mdidn9iHVySlT9sktNe70Ihn39Kg7gUG9wTF";
+    const wsUrl = process.env.LIVEKIT_URL || "https://coreflow-eo6z5wme.livekit.cloud";
+
+    if (!apiKey || !apiSecret) {
+      console.warn("LIVEKIT_API_KEY or secret missing, cannot end room.");
+      return;
+    }
+
+    const roomService = new RoomServiceClient(wsUrl, apiKey, apiSecret);
+    try {
+      await roomService.deleteRoom(roomName);
+      console.log(`Successfully ended LiveKit room: ${roomName}`);
+    } catch (e: any) {
+      // Room might already be deleted or not found
+      console.warn(`Could not end LiveKit room ${roomName}:`, e.message);
+    }
   }
 }

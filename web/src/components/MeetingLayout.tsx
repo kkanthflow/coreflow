@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRoomContext } from '@livekit/components-react';
 import { StageView } from './StageView';
 import { MeetingControls } from './MeetingControls';
@@ -18,11 +18,23 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
     return saved || defaultNotesTemplate;
   });
 
+  const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setNotesText(val);
-    localStorage.setItem(`meeting_notes_${meetingId}`, val);
+    
+    if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    saveTimeout.current = setTimeout(() => {
+      localStorage.setItem(`meeting_notes_${meetingId}`, val);
+    }, 1000);
   };
+
+  useEffect(() => {
+    return () => {
+      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+    };
+  }, []);
 
   const handleLeave = () => {
     room.disconnect();

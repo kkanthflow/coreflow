@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { useParams, useSearchParams, useNavigate } from 'react-router-dom';
+import { useParams, useSearchParams, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
 import type { RoomOptions } from 'livekit-client';
 import { VideoPresets } from 'livekit-client';
@@ -10,8 +11,9 @@ import '@livekit/components-styles';
 export default function MeetingRoom() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const name = searchParams.get('name');
   const navigate = useNavigate();
+  const location = useLocation();
+  const { session, loading: authLoading } = useAuth();
 
   const { isDuplicate, claimLock } = useSingleTabLock(id);
 
@@ -63,8 +65,9 @@ export default function MeetingRoom() {
   );
 
   useEffect(() => {
-    if (!name) {
-      navigate(`/meetings/${id}`, { replace: true });
+    if (authLoading) return;
+    if (!session?.access_token) {
+      navigate('/login', { state: { from: location }, replace: true });
       return;
     }
 
@@ -74,10 +77,12 @@ export default function MeetingRoom() {
     const fetchToken = async () => {
       try {
         const apiUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'https://coreflow-one.vercel.app';
-        const res = await fetch(`${apiUrl}/api/meetings/${id}/join-guest`, {
+        const res = await fetch(`${apiUrl}/api/meetings/${id}/join`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name }),
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
         });
 
         if (!res.ok) {
@@ -97,7 +102,7 @@ export default function MeetingRoom() {
     };
 
     fetchToken();
-  }, [id, name]);
+  }, [id, session, authLoading, navigate, location]);
 
   // ── Duplicate Tab State (Single-tab meeting enforcement) ─────────────────────
   if (isDuplicate) {

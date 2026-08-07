@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../hooks/useAuth';
+import { supabase } from '../lib/supabase';
 
 const isMobileDevice = () =>
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -7,12 +9,15 @@ const isMobileDevice = () =>
 export default function PreJoin() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user, loading: authLoading, session } = useAuth();
 
-  const [name, setName] = useState('');
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   const [cameraError, setCameraError] = useState(false);
+
+  const [meetingState, setMeetingState] = useState<'idle' | 'loading' | 'pending' | 'accepted' | 'declined' | 'ended' | 'not_invited'>('idle');
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -60,12 +65,126 @@ export default function PreJoin() {
     };
   }, [videoEnabled]);
 
-  const handleJoin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
+  useEffect(() => {
+    if (authLoading) return;
+    if (!user) {
+      navigate('/login', { state: { from: location }, replace: true });
+    }
+  }, [user, authLoading, navigate, location]);
 
+  // Fetch meeting & invitation state
+  useEffect(() => {
+    if (!id || !user) {
+      setMeetingState('idle');
+      return;
+    }
+
+    let isMounted = true;
+
+    const checkAccess = async () => {
+      if (isMounted) setMeetingState('loading');
+      
+      try {
+        const { data: meeting, error: meetingError } = await supabase
+          .from('meetings')
+          .select('id, host_id, status, end_time')
+          .eq('id', id)
+          .single();
+
+        if (meetingError || !meeting) {
+          if (isMounted) setMeetingState('not_invited');
+          return;
+        }
+
+        if (meeting.end_time && new Date(meeting.end_time) < new Date()) {
+          if (isMounted) setMeetingState('ended');
+          return;
+        }
+
+        if (meeting.status === 'completed') {
+          if (isMounted) setMeetingState('ended');
+          return;
+        }
+
+        // Host always has access
+        if (meeting.host_id === user.id) {
+          if (isMounted) setMeetingState('accepted');
+          return;
+        }
+
+        const { data: inv, error: invError } = await supabase
+          .from('meeting_invitations')
+          .select('status')
+          .eq('meeting_id', id)
+          .eq('user_id', user.id)
+          .single();
+
+        if (invError || !inv) {
+          if (isMounted) setMeetingState('not_invited');
+          return;
+        }
+
+        if (isMounted) setMeetingState(inv.status as any);
+
+      } catch (err) {
+        console.error('Error checking access:', err);
+      }
+    };
+
+    checkAccess();
+
+    const channel = supabase.channel(`invitation-web-${id}-${user.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'meeting_invitations', filter: `meeting_id=eq.${id}` },
+        (payload) => {
+          if (payload.new && payload.new.user_id === user.id) {
+            setMeetingState(payload.new.status);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      isMounted = false;
+      supabase.removeChannel(channel);
+    };
+  }, [id, user]);
+
+  const handleAcceptInvitation = async () => {
+    if (!id || !session?.access_token) return;
+    try {
+      const baseUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'https://coreflow-one.vercel.app';
+      await fetch(`${baseUrl}/api/meetings/${id}/invitations/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeclineInvitation = async () => {
+    if (!id || !session?.access_token) return;
+    try {
+      const baseUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'https://coreflow-one.vercel.app';
+      await fetch(`${baseUrl}/api/meetings/${id}/invitations/decline`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleJoin = () => {
     const query = new URLSearchParams({
-      name: name.trim(),
       video: String(videoEnabled),
       audio: String(audioEnabled),
     });
@@ -183,31 +302,53 @@ export default function PreJoin() {
           </div>
         </div>
 
-        {/* Join form */}
-        <form onSubmit={handleJoin} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">
-              Your name <span className="text-red-400">*</span>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Enter your name to join"
-              required
-              autoFocus
-              className="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all text-base"
-            />
-          </div>
+        {/* Join form / Invitation states */}
+        <div className="space-y-4">
+          {(meetingState === 'pending') && (
+            <div className="space-y-3">
+              <button 
+                onClick={handleAcceptInvitation} 
+                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl px-4 py-4 transition-all shadow-lg"
+              >
+                Accept Invitation
+              </button>
+              <button 
+                onClick={handleDeclineInvitation} 
+                className="w-full bg-transparent hover:bg-red-500/10 border border-red-500/50 text-red-500 font-bold rounded-xl px-4 py-4 transition-all"
+              >
+                Decline
+              </button>
+            </div>
+          )}
 
-          <button
-            type="submit"
-            disabled={!name.trim()}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-[#2c2c2e] disabled:text-gray-500 disabled:cursor-not-allowed text-white font-bold rounded-xl px-4 py-4 transition-all text-base shadow-lg shadow-blue-600/20"
-          >
-            {name.trim() ? 'Join Meeting' : 'Enter your name to join'}
-          </button>
-        </form>
+          {(meetingState === 'declined') && (
+            <div className="w-full bg-[#2c2c2e] text-center rounded-xl px-4 py-4">
+              <span className="text-gray-400 font-bold">Invitation Declined</span>
+            </div>
+          )}
+
+          {(meetingState === 'ended') && (
+            <div className="w-full bg-[#2c2c2e] text-center rounded-xl px-4 py-4">
+              <span className="text-gray-400 font-bold">Meeting Ended</span>
+            </div>
+          )}
+
+          {(meetingState === 'not_invited' && id) && (
+            <div className="w-full bg-[#2c2c2e] text-center rounded-xl px-4 py-4">
+              <span className="text-gray-400 font-bold">Access Denied</span>
+            </div>
+          )}
+
+          {(meetingState === 'accepted' || meetingState === 'idle' || meetingState === 'loading' || (meetingState === 'not_invited' && !id)) && (
+            <button
+              onClick={handleJoin}
+              disabled={!id || meetingState === 'loading'}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-[#2c2c2e] disabled:text-gray-500 disabled:cursor-not-allowed text-white font-bold rounded-xl px-4 py-4 transition-all shadow-lg shadow-blue-600/20"
+            >
+              {meetingState === 'loading' ? 'Checking Access...' : 'Join Meeting'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

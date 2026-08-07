@@ -4,7 +4,9 @@ import { ScreenShareView } from './ScreenShareView';
 import { ParticipantGrid } from './ParticipantGrid';
 import { ParticipantTile } from './ParticipantTile';
 
-export function StageView() {
+import React from 'react';
+
+export const StageView = React.memo(function StageView() {
   const participants = useParticipants();
 
   // Detect active presenter using participant.isScreenShareEnabled
@@ -43,4 +45,4 @@ export function StageView() {
 
   // ── 2. Camera Grid Mode ─────────────────────────────────────────────────────
   return <ParticipantGrid participants={participants} />;
-}
+});

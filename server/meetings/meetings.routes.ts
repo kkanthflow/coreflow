@@ -36,7 +36,9 @@ const requireAuth = async (req: any, res: any, next: any) => {
 router.post('/', requireAuth, MeetingsController.createMeeting);
 router.get('/:id', requireAuth, MeetingsController.getMeetingDetails);
 router.post('/:id/join', requireAuth, MeetingsController.joinMeeting);
-router.post('/:id/join-guest', MeetingsController.joinMeetingGuest);
+router.post('/:id/invite', requireAuth, MeetingsController.inviteUser);
+router.post('/:id/invitations/accept', requireAuth, MeetingsController.acceptInvitation);
+router.post('/:id/invitations/decline', requireAuth, MeetingsController.declineInvitation);
 
 // Public webhook endpoint (LiveKit authenticates via its own webhook secret)
 router.post('/webhook/livekit', MeetingsController.liveKitWebhook);

@@ -7,8 +7,11 @@ import { registerAuthProxyRoutes } from "../security/authProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import meetingsRouter from "../meetings/meetings.routes";
+import { startCronJobs } from "./cron";
 
 export function createExpressApp() {
+  // Start background jobs
+  startCronJobs();
   // Fallback JWT_SECRET to SUPABASE_JWT_SECRET if available
   if (!process.env.JWT_SECRET && process.env.SUPABASE_JWT_SECRET) {
     process.env.JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
