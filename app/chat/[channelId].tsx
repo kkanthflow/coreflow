@@ -624,7 +624,7 @@ export default function ChannelChatScreen() {
     }
   };
 
-  const handleReact = async (messageId: string, emoji: string) => {
+  const handleReact = useCallback(async (messageId: string, emoji: string) => {
     const msg = messages.find((m) => m.id === messageId);
     if (!msg) return;
 
@@ -655,7 +655,69 @@ export default function ChannelChatScreen() {
     } catch (err) {
       console.error('Error adding reaction:', err);
     }
-  };
+  }, [messages, user]);
+
+  const keyExtractor = useCallback((item: any) => item.id, []);
+
+  const renderItem = useCallback(({ item, index }: { item: any, index: number }) => {
+    const isRead =
+      item.message_reads &&
+      item.message_reads.some((r: any) => r.user_id !== item.sender_id);
+
+    // Determine if we need to show a date divider
+    let showDateDivider = false;
+    let dateText = '';
+    if (index === 0) {
+      showDateDivider = true;
+    } else {
+      const prevItem = messages[index - 1];
+      const prevDate = new Date(prevItem.created_at).toDateString();
+      const currDate = new Date(item.created_at).toDateString();
+      if (prevDate !== currDate) {
+        showDateDivider = true;
+      }
+    }
+
+    if (showDateDivider) {
+      const messageDate = new Date(item.created_at);
+      const today = new Date();
+      const yesterday = new Date();
+      yesterday.setDate(today.getDate() - 1);
+
+      if (messageDate.toDateString() === today.toDateString()) {
+        dateText = 'Today';
+      } else if (messageDate.toDateString() === yesterday.toDateString()) {
+        dateText = 'Yesterday';
+      } else {
+        dateText = messageDate.toLocaleDateString([], {
+          weekday: 'long',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+        });
+      }
+    }
+
+    return (
+      <View>
+        {showDateDivider && (
+          <View style={styles.dateDivider}>
+            <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
+            <Text style={[styles.dateText, { color: colors.muted, backgroundColor: colors.background }]}>
+              {dateText}
+            </Text>
+          </View>
+        )}
+        <ChatBubble
+          message={item}
+          onReply={setReplyToMessage}
+          onReact={handleReact}
+          onDelete={handleDeleteMessage}
+          isRead={isRead}
+        />
+      </View>
+    );
+  }, [messages, colors, handleReact, handleDeleteMessage]);
 
   if (loading && !channel) {
     return (
@@ -775,66 +837,8 @@ export default function ChannelChatScreen() {
         <FlatList
           ref={listRef}
           data={messages}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item, index }) => {
-            const isRead =
-              item.message_reads &&
-              item.message_reads.some((r: any) => r.user_id !== item.sender_id);
-
-            // Determine if we need to show a date divider
-            let showDateDivider = false;
-            let dateText = '';
-            if (index === 0) {
-              showDateDivider = true;
-            } else {
-              const prevItem = messages[index - 1];
-              const prevDate = new Date(prevItem.created_at).toDateString();
-              const currDate = new Date(item.created_at).toDateString();
-              if (prevDate !== currDate) {
-                showDateDivider = true;
-              }
-            }
-
-            if (showDateDivider) {
-              const messageDate = new Date(item.created_at);
-              const today = new Date();
-              const yesterday = new Date();
-              yesterday.setDate(today.getDate() - 1);
-
-              if (messageDate.toDateString() === today.toDateString()) {
-                dateText = 'Today';
-              } else if (messageDate.toDateString() === yesterday.toDateString()) {
-                dateText = 'Yesterday';
-              } else {
-                dateText = messageDate.toLocaleDateString([], {
-                  weekday: 'long',
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                });
-              }
-            }
-
-            return (
-              <View>
-                {showDateDivider && (
-                  <View style={styles.dateDivider}>
-                    <View style={[styles.dateLine, { backgroundColor: colors.border }]} />
-                    <Text style={[styles.dateText, { color: colors.muted, backgroundColor: colors.background }]}>
-                      {dateText}
-                    </Text>
-                  </View>
-                )}
-                <ChatBubble
-                  message={item}
-                  onReply={setReplyToMessage}
-                  onReact={handleReact}
-                  onDelete={handleDeleteMessage}
-                  isRead={isRead}
-                />
-              </View>
-            );
-          }}
+          keyExtractor={keyExtractor}
+          renderItem={renderItem}
           contentContainerStyle={{ paddingVertical: 20 }}
           onContentSizeChange={() =>
             listRef.current?.scrollToEnd({ animated: true })

@@ -40,7 +40,7 @@ interface ChatBubbleProps {
 
 const REACTION_OPTIONS = ['❤️', '👍', '😂', '😮', '😢', '🔥'];
 
-function VoicePlayer({ fileUrl, isMe }: { fileUrl: string; isMe: boolean }) {
+const VoicePlayer = React.memo(function VoicePlayer({ fileUrl, isMe }: { fileUrl: string; isMe: boolean }) {
   const colors = useColors();
   const player = useAudioPlayer(fileUrl);
   const status = useAudioPlayerStatus(player);
@@ -106,9 +106,9 @@ function VoicePlayer({ fileUrl, isMe }: { fileUrl: string; isMe: boolean }) {
       </View>
     </View>
   );
-}
+});
 
-export function ChatBubble({ message, onReply, onReact, onDelete, isRead }: ChatBubbleProps) {
+export const ChatBubble = React.memo(function ChatBubble({ message, onReply, onReact, onDelete, isRead }: ChatBubbleProps) {
   const { user } = useAuth();
   const colors = useColors();
   const [menuVisible, setMenuVisible] = useState(false);
@@ -408,7 +408,7 @@ export function ChatBubble({ message, onReply, onReact, onDelete, isRead }: Chat
       </Reanimated.View>
     </GestureDetector>
   );
-}
+});
 
 const styles = StyleSheet.create({
   wrapper: {

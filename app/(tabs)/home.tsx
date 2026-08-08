@@ -247,6 +247,59 @@ function MainHomeScreen() {
     projects.length > 0 || 
     todoTasks.length > 0;
 
+  const isIndie = activeWorkspace?.type === 'independent';
+
+  const perms = {
+    meetings: hasWorkspacePermission("schedule_meetings" as any) || hasPermission(user?.role, 'schedule_meetings'),
+    directory: hasWorkspacePermission("organization.view") || hasPermission(user?.role, 'view_team_directory'),
+    departments: hasWorkspacePermission("department.view"),
+    reports: hasWorkspacePermission("audit.view") || hasPermission(user?.role, 'view_reports'),
+    invoices: hasWorkspacePermission("invoice.view"),
+    roles: hasWorkspacePermission("organization.edit") || hasPermission(user?.role, 'manage_roles'),
+  };
+
+  const quickActions = React.useMemo(() => {
+    return isIndie
+      ? [
+          {
+            id: 'clients', label: 'Clients', sub: 'CRM', icon: 'people' as const,
+            color: '#10B981', onPress: () => router.push('/clients' as any),
+          },
+          {
+            id: 'projects', label: 'Projects', sub: 'Work', icon: 'folder-open' as const,
+            color: '#3B82F6', onPress: () => router.push('/(tabs)/projects' as any),
+          },
+          {
+            id: 'invoices', label: 'Invoices', sub: 'Billing', icon: 'receipt' as const,
+            color: '#F59E0B', onPress: () => router.push('/invoices' as any),
+          }
+        ]
+      : QUICK_ACTIONS(perms, router, colors, user?.role || '');
+  }, [isIndie, perms, router, colors, user?.role]);
+
+  const workspaceScore = React.useMemo(() => Math.min(100, Math.round(
+    ((isIndie ? stats.projectsCount : stats.upcoming) > 0 ? 20 : 0) +
+    ((isIndie ? stats.clients : stats.teamMembers) > 1 ? 30 : 0) +
+    (projects.length > 0 ? 30 : 0) +
+    (todoTasks.length < 3 ? 20 : 10)
+  )), [isIndie, stats, projects.length, todoTasks.length]);
+
+  const aiInsight = React.useMemo(() => 
+    projects.length === 0
+      ? 'Your workspace is set up. Start by creating your first project to track team progress.'
+      : todoTasks.length === 0
+      ? `Excellent! No pending tasks. Your team has ${projects.length} active project${projects.length > 1 ? 's' : ''} running smoothly.`
+      : `You have ${todoTasks.length} pending task${todoTasks.length > 1 ? 's' : ''} across ${projects.length} project${projects.length > 1 ? 's' : ''}. Prioritize your critical items first.`
+  , [projects.length, todoTasks.length]);
+
+  const handleProjectPress = useCallback((id: string) => {
+    router.push(`/projects/${id}` as any);
+  }, [router]);
+
+  const handleTaskPress = useCallback((id: string) => {
+    router.push(`/tasks/${id}` as any);
+  }, [router]);
+
   if (isLoading || !isCacheLoaded || (loading && !hasCachedData)) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -277,34 +330,6 @@ function MainHomeScreen() {
       </View>
     );
   }
-
-  const isIndie = activeWorkspace?.type === 'independent';
-
-  const perms = {
-    meetings: hasWorkspacePermission("schedule_meetings" as any) || hasPermission(user?.role, 'schedule_meetings'),
-    directory: hasWorkspacePermission("organization.view") || hasPermission(user?.role, 'view_team_directory'),
-    departments: hasWorkspacePermission("department.view"),
-    reports: hasWorkspacePermission("audit.view") || hasPermission(user?.role, 'view_reports'),
-    invoices: hasWorkspacePermission("invoice.view"),
-    roles: hasWorkspacePermission("organization.edit") || hasPermission(user?.role, 'manage_roles'),
-  };
-
-  const quickActions = isIndie
-    ? [
-        {
-          id: 'clients', label: 'Clients', sub: 'CRM', icon: 'people' as const,
-          color: '#10B981', onPress: () => router.push('/clients' as any),
-        },
-        {
-          id: 'projects', label: 'Projects', sub: 'Work', icon: 'folder-open' as const,
-          color: '#3B82F6', onPress: () => router.push('/(tabs)/projects' as any),
-        },
-        {
-          id: 'invoices', label: 'Invoices', sub: 'Billing', icon: 'receipt' as const,
-          color: '#F59E0B', onPress: () => router.push('/invoices' as any),
-        }
-      ]
-    : QUICK_ACTIONS(perms, router, colors, user.role || '');
 
   const isOwner = ['owner', 'ceo', 'managing_director', 'administrator'].includes(user?.role || '');
 
@@ -358,20 +383,6 @@ function MainHomeScreen() {
   };
 
   const firstName = user.fullName?.split(' ')[0] || 'there';
-
-  const workspaceScore = Math.min(100, Math.round(
-    ((isIndie ? stats.projectsCount : stats.upcoming) > 0 ? 20 : 0) +
-    ((isIndie ? stats.clients : stats.teamMembers) > 1 ? 30 : 0) +
-    (projects.length > 0 ? 30 : 0) +
-    (todoTasks.length < 3 ? 20 : 10)
-  ));
-
-  const aiInsight =
-    projects.length === 0
-      ? 'Your workspace is set up. Start by creating your first project to track team progress.'
-      : todoTasks.length === 0
-      ? `Excellent! No pending tasks. Your team has ${projects.length} active project${projects.length > 1 ? 's' : ''} running smoothly.`
-      : `You have ${todoTasks.length} pending task${todoTasks.length > 1 ? 's' : ''} across ${projects.length} project${projects.length > 1 ? 's' : ''}. Prioritize your critical items first.`;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -514,7 +525,7 @@ function MainHomeScreen() {
                     key={proj.id}
                     project={proj}
                     index={i}
-                    onPress={() => router.push(`/projects/${proj.id}` as any)}
+                    onPress={() => handleProjectPress(proj.id)}
                   />
                 ))}
               </View>
@@ -540,7 +551,7 @@ function MainHomeScreen() {
                 </View>
               ) : (
                 todoTasks.map((task, idx) => (
-                  <TaskRow key={task.id} task={task} isLast={idx === todoTasks.length - 1} onPress={() => router.push(`/tasks/${task.id}` as any)} />
+                  <TaskRow key={task.id} task={task} isLast={idx === todoTasks.length - 1} onPress={() => handleTaskPress(task.id)} />
                 ))
               )}
             </GlassCard>
@@ -643,7 +654,7 @@ function MainHomeScreen() {
 
 // ── Sub-components ────────────────────────────────────────────────────────────
 
-function QuickActionCard({ action, index }: { action: any; index: number }) {
+const QuickActionCard = React.memo(function QuickActionCard({ action, index }: { action: any; index: number }) {
   const colors = useColors();
   const [isPressed, setIsPressed] = useState(false);
 
@@ -725,9 +736,9 @@ function QuickActionCard({ action, index }: { action: any; index: number }) {
       </FloatingWrapper>
     </Reanimated.View>
   );
-}
+});
 
-function ProjectHealthCard({ project, index, onPress }: { project: any; index: number; onPress: () => void }) {
+const ProjectHealthCard = React.memo(function ProjectHealthCard({ project, index, onPress }: { project: any; index: number; onPress: () => void }) {
   const colors = useColors();
 
   return (
@@ -758,9 +769,9 @@ function ProjectHealthCard({ project, index, onPress }: { project: any; index: n
       </FloatingWrapper>
     </Reanimated.View>
   );
-}
+});
 
-function TaskRow({ task, isLast, onPress }: { task: any; isLast: boolean; onPress: () => void }) {
+const TaskRow = React.memo(function TaskRow({ task, isLast, onPress }: { task: any; isLast: boolean; onPress: () => void }) {
   const colors = useColors();
   const priorityColors: Record<string, string> = {
     critical: colors.error,
@@ -806,7 +817,7 @@ function TaskRow({ task, isLast, onPress }: { task: any; isLast: boolean; onPres
       <Ionicons name="chevron-forward" size={14} color={colors.muted} />
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   header: {

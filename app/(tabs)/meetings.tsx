@@ -13,7 +13,7 @@ import { ActivityIndicator } from 'react-native';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 
-const ActionCard = ({ title, subtitle, icon: Icon, delay, onPress, active, loading }: any) => {
+const ActionCard = React.memo(function ActionCard({ title, subtitle, icon: Icon, delay, onPress, active, loading }: any) {
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -46,9 +46,9 @@ const ActionCard = ({ title, subtitle, icon: Icon, delay, onPress, active, loadi
       </View>
     </AnimatedPressable>
   );
-};
+});
 
-const TimelineCard = ({ meeting, delay }: any) => {
+const TimelineCard = React.memo(function TimelineCard({ meeting, delay }: any) {
   const formatTime = (dateStr: string) => {
     const d = new Date(dateStr);
     return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -103,7 +103,7 @@ const TimelineCard = ({ meeting, delay }: any) => {
       </View>
     </AnimatedPressable>
   );
-};
+});
 
 export default function MeetingsDashboard() {
   const router = useRouter();
@@ -113,7 +113,7 @@ export default function MeetingsDashboard() {
   const [loading, setLoading] = useState(true);
   const [isStartingInstant, setIsStartingInstant] = useState(false);
 
-  const handleInstantMeeting = async () => {
+  const handleInstantMeeting = React.useCallback(async () => {
     if (!user) return;
     setIsStartingInstant(true);
     try {
@@ -168,15 +168,17 @@ export default function MeetingsDashboard() {
     } finally {
       setIsStartingInstant(false);
     }
-  };
+  }, [user, activeWorkspace, router]);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      fetchMeetings();
-    }, [])
-  );
+  const handleCreateMeeting = React.useCallback(() => {
+    router.push('/meetings/new');
+  }, [router]);
 
-  const fetchMeetings = async () => {
+  const handleJoinMeeting = React.useCallback(() => {
+    router.push('/meetings/pre-join');
+  }, [router]);
+
+  const fetchMeetings = React.useCallback(async () => {
     try {
       const now = new Date().toISOString();
       const { data: upcomingData } = await supabase
@@ -204,7 +206,15 @@ export default function MeetingsDashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchMeetings();
+    }, [fetchMeetings])
+  );
+
+
 
   return (
     <TabScreenWrapper>
@@ -240,14 +250,14 @@ export default function MeetingsDashboard() {
               subtitle="Schedule your meeting" 
               icon={CalendarPlus} 
               delay={80}
-              onPress={() => router.push('/meetings/new')} 
+              onPress={handleCreateMeeting} 
             />
             <ActionCard 
               title="Join with Code" 
               subtitle="Enter meeting code" 
               icon={Key} 
               delay={160}
-              onPress={() => router.push('/meetings/pre-join')} 
+              onPress={handleJoinMeeting} 
             />
           </View>
 

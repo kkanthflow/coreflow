@@ -19,7 +19,7 @@ interface ChannelListItemProps {
   isSelectionMode?: boolean;
 }
 
-export function ChannelListItem({ 
+export const ChannelListItem = React.memo(function ChannelListItem({ 
   channel, 
   onPress, 
   onLongPress, 
@@ -110,7 +110,7 @@ export function ChannelListItem({
       <Ionicons name="chevron-forward" size={16} color={colors.muted} />
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

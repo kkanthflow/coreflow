@@ -17,7 +17,7 @@ import { GradientButton } from '@/components/ui/gradient-button';
 
 import { useColors } from '@/hooks/use-colors';
 
-function ProjectCard({ project, onPress, index }: { project: any; onPress: () => void; index: number }) {
+const ProjectCard = React.memo(function ProjectCard({ project, onPress, index }: { project: any; onPress: (id: string) => void; index: number }) {
   const colors = useColors();
   const C = {
     bg: colors.background,
@@ -59,7 +59,7 @@ function ProjectCard({ project, onPress, index }: { project: any; onPress: () =>
   return (
     <Animated.View style={{ transform: [{ translateY: slideAnim }], opacity: fadeAnim, marginBottom: 14 }}>
       <Pressable
-        onPress={onPress}
+        onPress={() => onPress(project.id)}
         style={({ pressed }) => ({
           backgroundColor: C.card,
           borderRadius: 20,
@@ -138,7 +138,7 @@ function ProjectCard({ project, onPress, index }: { project: any; onPress: () =>
       </Pressable>
     </Animated.View>
   );
-}
+});
 
 const STATUS_FILTERS = [
   { key: 'all', label: 'All' },
@@ -233,6 +233,16 @@ export default function ProjectsScreen() {
     return matchFilter && matchSearch;
   });
 
+  const handleProjectPress = useCallback((id: string) => {
+    router.push(`/projects/${id}` as any);
+  }, [router]);
+
+  const keyExtractor = useCallback((i: any) => i.id, []);
+  
+  const renderItem = useCallback(({ item, index }: { item: any; index: number }) => (
+    <ProjectCard project={item} index={index} onPress={handleProjectPress} />
+  ), [handleProjectPress]);
+
   return (
     <TabScreenWrapper>
     <View style={{ flex: 1, backgroundColor: C.bg }}>
@@ -303,11 +313,9 @@ export default function ProjectsScreen() {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={i => i.id}
+          keyExtractor={keyExtractor}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130 }}
-          renderItem={({ item, index }) => (
-            <ProjectCard project={item} index={index} onPress={() => router.push(`/projects/${item.id}` as any)} />
-          )}
+          renderItem={renderItem}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <View style={[styles.emptyIconWrap, { backgroundColor: C.card, borderColor: C.border }]}>

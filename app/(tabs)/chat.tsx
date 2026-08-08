@@ -234,25 +234,25 @@ export default function ChatScreen() {
     !search || ch.name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleCardPress = (channelId: string) => {
+  const handleCardPress = useCallback((channelId: string) => {
     if (isSelectionMode) {
       toggleSelection(channelId);
     } else {
       router.push(`/chat/${channelId}` as any);
     }
-  };
+  }, [isSelectionMode, router]);
 
-  const toggleSelection = (channelId: string) => {
+  const toggleSelection = useCallback((channelId: string) => {
     setSelectedIds(prev => 
       prev.includes(channelId) 
         ? prev.filter(id => id !== channelId) 
         : [...prev, channelId]
     );
-  };
+  }, []);
 
-  const handleClearSelection = () => {
+  const handleClearSelection = useCallback(() => {
     setSelectedIds([]);
-  };
+  }, []);
 
   const handleDeleteSelected = () => {
     if (selectedIds.length === 0) return;
@@ -290,6 +290,18 @@ export default function ChatScreen() {
       ]
     );
   };
+
+  const keyExtractor = useCallback((i: any) => i.id, []);
+
+  const renderItem = useCallback(({ item }: { item: any }) => (
+    <ChannelListItem
+      channel={item}
+      isSelected={selectedIds.includes(item.id)}
+      isSelectionMode={isSelectionMode}
+      onPress={() => handleCardPress(item.id)}
+      onLongPress={() => toggleSelection(item.id)}
+    />
+  ), [selectedIds, isSelectionMode, handleCardPress, toggleSelection]);
 
   return (
     <TabScreenWrapper>
@@ -361,18 +373,10 @@ export default function ChatScreen() {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={i => i.id}
+          keyExtractor={keyExtractor}
           contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 130 }}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <ChannelListItem
-              channel={item}
-              isSelected={selectedIds.includes(item.id)}
-              isSelectionMode={isSelectionMode}
-              onPress={() => handleCardPress(item.id)}
-              onLongPress={() => toggleSelection(item.id)}
-            />
-          )}
+          renderItem={renderItem}
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <View style={[styles.emptyIcon, { backgroundColor: C.card, borderColor: C.border }]}>
