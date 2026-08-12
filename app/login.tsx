@@ -200,7 +200,15 @@ export default function LoginScreen() {
             }),
           });
 
-          const data = await response.json();
+          const contentType = response.headers.get("content-type");
+          let data: any = {};
+          if (contentType && contentType.includes("application/json")) {
+            data = await response.json();
+          } else {
+            const text = await response.text();
+            throw new Error(`Server returned HTML/Text instead of JSON: ${text.slice(0, 100)}`);
+          }
+
           if (!response.ok) {
             throw new Error(data.error || 'Verification failed.');
           }
@@ -308,7 +316,14 @@ export default function LoginScreen() {
         }),
       });
 
-      const data = await response.json();
+      const contentType = response.headers.get("content-type");
+      let data: any = {};
+      if (contentType && contentType.includes("application/json")) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        throw new Error(`Server returned HTML/Text instead of JSON: ${text.slice(0, 100)}`);
+      }
 
       if (!response.ok) {
         if (data.captchaRequired) {

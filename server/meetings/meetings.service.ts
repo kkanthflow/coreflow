@@ -132,7 +132,19 @@ export class MeetingsService {
       .select()
       .single();
     if (error) throw error;
+    
+    // Also update meeting_participants for mobile app sync
+    await getSupabase()
+      .from('meeting_participants')
+      .update({ status })
+      .eq('meeting_id', meetingId)
+      .eq('user_id', userId);
+      
     return data;
+  }
+
+  static getSupabase() {
+    return getSupabase();
   }
 
   static async getInvitation(meetingId: string, userId: string) {

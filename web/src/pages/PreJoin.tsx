@@ -17,7 +17,8 @@ export default function PreJoin() {
   const [isMobile, setIsMobile] = useState(false);
   const [cameraError, setCameraError] = useState(false);
 
-  const [meetingState, setMeetingState] = useState<'idle' | 'loading' | 'pending' | 'accepted' | 'declined' | 'ended' | 'not_invited'>('idle');
+  const [meetingState, setMeetingState] = useState<'idle' | 'loading' | 'pending' | 'accepted' | 'declined' | 'ended' | 'not_invited' | 'waiting_for_host'>('idle');
+
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -96,10 +97,7 @@ export default function PreJoin() {
           return;
         }
 
-        if (meeting.end_time && new Date(meeting.end_time) < new Date()) {
-          if (isMounted) setMeetingState('ended');
-          return;
-        }
+        // Removed end_time block so meetings don't expire
 
         if (meeting.status === 'completed') {
           if (isMounted) setMeetingState('ended');
@@ -112,6 +110,7 @@ export default function PreJoin() {
           return;
         }
 
+        // Non-host: Check invitation status first
         const { data: inv, error: invError } = await supabase
           .from('meeting_invitations')
           .select('status')
@@ -124,7 +123,31 @@ export default function PreJoin() {
           return;
         }
 
-        if (isMounted) setMeetingState(inv.status as any);
+        if (inv.status === 'pending') {
+          if (isMounted) setMeetingState('pending');
+          return;
+        }
+        
+        if (inv.status === 'declined') {
+          if (isMounted) setMeetingState('declined');
+          return;
+        }
+
+        // Validate if host is active in meeting_participants
+        const { data: hostParticipant } = await supabase
+          .from('meeting_participants')
+          .select('status')
+          .eq('meeting_id', meeting.id)
+          .eq('user_id', meeting.host_id)
+          .eq('status', 'joined')
+          .maybeSingle();
+
+        if (!hostParticipant) {
+          if (isMounted) setMeetingState('waiting_for_host');
+          return;
+        }
+
+        if (isMounted) setMeetingState('accepted');
 
       } catch (err) {
         console.error('Error checking access:', err);
@@ -152,34 +175,61 @@ export default function PreJoin() {
   }, [id, user]);
 
   const handleAcceptInvitation = async () => {
-    if (!id || !session?.access_token) return;
+    if (!id || !user?.id) return;
+    setMeetingState('accepted');
     try {
-      const baseUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'https://coreflow-one.vercel.app';
-      await fetch(`${baseUrl}/api/meetings/${id}/invitations/accept`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        }
-      });
+      // 1. Try directly updating via Supabase client (Client-side fail-safe)
+      const { error: sbError } = await supabase
+        .from('meeting_invitations')
+        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .eq('meeting_id', id)
+        .eq('user_id', user.id);
+
+      if (sbError) throw sbError;
+
+      // 2. Proactively try synchronizing via API endpoint if it exists
+      if (session?.access_token) {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
+        await fetch(`${baseUrl}/api/meetings/${id}/invitations/accept`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          }
+        }).catch(err => console.warn('API Sync Warning:', err));
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Accept invitation failed:', e);
+      setMeetingState('pending');
     }
   };
 
   const handleDeclineInvitation = async () => {
-    if (!id || !session?.access_token) return;
+    if (!id || !user?.id) return;
+    setMeetingState('declined');
     try {
-      const baseUrl = (import.meta as any).env?.VITE_API_BASE_URL || 'https://coreflow-one.vercel.app';
-      await fetch(`${baseUrl}/api/meetings/${id}/invitations/decline`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session.access_token}`,
-        }
-      });
+      // 1. Try directly updating via Supabase client (Client-side fail-safe)
+      const { error: sbError } = await supabase
+        .from('meeting_invitations')
+        .update({ status: 'declined' })
+        .eq('meeting_id', id)
+        .eq('user_id', user.id);
+
+      if (sbError) throw sbError;
+
+      if (session?.access_token) {
+        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
+        await fetch(`${baseUrl}/api/meetings/${id}/invitations/decline`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          }
+        }).catch(err => console.warn('API Sync Warning:', err));
+      }
     } catch (e) {
-      console.error(e);
+      console.error('Decline invitation failed:', e);
+      setMeetingState('pending');
     }
   };
 
@@ -212,6 +262,19 @@ export default function PreJoin() {
           </button>
         </div>
       )}
+
+      {/* Sign Out Button in top right */}
+      <div className="absolute top-4 right-4 z-50">
+        <button 
+          onClick={async () => {
+            await supabase.auth.signOut();
+            navigate('/login', { replace: true });
+          }}
+          className="px-4 py-2 bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white font-semibold rounded-lg transition-colors border border-white/10 text-sm shadow"
+        >
+          Sign Out
+        </button>
+      </div>
 
       <div className="w-full max-w-lg">
         {/* Header */}
@@ -302,6 +365,7 @@ export default function PreJoin() {
           </div>
         </div>
 
+
         {/* Join form / Invitation states */}
         <div className="space-y-4">
           {(meetingState === 'pending') && (
@@ -336,6 +400,12 @@ export default function PreJoin() {
           {(meetingState === 'not_invited' && id) && (
             <div className="w-full bg-[#2c2c2e] text-center rounded-xl px-4 py-4">
               <span className="text-gray-400 font-bold">Access Denied</span>
+            </div>
+          )}
+
+          {(meetingState === 'waiting_for_host') && (
+            <div className="w-full bg-[#2c2c2e] text-center rounded-xl px-4 py-4">
+              <span className="text-gray-400 font-bold">Waiting for host to join...</span>
             </div>
           )}
 

@@ -186,6 +186,15 @@ export default function NotificationsScreen() {
         .eq('meeting_id', meetingId)
         .eq('user_id', user.id);
         
+      let invStatus: string = status;
+      if (invStatus === 'tentative') invStatus = 'pending';
+      
+      await supabase
+        .from('meeting_invitations')
+        .update({ status: invStatus })
+        .eq('meeting_id', meetingId)
+        .eq('user_id', user.id);
+        
       if (!error) {
         handleDelete(notificationId);
       }

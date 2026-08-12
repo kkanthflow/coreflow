@@ -1,4 +1,4 @@
-import { AccessToken, RoomServiceClient, WebhookReceiver } from 'livekit-server-sdk';
+import { AccessToken, RoomServiceClient, WebhookReceiver, EgressClient, EncodedFileOutput, EncodedFileType } from 'livekit-server-sdk';
 
 export class LiveKitService {
   static async generateToken(roomName: string, participantId: string, participantName: string, permissions: any): Promise<string> {
@@ -56,5 +56,42 @@ export class LiveKitService {
       // Room might already be deleted or not found
       console.warn(`Could not end LiveKit room ${roomName}:`, e.message);
     }
+  }
+  static async startRecording(roomName: string): Promise<string> {
+    const apiKey = process.env.LIVEKIT_API_KEY || "APIUfGWSwruirn9";
+    const apiSecret = process.env.LIVEKIT_API_SECRET || "hXwn252Mdidn9iHVySlT9sktNe70Ihn39Kg7gUG9wTF";
+    const wsUrl = process.env.LIVEKIT_URL || "https://coreflow-eo6z5wme.livekit.cloud";
+
+    if (!apiKey || !apiSecret) {
+      throw new Error("LIVEKIT_API_KEY or secret missing, cannot start egress.");
+    }
+
+    const egressClient = new EgressClient(wsUrl, apiKey, apiSecret);
+    
+    const fileOutput = new EncodedFileOutput({
+      fileType: EncodedFileType.MP4,
+      filepath: `recordings/${roomName}-${Date.now()}.mp4`,
+    });
+
+    const egressInfo = await egressClient.startRoomCompositeEgress(
+      roomName,
+      {
+        file: fileOutput
+      },
+      {
+        layout: 'grid',
+      }
+    );
+
+    return egressInfo.egressId;
+  }
+
+  static async stopRecording(egressId: string): Promise<void> {
+    const apiKey = process.env.LIVEKIT_API_KEY || "APIUfGWSwruirn9";
+    const apiSecret = process.env.LIVEKIT_API_SECRET || "hXwn252Mdidn9iHVySlT9sktNe70Ihn39Kg7gUG9wTF";
+    const wsUrl = process.env.LIVEKIT_URL || "https://coreflow-eo6z5wme.livekit.cloud";
+
+    const egressClient = new EgressClient(wsUrl, apiKey, apiSecret);
+    await egressClient.stopEgress(egressId);
   }
 }

@@ -48,15 +48,16 @@ const config: ExpoConfig = {
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   updates: {
-    url: "https://u.expo.dev/4c5173e9-30a8-474f-9fb7-cab0c9dbf3da"
+    url: "https://u.expo.dev/50f42807-de21-4b8b-8404-16bf9d7a4a07"
   },
   runtimeVersion: "1.0.0",
   ios: {
     supportsTablet: true,
     bundleIdentifier: env.iosBundleId,
-    "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
-      }
+    infoPlist: {
+      ITSAppUsesNonExemptEncryption: false,
+      UIBackgroundModes: ["audio", "voip", "video"]
+    }
   },
   android: {
     googleServicesFile: "./google-services.json",
@@ -182,7 +183,7 @@ const config: ExpoConfig = {
   },
   extra: {
     eas: {
-      projectId: "77490e14-8bd7-4ad6-aa00-2ca53c0afae9",
+      projectId: "50f42807-de21-4b8b-8404-16bf9d7a4a07"
     },
   },
 };

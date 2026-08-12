@@ -92,10 +92,7 @@ export default function PreJoinScreen() {
         
         if (isMounted) setMeetingHostId(meeting.host_id);
 
-        if (meeting.end_time && new Date(meeting.end_time) < new Date()) {
-          if (isMounted) setMeetingState('ended');
-          return;
-        }
+        // Removed end_time block so meetings don't expire
 
         if (meeting.status === 'completed') {
           if (isMounted) setMeetingState('ended');

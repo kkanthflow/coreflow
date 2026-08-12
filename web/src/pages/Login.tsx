@@ -13,7 +13,7 @@ export default function Login() {
   const location = useLocation();
   const { user } = useAuth();
 
-  const from = location.state?.from?.pathname || '/meetings/demo';
+  const from = location.state?.from?.pathname || '/dashboard';
 
   if (user) {
     navigate(from, { replace: true });
@@ -26,10 +26,24 @@ export default function Login() {
     setError('');
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      let { error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
+
+      if (error && error.message.includes('Invalid login credentials')) {
+        // Fallback for legacy hashed passwords (used by the mobile app / backend proxy)
+        const msgBuffer = new TextEncoder().encode(password);
+        const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashedPassword = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+
+        const fallback = await supabase.auth.signInWithPassword({
+          email,
+          password: hashedPassword,
+        });
+        error = fallback.error;
+      }
 
       if (error) throw error;
       navigate(from, { replace: true });

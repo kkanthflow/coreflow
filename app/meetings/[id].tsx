@@ -55,6 +55,20 @@ export default function MeetingDetailsScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchMeeting();
+      
+      const channel = supabase.channel(`meeting-details-${id}`)
+        .on(
+          'postgres_changes',
+          { event: 'UPDATE', schema: 'public', table: 'meeting_participants', filter: `meeting_id=eq.${id}` },
+          () => {
+            fetchMeeting(); // Re-fetch when any participant's RSVP changes
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }, [id])
   );
 
@@ -69,6 +83,16 @@ export default function MeetingDetailsScreen() {
         .eq('user_id', user.id);
 
       if (error) throw error;
+
+      // Also update the newer meeting_invitations table (used by web app)
+      let invStatus = status;
+      if (invStatus === 'tentative') invStatus = 'pending';
+      
+      await supabase
+        .from('meeting_invitations')
+        .update({ status: invStatus })
+        .eq('meeting_id', meeting.id)
+        .eq('user_id', user.id);
       
       // Update local state optimistically
       setMeeting((prev: any) => ({
@@ -186,11 +210,10 @@ export default function MeetingDetailsScreen() {
   const declinedCount = meeting.attendees.filter((a: any) => a.status === 'declined').length;
 
   const meetingDate = new Date(meeting.start_time);
-  const isMeetingPast = isPast(meetingDate);
 
   return (
     <ScreenContainer className="flex-1">
-        {canModify && meeting.status !== 'cancelled' && !isMeetingPast ? (
+        {canModify && meeting.status !== 'cancelled' ? (
           <Pressable 
             onPress={() => router.push(`/meetings/new?editId=${meeting.id}` as any)}
             className="p-2 -mr-2"
@@ -263,7 +286,7 @@ export default function MeetingDetailsScreen() {
                       <Pressable onPress={handleShareMeeting} className="bg-primary/10 px-4 py-1.5 rounded-full">
                         <Text className="text-primary text-sm font-bold">Share</Text>
                       </Pressable>
-                      {(meeting.room_name || meeting.meeting_link) && meeting.status !== 'cancelled' && !isMeetingPast && (
+                      {(meeting.room_name || meeting.meeting_link) && meeting.status !== 'cancelled' && (
                         <Pressable onPress={handleJoinLink} className="bg-primary px-4 py-1.5 rounded-full">
                           <Text className="text-white text-sm font-bold">Join</Text>
                         </Pressable>
@@ -290,7 +313,7 @@ export default function MeetingDetailsScreen() {
           </View>
 
           {/* RSVP Section (Only if attendee and not cancelled and not past) */}
-          {meeting.status !== 'cancelled' && !isMeetingPast && myAttendeeRecord && !isCreator && (
+          {meeting.status !== 'cancelled' && myAttendeeRecord && !isCreator && (
             <View className="mb-8">
               <Text className="text-base font-bold text-foreground mb-3">Your RSVP</Text>
               <View className="flex-row gap-2">
@@ -379,7 +402,7 @@ export default function MeetingDetailsScreen() {
           </View>
 
           {/* Admin / Creator Controls */}
-          {canModify && meeting.status !== 'cancelled' && !isMeetingPast && (
+          {canModify && meeting.status !== 'cancelled' && (
             <View className="mb-12 mt-4 pt-6 border-t border-border">
               <PremiumButton
                 variant="outline"

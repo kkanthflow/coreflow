@@ -74,3 +74,4 @@ test_*.js
 list_*.js
 trim_orgs.js
 check_*.js
+.env*

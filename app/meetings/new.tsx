@@ -131,8 +131,19 @@ export default function NewMeetingScreen() {
         if (wsData) {
           realWorkspaceId = wsData.id;
         } else {
-          // Fallback if organization_id doesn't match a workspace directly
           console.warn('Could not find workspace for organization:', activeWorkspace.id, wsError);
+        }
+      }
+
+      // If workspace_id is still null, fetch the first available workspace for the user
+      // so the database foreign key constraint is satisfied.
+      if (!realWorkspaceId) {
+        const { data: userWorkspaces } = await supabase
+          .from('workspaces')
+          .select('id')
+          .limit(1);
+        if (userWorkspaces && userWorkspaces.length > 0) {
+          realWorkspaceId = userWorkspaces[0].id;
         }
       }
 
@@ -155,9 +166,14 @@ export default function NewMeetingScreen() {
 
         if (meetingError) throw meetingError;
 
-        // Delete old attendees
+        // Delete old attendees and invitations
         await supabase
           .from('meeting_participants')
+          .delete()
+          .eq('meeting_id', editId);
+          
+        await supabase
+          .from('meeting_invitations')
           .delete()
           .eq('meeting_id', editId);
       } else {
@@ -219,6 +235,23 @@ export default function NewMeetingScreen() {
         .insert(attendeesToInsert);
 
       if (attendeesError) throw attendeesError;
+      
+      // Also insert into meeting_invitations for the web app
+      const invitationsToInsert = selectedAttendees.map(attendeeId => {
+        let status = 'pending';
+        if (attendeeId === user?.id) status = 'accepted';
+        
+        return {
+          meeting_id: meetingId,
+          user_id: attendeeId,
+          status,
+          invited_by: user?.id,
+          invited_at: new Date().toISOString(),
+          accepted_at: attendeeId === user?.id ? new Date().toISOString() : null,
+        };
+      });
+      
+      await supabase.from('meeting_invitations').insert(invitationsToInsert);
 
       // Send notifications to attendees
       const notificationsToInsert = selectedAttendees

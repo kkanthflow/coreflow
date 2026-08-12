@@ -3,7 +3,7 @@ import { cache } from "./redis";
 
 // Configurable rate limit settings
 const LIMIT_WINDOW_S = parseInt(process.env.RATE_LIMIT_WINDOW_S || "60", 10);
-const MAX_GLOBAL_REQ = parseInt(process.env.RATE_LIMIT_API_MAX || "100", 10);
+const MAX_GLOBAL_REQ = parseInt(process.env.RATE_LIMIT_API_MAX || "10000", 10);
 const MAX_AI_REQ = parseInt(process.env.RATE_LIMIT_AI_MAX || "10", 10);
 
 export function globalRateLimiter(req: Request, res: Response, next: NextFunction) {

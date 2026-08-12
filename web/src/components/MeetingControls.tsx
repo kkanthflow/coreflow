@@ -2,12 +2,15 @@ import { useState } from 'react';
 import { useLocalParticipant } from '@livekit/components-react';
 
 interface MeetingControlsProps {
-  isNotesOpen: boolean;
+  activeDrawer: 'notes' | 'chat' | null;
+  isRecording: boolean;
   onToggleNotes: () => void;
+  onToggleChat: () => void;
+  onToggleRecord: () => void;
   onLeave: () => void;
 }
 
-export function MeetingControls({ isNotesOpen, onToggleNotes, onLeave }: MeetingControlsProps) {
+export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onToggleChat, onToggleRecord, onLeave }: MeetingControlsProps) {
   const { localParticipant } = useLocalParticipant();
 
   const isMicOn = localParticipant.isMicrophoneEnabled;
@@ -140,11 +143,26 @@ export function MeetingControls({ isNotesOpen, onToggleNotes, onLeave }: Meeting
         </svg>
       </button>
 
+      {/* Chat Toggle */}
+      <button
+        onClick={onToggleChat}
+        className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
+          activeDrawer === 'chat'
+            ? 'bg-emerald-600 text-white'
+            : 'bg-[#27272a] hover:bg-[#3f3f46] text-white'
+        }`}
+        title="Toggle Chat"
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      </button>
+
       {/* Notes Toggle */}
       <button
         onClick={onToggleNotes}
         className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
-          isNotesOpen
+          activeDrawer === 'notes'
             ? 'bg-blue-600 text-white'
             : 'bg-[#27272a] hover:bg-[#3f3f46] text-white'
         }`}
@@ -155,6 +173,22 @@ export function MeetingControls({ isNotesOpen, onToggleNotes, onLeave }: Meeting
           <polyline points="14 2 14 8 20 8"/>
           <line x1="16" y1="13" x2="8" y2="13"/>
           <line x1="16" y1="17" x2="8" y2="17"/>
+        </svg>
+      </button>
+
+      {/* Record Toggle */}
+      <button
+        onClick={onToggleRecord}
+        className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
+          isRecording
+            ? 'bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-600/30 animate-pulse'
+            : 'bg-[#27272a] hover:bg-[#3f3f46] text-white'
+        }`}
+        title={isRecording ? 'Stop Recording' : 'Start Recording'}
+      >
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10" />
+          <circle cx="12" cy="12" r="3" fill={isRecording ? 'currentColor' : 'none'} />
         </svg>
       </button>
 

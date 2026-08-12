@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react';
-import { Participant, TrackPublication, Track } from 'livekit-client';
+import { Participant, TrackPublication, Track, TrackEvent } from 'livekit-client';
 import { VideoTrack, useLocalParticipant } from '@livekit/components-react';
 
 interface ScreenShareViewProps {
@@ -11,7 +11,11 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
   const { localParticipant } = useLocalParticipant();
   const isLocalPresenter = presenter.isLocal;
 
+  // Track whether the remote track is subscribed and available
+  const [isTrackReady, setIsTrackReady] = useState(() => !!publication.track);
+
   // Ensure remote subscribers explicitly request high priority for maximum sharpness
+  // and listen for subscription events so we re-render when track becomes available
   useEffect(() => {
     if (!isLocalPresenter && publication) {
       const pubAny = publication as any;
@@ -21,17 +25,33 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
       if (typeof pubAny.setSubscribed === 'function') {
         pubAny.setSubscribed(true);
       }
+
+      // Re-check track readiness when subscription events fire
+      const handleSubscribed = () => setIsTrackReady(true);
+      const handleUnsubscribed = () => setIsTrackReady(false);
+      publication.on(TrackEvent.Subscribed, handleSubscribed);
+      publication.on(TrackEvent.Unsubscribed, handleUnsubscribed);
+
+      // Also check immediately in case it was already subscribed
+      if (publication.track) setIsTrackReady(true);
+
+      return () => {
+        publication.off(TrackEvent.Subscribed, handleSubscribed);
+        publication.off(TrackEvent.Unsubscribed, handleUnsubscribed);
+      };
     }
   }, [isLocalPresenter, publication]);
 
-  // ── 2. Remote Presenter View ─────────────────────────────────────────────────
+  // ── Remote Presenter trackRef ─────────────────────────────────────────────────
   const trackRef = useMemo(
     () => ({
       participant: presenter,
       publication: publication,
       source: Track.Source.ScreenShare,
+      track: publication.track ?? undefined,
     }),
-    [presenter, publication]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [presenter, publication, isTrackReady]
   );
 
   // Presenter Elapsed Timer
@@ -116,10 +136,18 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
   // ── 2. Remote Presenter View ─────────────────────────────────────────────────
   return (
     <div className="w-full h-full relative rounded-2xl overflow-hidden bg-black border border-white/10 shadow-2xl flex items-center justify-center">
-      <VideoTrack
-        trackRef={trackRef}
-        className="w-full h-full object-contain"
-      />
+      {isTrackReady ? (
+        <VideoTrack
+          trackRef={trackRef}
+          className="w-full h-full object-contain"
+        />
+      ) : (
+        /* Track not yet subscribed — show a loading state instead of black screen */
+        <div className="flex flex-col items-center gap-4 text-white/50">
+          <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <span className="text-sm font-medium">Connecting to screen share…</span>
+        </div>
+      )}
 
       {/* Presenter Name Badge */}
       <div className="absolute top-4 left-4 bg-black/70 backdrop-blur-md text-white text-xs font-semibold px-4 py-2 rounded-full flex items-center gap-2 border border-white/10 shadow-lg z-10">

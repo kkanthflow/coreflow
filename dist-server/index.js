@@ -39,6 +39,10 @@ var init_env = __esm({
       appId: process.env.VITE_APP_ID ?? "",
       cookieSecret: process.env.JWT_SECRET ?? "",
       databaseUrl: process.env.DATABASE_URL ?? "",
+      supabaseUrl: process.env.SUPABASE_URL ?? "",
+      supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? "",
+      supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+      jwtSecret: process.env.JWT_SECRET ?? "",
       oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
       ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
       isProduction: process.env.NODE_ENV === "production",
@@ -287,7 +291,7 @@ __export(notification_exports, {
 import { TRPCError } from "@trpc/server";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getMessaging } from "firebase-admin/messaging";
-import { Pool as Pool2 } from "pg";
+import { createClient as createClient3 } from "@supabase/supabase-js";
 async function notifyOwner(payload) {
   const { title, content } = validatePayload(payload);
   if (!ENV.forgeApiUrl) {
@@ -327,16 +331,13 @@ async function notifyOwner(payload) {
     return false;
   }
 }
-function getDbPool() {
-  if (!dbPool) {
-    dbPool = new Pool2({
-      connectionString: process.env.DATABASE_URL,
-      ssl: {
-        rejectUnauthorized: false
-      }
-    });
+function getSupabaseAdmin() {
+  if (!supabaseClient) {
+    const supabaseUrl4 = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+    supabaseClient = createClient3(supabaseUrl4, supabaseKey);
   }
-  return dbPool;
+  return supabaseClient;
 }
 function getFirebaseApp() {
   if (fcmApp) return fcmApp;
@@ -353,6 +354,13 @@ function getFirebaseApp() {
       serviceAccountString = Buffer.from(b64Key, "base64").toString("utf8");
     } catch (e) {
       console.error("[FCM] Failed to decode base64 service account credentials:", e);
+    }
+  }
+  if (serviceAccountString && !serviceAccountString.trim().startsWith("{")) {
+    try {
+      serviceAccountString = Buffer.from(serviceAccountString, "base64").toString("utf8");
+    } catch (e) {
+      console.error("[FCM] Failed to decode FIREBASE_SERVICE_ACCOUNT as base64:", e);
     }
   }
   if (!serviceAccountString) {
@@ -374,6 +382,14 @@ function getFirebaseApp() {
   }
   try {
     const serviceAccount = JSON.parse(serviceAccountString);
+    if (serviceAccount.private_key) {
+      let key = serviceAccount.private_key;
+      let body = key.replace(/-----BEGIN PRIVATE KEY-----/gi, "").replace(/-----END PRIVATE KEY-----/gi, "").replace(/\s+/g, "");
+      let chunks = body.match(/.{1,64}/g);
+      if (chunks) {
+        serviceAccount.private_key = "-----BEGIN PRIVATE KEY-----\n" + chunks.join("\n") + "\n-----END PRIVATE KEY-----\n";
+      }
+    }
     fcmApp = initializeApp({ credential: cert(serviceAccount) });
     console.log("[FCM] Firebase app initialized via environment variable.");
     return fcmApp;
@@ -382,134 +398,106 @@ function getFirebaseApp() {
     return null;
   }
 }
-function dispatchFCMPush(data) {
-  pushQueue.enqueue(async () => {
-    const pool2 = getDbPool();
-    const app = getFirebaseApp();
-    if (!app) {
-      console.error("[FCM] Firebase app is not initialized. Cannot dispatch push.");
-      await pool2.query(
-        "UPDATE public.notifications SET delivery_status = 'failed', delivery_error = 'Firebase app not initialized' WHERE id = $1",
-        [data.id]
-      );
-      return;
-    }
-    const messaging = getMessaging(app);
-    try {
-      const prefResult = await pool2.query(
-        `SELECT chat_enabled, meetings_enabled, tasks_enabled, finance_enabled, announcements_enabled 
-         FROM public.notification_preferences WHERE user_id = $1`,
-        [data.userId]
-      );
-      if (prefResult.rows.length > 0) {
-        const pref = prefResult.rows[0];
-        const isChatDisabled = data.type === "chat" && !pref.chat_enabled;
-        const isMeetingDisabled = data.type === "meeting" && !pref.meetings_enabled;
-        const isTaskDisabled = data.type === "task" && !pref.tasks_enabled;
-        const isFinanceDisabled = data.type === "finance" && !pref.finance_enabled;
-        const isAnnouncementDisabled = data.type === "announcements" && !pref.announcements_enabled;
-        if (isChatDisabled || isMeetingDisabled || isTaskDisabled || isFinanceDisabled || isAnnouncementDisabled) {
-          console.log(`[FCM] Notification skipped for user ${data.userId} due to preference settings.`);
-          await pool2.query(
-            "UPDATE public.notifications SET delivery_status = 'failed', delivery_error = 'Skipped by preferences' WHERE id = $1",
-            [data.id]
-          );
-          return;
-        }
-      }
-      let tokensQuery = "SELECT token, device_id, platform FROM public.user_push_tokens WHERE user_id = $1 AND is_enabled = true";
-      let tokensParams = [data.userId];
-      if (data.senderId && data.senderId !== data.userId) {
-        tokensQuery += " AND token NOT IN (SELECT token FROM public.user_push_tokens WHERE user_id = $2)";
-        tokensParams.push(data.senderId);
-      }
-      const tokensResult = await pool2.query(tokensQuery, tokensParams);
-      const deviceTokens = tokensResult.rows;
-      if (deviceTokens.length === 0) {
-        console.log(`[FCM] No active device tokens found for user ${data.userId}.`);
-        await pool2.query(
-          "UPDATE public.notifications SET delivery_status = 'failed', delivery_error = 'No active tokens' WHERE id = $1",
-          [data.id]
-        );
+async function dispatchFCMPush(data) {
+  const supabase3 = getSupabaseAdmin();
+  const app = getFirebaseApp();
+  if (!app) {
+    console.error("[FCM] Firebase app is not initialized. Cannot dispatch push.");
+    await supabase3.from("notifications").update({ delivery_status: "failed", delivery_error: "Firebase app not initialized" }).eq("id", data.id);
+    return;
+  }
+  const messaging = getMessaging(app);
+  try {
+    const { data: prefRows } = await supabase3.from("notification_preferences").select("chat_enabled, meetings_enabled, tasks_enabled, finance_enabled, announcements_enabled").eq("user_id", data.userId);
+    if (prefRows && prefRows.length > 0) {
+      const pref = prefRows[0];
+      const isChatDisabled = data.type === "chat" && !pref.chat_enabled;
+      const isMeetingDisabled = data.type === "meeting" && !pref.meetings_enabled;
+      const isTaskDisabled = data.type === "task" && !pref.tasks_enabled;
+      const isFinanceDisabled = data.type === "finance" && !pref.finance_enabled;
+      const isAnnouncementDisabled = data.type === "announcements" && !pref.announcements_enabled;
+      if (isChatDisabled || isMeetingDisabled || isTaskDisabled || isFinanceDisabled || isAnnouncementDisabled) {
+        console.log(`[FCM] Notification skipped for user ${data.userId} due to preference settings.`);
+        await supabase3.from("notifications").update({ delivery_status: "failed", delivery_error: "Skipped by preferences" }).eq("id", data.id);
         return;
       }
-      await pool2.query(
-        "UPDATE public.notifications SET delivery_status = 'sending', delivery_attempts = delivery_attempts + 1 WHERE id = $1",
-        [data.id]
-      );
-      const tokens = deviceTokens.map((t2) => t2.token);
-      console.log(`[FCM] Dispatching to ${tokens.length} device(s) for user ${data.userId}`);
-      const multicastMessage = {
-        tokens,
-        notification: {
-          title: data.title,
-          body: data.message
-        },
-        data: {
-          id: data.id,
-          type: data.type || "",
-          entity_type: data.entityType || "",
-          entity_id: data.entityId || "",
-          action_url: data.actionUrl || "",
-          sender_id: data.senderId || ""
-        },
-        android: {
-          priority: "high",
-          notification: {
-            channelId: data.type === "chat" ? "chat" : data.type === "meeting" ? "meetings" : data.type === "task" || data.type === "task_assigned" ? "tasks" : "default",
-            sound: "default",
-            clickAction: "FLUTTER_NOTIFICATION_CLICK"
-          }
-        },
-        apns: {
-          payload: {
-            aps: {
-              sound: "default",
-              badge: 1
-            }
-          }
-        }
-      };
-      const response = await sendWithRetry(messaging, multicastMessage);
-      const tokensToDelete = [];
-      response.responses.forEach((res, idx) => {
-        if (!res.success && res.error) {
-          const errorCode = res.error.code;
-          const token = tokens[idx];
-          const device = deviceTokens[idx];
-          console.warn(`[FCM] Send failed for user ${data.userId} device ${device.device_id}:`, res.error.message);
-          if (errorCode === "messaging/registration-token-not-registered" || errorCode === "messaging/invalid-argument") {
-            tokensToDelete.push(token);
-          }
-        }
-      });
-      if (tokensToDelete.length > 0) {
-        console.log(`[FCM] Deleting ${tokensToDelete.length} unregistered / invalid tokens.`);
-        await pool2.query(
-          "DELETE FROM public.user_push_tokens WHERE token = ANY($1)",
-          [tokensToDelete]
-        );
-      }
-      const successCount = response.successCount;
-      if (successCount > 0) {
-        await pool2.query(
-          "UPDATE public.notifications SET delivery_status = 'sent', delivery_error = null WHERE id = $1",
-          [data.id]
-        );
-      } else {
-        await pool2.query(
-          "UPDATE public.notifications SET delivery_status = 'failed', delivery_error = 'All token dispatches failed' WHERE id = $1",
-          [data.id]
-        );
-      }
-    } catch (err) {
-      console.error("[FCM] Critical push dispatch failure:", err);
-      await pool2.query(
-        "UPDATE public.notifications SET delivery_status = 'failed', delivery_error = $2 WHERE id = $1",
-        [data.id, err.message || "Unknown error"]
-      );
     }
-  });
+    let query2 = supabase3.from("user_push_tokens").select("token, device_id, platform").eq("user_id", data.userId).eq("is_enabled", true);
+    if (data.senderId && data.senderId !== data.userId) {
+      const { data: senderTokens } = await supabase3.from("user_push_tokens").select("token").eq("user_id", data.senderId);
+      if (senderTokens && senderTokens.length > 0) {
+        const excludeTokens = senderTokens.map((t2) => t2.token);
+        query2 = query2.not("token", "in", excludeTokens);
+      }
+    }
+    const { data: deviceTokens } = await query2;
+    const tokens = (deviceTokens || []).map((t2) => t2.token);
+    if (!tokens || tokens.length === 0) {
+      console.log(`[FCM] No devices found for user ${data.userId}`);
+      await supabase3.from("notifications").update({ delivery_status: "failed", delivery_error: "No active device tokens found" }).eq("id", data.id);
+      return;
+    }
+    const { data: nData } = await supabase3.from("notifications").select("delivery_attempts").eq("id", data.id).single();
+    const attempts = (nData?.delivery_attempts || 0) + 1;
+    await supabase3.from("notifications").update({ delivery_status: "sending", delivery_attempts: attempts }).eq("id", data.id);
+    console.log(`[FCM] Dispatching to ${tokens.length} device(s) for user ${data.userId}`);
+    const multicastMessage = {
+      tokens,
+      notification: {
+        title: data.title,
+        body: data.message
+      },
+      data: {
+        id: data.id,
+        type: data.type || "",
+        entity_type: data.entityType || "",
+        entity_id: data.entityId || "",
+        action_url: data.actionUrl || "",
+        sender_id: data.senderId || ""
+      },
+      android: {
+        priority: "high",
+        notification: {
+          channelId: data.type === "chat" ? "chat" : data.type === "meeting" ? "meetings" : data.type === "task" || data.type === "task_assigned" ? "tasks" : "default",
+          sound: "default"
+        }
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "default",
+            badge: 1
+          }
+        }
+      }
+    };
+    const response = await sendWithRetry(messaging, multicastMessage);
+    const tokensToDelete = [];
+    response.responses.forEach((res, idx) => {
+      if (!res.success && res.error) {
+        const errorCode = res.error.code;
+        const token = tokens[idx];
+        const device = deviceTokens[idx];
+        console.warn(`[FCM] Send failed for user ${data.userId} device ${device.device_id}:`, res.error.message);
+        if (errorCode === "messaging/registration-token-not-registered" || errorCode === "messaging/invalid-argument") {
+          tokensToDelete.push(token);
+        }
+      }
+    });
+    if (tokensToDelete.length > 0) {
+      console.log(`[FCM] Deleting ${tokensToDelete.length} unregistered / invalid tokens.`);
+      await supabase3.from("user_push_tokens").delete().in("token", tokensToDelete);
+    }
+    const successCount = response.successCount;
+    if (successCount > 0) {
+      await supabase3.from("notifications").update({ delivery_status: "delivered", delivery_error: null }).eq("id", data.id);
+    } else {
+      await supabase3.from("notifications").update({ delivery_status: "failed", delivery_error: "All token dispatches failed" }).eq("id", data.id);
+    }
+  } catch (err) {
+    console.error("[FCM] Critical push dispatch failure:", err);
+    await supabase3.from("notifications").update({ delivery_status: "failed", delivery_error: err.message || "Unknown error" }).eq("id", data.id);
+  }
 }
 async function sendWithRetry(messaging, payload, attempt = 1) {
   try {
@@ -524,7 +512,7 @@ async function sendWithRetry(messaging, payload, attempt = 1) {
     throw error;
   }
 }
-var TITLE_MAX_LENGTH, CONTENT_MAX_LENGTH, trimValue, isNonEmptyString2, buildEndpointUrl, validatePayload, dbPool, fcmApp, PushQueue, pushQueue;
+var TITLE_MAX_LENGTH, CONTENT_MAX_LENGTH, trimValue, isNonEmptyString2, buildEndpointUrl, validatePayload, supabaseClient, fcmApp, PushQueue, pushQueue;
 var init_notification = __esm({
   "server/_core/notification.ts"() {
     "use strict";
@@ -566,7 +554,7 @@ var init_notification = __esm({
       }
       return { title, content };
     };
-    dbPool = null;
+    supabaseClient = null;
     fcmApp = null;
     PushQueue = class {
       queue = [];
@@ -634,7 +622,7 @@ var init_rateLimit = __esm({
     "use strict";
     init_redis();
     LIMIT_WINDOW_S = parseInt(process.env.RATE_LIMIT_WINDOW_S || "60", 10);
-    MAX_GLOBAL_REQ = parseInt(process.env.RATE_LIMIT_API_MAX || "100", 10);
+    MAX_GLOBAL_REQ = parseInt(process.env.RATE_LIMIT_API_MAX || "10000", 10);
     MAX_AI_REQ = parseInt(process.env.RATE_LIMIT_AI_MAX || "10", 10);
   }
 });
@@ -662,34 +650,188 @@ var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
 
 // server/db.ts
 import { eq } from "drizzle-orm";
-import { drizzle } from "drizzle-orm/mysql2";
+import { drizzle } from "drizzle-orm/postgres-js";
+import postgres from "postgres";
 
 // drizzle/schema.ts
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
-var users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
-  id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
+import { serial, pgEnum, pgTable, text, timestamp, varchar, boolean, integer, jsonb } from "drizzle-orm/pg-core";
+var roleEnum = pgEnum("role", [
+  "student",
+  "faculty",
+  "club_admin",
+  "placement_cell",
+  "department_admin",
+  "college_administrator",
+  "super_admin",
+  "admin"
+]);
+var eventTypeEnum = pgEnum("event_type", ["workshop", "seminar", "hackathon", "cultural", "sports", "other"]);
+var jobTypeEnum = pgEnum("job_type", ["internship", "full_time", "part_time"]);
+var lostFoundCategoryEnum = pgEnum("lost_found_category", ["electronics", "documents", "clothing", "other"]);
+var lostFoundStatusEnum = pgEnum("lost_found_status", ["lost", "found", "returned"]);
+var users = pgTable("users", {
+  id: serial("id").primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
+  // Auth provider ID
   name: text("name"),
-  email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
-  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  // nullable, may be set later
+  email: varchar("email", { length: 320 }).unique(),
+  // nullable, may be set later
+  role: roleEnum("role").default("student").notNull(),
+  avatarUrl: text("avatarUrl"),
+  bio: text("bio"),
+  department: varchar("department", { length: 100 }),
+  year: integer("year"),
+  skills: jsonb("skills"),
+  // Array of skill strings
+  githubUrl: text("githubUrl"),
+  linkedinUrl: text("linkedinUrl"),
+  portfolioUrl: text("portfolioUrl"),
+  loginMethod: varchar("loginMethod", { length: 100 }),
+  // optional login method
+  lastSignedIn: timestamp("lastSignedIn"),
+  // optional timestamp of last sign‑in
   createdAt: timestamp("createdAt").defaultNow().notNull(),
-  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
-  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull()
+  updatedAt: timestamp("updatedAt").defaultNow().notNull()
+});
+var posts = pgTable("posts", {
+  id: serial("id").primaryKey(),
+  authorId: integer("authorId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  mediaUrls: jsonb("mediaUrls"),
+  // Array of media URLs
+  isPinned: boolean("isPinned").default(false),
+  isOfficial: boolean("isOfficial").default(false),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
+});
+var comments = pgTable("comments", {
+  id: serial("id").primaryKey(),
+  postId: integer("postId").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  authorId: integer("authorId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  content: text("content").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
+});
+var likes = pgTable("likes", {
+  id: serial("id").primaryKey(),
+  postId: integer("postId").notNull().references(() => posts.id, { onDelete: "cascade" }),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
+});
+var events = pgTable("events", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  eventType: eventTypeEnum("eventType").default("other").notNull(),
+  organizerId: integer("organizerId").notNull().references(() => users.id),
+  startTime: timestamp("startTime").notNull(),
+  endTime: timestamp("endTime").notNull(),
+  location: varchar("location", { length: 255 }),
+  coverImageUrl: text("coverImageUrl"),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
+});
+var eventRegistrations = pgTable("event_registrations", {
+  id: serial("id").primaryKey(),
+  eventId: integer("eventId").notNull().references(() => events.id, { onDelete: "cascade" }),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  hasAttended: boolean("hasAttended").default(false),
+  registeredAt: timestamp("registeredAt").defaultNow().notNull()
+});
+var clubs = pgTable("clubs", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  logoUrl: text("logoUrl"),
+  adminId: integer("adminId").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
+});
+var clubMembers = pgTable("club_members", {
+  id: serial("id").primaryKey(),
+  clubId: integer("clubId").notNull().references(() => clubs.id, { onDelete: "cascade" }),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  role: varchar("role", { length: 50 }).default("member").notNull(),
+  // committee, member
+  joinedAt: timestamp("joinedAt").defaultNow().notNull()
+});
+var jobs = pgTable("jobs", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  companyName: varchar("companyName", { length: 255 }).notNull(),
+  jobType: jobTypeEnum("jobType").notNull(),
+  description: text("description").notNull(),
+  eligibilityCriteria: text("eligibilityCriteria"),
+  deadline: timestamp("deadline"),
+  postedById: integer("postedById").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
+});
+var teams = pgTable("teams", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  projectCategory: varchar("projectCategory", { length: 100 }),
+  // hackathon, research, etc.
+  requiredSkills: jsonb("requiredSkills"),
+  creatorId: integer("creatorId").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
+});
+var lostAndFoundItems = pgTable("lost_and_found_items", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  category: lostFoundCategoryEnum("category").notNull(),
+  status: lostFoundStatusEnum("status").default("lost").notNull(),
+  location: varchar("location", { length: 255 }),
+  imageUrl: text("imageUrl"),
+  reporterId: integer("reporterId").notNull().references(() => users.id),
+  dateReported: timestamp("dateReported").defaultNow().notNull()
+});
+var campusProjects = pgTable("campus_projects", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  techStack: jsonb("techStack"),
+  githubUrl: text("githubUrl"),
+  liveDemoUrl: text("liveDemoUrl"),
+  coverImageUrl: text("coverImageUrl"),
+  ownerId: integer("ownerId").notNull().references(() => users.id),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
+});
+var feedback = pgTable("feedback", {
+  id: serial("id").primaryKey(),
+  department: varchar("department", { length: 100 }).notNull(),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  facultyName: varchar("facultyName", { length: 255 }).notNull(),
+  rating: integer("rating").notNull(),
+  comments: text("comments"),
+  submittedAt: timestamp("submittedAt").defaultNow().notNull()
+  // Anonymous submission, so no userId
+});
+var achievements = pgTable("achievements", {
+  id: serial("id").primaryKey(),
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description").notNull(),
+  userId: integer("userId").references(() => users.id, { onDelete: "cascade" }),
+  clubId: integer("clubId").references(() => clubs.id, { onDelete: "cascade" }),
+  imageUrl: text("imageUrl"),
+  awardedAt: timestamp("awardedAt").defaultNow().notNull()
+});
+var notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("userId").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  isRead: boolean("isRead").default(false).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull()
 });
 
 // server/db.ts
 init_env();
 var _db = null;
+var queryClient = null;
 async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      queryClient = postgres(process.env.DATABASE_URL);
+      _db = drizzle(queryClient);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -737,7 +879,8 @@ async function upsertUser(user) {
     if (Object.keys(updateSet).length === 0) {
       updateSet.lastSignedIn = /* @__PURE__ */ new Date();
     }
-    await db.insert(users).values(values).onDuplicateKeyUpdate({
+    await db.insert(users).values(values).onConflictDoUpdate({
+      target: users.openId,
       set: updateSet
     });
   } catch (error) {
@@ -1881,24 +2024,27 @@ async function createContext(opts) {
 import { Router } from "express";
 
 // server/meetings/meetings.service.ts
-import { createClient as createClient3 } from "@supabase/supabase-js";
-var supabaseClient = null;
+import { createClient as createClient4 } from "@supabase/supabase-js";
+import crypto2 from "crypto";
+var supabaseClient2 = null;
 function getSupabase() {
-  if (!supabaseClient) {
+  if (!supabaseClient2) {
     if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for meetings service");
-    supabaseClient = createClient3(
-      process.env.EXPO_PUBLIC_SUPABASE_URL,
+    supabaseClient2 = createClient4(
+      process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
   }
-  return supabaseClient;
+  return supabaseClient2;
 }
 var MeetingsService = class {
   static async createMeeting(data) {
-    const roomName = `cf-meeting-${Math.random().toString(36).substring(2, 10)}`;
+    const meetingId = crypto2.randomUUID();
+    const roomName = `coreflow-${meetingId}`;
     const { data: meeting, error } = await getSupabase().from("meetings").insert({
+      id: meetingId,
       host_id: data.hostId,
-      workspace_id: data.workspaceId,
+      workspace_id: data.workspaceId === "independent" ? null : data.workspaceId,
       title: data.title,
       description: data.description,
       start_time: data.startTime,
@@ -1928,27 +2074,67 @@ var MeetingsService = class {
     if (error) throw error;
     return data;
   }
-  static async trackParticipant(meetingId, userId) {
+  static async trackParticipant(meetingId, userId, hostId) {
+    const isHost = userId === hostId;
     const { data, error } = await getSupabase().from("meeting_participants").select("*").eq("meeting_id", meetingId).eq("user_id", userId).single();
     if (!data) {
-      await getSupabase().from("meeting_participants").insert({
+      const { data: newParticipant } = await getSupabase().from("meeting_participants").insert({
         meeting_id: meetingId,
         user_id: userId,
         status: "joined",
-        joined_at: (/* @__PURE__ */ new Date()).toISOString()
-      });
+        role: isHost ? "host" : "attendee",
+        admission_status: isHost ? "admitted" : "waiting"
+        // host doesn't wait
+      }).select().single();
+      return newParticipant;
     } else {
-      await getSupabase().from("meeting_participants").update({ status: "joined", joined_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", data.id);
+      let updates = { status: "joined", joined_at: (/* @__PURE__ */ new Date()).toISOString() };
+      if (isHost && data.role !== "host") {
+        updates.role = "host";
+        updates.admission_status = "admitted";
+      } else if (data.admission_status === "none" && data.role !== "host") {
+        updates.admission_status = "waiting";
+      }
+      const { data: updatedParticipant } = await getSupabase().from("meeting_participants").update(updates).eq("id", data.id).select().single();
+      return updatedParticipant;
     }
+  }
+  static async inviteUser(meetingId, userId, hostId) {
+    const { data, error } = await getSupabase().from("meeting_invitations").insert({
+      meeting_id: meetingId,
+      user_id: userId,
+      invited_by: hostId
+    }).select().single();
+    if (error) throw error;
+    return data;
+  }
+  static async updateInvitationStatus(meetingId, userId, status) {
+    const { data, error } = await getSupabase().from("meeting_invitations").update({ status, accepted_at: status === "accepted" ? (/* @__PURE__ */ new Date()).toISOString() : null }).eq("meeting_id", meetingId).eq("user_id", userId).select().single();
+    if (error) throw error;
+    await getSupabase().from("meeting_participants").update({ status }).eq("meeting_id", meetingId).eq("user_id", userId);
+    return data;
+  }
+  static getSupabase() {
+    return getSupabase();
+  }
+  static async getInvitation(meetingId, userId) {
+    const { data, error } = await getSupabase().from("meeting_invitations").select("*").eq("meeting_id", meetingId).eq("user_id", userId).maybeSingle();
+    if (error) throw error;
+    return data;
   }
 };
 
 // server/meetings/livekit.service.ts
-import { AccessToken } from "livekit-server-sdk";
-import { WebhookReceiver } from "livekit-server-sdk";
+import { AccessToken, RoomServiceClient, WebhookReceiver, EgressClient, EncodedFileOutput, EncodedFileType } from "livekit-server-sdk";
 var LiveKitService = class {
-  static generateToken(roomName, participantId, participantName, permissions) {
-    const at = new AccessToken(process.env.LIVEKIT_API_KEY, process.env.LIVEKIT_API_SECRET, {
+  static async generateToken(roomName, participantId, participantName, permissions) {
+    const apiKey = process.env.LIVEKIT_API_KEY || "APIUfGWSwruirn9";
+    const apiSecret = process.env.LIVEKIT_API_SECRET || "hXwn252Mdidn9iHVySlT9sktNe70Ihn39Kg7gUG9wTF";
+    if (!apiKey || !apiSecret) {
+      console.warn("LIVEKIT_API_KEY or LIVEKIT_API_SECRET is missing. Generating a dummy token.");
+      return "dummy_token_for_" + participantId;
+    }
+    const at = new AccessToken(apiKey, apiSecret, {
       identity: participantId,
       name: participantName
     });
@@ -1959,7 +2145,7 @@ var LiveKitService = class {
       canSubscribe: permissions.canSubscribe,
       canPublishData: permissions.canPublishData
     });
-    return at.toJwt();
+    return await at.toJwt();
   }
   static async verifyWebhook(body, authHeader) {
     const receiver = new WebhookReceiver(
@@ -1968,6 +2154,52 @@ var LiveKitService = class {
     );
     const event = receiver.receive(body, authHeader);
     return event;
+  }
+  static async endRoom(roomName) {
+    const apiKey = process.env.LIVEKIT_API_KEY || "APIUfGWSwruirn9";
+    const apiSecret = process.env.LIVEKIT_API_SECRET || "hXwn252Mdidn9iHVySlT9sktNe70Ihn39Kg7gUG9wTF";
+    const wsUrl = process.env.LIVEKIT_URL || "https://coreflow-eo6z5wme.livekit.cloud";
+    if (!apiKey || !apiSecret) {
+      console.warn("LIVEKIT_API_KEY or secret missing, cannot end room.");
+      return;
+    }
+    const roomService = new RoomServiceClient(wsUrl, apiKey, apiSecret);
+    try {
+      await roomService.deleteRoom(roomName);
+      console.log(`Successfully ended LiveKit room: ${roomName}`);
+    } catch (e) {
+      console.warn(`Could not end LiveKit room ${roomName}:`, e.message);
+    }
+  }
+  static async startRecording(roomName) {
+    const apiKey = process.env.LIVEKIT_API_KEY || "APIUfGWSwruirn9";
+    const apiSecret = process.env.LIVEKIT_API_SECRET || "hXwn252Mdidn9iHVySlT9sktNe70Ihn39Kg7gUG9wTF";
+    const wsUrl = process.env.LIVEKIT_URL || "https://coreflow-eo6z5wme.livekit.cloud";
+    if (!apiKey || !apiSecret) {
+      throw new Error("LIVEKIT_API_KEY or secret missing, cannot start egress.");
+    }
+    const egressClient = new EgressClient(wsUrl, apiKey, apiSecret);
+    const fileOutput = new EncodedFileOutput({
+      fileType: EncodedFileType.MP4,
+      filepath: `recordings/${roomName}-${Date.now()}.mp4`
+    });
+    const egressInfo = await egressClient.startRoomCompositeEgress(
+      roomName,
+      {
+        file: fileOutput
+      },
+      {
+        layout: "grid"
+      }
+    );
+    return egressInfo.egressId;
+  }
+  static async stopRecording(egressId) {
+    const apiKey = process.env.LIVEKIT_API_KEY || "APIUfGWSwruirn9";
+    const apiSecret = process.env.LIVEKIT_API_SECRET || "hXwn252Mdidn9iHVySlT9sktNe70Ihn39Kg7gUG9wTF";
+    const wsUrl = process.env.LIVEKIT_URL || "https://coreflow-eo6z5wme.livekit.cloud";
+    const egressClient = new EgressClient(wsUrl, apiKey, apiSecret);
+    await egressClient.stopEgress(egressId);
   }
 };
 
@@ -2013,8 +2245,35 @@ var MeetingsController = class {
       const { id } = req.params;
       const meeting = await MeetingsService.getMeetingById(id);
       if (!meeting) return res.status(404).json({ error: "Meeting not found" });
+      if (meeting.status !== "scheduled" && meeting.status !== "active") {
+        return res.status(403).json({ error: "Meeting is not available to join" });
+      }
+      const isHost = meeting.host_id === user.id;
+      if (!isHost) {
+        const invitation = await MeetingsService.getInvitation(meeting.id, user.id);
+        if (!invitation) {
+          return res.status(403).json({ error: "You are not invited to this meeting" });
+        }
+        if (invitation.status !== "accepted") {
+          return res.status(403).json({ error: "You must accept the invitation before joining" });
+        }
+        if (meeting.is_locked) {
+          return res.status(403).json({ error: "Meeting is locked" });
+        }
+      }
+      if (!isHost) {
+        const { data: hostParticipant } = await MeetingsService.getSupabase().from("meeting_participants").select("admission_status, status").eq("meeting_id", meeting.id).eq("user_id", meeting.host_id).eq("status", "joined").maybeSingle();
+        if (!hostParticipant || hostParticipant.admission_status !== "admitted") {
+          await MeetingsService.trackParticipant(meeting.id, user.id, meeting.host_id);
+          return res.status(400).json({ error: "waiting_room", details: "Waiting for the host to join the meeting" });
+        }
+      }
+      const participant = await MeetingsService.trackParticipant(meeting.id, user.id, meeting.host_id);
+      if (!isHost && participant && participant.admission_status === "waiting") {
+        return res.status(400).json({ error: "waiting_room", details: "Waiting for host approval to enter the room" });
+      }
       const participantName = user.user_metadata?.full_name || user.email;
-      const token = LiveKitService.generateToken(
+      const token = await LiveKitService.generateToken(
         meeting.room_name,
         user.id,
         participantName,
@@ -2024,17 +2283,144 @@ var MeetingsController = class {
           canPublishData: true
         }
       );
-      await MeetingsService.trackParticipant(meeting.id, user.id);
-      res.json({ token, roomUrl: process.env.LIVEKIT_API_URL });
+      res.json({ token, roomUrl: process.env.LIVEKIT_URL || "wss://coreflow-eo6z5wme.livekit.cloud" });
     } catch (error) {
       console.error("Error joining meeting:", error);
-      res.status(500).json({ error: "Failed to join meeting" });
+      res.status(500).json({ error: "Failed to join meeting", details: error?.message || String(error) });
+    }
+  }
+  static async inviteUser(req, res) {
+    try {
+      const { user } = req;
+      const { id } = req.params;
+      const { userId } = req.body;
+      const meeting = await MeetingsService.getMeetingById(id);
+      if (!meeting) return res.status(404).json({ error: "Meeting not found" });
+      if (meeting.host_id !== user.id) {
+        return res.status(403).json({ error: "Only the host can invite users" });
+      }
+      const invitation = await MeetingsService.inviteUser(meeting.id, userId, user.id);
+      res.status(201).json({ invitation });
+    } catch (error) {
+      console.error("Error inviting user:", error);
+      res.status(500).json({ error: "Failed to invite user" });
+    }
+  }
+  static async acceptInvitation(req, res) {
+    try {
+      const { user } = req;
+      const { id } = req.params;
+      const invitation = await MeetingsService.updateInvitationStatus(id, user.id, "accepted");
+      res.json({ invitation });
+    } catch (error) {
+      console.error("Error accepting invitation:", error);
+      res.status(500).json({ error: "Failed to accept invitation" });
+    }
+  }
+  static async declineInvitation(req, res) {
+    try {
+      const { user } = req;
+      const { id } = req.params;
+      const invitation = await MeetingsService.updateInvitationStatus(id, user.id, "declined");
+      res.json({ invitation });
+    } catch (error) {
+      console.error("Error declining invitation:", error);
+      res.status(500).json({ error: "Failed to decline invitation" });
+    }
+  }
+  static async startRecording(req, res) {
+    try {
+      const { user } = req;
+      const { id } = req.params;
+      const meeting = await MeetingsService.getMeetingById(id);
+      if (!meeting) return res.status(404).json({ error: "Meeting not found" });
+      if (meeting.host_id !== user.id) {
+        return res.status(403).json({ error: "Only the host can record meetings" });
+      }
+      const egressId = await LiveKitService.startRecording(meeting.room_name);
+      res.json({ egressId, message: "Recording started" });
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      res.status(500).json({ error: "Failed to start recording", details: error.message });
+    }
+  }
+  static async stopRecording(req, res) {
+    try {
+      const { user } = req;
+      const { id } = req.params;
+      const { egressId } = req.body;
+      const meeting = await MeetingsService.getMeetingById(id);
+      if (!meeting) return res.status(404).json({ error: "Meeting not found" });
+      if (meeting.host_id !== user.id) {
+        return res.status(403).json({ error: "Only the host can stop recordings" });
+      }
+      await LiveKitService.stopRecording(egressId);
+      res.json({ message: "Recording stopped" });
+    } catch (error) {
+      console.error("Error stopping recording:", error);
+      res.status(500).json({ error: "Failed to stop recording", details: error.message });
+    }
+  }
+  static async getNotes(req, res) {
+    try {
+      const { id } = req.params;
+      const { data, error } = await MeetingsService.getSupabase().from("meeting_notes").select("*").eq("meeting_id", id).maybeSingle();
+      if (error && error.code !== "PGRST116") {
+        throw error;
+      }
+      res.json({ notes: data || { content: "" } });
+    } catch (error) {
+      console.error("Error fetching notes:", error);
+      res.status(500).json({ error: "Failed to fetch notes" });
+    }
+  }
+  static async saveNotes(req, res) {
+    try {
+      const { user } = req;
+      const { id } = req.params;
+      const { content } = req.body;
+      const { data, error } = await MeetingsService.getSupabase().from("meeting_notes").upsert(
+        {
+          meeting_id: id,
+          content,
+          updated_by: user.id,
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        },
+        { onConflict: "meeting_id" }
+      ).select().single();
+      if (error) throw error;
+      res.json({ notes: data });
+    } catch (error) {
+      console.error("Error saving notes:", error);
+      res.status(500).json({ error: "Failed to save notes" });
     }
   }
   static async liveKitWebhook(req, res) {
     try {
       const event = await LiveKitService.verifyWebhook(req.body, req.headers.authorization);
       console.log("Received LiveKit event:", event);
+      if (event.event === "egress_ended") {
+        const egressInfo = event.egressInfo;
+        const roomName = egressInfo?.roomName;
+        const fileUrl = egressInfo?.fileResults?.[0]?.location || egressInfo?.file?.location;
+        const durationSeconds = egressInfo?.updatedAt && egressInfo?.startedAt ? Math.floor((Number(egressInfo.updatedAt) - Number(egressInfo.startedAt)) / 1e9) : 0;
+        if (roomName && fileUrl) {
+          const { data: meeting } = await MeetingsService.getSupabase().from("meetings").select("id").eq("room_name", roomName).maybeSingle();
+          if (meeting) {
+            await MeetingsService.getSupabase().from("meeting_recordings").insert({
+              meeting_id: meeting.id,
+              file_url: fileUrl,
+              duration: durationSeconds,
+              resolution: "720p",
+              file_size: egressInfo?.fileResults?.[0]?.size || egressInfo?.file?.size || 0,
+              recording_status: "completed",
+              started_at: egressInfo?.startedAt ? new Date(Number(egressInfo.startedAt) / 1e6).toISOString() : (/* @__PURE__ */ new Date()).toISOString(),
+              finished_at: (/* @__PURE__ */ new Date()).toISOString()
+            });
+            console.log(`Saved recording for room ${roomName} to Supabase.`);
+          }
+        }
+      }
       res.status(200).send();
     } catch (error) {
       console.error("LiveKit Webhook error:", error);
@@ -2044,10 +2430,21 @@ var MeetingsController = class {
 };
 
 // server/meetings/meetings.routes.ts
+import { createClient as createClient5 } from "@supabase/supabase-js";
 var router2 = Router();
+var supabaseUrl3 = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || "";
+var supabaseAnonKey3 = process.env.SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
+var supabase2 = createClient5(supabaseUrl3, supabaseAnonKey3);
 var requireAuth = async (req, res, next) => {
   try {
-    const user = await sdk.authenticateRequest(req);
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    let token;
+    if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+      token = authHeader.slice("Bearer ".length).trim();
+    }
+    if (!token) throw new Error("No token provided");
+    const { data: { user }, error } = await supabase2.auth.getUser(token);
+    if (error || !user) throw new Error("Invalid token");
     req.user = user;
     next();
   } catch (error) {
@@ -2057,11 +2454,69 @@ var requireAuth = async (req, res, next) => {
 router2.post("/", requireAuth, MeetingsController.createMeeting);
 router2.get("/:id", requireAuth, MeetingsController.getMeetingDetails);
 router2.post("/:id/join", requireAuth, MeetingsController.joinMeeting);
+router2.post("/:id/invite", requireAuth, MeetingsController.inviteUser);
+router2.post("/:id/invitations/accept", requireAuth, MeetingsController.acceptInvitation);
+router2.post("/:id/invitations/decline", requireAuth, MeetingsController.declineInvitation);
+router2.post("/:id/record/start", requireAuth, MeetingsController.startRecording);
+router2.post("/:id/record/stop", requireAuth, MeetingsController.stopRecording);
+router2.get("/:id/notes", requireAuth, MeetingsController.getNotes);
+router2.post("/:id/notes", requireAuth, MeetingsController.saveNotes);
 router2.post("/webhook/livekit", MeetingsController.liveKitWebhook);
 var meetings_routes_default = router2;
 
+// server/_core/cron.ts
+import { createClient as createClient6 } from "@supabase/supabase-js";
+var supabaseClient3 = null;
+function getSupabase2() {
+  if (!supabaseClient3) {
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for cron");
+    supabaseClient3 = createClient6(
+      process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+  }
+  return supabaseClient3;
+}
+function startCronJobs() {
+  console.log("[Cron] Starting background jobs...");
+  setInterval(async () => {
+    try {
+      const supabase3 = getSupabase2();
+      const now = (/* @__PURE__ */ new Date()).toISOString();
+      const { data: expiredMeetings, error } = await supabase3.from("meetings").select("id, room_name").lt("end_time", now).in("status", ["scheduled", "active"]);
+      if (error) {
+        console.error("[Cron] Error fetching expired meetings:", error);
+        return;
+      }
+      if (!expiredMeetings || expiredMeetings.length === 0) {
+        return;
+      }
+      for (const meeting of expiredMeetings) {
+        const { error: updateError } = await supabase3.from("meetings").update({
+          status: "completed",
+          ended_at: now
+        }).eq("id", meeting.id);
+        if (updateError) {
+          console.error(`[Cron] Failed to complete meeting ${meeting.id}:`, updateError);
+          continue;
+        }
+        console.log(`[Cron] Automatically completed expired meeting: ${meeting.id}`);
+        await supabase3.channel(`meeting-${meeting.id}`).send({
+          type: "broadcast",
+          event: "meeting_completed",
+          payload: { meetingId: meeting.id }
+        });
+        await LiveKitService.endRoom(meeting.room_name);
+      }
+    } catch (err) {
+      console.error("[Cron] Unexpected error in meeting expiration job:", err);
+    }
+  }, 60 * 1e3);
+}
+
 // server/_core/app.ts
 function createExpressApp() {
+  startCronJobs();
   if (!process.env.JWT_SECRET && process.env.SUPABASE_JWT_SECRET) {
     process.env.JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
   }
@@ -2124,7 +2579,7 @@ function createExpressApp() {
       return;
     }
     const { dispatchFCMPush: dispatchFCMPush2 } = (init_notification(), __toCommonJS(notification_exports));
-    dispatchFCMPush2({
+    await dispatchFCMPush2({
       id,
       userId: user_id,
       title,

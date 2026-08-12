@@ -1,8 +1,8 @@
 import React, { useEffect, useState, useMemo, useRef, memo } from 'react';
 import { View, Text, Pressable, ActivityIndicator, FlatList, Dimensions, Platform, Alert, TextInput, Modal, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useParticipant, useParticipants } from '@livekit/react-native';
-import { Track, ExternalE2EEKeyProvider, RoomOptions, VideoPresets, RoomEvent, RemoteTrackPublication } from 'livekit-client';
+import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useParticipant, useParticipants, AudioSession, RNKeyProvider } from '@livekit/react-native';
+import { Track, ExternalE2EEKeyProvider, RoomOptions, VideoPresets, RoomEvent, RemoteTrackPublication, ConnectionState } from 'livekit-client';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Users, MessageSquare, MoreHorizontal, FileText, X, Send, Play } from 'lucide-react-native';
 import { Camera } from 'expo-camera';
 import { BlurView } from 'expo-blur';
@@ -16,14 +16,24 @@ import ReactNativeForegroundService from '@supersami/rn-foreground-service';
 const { width } = Dimensions.get('window');
 
 const getLiveKitToken = async (roomId: string, token: string) => {
-  const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+  const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
   const res = await fetch(`${baseUrl}/api/meetings/${roomId}/join`, {
     method: 'POST',
     headers: {
+      'Content-Type': 'application/json',
       Authorization: `Bearer ${token}`
     }
   });
-  const data = await res.json();
+
+  const contentType = res.headers.get("content-type");
+  let data: any = {};
+  if (contentType && contentType.includes("application/json")) {
+    data = await res.json();
+  } else {
+    const text = await res.text();
+    throw new Error(`Server returned HTML/Text instead of JSON: ${text.slice(0, 100)}`);
+  }
+
   if (!res.ok) {
     if (data.error === 'waiting_room') {
       throw { type: 'waiting_room' };
@@ -34,6 +44,7 @@ const getLiveKitToken = async (roomId: string, token: string) => {
 };
 
 export default function MeetingRoomScreen() {
+  const router = useRouter();
   const { id, camera, mic } = useLocalSearchParams();
   const { session } = useAuth();
   const [token, setToken] = useState<string | null>(null);
@@ -45,17 +56,15 @@ export default function MeetingRoomScreen() {
   // Synchronized Enterprise LiveKit Room Configuration (Matching Web)
   const roomOptions: RoomOptions = useMemo(
     () => ({
-      adaptiveStream: {
-        pixelDensity: 'screen',
-      },
-      dynacast: true,
+      adaptiveStream: true, // Enable automatic video tile resolution scaling based on view size
+      dynacast: true,       // Pause stream layers that are not active/visible to others
       audioCaptureDefaults: {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
       },
       videoCaptureDefaults: {
-        resolution: VideoPresets.h720.resolution,
+        resolution: VideoPresets.h1080.resolution,
       },
       publishDefaults: {
         screenShareEncoding: {
@@ -64,16 +73,18 @@ export default function MeetingRoomScreen() {
         },
         screenShareSimulcastLayers: [], // Single 1080p @ 30 FPS layer (no low-res downscaling)
         videoEncoding: {
-          maxBitrate: 1_500_000,
-          maxFramerate: 30,
+          maxBitrate: 2_500_000, // Reduced slightly to avoid saturating upload bandwidth
+          maxFramerate: 24,      // 24fps delivers cinema-smooth video without heavy network packet delays
         },
         videoSimulcastLayers: [
+          VideoPresets.h1080,
           VideoPresets.h720,
           VideoPresets.h360,
-          VideoPresets.h180,
         ],
         dtx: true,
+        backupCodec: true, // Enable fallback codecs if primary has high latency
       },
+      latency: false,
       ...(e2eeOptions || {}),
     }),
     [e2eeOptions]
@@ -110,6 +121,34 @@ export default function MeetingRoomScreen() {
     async function connect() {
       if (!session?.access_token) return;
       try {
+        // Configure native audio session routing to default to loudspeaker output on mobile
+        try {
+          await AudioSession.configureAudio({
+            android: {
+              // 'speaker' first means Android picks loudspeaker when no headphones plugged in
+              preferredOutputList: ['speaker', 'bluetooth', 'headset', 'earpiece'],
+              audioTypeOptions: {
+                manageAudioFocus: true,
+                // Use 'normal' mode (NOT 'inCommunication') — inCommunication forces earpiece
+                audioMode: 'normal',
+                audioFocusMode: 'gain',
+                // Use 'music' stream so Android routes through media speaker, not call earpiece
+                audioStreamType: 'music',
+                audioAttributesUsageType: 'media',
+                audioAttributesContentType: 'speech',
+                // Force audio routing even if mode restriction applies on some devices
+                forceHandleAudioRouting: true,
+              }
+            },
+            ios: {
+              defaultOutput: 'speaker'
+            }
+          });
+        } catch (audioErr) {
+          console.warn('AudioSession configuration warning:', audioErr);
+        }
+        
+        // Fetch and set up native-bound E2EE encryption key matching the web
         const { data: keyData, error: keyError } = await supabase
           .from('meeting_keys')
           .select('encrypted_key')
@@ -122,14 +161,15 @@ export default function MeetingRoomScreen() {
             const myPubKey = await initializeUserKeys(session.user.id);
             const decryptedKeyStr = await decryptKeyWithSender(keyData.encrypted_key, myPubKey);
 
-            const keyProvider = new ExternalE2EEKeyProvider();
-            await keyProvider.setKey(decryptedKeyStr);
+            // RNKeyProvider is the React Native native-bound counterpart of ExternalE2EEKeyProvider
+            const keyProvider = new RNKeyProvider({ sharedKey: true });
+            await keyProvider.setSharedKey(decryptedKeyStr);
 
             if (isMounted) {
               setE2eeOptions({
                 e2ee: {
                   keyProvider,
-                  worker: undefined as any,
+                  worker: undefined as any, // Not used by native RNKeyProvider, but typed
                 },
               });
             }
@@ -213,8 +253,16 @@ export default function MeetingRoomScreen() {
       token={token}
       connect={true}
       audio={mic === '1' ? { autoGainControl: true, echoCancellation: true, noiseSuppression: true } : false}
-      video={camera === '1' ? { resolution: VideoPresets.h720 } : false}
+      video={camera === '1' ? { resolution: VideoPresets.h1080 } : false}
       options={roomOptions}
+      onError={(error) => {
+        console.error('[LiveKitRoom] Connection error:', error);
+        Alert.alert(
+          'Connection Failed',
+          error?.message || 'Could not connect to the meeting room. Please check your internet connection and try again.',
+          [{ text: 'OK', onPress: () => router.replace('/meetings' as any) }]
+        );
+      }}
     >
       <MeetingUI />
     </LiveKitRoom>
@@ -235,6 +283,38 @@ function MeetingUI() {
   const [chatInput, setChatInput] = useState('');
   const [messages, setMessages] = useState<{ id: string, text: string, sender: string, time: string, isSelf: boolean }[]>([]);
 
+  // ── Guard: show spinner while LiveKit is still connecting ────────────────
+  // Without this, the UI renders as a black screen during the WebSocket handshake
+  if (room.state === ConnectionState.Connecting || room.state === ConnectionState.Reconnecting) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#09090B', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={{ color: '#A1A1AA', marginTop: 16, fontSize: 15 }}>
+          {room.state === ConnectionState.Reconnecting ? 'Reconnecting…' : 'Connecting to room…'}
+        </Text>
+      </View>
+    );
+  }
+
+  if (room.state === ConnectionState.Disconnected) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#09090B', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+        <Text style={{ color: '#EF4444', fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>Disconnected</Text>
+        <Text style={{ color: '#A1A1AA', fontSize: 14, textAlign: 'center', marginBottom: 24 }}>
+          Lost connection to the meeting room.
+        </Text>
+        <Pressable
+          onPress={() => router.replace('/meetings' as any)}
+          style={{ backgroundColor: '#2563EB', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Back to Meetings</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+
+
   // Detect active presenter
   const presenter = participants.find((p: any) => p.isScreenShareEnabled);
   const screenSharePub = presenter?.getTrackPublication(Track.Source.ScreenShare);
@@ -245,8 +325,26 @@ function MeetingUI() {
       if (typeof pubAny.setPriority === 'function') {
         pubAny.setPriority('high');
       }
+      if (typeof pubAny.setSubscribed === 'function') {
+        pubAny.setSubscribed(true);
+      }
     }
   }, [presenter, screenSharePub]);
+
+  // Automatically force loudspeaker output routing when room connection completes
+  useEffect(() => {
+    async function selectSpeaker() {
+      try {
+        const outputs = await AudioSession.getAudioOutputs();
+        if (outputs.includes('speaker')) {
+          await AudioSession.selectAudioOutput('speaker');
+        }
+      } catch (err) {
+        console.warn('Loudspeaker routing force failed:', err);
+      }
+    }
+    selectSpeaker();
+  }, []);
 
   useEffect(() => {
     const handleData = (payload: Uint8Array, participant?: any) => {
@@ -411,10 +509,17 @@ function MeetingUI() {
   };
 
   useEffect(() => {
+    // Start the foreground service with camera + microphone type declared.
+    // On Android 14+, the OS requires the service to declare these types at start-time
+    // Camera + microphone foreground service types are declared in AndroidManifest
+    // via withLiveKitForegroundService.js plugin (camera|microphone|mediaProjection).
+    // That manifest declaration is what tells Android to allow continued camera capture
+    // while backgrounded — no runtime JS property is needed here.
     ReactNativeForegroundService.start({
       id: 144,
       title: "Meeting Active",
-      message: "You are sharing media in a meeting",
+      message: "Camera & microphone active — streaming in background",
+      importance: 'high',
     });
 
     return () => {
@@ -488,9 +593,10 @@ function MeetingUI() {
                     trackRef={{
                       participant: presenter as any,
                       publication: screenSharePub as any,
-                      source: Track.Source.ScreenShare,
+                      source: Track.Source.ScreenShare
                     }}
                     style={{ width: '100%', height: '100%' }}
+                    objectFit="contain"
                   />
                   <View className="absolute top-3 left-3 bg-black/70 px-3 py-1.5 rounded-full border border-white/10 flex-row items-center gap-2">
                     <MonitorUp size={14} color="#3B82F6" />
@@ -503,7 +609,7 @@ function MeetingUI() {
             {/* Horizontal Filmstrip for Camera Feeds */}
             <View className="h-28">
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 4 }}>
-                {participants.map((participant: any) => (
+                {[localParticipant, ...participants].filter(Boolean).map((participant: any) => (
                   <View key={participant.identity} className="w-36 h-28">
                     <ParticipantTile participant={participant} />
                   </View>
@@ -513,22 +619,25 @@ function MeetingUI() {
           </View>
         ) : (
           /* ── Camera Grid Mode ── */
-          participants.length === 0 ? (
-            <View className="flex-1 justify-center items-center">
-              <View className="w-24 h-24 rounded-full bg-[#18181B] items-center justify-center mb-4 border border-white/5">
-                <Users size={32} color="#A1A1AA" />
-              </View>
-              <Text className="text-[#A1A1AA] text-base">Waiting for others to join...</Text>
-            </View>
-          ) : (
-            <View className="flex-1 flex-row flex-wrap justify-between content-start gap-y-2">
-              {participants.map((participant: any) => (
-                <View key={participant.identity} style={getGridStyle(participants.length)}>
-                  <ParticipantTile participant={participant} />
+          (() => {
+            const allParticipants = [localParticipant, ...participants].filter(Boolean);
+            return allParticipants.length === 0 ? (
+              <View className="flex-1 justify-center items-center">
+                <View className="w-24 h-24 rounded-full bg-[#18181B] items-center justify-center mb-4 border border-white/5">
+                  <Users size={32} color="#A1A1AA" />
                 </View>
-              ))}
-            </View>
-          )
+                <Text className="text-[#A1A1AA] text-base">Waiting for others to join...</Text>
+              </View>
+            ) : (
+              <View className="flex-1 flex-row flex-wrap justify-between content-start gap-y-2">
+                {allParticipants.map((participant: any) => (
+                  <View key={participant.identity} style={getGridStyle(allParticipants.length)}>
+                    <ParticipantTile participant={participant} />
+                  </View>
+                ))}
+              </View>
+            );
+          })()
         )}
       </View>
 

@@ -55,10 +55,7 @@ export class MeetingsController {
         return res.status(403).json({ error: 'Meeting is not available to join' });
       }
 
-      // Check if meeting has ended
-      if (meeting.end_time && new Date(meeting.end_time) < new Date()) {
-        return res.status(410).json({ error: 'This meeting has already ended' });
-      }
+      // Check if meeting has ended - REMOVED: allow joining after end time (like Google Meet)
 
       const isHost = meeting.host_id === user.id;
 
@@ -77,8 +74,31 @@ export class MeetingsController {
         }
       }
 
+      // If caller is not the host, ensure the host has already joined the meeting.
+      // If the host is not active, return a 400 'waiting_room' response so they wait.
+      if (!isHost) {
+        const { data: hostParticipant } = await (MeetingsService as any).getSupabase()
+          .from('meeting_participants')
+          .select('admission_status, status')
+          .eq('meeting_id', meeting.id)
+          .eq('user_id', meeting.host_id)
+          .eq('status', 'joined')
+          .maybeSingle();
+
+        if (!hostParticipant || hostParticipant.admission_status !== 'admitted') {
+          // Put attendee in 'waiting' state in meeting_participants
+          await MeetingsService.trackParticipant(meeting.id, user.id, meeting.host_id);
+          return res.status(400).json({ error: 'waiting_room', details: 'Waiting for the host to join the meeting' });
+        }
+      }
+
       // Track participant
-      await MeetingsService.trackParticipant(meeting.id, user.id, meeting.host_id);
+      const participant = await MeetingsService.trackParticipant(meeting.id, user.id, meeting.host_id);
+      
+      // If the participant's admission_status is still 'waiting', return a 400 'waiting_room' response
+      if (!isHost && participant && participant.admission_status === 'waiting') {
+        return res.status(400).json({ error: 'waiting_room', details: 'Waiting for host approval to enter the room' });
+      }
 
       const participantName = user.user_metadata?.full_name || user.email;
 
@@ -148,6 +168,98 @@ export class MeetingsController {
     }
   }
 
+  static async startRecording(req: Request, res: Response) {
+    try {
+      const { user } = req as any;
+      const { id } = req.params;
+      
+      const meeting = await (MeetingsService.getMeetingById(id) as any);
+      if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
+      
+      if (meeting.host_id !== user.id) {
+        return res.status(403).json({ error: 'Only the host can record meetings' });
+      }
+
+      const egressId = await LiveKitService.startRecording(meeting.room_name);
+      
+      res.json({ egressId, message: 'Recording started' });
+    } catch (error: any) {
+      console.error('Error starting recording:', error);
+      res.status(500).json({ error: 'Failed to start recording', details: error.message });
+    }
+  }
+
+  static async stopRecording(req: Request, res: Response) {
+    try {
+      const { user } = req as any;
+      const { id } = req.params;
+      const { egressId } = req.body;
+      
+      const meeting = await (MeetingsService.getMeetingById(id) as any);
+      if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
+      
+      if (meeting.host_id !== user.id) {
+        return res.status(403).json({ error: 'Only the host can stop recordings' });
+      }
+
+      await LiveKitService.stopRecording(egressId);
+      
+      res.json({ message: 'Recording stopped' });
+    } catch (error: any) {
+      console.error('Error stopping recording:', error);
+      res.status(500).json({ error: 'Failed to stop recording', details: error.message });
+    }
+  }
+
+  static async getNotes(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      
+      const { data, error } = await MeetingsService.getSupabase()
+        .from('meeting_notes')
+        .select('*')
+        .eq('meeting_id', id)
+        .maybeSingle();
+
+      if (error && error.code !== 'PGRST116') {
+        throw error;
+      }
+
+      res.json({ notes: data || { content: '' } });
+    } catch (error: any) {
+      console.error('Error fetching notes:', error);
+      res.status(500).json({ error: 'Failed to fetch notes' });
+    }
+  }
+
+  static async saveNotes(req: Request, res: Response) {
+    try {
+      const { user } = req as any;
+      const { id } = req.params;
+      const { content } = req.body;
+
+      const { data, error } = await MeetingsService.getSupabase()
+        .from('meeting_notes')
+        .upsert(
+          {
+            meeting_id: id,
+            content,
+            updated_by: user.id,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'meeting_id' }
+        )
+        .select()
+        .single();
+
+      if (error) throw error;
+      res.json({ notes: data });
+    } catch (error: any) {
+      console.error('Error saving notes:', error);
+      res.status(500).json({ error: 'Failed to save notes' });
+    }
+  }
+
   static async liveKitWebhook(req: Request, res: Response) {
     try {
       // Receive webhooks from LiveKit to update DB events
@@ -155,6 +267,38 @@ export class MeetingsController {
       console.log('Received LiveKit event:', event);
       
       // We can handle event.event like 'participant_joined', 'participant_left', etc.
+      if (event.event === 'egress_ended') {
+        const egressInfo = event.egressInfo as any;
+        const roomName = egressInfo?.roomName;
+        const fileUrl = egressInfo?.fileResults?.[0]?.location || egressInfo?.file?.location;
+        const durationSeconds = (egressInfo?.updatedAt && egressInfo?.startedAt) 
+            ? Math.floor((Number(egressInfo.updatedAt) - Number(egressInfo.startedAt)) / 1000000000) 
+            : 0;
+
+        if (roomName && fileUrl) {
+          // Find the meeting by room_name
+          const { data: meeting } = await MeetingsService.getSupabase()
+            .from('meetings')
+            .select('id')
+            .eq('room_name', roomName)
+            .maybeSingle();
+
+          if (meeting) {
+            await MeetingsService.getSupabase().from('meeting_recordings').insert({
+              meeting_id: meeting.id,
+              file_url: fileUrl,
+              duration: durationSeconds,
+              resolution: '720p',
+              file_size: egressInfo?.fileResults?.[0]?.size || egressInfo?.file?.size || 0,
+              recording_status: 'completed',
+              started_at: egressInfo?.startedAt ? new Date(Number(egressInfo.startedAt) / 1000000).toISOString() : new Date().toISOString(),
+              finished_at: new Date().toISOString(),
+            });
+            console.log(`Saved recording for room ${roomName} to Supabase.`);
+          }
+        }
+      }
+      
       res.status(200).send();
     } catch (error: any) {
       console.error('LiveKit Webhook error:', error);

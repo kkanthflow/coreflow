@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
-import { useRoomContext } from '@livekit/components-react';
+import { useRoomContext, Chat } from '@livekit/components-react';
 import { StageView } from './StageView';
 import { MeetingControls } from './MeetingControls';
 import { DiagnosticsOverlay } from './DiagnosticsOverlay';
+import { supabase } from '../lib/supabase';
 
 interface MeetingLayoutProps {
   meetingId: string;
@@ -11,22 +12,59 @@ interface MeetingLayoutProps {
 export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
   const room = useRoomContext();
 
-  const [isNotesOpen, setIsNotesOpen] = useState(false);
+  const [activeDrawer, setActiveDrawer] = useState<'notes' | 'chat' | null>(null);
   const defaultNotesTemplate = `# Meeting Notes\n\n**Agenda:**\n- \n\n**Decisions:**\n- \n\n**Action Items:**\n- `;
-  const [notesText, setNotesText] = useState(() => {
-    const saved = localStorage.getItem(`meeting_notes_${meetingId}`);
-    return saved || defaultNotesTemplate;
-  });
+  const [notesText, setNotesText] = useState(defaultNotesTemplate);
+  const [egressId, setEgressId] = useState<string | null>(null);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const recordingStartTime = useRef<number | null>(null);
 
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const apiUrl = import.meta.env.VITE_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
+
+  // Fetch initial notes
+  useEffect(() => {
+    const fetchNotes = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        const res = await fetch(`${apiUrl}/api/meetings/${meetingId}/notes`, {
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.notes?.content) {
+            setNotesText(data.notes.content);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to fetch notes:', e);
+      }
+    };
+    fetchNotes();
+  }, [meetingId]);
 
   const handleNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setNotesText(val);
     
     if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    saveTimeout.current = setTimeout(() => {
-      localStorage.setItem(`meeting_notes_${meetingId}`, val);
+    saveTimeout.current = setTimeout(async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+        await fetch(`${apiUrl}/api/meetings/${meetingId}/notes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ content: val })
+        });
+      } catch (e) {
+        console.error('Failed to save notes:', e);
+      }
     }, 1000);
   };
 
@@ -49,6 +87,52 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
     } else {
       await navigator.clipboard.writeText(url);
       alert('Meeting link copied to clipboard!');
+    }
+  };
+
+  const handleToggleRecord = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      if (isRecording && egressId) {
+        // Stop recording
+        setIsRecording(false);
+        await fetch(`${apiUrl}/api/meetings/${meetingId}/record/stop`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ egressId })
+        });
+        setEgressId(null);
+        recordingStartTime.current = null;
+      } else {
+        // Start recording
+        setIsRecording(true);
+        recordingStartTime.current = Date.now();
+        const res = await fetch(`${apiUrl}/api/meetings/${meetingId}/record/start`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`
+          }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setEgressId(data.egressId);
+        } else {
+          // Fallback if egress fails (e.g. not host)
+          setIsRecording(false);
+          recordingStartTime.current = null;
+          alert('Failed to start recording. Make sure you are the host.');
+        }
+      }
+    } catch (err) {
+      console.error('Recording error:', err);
+      setIsRecording(false);
+      setEgressId(null);
     }
   };
 
@@ -84,12 +168,12 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
       {/* Main Content Area */}
       <div className="flex-1 flex w-full h-full min-h-0 relative overflow-hidden">
         {/* Stage View */}
-        <div className={`flex-1 h-full transition-all duration-300 ${isNotesOpen ? 'mr-[360px]' : ''}`}>
+        <div className={`flex-1 h-full transition-all duration-300 ${activeDrawer ? 'mr-[360px]' : ''}`}>
           <StageView />
         </div>
 
         {/* Notes Side Drawer */}
-        {isNotesOpen && (
+        {activeDrawer === 'notes' && (
           <div className="w-[360px] h-full bg-[#121214] border-l border-white/10 flex flex-col absolute right-0 top-0 bottom-0 z-40 shadow-2xl animate-in slide-in-from-right duration-200">
             <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#18181b]">
               <h3 className="text-white font-bold text-base flex items-center gap-2">
@@ -100,8 +184,9 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
                 Meeting Notes
               </h3>
               <button
-                onClick={() => setIsNotesOpen(false)}
+                onClick={() => setActiveDrawer(null)}
                 className="text-gray-400 hover:text-white p-1 rounded-lg transition-colors"
+
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"/>
@@ -117,6 +202,32 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
             />
           </div>
         )}
+
+        {/* Chat Side Drawer */}
+        {activeDrawer === 'chat' && (
+          <div className="w-[360px] h-full bg-[#121214] border-l border-white/10 flex flex-col absolute right-0 top-0 bottom-0 z-40 shadow-2xl animate-in slide-in-from-right duration-200">
+            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#18181b]">
+              <h3 className="text-white font-bold text-base flex items-center gap-2">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                Meeting Chat
+              </h3>
+              <button
+                onClick={() => setActiveDrawer(null)}
+                className="text-gray-400 hover:text-white p-1 rounded-lg transition-colors"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div className="flex-1 overflow-hidden relative">
+              <Chat />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Diagnostics Overlay (WebRTC Telemetry) */}
@@ -124,8 +235,11 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
 
       {/* Control Bar at Bottom */}
       <MeetingControls
-        isNotesOpen={isNotesOpen}
-        onToggleNotes={() => setIsNotesOpen((v) => !v)}
+        activeDrawer={activeDrawer}
+        isRecording={isRecording}
+        onToggleNotes={() => setActiveDrawer(v => v === 'notes' ? null : 'notes')}
+        onToggleChat={() => setActiveDrawer(v => v === 'chat' ? null : 'chat')}
+        onToggleRecord={handleToggleRecord}
         onLeave={handleLeave}
       />
     </div>

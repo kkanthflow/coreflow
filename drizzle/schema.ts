@@ -10,7 +10,8 @@ export const roleEnum = pgEnum("role", [
   "placement_cell",
   "department_admin",
   "college_administrator",
-  "super_admin"
+  "super_admin",
+  "admin"
 ]);
 
 export const eventTypeEnum = pgEnum("event_type", ["workshop", "seminar", "hackathon", "cultural", "sports", "other"]);
@@ -24,8 +25,8 @@ export const lostFoundStatusEnum = pgEnum("lost_found_status", ["lost", "found",
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   openId: varchar("openId", { length: 64 }).notNull().unique(), // Auth provider ID
-  name: text("name").notNull(),
-  email: varchar("email", { length: 320 }).notNull().unique(),
+  name: text("name"), // nullable, may be set later
+  email: varchar("email", { length: 320 }).unique(), // nullable, may be set later
   role: roleEnum("role").default("student").notNull(),
   avatarUrl: text("avatarUrl"),
   bio: text("bio"),
@@ -35,6 +36,8 @@ export const users = pgTable("users", {
   githubUrl: text("githubUrl"),
   linkedinUrl: text("linkedinUrl"),
   portfolioUrl: text("portfolioUrl"),
+  loginMethod: varchar("loginMethod", { length: 100 }), // optional login method
+  lastSignedIn: timestamp("lastSignedIn"), // optional timestamp of last sign‑in
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().notNull(),
 });
