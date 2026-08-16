@@ -332,7 +332,8 @@ export default function LoginScreen() {
         } else if (data.lockTimeRemaining) {
           setError(`Too many login attempts. Locked for ${Math.ceil(data.lockTimeRemaining / 60)} minutes.`);
         } else {
-          setError(data.error || 'Sign in failed. Please try again.');
+          const errorMsg = typeof data.error === 'object' && data.error ? data.error.message : data.error;
+          setError(errorMsg || 'Sign in failed. Please try again.');
         }
         setLoading(false);
         return;
@@ -348,14 +349,17 @@ export default function LoginScreen() {
         return;
       }
 
-      // 4. Authenticate local Supabase client with returned proxy session
       if (data.session) {
         const { error: sessionError } = await supabase.auth.setSession(data.session);
         if (sessionError) throw sessionError;
 
         if (Platform.OS !== 'web') {
-          await SecureStore.setItemAsync('biometric_email', email);
-          await SecureStore.setItemAsync('biometric_password', password);
+          try {
+            await SecureStore.setItemAsync('biometric_email', email);
+            await SecureStore.setItemAsync('biometric_password', password);
+          } catch (e) {
+            console.warn('[Login] Failed to save biometric credentials (likely emulator or missing lock screen):', e);
+          }
         }
       } else {
         throw new Error('No session returned from security proxy.');

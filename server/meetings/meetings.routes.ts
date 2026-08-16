@@ -40,6 +40,9 @@ router.post('/:id/invite', requireAuth, MeetingsController.inviteUser);
 router.post('/:id/invitations/accept', requireAuth, MeetingsController.acceptInvitation);
 router.post('/:id/invitations/decline', requireAuth, MeetingsController.declineInvitation);
 
+router.post('/:id/end', requireAuth, MeetingsController.endMeeting);
+router.post('/:id/participants/:userId/admit', requireAuth, MeetingsController.admitParticipant);
+
 // Recording endpoints
 router.post('/:id/record/start', requireAuth, MeetingsController.startRecording);
 router.post('/:id/record/stop', requireAuth, MeetingsController.stopRecording);

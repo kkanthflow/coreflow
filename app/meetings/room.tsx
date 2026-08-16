@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useRef, memo } from 'react';
 import { View, Text, Pressable, ActivityIndicator, FlatList, Dimensions, Platform, Alert, TextInput, Modal, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useParticipant, useParticipants, AudioSession, RNKeyProvider } from '@livekit/react-native';
+import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useParticipant, useRemoteParticipants, AudioSession, RNKeyProvider } from '@livekit/react-native';
 import { Track, ExternalE2EEKeyProvider, RoomOptions, VideoPresets, RoomEvent, RemoteTrackPublication, ConnectionState } from 'livekit-client';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Users, MessageSquare, MoreHorizontal, FileText, X, Send, Play } from 'lucide-react-native';
 import { Camera } from 'expo-camera';
@@ -40,7 +40,7 @@ const getLiveKitToken = async (roomId: string, token: string) => {
     }
     throw new Error(data.details || data.error || 'Failed to fetch token from backend');
   }
-  return data.token;
+  return { token: data.token, roomUrl: data.roomUrl as string };
 };
 
 export default function MeetingRoomScreen() {
@@ -48,10 +48,10 @@ export default function MeetingRoomScreen() {
   const { id, camera, mic } = useLocalSearchParams();
   const { session } = useAuth();
   const [token, setToken] = useState<string | null>(null);
+  const [serverUrl, setServerUrl] = useState<string>('');
   const [e2eeOptions, setE2eeOptions] = useState<RoomOptions | undefined>(undefined);
   const [e2eeInitialized, setE2eeInitialized] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
-  const serverUrl = process.env.EXPO_PUBLIC_LIVEKIT_URL || 'wss://coreflow-eo6z5wme.livekit.cloud';
 
   // Synchronized Enterprise LiveKit Room Configuration (Matching Web)
   const roomOptions: RoomOptions = useMemo(
@@ -125,18 +125,14 @@ export default function MeetingRoomScreen() {
         try {
           await AudioSession.configureAudio({
             android: {
-              // 'speaker' first means Android picks loudspeaker when no headphones plugged in
               preferredOutputList: ['speaker', 'bluetooth', 'headset', 'earpiece'],
               audioTypeOptions: {
                 manageAudioFocus: true,
-                // Use 'normal' mode (NOT 'inCommunication') — inCommunication forces earpiece
                 audioMode: 'normal',
                 audioFocusMode: 'gain',
-                // Use 'music' stream so Android routes through media speaker, not call earpiece
                 audioStreamType: 'music',
                 audioAttributesUsageType: 'media',
                 audioAttributesContentType: 'speech',
-                // Force audio routing even if mode restriction applies on some devices
                 forceHandleAudioRouting: true,
               }
             },
@@ -147,7 +143,7 @@ export default function MeetingRoomScreen() {
         } catch (audioErr) {
           console.warn('AudioSession configuration warning:', audioErr);
         }
-        
+
         // Fetch and set up native-bound E2EE encryption key matching the web
         const { data: keyData, error: keyError } = await supabase
           .from('meeting_keys')
@@ -161,7 +157,6 @@ export default function MeetingRoomScreen() {
             const myPubKey = await initializeUserKeys(session.user.id);
             const decryptedKeyStr = await decryptKeyWithSender(keyData.encrypted_key, myPubKey);
 
-            // RNKeyProvider is the React Native native-bound counterpart of ExternalE2EEKeyProvider
             const keyProvider = new RNKeyProvider({ sharedKey: true });
             await keyProvider.setSharedKey(decryptedKeyStr);
 
@@ -179,10 +174,12 @@ export default function MeetingRoomScreen() {
         }
         if (isMounted) setE2eeInitialized(true);
 
-        const tk = await getLiveKitToken(id as string, session.access_token);
+        const result = await getLiveKitToken(id as string, session.access_token);
         if (isMounted) {
           setIsWaiting(false);
-          setToken(tk);
+          setToken(result.token);
+          const cleanUrl = result.roomUrl ? result.roomUrl.replace(/^["']|["']$/g, '') : '';
+          setServerUrl(cleanUrl);
         }
       } catch (e: any) {
         if (!isMounted) return;
@@ -238,7 +235,7 @@ export default function MeetingRoomScreen() {
     );
   }
 
-  if (!token || !e2eeInitialized) {
+  if (!token || !serverUrl || !e2eeInitialized) {
     return (
       <View className="flex-1 bg-[#09090B] justify-center items-center">
         <ActivityIndicator size="large" color="#2563EB" />
@@ -276,42 +273,13 @@ function MeetingUI() {
   const { localParticipant, isMicrophoneEnabled, isCameraEnabled, isScreenShareEnabled } = useLocalParticipant();
   const { session } = useAuth();
   const insets = useSafeAreaInsets();
-  const participants = useParticipants();
+  const participants = useRemoteParticipants();
 
   const [waitingUsers, setWaitingUsers] = useState<any[]>([]);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [messages, setMessages] = useState<{ id: string, text: string, sender: string, time: string, isSelf: boolean }[]>([]);
 
-  // ── Guard: show spinner while LiveKit is still connecting ────────────────
-  // Without this, the UI renders as a black screen during the WebSocket handshake
-  if (room.state === ConnectionState.Connecting || room.state === ConnectionState.Reconnecting) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#09090B', justifyContent: 'center', alignItems: 'center' }}>
-        <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={{ color: '#A1A1AA', marginTop: 16, fontSize: 15 }}>
-          {room.state === ConnectionState.Reconnecting ? 'Reconnecting…' : 'Connecting to room…'}
-        </Text>
-      </View>
-    );
-  }
-
-  if (room.state === ConnectionState.Disconnected) {
-    return (
-      <View style={{ flex: 1, backgroundColor: '#09090B', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
-        <Text style={{ color: '#EF4444', fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>Disconnected</Text>
-        <Text style={{ color: '#A1A1AA', fontSize: 14, textAlign: 'center', marginBottom: 24 }}>
-          Lost connection to the meeting room.
-        </Text>
-        <Pressable
-          onPress={() => router.replace('/meetings' as any)}
-          style={{ backgroundColor: '#2563EB', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 }}
-        >
-          <Text style={{ color: '#fff', fontWeight: '600' }}>Back to Meetings</Text>
-        </Pressable>
-      </View>
-    );
-  }
 
 
 
@@ -331,6 +299,7 @@ function MeetingUI() {
     }
   }, [presenter, screenSharePub]);
 
+  // Automatically force loudspeaker output routing when room connection completes
   // Automatically force loudspeaker output routing when room connection completes
   useEffect(() => {
     async function selectSpeaker() {
@@ -503,6 +472,7 @@ function MeetingUI() {
     if (error) Alert.alert('Error denying user', error.message);
   };
 
+  // Background service enabled to keep meeting active in background
   const handleLeave = () => {
     ReactNativeForegroundService.stopAll();
     router.replace('/meetings' as any);
@@ -533,6 +503,36 @@ function MeetingUI() {
     if (count === 3 || count === 4) return { width: '49%', height: '49%' };
     return { width: '48%', height: width * 0.6 };
   };
+
+  // ── Guard: show spinner while LiveKit is still connecting ────────────────
+  // Without this, the UI renders as a black screen during the WebSocket handshake
+  if (room.state === ConnectionState.Connecting || room.state === ConnectionState.Reconnecting) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#09090B', justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#2563EB" />
+        <Text style={{ color: '#A1A1AA', marginTop: 16, fontSize: 15 }}>
+          {room.state === ConnectionState.Reconnecting ? 'Reconnecting…' : 'Connecting to room…'}
+        </Text>
+      </View>
+    );
+  }
+
+  if (room.state === ConnectionState.Disconnected) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#09090B', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+        <Text style={{ color: '#EF4444', fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>Disconnected</Text>
+        <Text style={{ color: '#A1A1AA', fontSize: 14, textAlign: 'center', marginBottom: 24 }}>
+          Lost connection to the meeting room.
+        </Text>
+        <Pressable
+          onPress={handleLeave}
+          style={{ backgroundColor: '#2563EB', paddingHorizontal: 24, paddingVertical: 12, borderRadius: 24 }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '600' }}>Back to Meetings</Text>
+        </Pressable>
+      </View>
+    );
+  }
 
   return (
     <View className="flex-1 bg-[#09090B]">

@@ -18,8 +18,8 @@ export function MeetingsView() {
   // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
+  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [time, setTime] = useState(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
   const [duration, setDuration] = useState('30');
   
   // Attendees State
@@ -117,7 +117,12 @@ export function MeetingsView() {
 
     try {
       // 1. Create Meeting via API
-      const startDateTime = new Date(`${date}T${time}`).toISOString();
+      const startDateObj = new Date(`${date}T${time}`);
+      const endDateObj = new Date(startDateObj.getTime() + parseInt(duration, 10) * 60000);
+      
+      const startDateTime = startDateObj.toISOString();
+      const endDateTime = endDateObj.toISOString();
+      
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
       
       const res = await fetch(`${baseUrl}/api/meetings`, {
@@ -125,12 +130,13 @@ export function MeetingsView() {
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${session?.access_token}`,
+          'x-workspace-id': 'independent'
         },
         body: JSON.stringify({
           title,
           description,
           startTime: startDateTime,
-          duration: parseInt(duration, 10)
+          endTime: endDateTime
         })
       });
 

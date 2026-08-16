@@ -207,6 +207,8 @@ export default function PreJoinScreen() {
       const myPubKey = await initializeUserKeys(session.user.id);
       const encryptedKey = await encryptKeyForRecipient(symKey, myPubKey);
 
+      const startTime = new Date();
+      const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour default
       const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
       const res = await fetch(`${baseUrl}/api/meetings`, {
         method: 'POST',
@@ -217,7 +219,8 @@ export default function PreJoinScreen() {
         },
         body: JSON.stringify({
           title: 'Instant Meeting',
-          startTime: new Date().toISOString(),
+          startTime: startTime.toISOString(),
+          endTime: endTime.toISOString(),
         })
       });
       if (!res.ok) throw new Error('Failed to create');

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
@@ -28,6 +28,7 @@ export default function Dashboard() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isCreating, setIsCreating] = useState(false);
+  const isCreatingRef = useRef(false);
 
   const fetchMeetings = async () => {
     try {
@@ -63,7 +64,7 @@ export default function Dashboard() {
       
       const upcomingMeetings = unique.filter((m: any) => m.status === 'scheduled' && new Date(m.start_time) > now);
       const activeMeetings = unique.filter((m: any) => (m.status === 'active' || m.status === 'joined') || (m.status === 'scheduled' && new Date(m.start_time) <= now && new Date(m.end_time) > now));
-      const pastMeetings = unique.filter((m: any) => m.status === 'completed' || m.status === 'cancelled' || new Date(m.end_time) <= now);
+      const pastMeetings = unique.filter((m: any) => m.status === 'completed' || m.status === 'cancelled' || (m.status === 'scheduled' && new Date(m.end_time) <= now));
       
       setUpcoming(upcomingMeetings);
       setActive(activeMeetings);
@@ -115,7 +116,8 @@ export default function Dashboard() {
   ];
 
   const handleInstantCall = async () => {
-    if (isCreating) return;
+    if (isCreatingRef.current) return;
+    isCreatingRef.current = true;
     setIsCreating(true);
     try {
       const { data, error } = await supabase.from('meetings').insert([{
@@ -131,7 +133,7 @@ export default function Dashboard() {
       navigate('/meetings/' + data.id);
     } catch (err) {
       console.error(err);
-    } finally {
+      isCreatingRef.current = false;
       setIsCreating(false);
     }
   };

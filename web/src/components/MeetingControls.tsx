@@ -8,9 +8,11 @@ interface MeetingControlsProps {
   onToggleChat: () => void;
   onToggleRecord: () => void;
   onLeave: () => void;
+  isHost: boolean;
+  onEndMeeting: () => void;
 }
 
-export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onToggleChat, onToggleRecord, onLeave }: MeetingControlsProps) {
+export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onToggleChat, onToggleRecord, onLeave, isHost, onEndMeeting }: MeetingControlsProps) {
   const { localParticipant } = useLocalParticipant();
 
   const isMicOn = localParticipant.isMicrophoneEnabled;
@@ -76,8 +78,10 @@ export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onTo
     }
   };
 
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
   return (
-    <div className="flex items-center justify-center gap-3 px-4 py-3 bg-[#121214] border-t border-white/10 w-full z-40">
+    <div className="flex items-center justify-center gap-2 md:gap-3 px-3 md:px-4 py-3 bg-[#121214] border-t border-white/10 w-full z-40 overflow-x-auto flex-shrink-0">
       {/* Microphone Toggle */}
       <button
         onClick={toggleMic}
@@ -125,23 +129,25 @@ export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onTo
         )}
       </button>
 
-      {/* Screen Share Toggle */}
-      <button
-        onClick={toggleScreenShare}
-        disabled={isTogglingScreen}
-        className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
-          isScreenSharing
-            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30'
-            : 'bg-[#27272a] hover:bg-[#3f3f46] text-white'
-        }`}
-        title={isScreenSharing ? 'Stop sharing screen' : 'Share screen'}
-      >
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="3" width="20" height="14" rx="2" />
-          <line x1="8" y1="21" x2="16" y2="21" />
-          <line x1="12" y1="17" x2="12" y2="21" />
-        </svg>
-      </button>
+      {/* Screen Share Toggle - hidden on mobile (not supported) */}
+      {!isMobile && (
+        <button
+          onClick={toggleScreenShare}
+          disabled={isTogglingScreen}
+          className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
+            isScreenSharing
+              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30'
+              : 'bg-[#27272a] hover:bg-[#3f3f46] text-white'
+          }`}
+          title={isScreenSharing ? 'Stop sharing screen' : 'Share screen'}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="3" width="20" height="14" rx="2" />
+            <line x1="8" y1="21" x2="16" y2="21" />
+            <line x1="12" y1="17" x2="12" y2="21" />
+          </svg>
+        </button>
+      )}
 
       {/* Chat Toggle */}
       <button
@@ -194,18 +200,35 @@ export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onTo
 
       <div className="h-6 w-[1px] bg-white/10 mx-1" />
 
-      {/* Leave Button */}
-      <button
-        onClick={onLeave}
-        className="px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-red-600/20"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-          <polyline points="16 17 21 12 16 7" />
-          <line x1="21" y1="12" x2="9" y2="12" />
-        </svg>
-        Leave
-      </button>
+      {/* Leave / End Button */}
+      {isHost ? (
+        <div className="flex items-center gap-2">
+          <button
+            onClick={onLeave}
+            className="px-4 py-2.5 rounded-full bg-[#27272a] hover:bg-[#3f3f46] text-white text-sm font-bold flex items-center gap-2 transition-all"
+          >
+            Leave
+          </button>
+          <button
+            onClick={onEndMeeting}
+            className="px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-red-600/20"
+          >
+            End Meeting
+          </button>
+        </div>
+      ) : (
+        <button
+          onClick={onLeave}
+          className="px-5 py-2.5 rounded-full bg-red-600 hover:bg-red-700 text-white text-sm font-bold flex items-center gap-2 transition-all shadow-lg shadow-red-600/20"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+          Leave
+        </button>
+      )}
     </div>
   );
 }

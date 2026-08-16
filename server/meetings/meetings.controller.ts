@@ -114,7 +114,10 @@ export class MeetingsController {
         }
       );
 
-      res.json({ token, roomUrl: process.env.LIVEKIT_URL || "wss://coreflow-eo6z5wme.livekit.cloud" });
+      let roomUrl = process.env.LIVEKIT_URL || "wss://coreflow-eo6z5wme.livekit.cloud";
+      roomUrl = roomUrl.replace(/^["']|["']$/g, '');
+
+      res.json({ token, roomUrl });
     } catch (error: any) {
       console.error('Error joining meeting:', error);
       res.status(500).json({ error: 'Failed to join meeting', details: error?.message || String(error) });
@@ -260,6 +263,60 @@ export class MeetingsController {
     }
   }
 
+  static async endMeeting(req: Request, res: Response) {
+    try {
+      const { user } = req as any;
+      const { id } = req.params;
+
+      const meeting = await (MeetingsService.getMeetingById(id) as any);
+      if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
+      
+      // Only the host can end the meeting for everyone
+      if (meeting.host_id !== user.id) {
+        return res.status(403).json({ error: 'Only the host can end the meeting' });
+      }
+
+      await MeetingsService.getSupabase()
+        .from('meetings')
+        .update({ status: 'completed' })
+        .eq('id', meeting.id);
+
+      // Tell LiveKit to end the room (which kicks everyone out)
+      await LiveKitService.endRoom(meeting.room_name);
+
+      res.json({ message: 'Meeting ended successfully' });
+    } catch (error: any) {
+      console.error('Error ending meeting:', error);
+      res.status(500).json({ error: 'Failed to end meeting' });
+    }
+  }
+
+  static async admitParticipant(req: Request, res: Response) {
+    try {
+      const { user } = req as any;
+      const { id, userId } = req.params;
+
+      const meeting = await (MeetingsService.getMeetingById(id) as any);
+      if (!meeting) return res.status(404).json({ error: 'Meeting not found' });
+      
+      // Only the host can admit participants
+      if (meeting.host_id !== user.id) {
+        return res.status(403).json({ error: 'Only the host can admit participants' });
+      }
+
+      await MeetingsService.getSupabase()
+        .from('meeting_participants')
+        .update({ admission_status: 'admitted' })
+        .eq('meeting_id', meeting.id)
+        .eq('user_id', userId);
+
+      res.json({ message: 'Participant admitted successfully' });
+    } catch (error: any) {
+      console.error('Error admitting participant:', error);
+      res.status(500).json({ error: 'Failed to admit participant' });
+    }
+  }
+
   static async liveKitWebhook(req: Request, res: Response) {
     try {
       // Receive webhooks from LiveKit to update DB events
@@ -267,7 +324,51 @@ export class MeetingsController {
       console.log('Received LiveKit event:', event);
       
       // We can handle event.event like 'participant_joined', 'participant_left', etc.
-      if (event.event === 'egress_ended') {
+      if (event.event === 'participant_left') {
+        const roomName = event.room?.name;
+        const identity = event.participant?.identity;
+
+        if (roomName && identity) {
+          const { data: meeting } = await MeetingsService.getSupabase()
+            .from('meetings')
+            .select('id, host_id')
+            .eq('room_name', roomName)
+            .maybeSingle();
+
+          if (meeting) {
+            if (meeting.host_id === identity) {
+              await MeetingsService.getSupabase()
+                .from('meetings')
+                .update({ status: 'completed' })
+                .eq('id', meeting.id);
+              console.log(`Host left, marked meeting ${meeting.id} as completed.`);
+            }
+            
+            await MeetingsService.getSupabase()
+              .from('meeting_participants')
+              .update({ status: 'left' })
+              .eq('meeting_id', meeting.id)
+              .eq('user_id', identity);
+          }
+        }
+      } else if (event.event === 'room_finished') {
+        const roomName = event.room?.name;
+        if (roomName) {
+          const { data: meeting } = await MeetingsService.getSupabase()
+            .from('meetings')
+            .select('id')
+            .eq('room_name', roomName)
+            .maybeSingle();
+
+          if (meeting) {
+            await MeetingsService.getSupabase()
+              .from('meetings')
+              .update({ status: 'completed' })
+              .eq('id', meeting.id);
+            console.log(`Room finished, marked meeting ${meeting.id} as completed.`);
+          }
+        }
+      } else if (event.event === 'egress_ended') {
         const egressInfo = event.egressInfo as any;
         const roomName = egressInfo?.roomName;
         const fileUrl = egressInfo?.fileResults?.[0]?.location || egressInfo?.file?.location;

@@ -27,6 +27,9 @@ export default function MeetingRoom() {
   const videoEnabled = searchParams.get('video') === 'true';
   const audioEnabled = searchParams.get('audio') === 'true';
 
+  // Detect mobile to apply appropriate constraints
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
   // LiveKit Enterprise Room Configuration (Google Meet Parity)
   const roomOptions: RoomOptions = useMemo(
     () => ({
@@ -49,30 +52,25 @@ export default function MeetingRoom() {
           maxFramerate: 30,
         },
         screenShareSimulcastLayers: [],
-        videoEncoding: {
-          maxBitrate: 3_000_000, // Elevated bitrate back to 3Mbps to carry high definition 1080p details
-          maxFramerate: 24,      // 24fps delivers cinema-smooth video without heavy network packet delays
-        },
-        videoSimulcastLayers: [
-          VideoPresets.h1080,
-          VideoPresets.h720,
-          VideoPresets.h360,
-        ],
+        videoEncoding: isMobile
+          ? { maxBitrate: 1_000_000, maxFramerate: 20 } // Lower for mobile bandwidth
+          : { maxBitrate: 3_000_000, maxFramerate: 24 },
+        videoSimulcastLayers: isMobile
+          ? [VideoPresets.h360, VideoPresets.h180]
+          : [VideoPresets.h1080, VideoPresets.h720, VideoPresets.h360],
         dtx: true,
         backupCodec: true, // Enable fallback codecs if primary has high latency
       },
-      videoCaptureDefaults: {
-        resolution: {
-          width: 1920,
-          height: 1080,
-          frameRate: 24,
-        },
-        facingMode: 'user',
-      },
+      videoCaptureDefaults: isMobile
+        ? { facingMode: 'user' } // Let mobile browser choose best resolution
+        : {
+            resolution: { width: 1920, height: 1080, frameRate: 24 },
+            facingMode: 'user',
+          },
       // Real-time audio configurations
       latency: false,
     }),
-    []
+    [isMobile]
   );
 
   useEffect(() => {

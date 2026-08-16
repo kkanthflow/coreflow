@@ -23,6 +23,71 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
   const saveTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
   const apiUrl = import.meta.env.VITE_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
 
+  const [waitingParticipants, setWaitingParticipants] = useState<any[]>([]);
+  const [isHost, setIsHost] = useState(false);
+
+  // Setup waiting room for host
+  useEffect(() => {
+    let channel: any;
+    
+    const setupWaitingRoom = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      const { data: meeting } = await supabase
+        .from('meetings')
+        .select('host_id')
+        .eq('id', meetingId)
+        .single();
+        
+      if (meeting?.host_id === session.user.id) {
+        setIsHost(true);
+        
+        const fetchWaiting = async () => {
+          const { data } = await supabase
+            .from('meeting_participants')
+            .select('user_id, profiles(full_name, email)')
+            .eq('meeting_id', meetingId)
+            .eq('admission_status', 'waiting');
+            
+          if (data) setWaitingParticipants(data);
+        };
+        fetchWaiting();
+        
+        channel = supabase.channel(`host_waiting_${meetingId}`)
+          .on('postgres_changes', { 
+            event: '*', 
+            schema: 'public', 
+            table: 'meeting_participants',
+            filter: `meeting_id=eq.${meetingId}`
+          }, () => {
+            fetchWaiting();
+          }).subscribe();
+      }
+    };
+    
+    setupWaitingRoom();
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [meetingId]);
+
+  const handleAdmit = async (userId: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      await fetch(`${apiUrl}/api/meetings/${meetingId}/participants/${userId}/admit`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      // Optimistically remove from list
+      setWaitingParticipants(prev => prev.filter(p => p.user_id !== userId));
+    } catch (e) {
+      console.error('Failed to admit participant', e);
+    }
+  };
+
   // Fetch initial notes
   useEffect(() => {
     const fetchNotes = async () => {
@@ -76,6 +141,22 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
 
   const handleLeave = () => {
     room.disconnect();
+  };
+
+  const handleEndMeeting = async () => {
+    if (!window.confirm("Are you sure you want to end this meeting for everyone?")) return;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      
+      await fetch(`${apiUrl}/api/meetings/${meetingId}/end`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      room.disconnect();
+    } catch (e) {
+      console.error('Failed to end meeting', e);
+    }
   };
 
   const handleShare = async () => {
@@ -137,30 +218,30 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
   };
 
   return (
-    <div className="h-screen w-full bg-[#09090b] flex flex-col relative overflow-hidden select-none">
+    <div className="h-[100dvh] w-full bg-[#09090b] flex flex-col relative overflow-hidden select-none">
       {/* Top Bar Header */}
-      <div className="h-14 px-6 border-b border-white/10 flex items-center justify-between bg-[#121214] z-30 flex-shrink-0">
-        <div className="flex items-center gap-3">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
+      <div className="h-14 px-3 md:px-6 border-b border-white/10 flex items-center justify-between bg-[#121214] z-30 flex-shrink-0">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.894L15 14" />
               <rect x="3" y="7" width="12" height="10" rx="2" />
             </svg>
           </div>
-          <span className="text-white font-bold text-base tracking-wide">CoreFlow Meeting</span>
+          <span className="text-white font-bold text-sm md:text-base tracking-wide">CoreFlow Meeting</span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={handleShare}
-            className="flex items-center gap-2 bg-[#27272a] hover:bg-[#3f3f46] text-white px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border border-white/10 shadow"
+            className="flex items-center gap-2 bg-[#27272a] hover:bg-[#3f3f46] text-white px-3 py-1.5 rounded-full text-xs font-semibold transition-all border border-white/10 shadow"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
               <polyline points="16 6 12 2 8 6" />
               <line x1="12" y1="2" x2="12" y2="15" />
             </svg>
-            Share Meeting
+            <span className="hidden sm:inline">Share Meeting</span>
           </button>
         </div>
       </div>
@@ -233,6 +314,26 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
       {/* Diagnostics Overlay (WebRTC Telemetry) */}
       <DiagnosticsOverlay />
 
+      {/* Waiting Room Notifications for Host */}
+      {isHost && waitingParticipants.length > 0 && (
+        <div className="absolute top-16 right-4 z-50 flex flex-col gap-2">
+          {waitingParticipants.map(p => (
+            <div key={p.user_id} className="bg-[#18181b] border border-blue-500/30 p-4 rounded-xl shadow-2xl animate-in slide-in-from-right flex items-center justify-between gap-4">
+              <div>
+                <p className="text-white font-semibold text-sm">{p.profiles?.full_name || p.profiles?.email || 'Someone'}</p>
+                <p className="text-gray-400 text-xs">is waiting to join...</p>
+              </div>
+              <button 
+                onClick={() => handleAdmit(p.user_id)}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+              >
+                Admit
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Control Bar at Bottom */}
       <MeetingControls
         activeDrawer={activeDrawer}
@@ -241,6 +342,8 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
         onToggleChat={() => setActiveDrawer(v => v === 'chat' ? null : 'chat')}
         onToggleRecord={handleToggleRecord}
         onLeave={handleLeave}
+        isHost={isHost}
+        onEndMeeting={handleEndMeeting}
       />
     </div>
   );
