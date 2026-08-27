@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { Calendar, Clock, Play, ListFilter, Video, Plus } from 'lucide-react';
+import { Calendar, Clock, Play, ListFilter, Video, Plus, FileText } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 interface OverviewViewProps {
@@ -13,6 +13,7 @@ interface OverviewViewProps {
   setStatusFilter: (f: string) => void;
   onJoin: (id: string) => void;
   handleInstantCall: () => void;
+  onDownloadNotes: (id: string, title: string) => void;
 }
 
 export function OverviewView({
@@ -25,7 +26,8 @@ export function OverviewView({
   statusFilter,
   setStatusFilter,
   onJoin,
-  handleInstantCall
+  handleInstantCall,
+  onDownloadNotes
 }: OverviewViewProps) {
   
   // Generate mock chart data if not enough real data, otherwise use real data
@@ -46,7 +48,7 @@ export function OverviewView({
           { label: "Active Live", count: active.length, color: "text-emerald-400", sub: "Rooms active now" },
           { label: "Upcoming", count: upcoming.length, color: "text-[#FF6B4A]", sub: "Scheduled calls" },
           { label: "Past / Completed", count: past.length, color: "text-gray-400", sub: "Logged sessions" },
-          { label: "Filters Match", count: allFilteredMeetings.length, color: "text-blue-400", sub: "Currently selected" }
+          { label: "Filters Match", count: allFilteredMeetings.length, color: "text-primary", sub: "Currently selected" }
         ].map((stat, idx) => (
           <div key={idx} className="bg-[#111118] border border-white/5 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-[#FF6B4A]/20 transition-all duration-300 backdrop-blur-md">
             <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
@@ -219,12 +221,22 @@ export function OverviewView({
                         <span className="text-[10px] text-gray-500 capitalize">{m.status}</span>
                       </div>
                     </div>
-                    <button
-                      onClick={() => onJoin(m.id)}
-                      className="text-[10px] font-semibold text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
-                    >
-                      Details
-                    </button>
+                    <div className="flex gap-2">
+                      {m.status === 'completed' && (
+                        <button
+                          onClick={() => onDownloadNotes(m.id, m.title)}
+                          className="text-[10px] font-semibold text-[#FF6B4A] bg-[#FF6B4A]/10 hover:bg-[#FF6B4A]/20 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                        >
+                          <FileText size={12} /> Notes
+                        </button>
+                      )}
+                      <button
+                        onClick={() => onJoin(m.id)}
+                        className="text-[10px] font-semibold text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        Details
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>

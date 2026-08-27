@@ -18,7 +18,7 @@ export default function NewDepartmentScreen() {
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [color, setColor] = useState('#1F6FEB');
+  const [color, setColor] = useState('#FF6B4A');
   const [headUserId, setHeadUserId] = useState('');
   const [users, setUsers] = useState<{ label: string; value: string }[]>([]);
   const [saving, setSaving] = useState(false);
@@ -97,6 +97,7 @@ export default function NewDepartmentScreen() {
   };
 
   const colorsList = [
+    '#FF6B4A', // CoreFlow Primary
     '#1F6FEB', // Blue
     '#238636', // Green
     '#D29922', // Orange/Yellow
@@ -104,7 +105,6 @@ export default function NewDepartmentScreen() {
     '#8957E5', // Purple
     '#DB61A2', // Pink
     '#30B0C7', // Teal
-    '#484848', // Gray
   ];
 
   if (!hasPermission(user?.role, 'manage_departments')) {
@@ -162,7 +162,7 @@ export default function NewDepartmentScreen() {
                 style={[
                   styles.colorBox,
                   { backgroundColor: c },
-                  color === c && { borderColor: colors.foreground, borderWidth: 3 }
+                  color === c && { borderColor: colors.primary, borderWidth: 3, transform: [{ scale: 1.1 }] }
                 ]}
               />
             ))}

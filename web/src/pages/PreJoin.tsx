@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { Video, Mic, MicOff, VideoOff, LogOut, Smartphone, Calendar, Shield } from 'lucide-react';
 
 const isMobileDevice = () =>
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -10,15 +12,15 @@ export default function PreJoin() {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, loading: authLoading, session } = useAuth();
+  const { user, loading: authLoading } = useAuth();
 
   const [videoEnabled, setVideoEnabled] = useState(true);
   const [audioEnabled, setAudioEnabled] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
-  const [cameraError, setCameraError] = useState(false);
+  const [cameraError, setCameraError] = useState('');
 
   const [meetingState, setMeetingState] = useState<'idle' | 'loading' | 'pending' | 'accepted' | 'declined' | 'ended' | 'not_invited' | 'waiting_for_host'>('idle');
-
+  const [meetingDetails, setMeetingDetails] = useState<any>(null);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -41,6 +43,14 @@ export default function PreJoin() {
         return;
       }
 
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        if (active) {
+          console.error("Media devices API not available");
+          setCameraError("Browser doesn't support camera or blocked by environment");
+        }
+        return;
+      }
+
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
         if (!active) { stream.getTracks().forEach(t => t.stop()); return; }
@@ -49,9 +59,11 @@ export default function PreJoin() {
           videoRef.current.srcObject = stream;
           videoRef.current.play().catch(() => {});
         }
-        setCameraError(false);
-      } catch {
-        if (active) setCameraError(true);
+        setCameraError('');
+      } catch (err: any) {
+        if (active) {
+          setCameraError(err.name === 'NotAllowedError' ? 'Camera permission denied in browser.' : (err.message || 'Unknown error'));
+        }
       }
     };
 
@@ -88,7 +100,7 @@ export default function PreJoin() {
       try {
         const { data: meeting, error: meetingError } = await supabase
           .from('meetings')
-          .select('id, host_id, status, end_time')
+          .select('id, host_id, status, end_time, title, description, start_time')
           .eq('id', id)
           .single();
 
@@ -97,20 +109,20 @@ export default function PreJoin() {
           return;
         }
 
-        // Removed end_time block so meetings don't expire
+        if (isMounted) {
+          setMeetingDetails(meeting);
+        }
 
         if (meeting.status === 'completed') {
           if (isMounted) setMeetingState('ended');
           return;
         }
 
-        // Host always has access
         if (meeting.host_id === user.id) {
           if (isMounted) setMeetingState('accepted');
           return;
         }
 
-        // Non-host: Check invitation status first
         const { data: inv, error: invError } = await supabase
           .from('meeting_invitations')
           .select('status')
@@ -123,31 +135,7 @@ export default function PreJoin() {
           return;
         }
 
-        if (inv.status === 'pending') {
-          if (isMounted) setMeetingState('pending');
-          return;
-        }
-        
-        if (inv.status === 'declined') {
-          if (isMounted) setMeetingState('declined');
-          return;
-        }
-
-        // Validate if host is active in meeting_participants
-        const { data: hostParticipant } = await supabase
-          .from('meeting_participants')
-          .select('status')
-          .eq('meeting_id', meeting.id)
-          .eq('user_id', meeting.host_id)
-          .eq('status', 'joined')
-          .maybeSingle();
-
-        if (!hostParticipant) {
-          if (isMounted) setMeetingState('waiting_for_host');
-          return;
-        }
-
-        if (isMounted) setMeetingState('accepted');
+        if (isMounted) setMeetingState(inv.status as any);
 
       } catch (err) {
         console.error('Error checking access:', err);
@@ -175,26 +163,24 @@ export default function PreJoin() {
   }, [id, user]);
 
   const handleAcceptInvitation = async () => {
-    if (!id || !user?.id) return;
-    setMeetingState('accepted');
+    if (!id || !user) return;
     try {
-      // 1. Try directly updating via Supabase client (Client-side fail-safe)
-      const { error: sbError } = await supabase
+      setMeetingState('accepted');
+      await supabase
         .from('meeting_invitations')
-        .update({ status: 'accepted', accepted_at: new Date().toISOString() })
+        .update({ status: 'accepted' })
         .eq('meeting_id', id)
         .eq('user_id', user.id);
 
-      if (sbError) throw sbError;
-
-      // 2. Proactively try synchronizing via API endpoint if it exists
-      if (session?.access_token) {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
-        await fetch(`${baseUrl}/api/meetings/${id}/invitations/accept`, {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
+      const sessionRes = await supabase.auth.getSession();
+      const token = sessionRes.data.session?.access_token;
+      if (token) {
+        fetch(`${baseUrl}/api/meetings/${id}/invitations/accept`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${token}`,
           }
         }).catch(err => console.warn('API Sync Warning:', err));
       }
@@ -205,25 +191,24 @@ export default function PreJoin() {
   };
 
   const handleDeclineInvitation = async () => {
-    if (!id || !user?.id) return;
-    setMeetingState('declined');
+    if (!id || !user) return;
     try {
-      // 1. Try directly updating via Supabase client (Client-side fail-safe)
-      const { error: sbError } = await supabase
+      setMeetingState('declined');
+      await supabase
         .from('meeting_invitations')
         .update({ status: 'declined' })
         .eq('meeting_id', id)
         .eq('user_id', user.id);
 
-      if (sbError) throw sbError;
-
-      if (session?.access_token) {
-        const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
-        await fetch(`${baseUrl}/api/meetings/${id}/invitations/decline`, {
+      const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
+      const sessionRes = await supabase.auth.getSession();
+      const token = sessionRes.data.session?.access_token;
+      if (token) {
+        fetch(`${baseUrl}/api/meetings/${id}/invitations/decline`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: `Bearer ${token}`,
           }
         }).catch(err => console.warn('API Sync Warning:', err));
       }
@@ -235,7 +220,7 @@ export default function PreJoin() {
 
   const handleJoin = () => {
     const query = new URLSearchParams({
-      video: String(videoEnabled),
+      video: String(videoEnabled && !cameraError),
       audio: String(audioEnabled),
     });
 
@@ -247,53 +232,90 @@ export default function PreJoin() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-4 bg-[#09090b]">
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-[#07080B] p-4 sm:p-6 lg:p-8">
+      {/* Background Mesh Glow */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-[20%] left-[20%] w-[650px] h-[650px] rounded-full bg-gradient-to-br from-[#FF6B4A]/15 via-[#FF4500]/5 to-transparent blur-[140px] animate-float-slow" />
+        <div className="absolute -bottom-[20%] right-[10%] w-[550px] h-[550px] rounded-full bg-gradient-to-tl from-blue-600/10 via-purple-600/5 to-transparent blur-[140px] animate-float-delayed" />
+      </div>
+
       {isMobile && (
-        <div className="absolute top-0 left-0 right-0 p-4 bg-blue-600/10 border-b border-blue-500/20 backdrop-blur-md z-50 flex items-center justify-between">
-          <div className="text-sm">
-            <p className="font-semibold text-white">CoreFlow App</p>
-            <p className="text-gray-400 text-xs">For the best experience</p>
+        <div className="fixed top-0 left-0 right-0 p-3.5 bg-[#12141D]/90 border-b border-white/[0.08] backdrop-blur-xl z-50 flex items-center justify-between shadow-2xl">
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#FF6B4A] to-[#FF8E75] flex items-center justify-center">
+              <Smartphone className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="font-bold text-white text-xs">CoreFlow Mobile</p>
+              <p className="text-zinc-400 text-[10px]">Optimized for mobile calling</p>
+            </div>
           </div>
           <button
             onClick={handleOpenApp}
-            className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-full text-sm hover:bg-blue-700 transition-colors"
+            className="px-3 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-white font-bold rounded-xl text-xs transition-colors shadow-md shadow-[#FF6B4A]/20"
           >
             Open in App
           </button>
         </div>
       )}
 
-      {/* Sign Out Button in top right */}
-      <div className="absolute top-4 right-4 z-50">
+      {/* Top Navbar Actions */}
+      <div className="absolute top-6 left-6 right-6 z-40 flex items-center justify-between">
+        <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] backdrop-blur-md">
+          <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#FF6B4A] to-[#FF8E75] flex items-center justify-center">
+            <Video className="w-3.5 h-3.5 text-white" />
+          </div>
+          <span className="text-white font-bold text-sm tracking-tight">CoreFlow</span>
+        </div>
+
         <button 
           onClick={async () => {
             await supabase.auth.signOut();
-            navigate('/login', { replace: true });
+            navigate('/', { replace: true });
           }}
-          className="px-4 py-2 bg-[#2c2c2e] hover:bg-[#3c3c3e] text-white font-semibold rounded-lg transition-colors border border-white/10 text-sm shadow"
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/[0.08] text-xs font-semibold backdrop-blur-md transition-all"
         >
-          Sign Out
+          <LogOut className="w-3.5 h-3.5" />
+          <span>Sign Out</span>
         </button>
       </div>
 
-      <div className="w-full max-w-lg">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.894L15 14" />
-                <rect x="3" y="7" width="12" height="10" rx="2" />
-              </svg>
-            </div>
-            <span className="text-white font-bold text-xl">CoreFlow</span>
-          </div>
-          <h1 className="text-2xl font-bold text-white">Ready to join?</h1>
-          <p className="text-gray-400 text-sm mt-1">Set up your camera and microphone before joining</p>
+      {/* Main Card */}
+      <div className="relative z-10 w-full max-w-xl glass-panel rounded-3xl p-6 sm:p-8 mt-12 mb-4">
+        {/* Meeting Header */}
+        <div className="text-center mb-6">
+          {meetingDetails ? (
+            <>
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FF6B4A]/10 border border-[#FF6B4A]/20 text-[#FF8E75] text-xs font-bold uppercase tracking-wider mb-3">
+                <Shield className="w-3.5 h-3.5" />
+                <span>Enterprise Meeting</span>
+              </div>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{meetingDetails.title}</h1>
+              {meetingDetails.description && (
+                <p className="text-zinc-400 text-sm mt-1.5 max-w-md mx-auto">{meetingDetails.description}</p>
+              )}
+              {meetingDetails.start_time && (
+                <div className="inline-flex items-center gap-2 text-xs font-medium text-zinc-400 mt-3 px-3 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                  <Calendar className="w-3.5 h-3.5 text-[#FF8E75]" />
+                  <span>{new Date(meetingDetails.start_time).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Ready to join?</h1>
+              <p className="text-zinc-400 text-sm mt-1 font-medium">Verify your audio and video stream before entering</p>
+            </>
+          )}
         </div>
 
-        {/* Camera Preview */}
-        <div className="relative aspect-video bg-[#1c1c1e] rounded-2xl overflow-hidden border border-white/10 mb-6">
+        {/* Video Preview Box (Spatial Anchor Motion) */}
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          className="relative aspect-video w-full rounded-2xl overflow-hidden bg-[#0A0B10] border border-white/[0.08] shadow-inner mb-6 flex items-center justify-center"
+        >
           {videoEnabled && !cameraError ? (
             <video
               ref={videoRef}
@@ -303,109 +325,80 @@ export default function PreJoin() {
               className="w-full h-full object-cover scale-x-[-1]"
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center gap-3">
-              <div className="w-16 h-16 rounded-full bg-[#2c2c2e] flex items-center justify-center">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 20L4 4M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.894L15 14" />
-                  <rect x="3" y="7" width="12" height="10" rx="2" />
-                </svg>
+            <div className="flex flex-col items-center justify-center p-6 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
+                <VideoOff className="w-7 h-7 text-zinc-500" />
               </div>
-              <p className="text-gray-500 text-sm">{cameraError ? 'Camera unavailable' : 'Camera is off'}</p>
+              <p className="text-zinc-400 text-sm font-medium">
+                {cameraError ? cameraError : 'Camera is muted'}
+              </p>
             </div>
           )}
 
-          {/* Toggle buttons overlay */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3">
+          {/* Floating Camera / Audio Controls */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 shadow-2xl">
             <button
               type="button"
               onClick={() => setAudioEnabled(v => !v)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all backdrop-blur-sm border ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                 audioEnabled
-                  ? 'bg-white/10 border-white/20 text-white hover:bg-white/20'
-                  : 'bg-red-600/90 border-red-500 text-white'
+                  ? 'bg-white/15 text-white hover:bg-white/25 border border-white/20'
+                  : 'bg-red-500 text-white shadow-lg shadow-red-500/25'
               }`}
             >
-              {audioEnabled ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                  <line x1="12" y1="19" x2="12" y2="23" />
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="1" y1="1" x2="23" y2="23" />
-                  <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6" />
-                  <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23" />
-                </svg>
-              )}
-              {audioEnabled ? 'Mic On' : 'Mic Off'}
+              {audioEnabled ? <Mic className="w-3.5 h-3.5 text-emerald-400" /> : <MicOff className="w-3.5 h-3.5" />}
+              <span>{audioEnabled ? 'Mic On' : 'Mic Off'}</span>
             </button>
 
             <button
               type="button"
               onClick={() => setVideoEnabled(v => !v)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all backdrop-blur-sm border ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                 videoEnabled
-                  ? 'bg-white/10 border-white/20 text-white hover:bg-white/20'
-                  : 'bg-red-600/90 border-red-500 text-white'
+                  ? 'bg-white/15 text-white hover:bg-white/25 border border-white/20'
+                  : 'bg-red-500 text-white shadow-lg shadow-red-500/25'
               }`}
             >
-              {videoEnabled ? (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.894L15 14" />
-                  <rect x="3" y="7" width="12" height="10" rx="2" />
-                </svg>
-              ) : (
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M16 16l4.553 2.069A1 1 0 0 0 22 17.155V6.845a1 1 0 0 0-1.447-.894L15 8M2 2l20 20M15 14H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h1" />
-                </svg>
-              )}
-              {videoEnabled ? 'Camera On' : 'Camera Off'}
+              {videoEnabled ? <Video className="w-3.5 h-3.5 text-emerald-400" /> : <VideoOff className="w-3.5 h-3.5" />}
+              <span>{videoEnabled ? 'Cam On' : 'Cam Off'}</span>
             </button>
           </div>
-        </div>
+        </motion.div>
 
-
-        {/* Join form / Invitation states */}
-        <div className="space-y-4">
-          {(meetingState === 'pending') && (
-            <div className="space-y-3">
+        {/* Join Actions */}
+        <div className="space-y-3">
+          {meetingState === 'pending' && (
+            <div className="grid grid-cols-2 gap-3">
               <button 
                 onClick={handleAcceptInvitation} 
-                className="w-full bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl px-4 py-4 transition-all shadow-lg"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl py-3.5 text-sm transition-all shadow-lg shadow-emerald-600/20"
               >
                 Accept Invitation
               </button>
               <button 
                 onClick={handleDeclineInvitation} 
-                className="w-full bg-transparent hover:bg-red-500/10 border border-red-500/50 text-red-500 font-bold rounded-xl px-4 py-4 transition-all"
+                className="w-full bg-white/[0.04] hover:bg-red-500/10 border border-white/[0.08] hover:border-red-500/30 text-zinc-300 hover:text-red-400 font-bold rounded-2xl py-3.5 text-sm transition-all"
               >
                 Decline
               </button>
             </div>
           )}
 
-          {(meetingState === 'declined') && (
-            <div className="w-full bg-[#2c2c2e] text-center rounded-xl px-4 py-4">
-              <span className="text-gray-400 font-bold">Invitation Declined</span>
+          {meetingState === 'declined' && (
+            <div className="w-full bg-white/[0.03] border border-white/[0.06] text-center rounded-2xl py-3.5">
+              <span className="text-zinc-400 font-bold text-sm">Invitation Declined</span>
             </div>
           )}
 
-          {(meetingState === 'ended') && (
-            <div className="w-full bg-[#2c2c2e] text-center rounded-xl px-4 py-4">
-              <span className="text-gray-400 font-bold">Meeting Ended</span>
+          {meetingState === 'ended' && (
+            <div className="w-full bg-white/[0.03] border border-white/[0.06] text-center rounded-2xl py-3.5">
+              <span className="text-zinc-400 font-bold text-sm">Meeting Ended</span>
             </div>
           )}
 
-          {(meetingState === 'not_invited' && id) && (
-            <div className="w-full bg-[#2c2c2e] text-center rounded-xl px-4 py-4">
-              <span className="text-gray-400 font-bold">Access Denied</span>
-            </div>
-          )}
-
-          {(meetingState === 'waiting_for_host') && (
-            <div className="w-full bg-[#2c2c2e] text-center rounded-xl px-4 py-4">
-              <span className="text-gray-400 font-bold">Waiting for host to join...</span>
+          {meetingState === 'not_invited' && id && (
+            <div className="w-full bg-red-500/10 border border-red-500/20 text-center rounded-2xl py-3.5">
+              <span className="text-red-300 font-bold text-sm">Access Denied - Not Invited</span>
             </div>
           )}
 
@@ -413,9 +406,9 @@ export default function PreJoin() {
             <button
               onClick={handleJoin}
               disabled={!id || meetingState === 'loading'}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-[#2c2c2e] disabled:text-gray-500 disabled:cursor-not-allowed text-white font-bold rounded-xl px-4 py-4 transition-all shadow-lg shadow-blue-600/20"
+              className="w-full relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#FF6B4A] via-[#FF5722] to-[#FF4500] text-white font-bold py-3.5 text-sm shadow-xl shadow-[#FF6B4A]/25 hover:shadow-2xl hover:shadow-[#FF6B4A]/35 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {meetingState === 'loading' ? 'Checking Access...' : 'Join Meeting'}
+              {meetingState === 'loading' ? 'Checking Access...' : 'Join Meeting Now'}
             </button>
           )}
         </div>

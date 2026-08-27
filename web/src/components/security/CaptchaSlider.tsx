@@ -100,7 +100,7 @@ export function CaptchaSlider({ onVerify }: CaptchaSliderProps) {
           onMouseDown={() => !isVerified && setIsDragging(true)}
           onTouchStart={() => !isVerified && setIsDragging(true)}
           className={`w-[48px] h-[48px] rounded-full flex items-center justify-center shadow-md cursor-grab active:cursor-grabbing z-10 transition-colors ${
-            isVerified ? 'bg-emerald-500' : 'bg-blue-600 hover:bg-blue-500'
+            isVerified ? 'bg-emerald-500' : 'bg-primary hover:bg-primary'
           }`}
           style={{ transform: `translateX(${dragOffset}px)`, transition: isDragging ? 'none' : 'transform 0.3s ease' }}
         >

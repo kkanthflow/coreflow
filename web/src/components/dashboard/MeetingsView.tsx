@@ -191,8 +191,8 @@ export function MeetingsView() {
       <div className="lg:col-span-2 space-y-6">
         <div className="bg-[#111118] border border-white/5 rounded-3xl p-6 lg:p-8 shadow-xl">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-              <Calendar className="text-blue-500" size={24} />
+            <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+              <Calendar className="text-primary" size={24} />
             </div>
             <div>
               <h2 className="text-xl font-bold text-white tracking-tight">Schedule Meeting</h2>
@@ -222,7 +222,7 @@ export function MeetingsView() {
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. Q3 Roadmap Planning"
-                className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors"
+                className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors"
               />
             </div>
 
@@ -233,7 +233,7 @@ export function MeetingsView() {
                 onChange={e => setDescription(e.target.value)}
                 placeholder="Brief agenda or context for attendees..."
                 rows={3}
-                className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500/50 transition-colors resize-none"
+                className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors resize-none"
               />
             </div>
 
@@ -247,7 +247,7 @@ export function MeetingsView() {
                     required
                     value={date}
                     onChange={e => setDate(e.target.value)}
-                    className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-blue-500/50 transition-colors [color-scheme:dark]"
+                    className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
                   />
                 </div>
               </div>
@@ -261,7 +261,7 @@ export function MeetingsView() {
                     required
                     value={time}
                     onChange={e => setTime(e.target.value)}
-                    className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-blue-500/50 transition-colors [color-scheme:dark]"
+                    className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
                   />
                 </div>
               </div>
@@ -272,7 +272,7 @@ export function MeetingsView() {
               <select
                 value={duration}
                 onChange={e => setDuration(e.target.value)}
-                className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500/50 transition-colors"
+                className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-colors"
               >
                 <option value="15">15 Minutes</option>
                 <option value="30">30 Minutes</option>
@@ -362,7 +362,7 @@ export function MeetingsView() {
               form="schedule-form"
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-[#2c2c2e] disabled:text-gray-500 disabled:cursor-not-allowed text-white font-bold rounded-xl px-4 py-4 transition-all shadow-lg"
+              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary disabled:bg-[#2c2c2e] disabled:text-gray-500 disabled:cursor-not-allowed text-white font-bold rounded-xl px-4 py-4 transition-all shadow-lg"
             >
               {loading ? (
                 <span>Scheduling...</span>

@@ -165,17 +165,31 @@ export default function ChannelChatScreen() {
             .maybeSingle();
 
           if (myKeyData) {
-            // Decrypt key
-            const creatorId = chanData.created_by || user.id;
-            const { data: creatorKeyData } = await supabase
-              .from('user_public_keys')
-              .select('public_key')
-              .eq('user_id', creatorId)
-              .single();
+            // Decrypt key - try channel creator, direct message partner, or self
+            const candidateUserIds = [
+              chanData.created_by,
+              chanData.channel_members?.find((m: any) => m.user_id !== user?.id)?.user_id,
+              user.id,
+            ].filter(Boolean);
 
-            if (creatorKeyData) {
-              symmetricKey = await decryptKeyWithSender(myKeyData.encrypted_key, creatorKeyData.public_key);
-              setSymmetricKey(symmetricKey);
+            for (const senderId of candidateUserIds) {
+              try {
+                const { data: senderKeyData } = await supabase
+                  .from('user_public_keys')
+                  .select('public_key')
+                  .eq('user_id', senderId)
+                  .maybeSingle();
+
+                if (senderKeyData?.public_key) {
+                  symmetricKey = await decryptKeyWithSender(myKeyData.encrypted_key, senderKeyData.public_key);
+                  if (symmetricKey) {
+                    setSymmetricKey(symmetricKey);
+                    break;
+                  }
+                }
+              } catch {
+                // Try next candidate
+              }
             }
           } else {
             // Create new key if we are creator/member and none exists
@@ -397,7 +411,7 @@ export default function ChannelChatScreen() {
 
     // Subscribe to Presence and Typing Broadcast
     console.log('[Typing] Setting up presence channel for channel:', channelId);
-    const presenceChannel = supabase.channel(`presence:${channelId}`, {
+    const presenceChannel = supabase.channel(`chat:presence:${channelId}`, {
       config: {
         broadcast: { self: false },
         presence: { key: user?.id },

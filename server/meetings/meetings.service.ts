@@ -1,14 +1,24 @@
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
+import ws from 'ws';
 
 let supabaseClient: any = null;
 function getSupabase(): any {
   if (!supabaseClient) {
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for meetings service");
-    supabaseClient = createClient(
-      process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL as string,
-      process.env.SUPABASE_SERVICE_ROLE_KEY as string
-    );
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+    if (!supabaseUrl || !supabaseKey) {
+      throw new Error("Supabase URL or Key is missing for meetings service");
+    }
+    supabaseClient = createClient(supabaseUrl, supabaseKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+      realtime: {
+        transport: ws as any,
+      },
+    });
   }
   return supabaseClient;
 }
@@ -46,11 +56,13 @@ export class MeetingsService {
 
     if (settingsError) throw settingsError;
 
-    // Add Host as participant with 'host' role
+    // Add Host as participant with 'host' role and default admission_status 'admitted'
     await getSupabase().from('meeting_participants').insert({
       meeting_id: meeting.id,
       user_id: data.hostId,
       role: 'host',
+      admission_status: 'admitted',
+      status: 'invited',
       can_share_screen: true,
       can_record: true,
       can_present: true,
@@ -61,11 +73,14 @@ export class MeetingsService {
   }
 
   static async getMeetingById(id: string) {
-    const { data, error } = await getSupabase()
-      .from('meetings')
-      .select('*, meeting_settings(*)')
-      .eq('id', id)
-      .single();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    let query = getSupabase().from('meetings').select('*, meeting_settings(*)');
+    if (isUuid) {
+      query = query.or(`id.eq.${id},room_name.eq.${id}`);
+    } else {
+      query = query.eq('room_name', id);
+    }
+    const { data, error } = await query.maybeSingle();
 
     if (error) throw error;
     return data;
@@ -74,30 +89,34 @@ export class MeetingsService {
   static async trackParticipant(meetingId: string, userId: string, hostId: string) {
     const isHost = userId === hostId;
 
-    const { data, error } = await getSupabase()
+    const { data } = await getSupabase()
       .from('meeting_participants')
       .select('*')
       .eq('meeting_id', meetingId)
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
 
     if (!data) {
-      // Create invited participant row if they weren't explicitly invited
+      // Create participant row
       const { data: newParticipant } = await getSupabase().from('meeting_participants').insert({
         meeting_id: meetingId,
         user_id: userId,
         status: 'joined',
         role: isHost ? 'host' : 'attendee',
         admission_status: isHost ? 'admitted' : 'waiting', // host doesn't wait
+        joined_at: new Date().toISOString(),
       }).select().single();
       return newParticipant;
     } else {
-      let updates: any = { status: 'joined', joined_at: new Date().toISOString() };
+      let updates: any = { 
+        status: 'joined', 
+        joined_at: new Date().toISOString() 
+      };
       
-      if (isHost && data.role !== 'host') {
+      if (isHost) {
         updates.role = 'host';
         updates.admission_status = 'admitted';
-      } else if (data.admission_status === 'none' && data.role !== 'host') {
+      } else if (!data.admission_status || data.admission_status === 'none') {
         updates.admission_status = 'waiting';
       }
 
@@ -109,6 +128,7 @@ export class MeetingsService {
       return updatedParticipant;
     }
   }
+
   static async inviteUser(meetingId: string, userId: string, hostId: string) {
     const { data, error } = await getSupabase()
       .from('meeting_invitations')
@@ -133,13 +153,6 @@ export class MeetingsService {
       .single();
     if (error) throw error;
     
-    // Also update meeting_participants for mobile app sync
-    await getSupabase()
-      .from('meeting_participants')
-      .update({ status })
-      .eq('meeting_id', meetingId)
-      .eq('user_id', userId);
-      
     return data;
   }
 

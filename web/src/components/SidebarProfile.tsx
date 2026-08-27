@@ -21,7 +21,7 @@ export const SidebarProfile = () => {
       <button
         onClick={async () => {
           await supabase.auth.signOut();
-          navigate('/login', { replace: true });
+          navigate('/', { replace: true });
         }}
         className="w-full py-2 bg-red-500/10 hover:bg-red-500/15 border border-red-500/20 text-red-400 hover:text-red-300 font-semibold rounded-lg text-[11px] flex items-center justify-center gap-1.5 transition-all active:scale-[0.98]"
       >

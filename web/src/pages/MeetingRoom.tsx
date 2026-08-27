@@ -21,6 +21,7 @@ export default function MeetingRoom() {
   const [token, setToken] = useState('');
   const [serverUrl, setServerUrl] = useState('');
   const [error, setError] = useState('');
+  const [mediaError, setMediaError] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
   const [disconnected, setDisconnected] = useState(false);
 
@@ -61,12 +62,10 @@ export default function MeetingRoom() {
         dtx: true,
         backupCodec: true, // Enable fallback codecs if primary has high latency
       },
-      videoCaptureDefaults: isMobile
-        ? { facingMode: 'user' } // Let mobile browser choose best resolution
-        : {
-            resolution: { width: 1920, height: 1080, frameRate: 24 },
-            facingMode: 'user',
-          },
+      videoCaptureDefaults: {
+        facingMode: 'user',
+        resolution: VideoPresets.h720.resolution,
+      },
       // Real-time audio configurations
       latency: false,
     }),
@@ -79,6 +78,11 @@ export default function MeetingRoom() {
       navigate('/login', { state: { from: location }, replace: true });
       return;
     }
+
+    // If we already have a token, do not fetch again.
+    // This prevents "Client initiated disconnect" when session or location changes
+    // causing a new token to be fetched and passed to LiveKitRoom.
+    if (token) return;
 
     let isMounted = true;
     
@@ -152,7 +156,7 @@ export default function MeetingRoom() {
       isMounted = false;
       supabase.removeChannel(channel);
     };
-  }, [id, session, authLoading, navigate, location]);
+  }, [id, session, authLoading, navigate, location, token]);
 
   // ── Duplicate Tab State (Single-tab meeting enforcement) ─────────────────────
   if (isDuplicate) {
@@ -194,7 +198,7 @@ export default function MeetingRoom() {
         <p className="text-gray-400 text-sm text-center max-w-sm">{error}</p>
         <button
           onClick={() => navigate(`/meetings/${id}`, { replace: true })}
-          className="mt-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors"
+          className="mt-2 px-6 py-3 bg-primary hover:bg-primary text-white font-semibold rounded-xl transition-colors"
         >
           Try Again
         </button>
@@ -206,7 +210,7 @@ export default function MeetingRoom() {
   if (disconnected) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 bg-[#09090b]">
-        <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mb-2">
+        <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
             <polyline points="22 4 12 14.01 9 11.01" />
@@ -216,7 +220,7 @@ export default function MeetingRoom() {
         <p className="text-gray-400 text-sm">The meeting has ended or you disconnected.</p>
         <button
           onClick={() => navigate(`/meetings/${id}`, { replace: true })}
-          className="mt-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-xl transition-colors"
+          className="mt-2 px-6 py-3 bg-primary hover:bg-primary text-white font-semibold rounded-xl transition-colors"
         >
           Rejoin Meeting
         </button>
@@ -229,12 +233,12 @@ export default function MeetingRoom() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-8 bg-[#09090b] relative overflow-hidden">
         {/* Subtle background glow */}
-        <div className="absolute w-[300px] h-[300px] rounded-full bg-blue-600/10 blur-[120px] pointer-events-none" />
+        <div className="absolute w-[300px] h-[300px] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
         
         {/* Animated pulse ring */}
         <div className="relative flex items-center justify-center">
-          <div className="absolute w-20 h-20 rounded-full border border-blue-500/20 animate-ping opacity-75" />
-          <div className="w-16 h-16 rounded-full bg-blue-600/10 border border-blue-500/30 flex items-center justify-center shadow-lg shadow-blue-500/5">
+          <div className="absolute w-20 h-20 rounded-full border border-primary/20 animate-ping opacity-75" />
+          <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center shadow-lg shadow-blue-500/5">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="animate-pulse">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
               <circle cx="9" cy="7" r="4" />
@@ -265,7 +269,7 @@ export default function MeetingRoom() {
   if (!token || !serverUrl) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-[#09090b]">
-        <div className="animate-spin rounded-full h-10 w-10 border-2 border-blue-600 border-t-transparent" />
+        <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
         <p className="text-gray-400 text-sm">Joining meeting...</p>
       </div>
     );
@@ -274,19 +278,43 @@ export default function MeetingRoom() {
   // ── Active Room ──────────────────────────────────────────────────────────────
   return (
     <LiveKitRoom
-      video={videoEnabled ? { resolution: VideoPresets.h1080 } : false}
+      video={videoEnabled ? { resolution: VideoPresets.h720.resolution } : false}
       audio={audioEnabled ? { echoCancellation: true, noiseSuppression: true, autoGainControl: true } : false}
       token={token}
       serverUrl={serverUrl}
       connect={true}
       options={roomOptions}
-      onDisconnected={() => setDisconnected(true)}
-      onError={(err) => setError(err?.message || 'Connection failed. Please try again.')}
+      onDisconnected={() => {
+        // Only set disconnected if we didn't just get an error, or if it's a real disconnect
+        setDisconnected(true);
+      }}
+      onError={(err) => {
+        if (err?.message === 'Client initiated disconnect') return;
+        if (err?.message?.toLowerCase().includes('permission denied') || err?.message?.toLowerCase().includes('device not found') || err?.message?.toLowerCase().includes('notallowederror')) {
+          console.warn('Ignored media access error:', err?.message);
+          setMediaError(true);
+          return;
+        }
+        setError(err?.message || 'Connection failed. Please try again.');
+      }}
       className="h-screen w-full bg-[#09090b]"
       data-lk-theme="default"
     >
       <MeetingLayout meetingId={id!} />
       <RoomAudioRenderer />
+      {mediaError && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600/90 text-white px-4 py-2 rounded-lg backdrop-blur-md text-sm font-medium z-50 flex items-center gap-2 shadow-xl border border-red-500/50 transition-all animate-in fade-in slide-in-from-top-4">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1="12" y1="9" x2="12" y2="13" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+          Media access denied by system. Check browser permissions.
+          <button onClick={() => setMediaError(false)} className="ml-2 hover:text-red-200 transition-colors p-1">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+      )}
     </LiveKitRoom>
   );
 }

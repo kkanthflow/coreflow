@@ -7,6 +7,7 @@ import { registerAuthProxyRoutes } from "../security/authProxy";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import meetingsRouter from "../meetings/meetings.routes";
+import causalityRouter from "../causality/causality.routes";
 import { startCronJobs } from "./cron";
 
 export function createExpressApp() {
@@ -80,6 +81,7 @@ export function createExpressApp() {
   registerOAuthRoutes(app);
   registerAuthProxyRoutes(app);
   app.use('/api/meetings', meetingsRouter);
+  app.use('/api/causality', causalityRouter);
 
   app.post("/api/notifications/send-push", async (req, res) => {
     const authHeader = req.headers.authorization;

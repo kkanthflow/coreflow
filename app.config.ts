@@ -29,7 +29,7 @@ const schemeFromBundleId = `manus${timestamp}`;
 const env = {
   // App branding - update these values directly (do not use env vars)
   appName: "CoreFlow",
-  appSlug: "krid",
+  appSlug: "krishnakanth",
   // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
   // Leave empty to use the default icon from assets/images/icon.png
   logoUrl: "",
@@ -46,10 +46,6 @@ const config: ExpoConfig = {
   icon: "./assets/images/icon.png",
   scheme: env.scheme,
   userInterfaceStyle: "automatic",
-  newArchEnabled: true,
-  updates: {
-    url: "https://u.expo.dev/50f42807-de21-4b8b-8404-16bf9d7a4a07"
-  },
   runtimeVersion: "1.0.0",
   ios: {
     supportsTablet: true,
@@ -67,8 +63,6 @@ const config: ExpoConfig = {
       foregroundImage: "./assets/images/icon.png"
     },
 
-    // @ts-ignore
-    edgeToEdgeEnabled: true,
     predictiveBackGestureEnabled: false,
     package: env.androidPackage,
     permissions: [
@@ -169,13 +163,21 @@ const config: ExpoConfig = {
       },
     ],
     [
+      "@livekit/react-native-expo-plugin",
+      {
+        android: {
+          audioType: "communication",
+          enableScreenShareService: true
+        }
+      }
+    ],
+    [
       "@config-plugins/react-native-webrtc",
       {
         cameraPermission: "Allow $(PRODUCT_NAME) to access your camera",
         microphonePermission: "Allow $(PRODUCT_NAME) to access your microphone"
       }
     ],
-    "./plugins/withLiveKitForegroundService.js",
   ],
   experiments: {
     typedRoutes: true,
@@ -183,8 +185,8 @@ const config: ExpoConfig = {
   },
   extra: {
     eas: {
-      projectId: "50f42807-de21-4b8b-8404-16bf9d7a4a07"
-    },
+      projectId: "208757b8-a9a3-49f0-83b0-70a0f9d1c53c"
+    }
   },
 };
 

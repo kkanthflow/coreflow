@@ -111,21 +111,31 @@ export default function ChatScreen() {
               .maybeSingle();
 
             if (myKeyData) {
-              const creatorId = ch.created_by || user.id;
-              const { data: creatorKeyData } = await supabase
-                .from('user_public_keys')
-                .select('public_key')
-                .eq('user_id', creatorId)
-                .single();
+              const candidateUserIds = [
+                ch.created_by,
+                ch.channel_members?.find((m: any) => m.user_id !== user.id)?.user_id,
+                user.id,
+              ].filter(Boolean);
 
-              if (creatorKeyData) {
+              for (const senderId of candidateUserIds) {
                 try {
-                  const symmetricKey = await decryptKeyWithSender(myKeyData.encrypted_key, creatorKeyData.public_key);
-                  const ciphertext = lastMsgText.substring('__E2EE__:'.length);
-                  const decrypted = await decryptMessagePayload(ciphertext, symmetricKey);
-                  lastMsgText = decrypted?.text || '[Decryption Failed]';
-                } catch (err) {
-                  console.warn('Error decrypting preview:', err);
+                  const { data: senderKeyData } = await supabase
+                    .from('user_public_keys')
+                    .select('public_key')
+                    .eq('user_id', senderId)
+                    .maybeSingle();
+
+                  if (senderKeyData?.public_key) {
+                    const symmetricKey = await decryptKeyWithSender(myKeyData.encrypted_key, senderKeyData.public_key);
+                    const ciphertext = lastMsgText.substring('__E2EE__:'.length);
+                    const decrypted = await decryptMessagePayload(ciphertext, symmetricKey);
+                    if (decrypted?.text) {
+                      lastMsgText = decrypted.text;
+                      break;
+                    }
+                  }
+                } catch {
+                  // Try next candidate
                 }
               }
             }

@@ -1,0 +1,16 @@
+node_modules
+.expo
+.git
+.vscode
+dist
+dist-server
+android
+ios
+web
+assets
+supabase
+*.apk
+*.log
+*.crt
+*.json
+*.sql

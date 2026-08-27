@@ -86,13 +86,12 @@ export default function PreJoinScreen() {
           .single();
 
         if (meetingError || !meeting) {
-          if (isMounted) setMeetingState('not_invited');
+          // If meeting not found by UUID, try meeting code or allow joining so room can validate token
+          if (isMounted) setMeetingState('accepted');
           return;
         }
         
         if (isMounted) setMeetingHostId(meeting.host_id);
-
-        // Removed end_time block so meetings don't expire
 
         if (meeting.status === 'completed') {
           if (isMounted) setMeetingState('ended');
@@ -105,36 +104,71 @@ export default function PreJoinScreen() {
           return;
         }
 
-        // 2. Fetch Invitation
-        const { data: inv, error: invError } = await supabase
+        // 2. Check meeting_invitations table
+        const { data: inv } = await supabase
           .from('meeting_invitations')
           .select('status')
           .eq('meeting_id', meetingId)
           .eq('user_id', session.user.id)
-          .single();
+          .maybeSingle();
 
-        if (invError || !inv) {
-          if (isMounted) setMeetingState('not_invited');
+        if (inv) {
+          if (isMounted) setMeetingState(inv.status as any);
           return;
         }
 
-        if (isMounted) setMeetingState(inv.status as any);
+        // 3. Check meeting_participants table
+        const { data: participant } = await supabase
+          .from('meeting_participants')
+          .select('status, admission_status')
+          .eq('meeting_id', meetingId)
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (participant) {
+          if (participant.status === 'declined') {
+            if (isMounted) setMeetingState('declined');
+          } else if (participant.status === 'accepted' || participant.admission_status === 'admitted') {
+            if (isMounted) setMeetingState('accepted');
+          } else {
+            if (isMounted) setMeetingState('pending');
+          }
+          return;
+        }
+
+        // If not the host and no invitation/participant record found, deny access
+        if (isMounted) setMeetingState('not_invited');
 
       } catch (err) {
         console.error('Error checking access:', err);
+        if (isMounted) setMeetingState('not_invited');
       }
     };
 
     checkAccess();
 
-    // 3. Subscribe to realtime updates for the invitation
-    const channel = supabase.channel(`invitation-${meetingId}-${session.user.id}`)
+    // 3. Subscribe to realtime updates for both invitations and participants
+    const channel = supabase.channel(`access-${meetingId}-${session.user.id}`)
       .on(
         'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'meeting_invitations', filter: `meeting_id=eq.${meetingId}` },
+        { event: '*', schema: 'public', table: 'meeting_invitations', filter: `meeting_id=eq.${meetingId}` },
         (payload) => {
-          if (payload.new && payload.new.user_id === session.user.id) {
-            setMeetingState(payload.new.status);
+          if (payload.new && (payload.new as any).user_id === session.user.id) {
+            setMeetingState((payload.new as any).status);
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'meeting_participants', filter: `meeting_id=eq.${meetingId}` },
+        (payload) => {
+          if (payload.new && (payload.new as any).user_id === session.user.id) {
+            const p = payload.new as any;
+            if (p.status === 'accepted' || p.admission_status === 'admitted') {
+              setMeetingState('accepted');
+            } else if (p.status === 'declined') {
+              setMeetingState('declined');
+            }
           }
         }
       )
@@ -149,7 +183,7 @@ export default function PreJoinScreen() {
   const handleAcceptInvitation = async () => {
     if (!meetingId || !session?.user?.id) return;
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
       await fetch(`${baseUrl}/api/meetings/${meetingId}/invitations/accept`, {
         method: 'POST',
         headers: {
@@ -166,7 +200,7 @@ export default function PreJoinScreen() {
   const handleDeclineInvitation = async () => {
     if (!meetingId || !session?.user?.id) return;
     try {
-      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
       await fetch(`${baseUrl}/api/meetings/${meetingId}/invitations/decline`, {
         method: 'POST',
         headers: {
@@ -182,26 +216,32 @@ export default function PreJoinScreen() {
   const handleJoin = () => {
     if (!meetingId.trim() || isJoining) return;
     
+    const camToPass = cameraEnabled;
+    const micToPass = micEnabled;
+
     setIsJoining(true);
-    // Force unmount the camera hardware before navigating
+    setCameraEnabled(false);
     setIsFocused(false);
     
-    // Wait for the React render cycle to fully unmount the CameraView
+    // Give native camera hardware 500ms to release Camera2 lock before LiveKit WebRTC attaches
     setTimeout(() => {
-      router.push({
+      router.replace({
         pathname: '/meetings/room' as any,
         params: { 
-          id: meetingId, 
-          camera: cameraEnabled ? '1' : '0', 
-          mic: micEnabled ? '1' : '0' 
+          id: meetingId.trim(), 
+          camera: camToPass ? '1' : '0', 
+          mic: micToPass ? '1' : '0' 
         }
       });
-    }, 300); // 300ms is plenty of time for React Native to detach the camera surface
+    }, 500);
   };
 
   const handleStartInstant = async () => {
-    if (!session?.access_token || !activeWorkspace?.id) return;
+    if (!session?.access_token || !activeWorkspace?.id || isCreating) return;
     setIsCreating(true);
+    const camToPass = cameraEnabled;
+    const micToPass = micEnabled;
+
     try {
       const symKey = generateRandomSymmetricKey();
       const myPubKey = await initializeUserKeys(session.user.id);
@@ -209,7 +249,7 @@ export default function PreJoinScreen() {
 
       const startTime = new Date();
       const endTime = new Date(startTime.getTime() + 60 * 60 * 1000); // 1 hour default
-      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL;
+      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
       const res = await fetch(`${baseUrl}/api/meetings`, {
         method: 'POST',
         headers: {
@@ -235,20 +275,20 @@ export default function PreJoinScreen() {
       if (keyError) console.error('Error inserting meeting key:', keyError);
 
       setIsFocused(false);
+      setCameraEnabled(false);
       
       setTimeout(() => {
-        router.push({
+        router.replace({
           pathname: '/meetings/room' as any,
           params: { 
             id: data.meeting.id, 
-            camera: cameraEnabled ? '1' : '0', 
-            mic: micEnabled ? '1' : '0' 
+            camera: camToPass ? '1' : '0', 
+            mic: micToPass ? '1' : '0' 
           }
         });
-      }, 300);
+      }, 500);
     } catch (e) {
       console.error(e);
-    } finally {
       setIsCreating(false);
     }
   };

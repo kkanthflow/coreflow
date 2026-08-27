@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import * as jose from 'jose';
+import ws from 'ws';
 import { ENV } from './env';
 
 if (!ENV.supabaseUrl || !ENV.supabaseServiceRoleKey) {
@@ -14,6 +15,9 @@ export const supabaseAdmin = createClient(
     auth: {
       autoRefreshToken: false,
       persistSession: false,
+    },
+    realtime: {
+      transport: ws as any,
     },
   }
 );

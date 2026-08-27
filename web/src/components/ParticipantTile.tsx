@@ -1,5 +1,5 @@
-import { memo, useMemo } from 'react';
-import { Participant, Track, TrackPublication } from 'livekit-client';
+import { memo, useMemo, useState, useEffect } from 'react';
+import { Participant, Track, TrackPublication, ParticipantEvent } from 'livekit-client';
 import { VideoTrack } from '@livekit/components-react';
 
 interface ParticipantTileProps {
@@ -11,19 +11,39 @@ export const ParticipantTile = memo(function ParticipantTile({
   participant,
   size = 'normal',
 }: ParticipantTileProps) {
-  const cameraPublications = participant.getTrackPublications();
-  const cameraPub = [...cameraPublications.values()].find(
-    (t) => t.source === Track.Source.Camera && t.track
+  const [, setUpdateTrigger] = useState(0);
+
+  // Subscribe to live participant events so camera track attachments reactively re-render
+  useEffect(() => {
+    const forceUpdate = () => setUpdateTrigger((v) => v + 1);
+
+    participant.on(ParticipantEvent.TrackPublished, forceUpdate);
+    participant.on(ParticipantEvent.TrackUnpublished, forceUpdate);
+    participant.on(ParticipantEvent.TrackSubscribed, forceUpdate);
+    participant.on(ParticipantEvent.TrackUnsubscribed, forceUpdate);
+    participant.on(ParticipantEvent.TrackMuted, forceUpdate);
+    participant.on(ParticipantEvent.TrackUnmuted, forceUpdate);
+    participant.on(ParticipantEvent.IsSpeakingChanged, forceUpdate);
+
+    return () => {
+      participant.off(ParticipantEvent.TrackPublished, forceUpdate);
+      participant.off(ParticipantEvent.TrackUnpublished, forceUpdate);
+      participant.off(ParticipantEvent.TrackSubscribed, forceUpdate);
+      participant.off(ParticipantEvent.TrackUnsubscribed, forceUpdate);
+      participant.off(ParticipantEvent.TrackMuted, forceUpdate);
+      participant.off(ParticipantEvent.TrackUnmuted, forceUpdate);
+      participant.off(ParticipantEvent.IsSpeakingChanged, forceUpdate);
+    };
+  }, [participant]);
+
+  const cameraPub = participant.getTrackPublication(Track.Source.Camera);
+  const micPub = participant.getTrackPublication(Track.Source.Microphone);
+
+  const isCameraEnabled = Boolean(
+    participant.isCameraEnabled || (cameraPub && !cameraPub.isMuted)
   );
 
-  const isCameraEnabled = cameraPub && !cameraPub.isMuted && cameraPub.track;
-
-  const micPublications = participant.getTrackPublications();
-  const micPub = [...micPublications.values()].find(
-    (t) => t.source === Track.Source.Microphone
-  );
-  const isMicMuted = !micPub || micPub.isMuted;
-
+  const isMicMuted = !micPub || micPub.isMuted || !participant.isMicrophoneEnabled;
   const isSpeaking = participant.isSpeaking;
 
   const heightClass = size === 'small' ? 'h-[110px] w-[150px]' : 'h-full w-full';
@@ -35,15 +55,16 @@ export const ParticipantTile = memo(function ParticipantTile({
             participant,
             publication: cameraPub as TrackPublication,
             source: Track.Source.Camera,
+            track: cameraPub.track ?? undefined,
           }
         : undefined,
-    [participant, cameraPub]
+    [participant, cameraPub, cameraPub?.track]
   );
 
   return (
     <div
       className={`relative ${heightClass} rounded-xl overflow-hidden bg-[#1c1c1e] border ${
-        isSpeaking ? 'border-blue-500 ring-2 ring-blue-500/50' : 'border-white/10'
+        isSpeaking ? 'border-[#FF6B4A] ring-2 ring-[#FF6B4A]/50' : 'border-white/10'
       } flex-shrink-0 transition-all duration-300 shadow-md group`}
     >
       {/* Video Feed or Avatar */}

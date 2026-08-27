@@ -89,7 +89,7 @@ export function RecordingsView() {
                   {recording.recording_status === 'completed' ? (
                     <button 
                       onClick={() => window.open(recording.file_url, '_blank')}
-                      className="w-12 h-12 rounded-full bg-blue-600 hover:bg-blue-500 flex items-center justify-center transition-transform hover:scale-110 shadow-lg shadow-blue-600/30"
+                      className="w-12 h-12 rounded-full bg-primary hover:bg-primary flex items-center justify-center transition-transform hover:scale-110 shadow-lg shadow-blue-600/30"
                     >
                       <Play className="ml-1" size={20} />
                     </button>

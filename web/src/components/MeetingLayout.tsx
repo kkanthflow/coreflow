@@ -4,10 +4,13 @@ import { StageView } from './StageView';
 import { MeetingControls } from './MeetingControls';
 import { DiagnosticsOverlay } from './DiagnosticsOverlay';
 import { supabase } from '../lib/supabase';
+import ConfirmModal from './ConfirmModal';
 
 interface MeetingLayoutProps {
   meetingId: string;
 }
+
+import { toast } from './ui/Toast';
 
 export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
   const room = useRoomContext();
@@ -46,7 +49,7 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
         const fetchWaiting = async () => {
           const { data } = await supabase
             .from('meeting_participants')
-            .select('user_id, profiles(full_name, email)')
+            .select('user_id, users:user_id(full_name, email)')
             .eq('meeting_id', meetingId)
             .eq('admission_status', 'waiting');
             
@@ -74,17 +77,51 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
 
   const handleAdmit = async (userId: string) => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
-      
-      await fetch(`${apiUrl}/api/meetings/${meetingId}/participants/${userId}/admit`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${session.access_token}` }
-      });
-      // Optimistically remove from list
       setWaitingParticipants(prev => prev.filter(p => p.user_id !== userId));
+      await supabase
+        .from('meeting_participants')
+        .update({ admission_status: 'admitted' })
+        .eq('meeting_id', meetingId)
+        .eq('user_id', userId);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        fetch(`${apiUrl}/api/meetings/${meetingId}/participants/${userId}/admit`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        }).catch(() => {});
+      }
     } catch (e) {
       console.error('Failed to admit participant', e);
+    }
+  };
+
+  const handleDeny = async (userId: string) => {
+    try {
+      setWaitingParticipants(prev => prev.filter(p => p.user_id !== userId));
+      await supabase
+        .from('meeting_participants')
+        .update({ admission_status: 'rejected' })
+        .eq('meeting_id', meetingId)
+        .eq('user_id', userId);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        fetch(`${apiUrl}/api/meetings/${meetingId}/participants/${userId}/deny`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${session.access_token}` }
+        }).catch(() => {});
+      }
+    } catch (e) {
+      console.error('Failed to deny participant', e);
+    }
+  };
+
+  const handleAdmitAll = async () => {
+    const list = [...waitingParticipants];
+    setWaitingParticipants([]);
+    for (const p of list) {
+      handleAdmit(p.user_id);
     }
   };
 
@@ -143,8 +180,10 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
     room.disconnect();
   };
 
-  const handleEndMeeting = async () => {
-    if (!window.confirm("Are you sure you want to end this meeting for everyone?")) return;
+  const [isConfirmEndOpen, setIsConfirmEndOpen] = useState(false);
+
+  const confirmEndMeeting = async () => {
+    setIsConfirmEndOpen(false);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -159,6 +198,10 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
     }
   };
 
+  const handleEndMeeting = () => {
+    setIsConfirmEndOpen(true);
+  };
+
   const handleShare = async () => {
     const url = window.location.origin + `/meetings/${meetingId}`;
     if (navigator.share) {
@@ -167,48 +210,142 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
       } catch {}
     } else {
       await navigator.clipboard.writeText(url);
-      alert('Meeting link copied to clipboard!');
+      toast.success('Meeting link copied to clipboard!', 'Link Copied');
     }
+  };
+
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordedChunksRef = useRef<Blob[]>([]);
+  const screenStreamRef = useRef<MediaStream | null>(null);
+
+  const startBrowserRecording = async () => {
+    try {
+      if (!navigator.mediaDevices?.getDisplayMedia) {
+        toast.error('Screen & audio recording is not supported in this browser.', 'Recording Unsupported');
+        setIsRecording(false);
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getDisplayMedia({
+        video: { frameRate: 30 },
+        audio: true
+      });
+      screenStreamRef.current = stream;
+      recordedChunksRef.current = [];
+
+      const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+        ? 'video/webm;codecs=vp9,opus'
+        : 'video/webm';
+
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          recordedChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        if (recordedChunksRef.current.length > 0) {
+          const blob = new Blob(recordedChunksRef.current, { type: 'video/webm' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = url;
+          a.download = `CoreFlow-Meeting-${new Date().toISOString().slice(0, 10)}.webm`;
+          document.body.appendChild(a);
+          a.click();
+          toast.success('Meeting recording saved and downloaded successfully.', 'Recording Saved');
+          setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+          }, 100);
+        }
+      };
+
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.onended = () => {
+          stopBrowserRecording();
+        };
+      }
+
+      mediaRecorder.start(1000);
+      mediaRecorderRef.current = mediaRecorder;
+      setIsRecording(true);
+      recordingStartTime.current = Date.now();
+    } catch (err: any) {
+      console.warn('Browser recording canceled or rejected:', err);
+      setIsRecording(false);
+      recordingStartTime.current = null;
+    }
+  };
+
+  const stopBrowserRecording = () => {
+    try {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+        mediaRecorderRef.current.stop();
+      }
+      if (screenStreamRef.current) {
+        screenStreamRef.current.getTracks().forEach(t => t.stop());
+        screenStreamRef.current = null;
+      }
+    } catch (e) {
+      console.warn('Error stopping browser recording:', e);
+    }
+    setIsRecording(false);
+    recordingStartTime.current = null;
   };
 
   const handleToggleRecord = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
 
-      if (isRecording && egressId) {
-        // Stop recording
+      if (isRecording) {
+        // Stop recording (either server egress or browser recording)
+        if (egressId && session?.access_token) {
+          try {
+            await fetch(`${apiUrl}/api/meetings/${meetingId}/record/stop`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`
+              },
+              body: JSON.stringify({ egressId })
+            });
+          } catch {}
+          setEgressId(null);
+        }
+        stopBrowserRecording();
         setIsRecording(false);
-        await fetch(`${apiUrl}/api/meetings/${meetingId}/record/stop`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`
-          },
-          body: JSON.stringify({ egressId })
-        });
-        setEgressId(null);
         recordingStartTime.current = null;
       } else {
-        // Start recording
-        setIsRecording(true);
-        recordingStartTime.current = Date.now();
-        const res = await fetch(`${apiUrl}/api/meetings/${meetingId}/record/start`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${session.access_token}`
+        // Start recording: try backend egress, fallback directly to browser capture
+        if (session?.access_token) {
+          try {
+            const res = await fetch(`${apiUrl}/api/meetings/${meetingId}/record/start`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${session.access_token}`
+              }
+            });
+            if (res.ok) {
+              const data = await res.json();
+              if (data.egressId) {
+                setEgressId(data.egressId);
+                setIsRecording(true);
+                recordingStartTime.current = Date.now();
+                return;
+              }
+            }
+          } catch {
+            // Backend egress unavailable, fallback to browser recorder below
           }
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setEgressId(data.egressId);
-        } else {
-          // Fallback if egress fails (e.g. not host)
-          setIsRecording(false);
-          recordingStartTime.current = null;
-          alert('Failed to start recording. Make sure you are the host.');
         }
+
+        // Fallback: start browser high-definition screen/tab recorder
+        await startBrowserRecording();
       }
     } catch (err) {
       console.error('Recording error:', err);
@@ -222,7 +359,7 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
       {/* Top Bar Header */}
       <div className="h-14 px-3 md:px-6 border-b border-white/10 flex items-center justify-between bg-[#121214] z-30 flex-shrink-0">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.894L15 14" />
               <rect x="3" y="7" width="12" height="10" rx="2" />
@@ -316,21 +453,51 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
 
       {/* Waiting Room Notifications for Host */}
       {isHost && waitingParticipants.length > 0 && (
-        <div className="absolute top-16 right-4 z-50 flex flex-col gap-2">
-          {waitingParticipants.map(p => (
-            <div key={p.user_id} className="bg-[#18181b] border border-blue-500/30 p-4 rounded-xl shadow-2xl animate-in slide-in-from-right flex items-center justify-between gap-4">
-              <div>
-                <p className="text-white font-semibold text-sm">{p.profiles?.full_name || p.profiles?.email || 'Someone'}</p>
-                <p className="text-gray-400 text-xs">is waiting to join...</p>
-              </div>
-              <button 
-                onClick={() => handleAdmit(p.user_id)}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+        <div className="absolute top-16 right-4 z-50 flex flex-col gap-2 max-w-sm w-full">
+          {waitingParticipants.length > 1 && (
+            <div className="flex justify-end mb-1">
+              <button
+                onClick={handleAdmitAll}
+                className="px-3 py-1 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded shadow-md transition-colors"
               >
-                Admit
+                Admit All ({waitingParticipants.length})
               </button>
             </div>
-          ))}
+          )}
+          {waitingParticipants.map(p => {
+            const name = p.users?.full_name || p.users?.email || p.user_id || 'Attendee';
+            return (
+              <div
+                key={p.user_id}
+                className="bg-[#0C0D12]/95 backdrop-blur border border-[#FF6B4A]/30 p-3.5 rounded-lg shadow-2xl animate-in slide-in-from-right flex items-center justify-between gap-3 text-xs"
+              >
+                <div className="min-w-0 flex items-center gap-2.5">
+                  <div className="w-7 h-7 rounded-md bg-[#FF6B4A]/15 text-[#FF6B4A] font-bold text-xs flex items-center justify-center shrink-0">
+                    {name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-white font-semibold truncate">{name}</p>
+                    <p className="text-zinc-400 text-[10px]">Waiting in lobby...</p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button 
+                    onClick={() => handleDeny(p.user_id)}
+                    className="px-2.5 py-1 bg-[#151822] hover:bg-[#1C2030] text-zinc-400 hover:text-white rounded text-[11px] font-medium border border-white/[0.06] transition-colors"
+                  >
+                    Deny
+                  </button>
+                  <button 
+                    onClick={() => handleAdmit(p.user_id)}
+                    className="px-3 py-1 bg-[#FF6B4A] hover:bg-[#FF552B] text-white rounded text-[11px] font-semibold transition-colors shadow-sm"
+                  >
+                    Admit
+                  </button>
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -344,6 +511,17 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
         onLeave={handleLeave}
         isHost={isHost}
         onEndMeeting={handleEndMeeting}
+      />
+
+      <ConfirmModal
+        isOpen={isConfirmEndOpen}
+        title="End Meeting"
+        message="Are you sure you want to end this meeting for everyone? All active participants will be disconnected."
+        confirmText="End Meeting for All"
+        cancelText="Cancel"
+        isDestructive={true}
+        onConfirm={confirmEndMeeting}
+        onCancel={() => setIsConfirmEndOpen(false)}
       />
     </div>
   );

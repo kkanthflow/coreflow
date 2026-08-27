@@ -240,7 +240,12 @@ export default function SettingsScreen() {
         {isOwnerOrAdmin && (
           <>
             <View className="px-6 mb-6">
-              <Text className="text-xs font-bold text-muted mb-3 uppercase tracking-wider ml-1">Organization Currency</Text>
+              <View className="flex-row items-center justify-between mb-3 ml-1">
+                <Text className="text-xs font-bold text-muted uppercase tracking-wider">Organization Currency</Text>
+                <Text className="text-xs font-bold text-primary">
+                  {SUPPORTED_CURRENCIES.find(c => c.code === defaultCurrency)?.code || defaultCurrency}
+                </Text>
+              </View>
               <View className="rounded-2xl border border-border overflow-hidden py-3" style={{ backgroundColor: colors.surface }}>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: 12, gap: 8 }}>
                   {SUPPORTED_CURRENCIES.map((curr) => {
@@ -249,9 +254,15 @@ export default function SettingsScreen() {
                       <Pressable
                         key={curr.code}
                         onPress={() => handleUpdateCurrency(curr.code)}
-                        className={`px-4 py-2 rounded-full border ${isSelected ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
+                        className={`flex-row items-center px-3.5 py-2 rounded-xl border ${isSelected ? 'bg-primary border-primary' : 'bg-surface border-border'}`}
+                        style={{ gap: 6 }}
                       >
-                        <Text style={{ color: isSelected ? '#FFF' : '#7A7A92', fontSize: 12, fontWeight: '700' }}>
+                        <View style={{ width: 22, height: 22, borderRadius: 6, backgroundColor: isSelected ? 'rgba(255,255,255,0.2)' : 'rgba(255,255,255,0.05)', alignItems: 'center', justifyContent: 'center' }}>
+                          <Text style={{ color: isSelected ? '#FFF' : colors.foreground, fontSize: 11, fontWeight: '800' }}>
+                            {curr.symbol}
+                          </Text>
+                        </View>
+                        <Text style={{ color: isSelected ? '#FFF' : colors.secondary_text, fontSize: 12, fontWeight: '700' }}>
                           {curr.name}
                         </Text>
                       </Pressable>

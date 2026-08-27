@@ -136,7 +136,7 @@ export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onTo
           disabled={isTogglingScreen}
           className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
             isScreenSharing
-              ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/30'
+              ? 'bg-primary hover:bg-primary text-white shadow-lg shadow-blue-600/30'
               : 'bg-[#27272a] hover:bg-[#3f3f46] text-white'
           }`}
           title={isScreenSharing ? 'Stop sharing screen' : 'Share screen'}
@@ -169,7 +169,7 @@ export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onTo
         onClick={onToggleNotes}
         className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
           activeDrawer === 'notes'
-            ? 'bg-blue-600 text-white'
+            ? 'bg-primary text-white'
             : 'bg-[#27272a] hover:bg-[#3f3f46] text-white'
         }`}
         title="Toggle Notes"

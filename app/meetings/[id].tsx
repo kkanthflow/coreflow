@@ -12,6 +12,8 @@ import { Image } from 'expo-image';
 import clsx from 'clsx';
 import { isPast } from 'date-fns';
 import { safeFormat } from '@/lib/utils';
+import * as Sharing from 'expo-sharing';
+import * as Print from 'expo-print';
 
 export default function MeetingDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -20,6 +22,7 @@ export default function MeetingDetailsScreen() {
   const router = useRouter();
 
   const [meeting, setMeeting] = useState<any>(null);
+  const [meetingNotes, setMeetingNotes] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdatingRSVP, setIsUpdatingRSVP] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -43,6 +46,17 @@ export default function MeetingDetailsScreen() {
 
       if (error) throw error;
       setMeeting(data);
+
+      if (data && data.status === 'completed') {
+        const { data: notesData } = await supabase
+          .from('meeting_notes')
+          .select('content')
+          .eq('meeting_id', id)
+          .maybeSingle();
+        if (notesData && notesData.content) {
+          setMeetingNotes(notesData.content);
+        }
+      }
     } catch (err) {
       console.error('Error fetching meeting:', err);
       Alert.alert('Error', 'Failed to load meeting details.');
@@ -176,7 +190,7 @@ export default function MeetingDetailsScreen() {
 
   const handleShareMeeting = async () => {
     if (!meeting) return;
-    const link = `${process.env.EXPO_PUBLIC_WEB_URL || 'https://coreflow-meeting.vercel.app'}/meetings/${meeting.id}`;
+    const link = `${process.env.EXPO_PUBLIC_WEB_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app'}/meetings/${meeting.id}`;
     try {
       await Share.share({
         message: `Join my meeting "${meeting.title}" on CoreFlow: ${link}`,
@@ -185,6 +199,64 @@ export default function MeetingDetailsScreen() {
       });
     } catch (error) {
       console.error('Error sharing:', error);
+    }
+  };
+
+  const handleDownloadNotes = async () => {
+    if (!meetingNotes) return;
+    try {
+      const orgName = (user as any)?.user_metadata?.org_name || (user as any)?.user_metadata?.organization_name || (user as any)?.user_metadata?.company_name || 'Your Organization';
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>${meeting.title} - Meeting Notes</title>
+            <style>
+              body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333; line-height: 1.6; padding: 40px; margin: 0 auto; max-width: 800px; }
+              .header { border-bottom: 2px solid #FF6B4A; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+              .org-name { font-size: 24px; font-weight: bold; color: #FF6B4A; text-transform: uppercase; letter-spacing: 1px; }
+              .doc-type { font-size: 14px; color: #888; text-transform: uppercase; letter-spacing: 2px; }
+              .title { font-size: 28px; font-weight: 800; color: #111; margin: 0 0 10px 0; }
+              .meta { font-size: 14px; color: #555; margin-bottom: 40px; }
+              .content { font-size: 15px; white-space: pre-wrap; background: #fafafa; padding: 30px; border-radius: 8px; border: 1px solid #eee; }
+              .footer { margin-top: 50px; font-size: 12px; color: #aaa; text-align: center; border-top: 1px solid #eee; padding-top: 20px; }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <div class="org-name">${orgName}</div>
+              <div class="doc-type">Official Meeting Notes</div>
+            </div>
+            <h1 class="title">${meeting.title}</h1>
+            <div class="meta">
+              <strong>Generated:</strong> ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
+            <div class="content">${meetingNotes.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+            <div class="footer">
+              Confidential &bull; Generated securely via CoreFlow
+            </div>
+          </body>
+        </html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false
+      });
+      
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (isAvailable) {
+        await Sharing.shareAsync(uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Download Meeting Notes PDF'
+        });
+      } else {
+        Alert.alert('Error', 'Sharing is not available on this device');
+      }
+    } catch (err) {
+      console.error('Error generating PDF:', err);
+      Alert.alert('Error', 'Failed to generate meeting notes PDF');
     }
   };
 
@@ -311,6 +383,20 @@ export default function MeetingDetailsScreen() {
               </View>
             </View>
           </View>
+
+          {/* Meeting Notes Section */}
+          {meeting.status === 'completed' && meetingNotes && (
+            <View className="mb-6">
+              <PremiumButton
+                variant="primary"
+                onPress={handleDownloadNotes}
+                className="w-full flex-row items-center justify-center"
+              >
+                <Ionicons name="document-text-outline" size={20} color="white" style={{ marginRight: 8 }} />
+                <Text className="text-white font-bold text-base">Download Meeting Notes</Text>
+              </PremiumButton>
+            </View>
+          )}
 
           {/* RSVP Section (Only if attendee and not cancelled and not past) */}
           {meeting.status !== 'cancelled' && myAttendeeRecord && !isCreator && (

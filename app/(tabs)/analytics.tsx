@@ -130,7 +130,7 @@ function StatCard({
 }
 
 export default function AnalyticsScreen() {
-  const { user } = useAuth();
+  const { user, activeWorkspace } = useAuth();
   const colors = useColors();
   const colorScheme = useColorScheme();
   const C = {
@@ -167,7 +167,7 @@ export default function AnalyticsScreen() {
     total: 0, done: 0, inProgress: 0, review: 0, todo: 0,
   });
 
-  const isManagement = ['owner', 'administrator', 'director', 'senior_manager', 'manager'].includes(user?.role || '');
+  const isManagement = ['owner', 'administrator', 'director', 'senior_manager', 'manager', 'managing_director', 'ceo'].includes(user?.role || '') || activeWorkspace?.type === 'independent';
 
   useEffect(() => {
     Animated.parallel([
@@ -177,42 +177,73 @@ export default function AnalyticsScreen() {
   }, []);
 
   const fetchAnalytics = useCallback(async () => {
-    if (!user?.organizationId) { setLoading(false); return; }
+    if (!user) { setLoading(false); return; }
+    
+    const isIndie = user.freelancerType === 'independent' || activeWorkspace?.type === 'independent' || (!user.organizationId && !activeWorkspace?.id);
+    const effectiveOrgId = activeWorkspace && activeWorkspace.id !== 'independent' 
+      ? activeWorkspace.id 
+      : user.organizationId || null;
+
     if (isFirstLoad.current) {
       setLoading(true);
     }
     try {
-      const { data: orgData } = await supabase
-        .from('organizations')
-        .select('default_currency')
-        .eq('id', user.organizationId)
-        .single();
-      
-      if (orgData && orgData.default_currency) {
-        setOrgCurrency(orgData.default_currency);
+      if (effectiveOrgId) {
+        const { data: orgData } = await supabase
+          .from('organizations')
+          .select('default_currency')
+          .eq('id', effectiveOrgId)
+          .maybeSingle();
+        
+        if (orgData && orgData.default_currency) {
+          setOrgCurrency(orgData.default_currency);
+        }
       }
+
       if (isManagement) {
+        let projQuery = supabase.from('projects').select('id, status');
+        let taskQuery = supabase.from('tasks').select('id, status');
+        let invQuery = supabase.from('invoices').select('id, status, total_amount, paid_amount, balance_due');
+
+        if (!isIndie && effectiveOrgId) {
+          projQuery = projQuery.eq('org_id', effectiveOrgId);
+          taskQuery = taskQuery.eq('org_id', effectiveOrgId);
+          invQuery = invQuery.eq('org_id', effectiveOrgId);
+        } else {
+          projQuery = projQuery.eq('owner_id', user.id);
+          taskQuery = taskQuery.or(`created_by.eq.${user.id},assignee_id.eq.${user.id}`);
+          invQuery = invQuery.eq('owner_id', user.id);
+        }
+
         const [projRes, taskRes, invRes] = await Promise.all([
-          supabase.from('projects').select('id, status').eq('org_id', user.organizationId),
-          supabase.from('tasks').select('id, status').eq('org_id', user.organizationId),
-          supabase.from('invoices').select('id, status, total_amount').eq('organization_id', user.organizationId),
+          projQuery,
+          taskQuery,
+          invQuery,
         ]);
 
         let paid = 0, pending = 0;
         (invRes.data || []).forEach((inv: any) => {
-          const val = Number(inv.total_amount) || 0;
-          if (inv.status === 'paid') paid += val;
-          else if (inv.status === 'pending' || inv.status === 'sent') pending += val;
+          const tot = Number(inv.total_amount) || 0;
+          const p = Number(inv.paid_amount) || 0;
+          if (inv.status === 'paid') {
+            paid += tot;
+          } else {
+            paid += p;
+            pending += (inv.balance_due !== undefined && inv.balance_due !== null) 
+              ? Number(inv.balance_due) 
+              : Math.max(0, tot - p);
+          }
         });
 
         setOrgStats({
           totalProjects: projRes.data?.length || 0,
-          completedProjects: projRes.data?.filter((p: any) => p.status === 'completed').length || 0,
+          completedProjects: projRes.data?.filter((p: any) => p.status === 'completed' || p.status === 'done').length || 0,
           totalTasks: taskRes.data?.length || 0,
           doneTasks: taskRes.data?.filter((t: any) => t.status === 'done').length || 0,
           inProgressTasks: taskRes.data?.filter((t: any) => t.status === 'in_progress').length || 0,
           totalInvoices: invRes.data?.length || 0,
-          paidValue: paid, pendingValue: pending,
+          paidValue: paid, 
+          pendingValue: pending,
         });
       } else {
         const { data } = await supabase.from('tasks').select('id, status').eq('assignee_id', user.id);
@@ -232,7 +263,7 @@ export default function AnalyticsScreen() {
       setRefreshing(false);
       isFirstLoad.current = false;
     }
-  }, [user?.organizationId, user?.id, isManagement]);
+  }, [user, activeWorkspace, isManagement]);
 
   useFocusEffect(useCallback(() => { fetchAnalytics(); }, [fetchAnalytics]));
 

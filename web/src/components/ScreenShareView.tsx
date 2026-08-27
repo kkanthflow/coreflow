@@ -89,11 +89,11 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
     return (
       <div className="w-full h-full flex flex-col items-center justify-center bg-[#121214] border border-white/10 rounded-2xl p-8 relative overflow-hidden shadow-2xl">
         {/* Subtle background blur effect */}
-        <div className="absolute inset-0 bg-gradient-to-b from-blue-600/10 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
 
         {/* Icon & Details */}
         <div className="relative z-10 flex flex-col items-center text-center max-w-md">
-          <div className="w-20 h-20 rounded-3xl bg-blue-600/20 border border-blue-500/30 flex items-center justify-center mb-6 shadow-lg shadow-blue-500/10">
+          <div className="w-20 h-20 rounded-3xl bg-primary/20 border border-primary/30 flex items-center justify-center mb-6 shadow-lg shadow-blue-500/10">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="3" width="20" height="14" rx="2" />
               <line x1="8" y1="21" x2="16" y2="21" />
@@ -113,7 +113,7 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
               1080p 30 FPS
             </span>
             <span className="text-white/20">•</span>
-            <span className="text-xs font-mono font-bold text-blue-400">
+            <span className="text-xs font-mono font-bold text-primary">
               {formatTimer(elapsedSeconds)}
             </span>
           </div>
@@ -144,7 +144,7 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
       ) : (
         /* Track not yet subscribed — show a loading state instead of black screen */
         <div className="flex flex-col items-center gap-4 text-white/50">
-          <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           <span className="text-sm font-medium">Connecting to screen share…</span>
         </div>
       )}

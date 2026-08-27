@@ -1,6 +1,6 @@
+import "../lib/preboot";
 import { registerGlobals } from '@livekit/react-native';
 registerGlobals();
-import "../lib/preboot";
 import "@/global.css";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments, useRootNavigationState } from "expo-router";

@@ -1,17 +1,15 @@
 import React, { useEffect, useState, useMemo, useRef, memo } from 'react';
 import { View, Text, Pressable, ActivityIndicator, FlatList, Dimensions, Platform, Alert, TextInput, Modal, KeyboardAvoidingView, ScrollView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useParticipant, useRemoteParticipants, AudioSession, RNKeyProvider } from '@livekit/react-native';
-import { Track, ExternalE2EEKeyProvider, RoomOptions, VideoPresets, RoomEvent, RemoteTrackPublication, ConnectionState } from 'livekit-client';
-import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Users, MessageSquare, MoreHorizontal, FileText, X, Send, Play } from 'lucide-react-native';
+import { LiveKitRoom, useRoomContext, VideoTrack, useLocalParticipant, useParticipant, useRemoteParticipants, useConnectionState, useTracks, AudioSession, RNKeyProvider } from '@livekit/react-native';
+import { Track, ExternalE2EEKeyProvider, RoomOptions, VideoPresets, RoomEvent, ParticipantEvent, RemoteTrackPublication, ConnectionState } from 'livekit-client';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp, Users, MessageSquare, MoreHorizontal, FileText, X, Send, Play, Volume2, VolumeX } from 'lucide-react-native';
 import { Camera } from 'expo-camera';
 import { BlurView } from 'expo-blur';
 import { useAuth } from '@/hooks/use-auth';
-import Animated, { useAnimatedStyle, withTiming, Easing } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { supabase } from '@/lib/supabase';
-import { initializeUserKeys, decryptKeyWithSender } from '@/lib/crypto';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import ReactNativeForegroundService from '@supersami/rn-foreground-service';
 
 const { width } = Dimensions.get('window');
 
@@ -46,48 +44,47 @@ const getLiveKitToken = async (roomId: string, token: string) => {
 export default function MeetingRoomScreen() {
   const router = useRouter();
   const { id, camera, mic } = useLocalSearchParams();
-  const { session } = useAuth();
+  const { session: hookSession, isLoading: authLoading } = useAuth();
   const [token, setToken] = useState<string | null>(null);
   const [serverUrl, setServerUrl] = useState<string>('');
   const [e2eeOptions, setE2eeOptions] = useState<RoomOptions | undefined>(undefined);
   const [e2eeInitialized, setE2eeInitialized] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
+  const [connError, setConnError] = useState<string | null>(null);
 
   // Synchronized Enterprise LiveKit Room Configuration (Matching Web)
   const roomOptions: RoomOptions = useMemo(
     () => ({
-      adaptiveStream: true, // Enable automatic video tile resolution scaling based on view size
-      dynacast: true,       // Pause stream layers that are not active/visible to others
+      adaptiveStream: true,
+      dynacast: true,
       audioCaptureDefaults: {
         echoCancellation: true,
         noiseSuppression: true,
         autoGainControl: true,
       },
       videoCaptureDefaults: {
-        resolution: VideoPresets.h1080.resolution,
+        resolution: VideoPresets.h720.resolution,
       },
       publishDefaults: {
+        simulcast: true,
         screenShareEncoding: {
           maxBitrate: 3_500_000,
           maxFramerate: 30,
         },
-        screenShareSimulcastLayers: [], // Single 1080p @ 30 FPS layer (no low-res downscaling)
+        screenShareSimulcastLayers: [],
         videoEncoding: {
-          maxBitrate: 2_500_000, // Reduced slightly to avoid saturating upload bandwidth
-          maxFramerate: 24,      // 24fps delivers cinema-smooth video without heavy network packet delays
+          maxBitrate: 2_000_000,
+          maxFramerate: 24,
         },
         videoSimulcastLayers: [
-          VideoPresets.h1080,
           VideoPresets.h720,
           VideoPresets.h360,
         ],
         dtx: true,
-        backupCodec: true, // Enable fallback codecs if primary has high latency
+        backupCodec: true,
       },
-      latency: false,
-      ...(e2eeOptions || {}),
     }),
-    [e2eeOptions]
+    []
   );
 
   const isWaitingRef = useRef(isWaiting);
@@ -98,40 +95,51 @@ export default function MeetingRoomScreen() {
   // Clean up ghost waiting room status if user leaves while waiting
   useEffect(() => {
     return () => {
-      if (isWaitingRef.current && session?.user?.id) {
+      if (isWaitingRef.current && hookSession?.user?.id) {
         const updateStatus = async () => {
           try {
             await supabase
               .from('meeting_participants')
               .update({ admission_status: 'left' })
               .eq('meeting_id', id)
-              .eq('user_id', session.user.id);
-          } catch (e) {}
+              .eq('user_id', hookSession.user.id);
+          } catch (e) { }
         };
         updateStatus();
       }
     };
-  }, [id, session?.user?.id]);
+  }, [id, hookSession?.user?.id]);
 
   useEffect(() => {
-    if (!session?.access_token) return;
+    if (token) return;
 
     let isMounted = true;
 
     async function connect() {
-      if (!session?.access_token) return;
       try {
-        // Configure native audio session routing to default to loudspeaker output on mobile
+        setConnError(null);
+        let activeSession = hookSession;
+        if (!activeSession?.access_token) {
+          const { data: sessData } = await supabase.auth.getSession();
+          activeSession = sessData?.session;
+        }
+
+        if (!activeSession?.access_token) {
+          if (authLoading) return;
+          throw new Error('Not authenticated. Please log in again.');
+        }
+
+        // Configure native audio session routing for call clarity - default to loudspeaker for video conference
         try {
           await AudioSession.configureAudio({
             android: {
               preferredOutputList: ['speaker', 'bluetooth', 'headset', 'earpiece'],
               audioTypeOptions: {
                 manageAudioFocus: true,
-                audioMode: 'normal',
+                audioMode: 'inCommunication',
                 audioFocusMode: 'gain',
-                audioStreamType: 'music',
-                audioAttributesUsageType: 'media',
+                audioStreamType: 'voiceCall',
+                audioAttributesUsageType: 'voiceCommunication',
                 audioAttributesContentType: 'speech',
                 forceHandleAudioRouting: true,
               }
@@ -144,41 +152,12 @@ export default function MeetingRoomScreen() {
           console.warn('AudioSession configuration warning:', audioErr);
         }
 
-        // Fetch and set up native-bound E2EE encryption key matching the web
-        const { data: keyData, error: keyError } = await supabase
-          .from('meeting_keys')
-          .select('encrypted_key')
-          .eq('meeting_id', id)
-          .eq('user_id', session.user.id)
-          .single();
-
-        if (!keyError && keyData?.encrypted_key) {
-          try {
-            const myPubKey = await initializeUserKeys(session.user.id);
-            const decryptedKeyStr = await decryptKeyWithSender(keyData.encrypted_key, myPubKey);
-
-            const keyProvider = new RNKeyProvider({ sharedKey: true });
-            await keyProvider.setSharedKey(decryptedKeyStr);
-
-            if (isMounted) {
-              setE2eeOptions({
-                e2ee: {
-                  keyProvider,
-                  worker: undefined as any, // Not used by native RNKeyProvider, but typed
-                },
-              });
-            }
-          } catch (cryptoError) {
-            console.error('Failed to initialize E2EE keys:', cryptoError);
-          }
-        }
-        if (isMounted) setE2eeInitialized(true);
-
-        const result = await getLiveKitToken(id as string, session.access_token);
+        const result = await getLiveKitToken(id as string, activeSession.access_token);
         if (isMounted) {
           setIsWaiting(false);
           setToken(result.token);
-          const cleanUrl = result.roomUrl ? result.roomUrl.replace(/^["']|["']$/g, '') : '';
+          const rawUrl = result.roomUrl || process.env.EXPO_PUBLIC_LIVEKIT_URL || 'wss://coreflow-eo6z5wme.livekit.cloud';
+          const cleanUrl = rawUrl.replace(/^["']|["']$/g, '').trim();
           setServerUrl(cleanUrl);
         }
       } catch (e: any) {
@@ -187,40 +166,49 @@ export default function MeetingRoomScreen() {
           setIsWaiting(true);
         } else {
           console.error('Connection error:', e);
-          Alert.alert('Connection Error', e.message || 'Failed to connect to the meeting.');
+          const errMsg = e.message || 'Failed to connect to the meeting.';
+          setConnError(errMsg);
+          Alert.alert('Connection Error', errMsg, [
+            { text: 'Back to Meetings', onPress: () => router.replace('/meetings' as any) }
+          ]);
         }
       }
     }
-    
+
     connect();
 
     // Subscribe to admission_status changes if waiting
-    const channel = supabase
-      .channel(`waiting_room_${id}_${session.user.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'meeting_participants',
-          filter: `meeting_id=eq.${id}`,
-        },
-        (payload) => {
-          if (payload.new.user_id === session.user.id && payload.new.admission_status === 'admitted') {
-            if (isMounted) {
-              setIsWaiting(false);
-              connect();
+    const currentUserId = hookSession?.user?.id;
+    let channel: any = null;
+    if (currentUserId) {
+      channel = supabase
+        .channel(`waiting_room_${id}_${currentUserId}`)
+        .on(
+          'postgres_changes',
+          {
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'meeting_participants',
+            filter: `meeting_id=eq.${id}`,
+          },
+          (payload) => {
+            if (payload.new.user_id === currentUserId && payload.new.admission_status === 'admitted') {
+              if (isMounted) {
+                setIsWaiting(false);
+                connect();
+              }
             }
+
           }
-        }
-      )
-      .subscribe();
+        )
+        .subscribe();
+    }
 
     return () => {
       isMounted = false;
-      supabase.removeChannel(channel);
+      if (channel) supabase.removeChannel(channel);
     };
-  }, [id, session?.access_token, session?.user?.id]);
+  }, [id, hookSession, authLoading, token]);
 
   if (isWaiting) {
     return (
@@ -235,11 +223,26 @@ export default function MeetingRoomScreen() {
     );
   }
 
-  if (!token || !serverUrl || !e2eeInitialized) {
+  if (connError) {
     return (
-      <View className="flex-1 bg-[#09090B] justify-center items-center">
+      <View className="flex-1 bg-[#09090B] justify-center items-center px-8">
+        <Text className="text-red-500 text-xl font-bold mb-3 text-center">Connection Failed</Text>
+        <Text className="text-[#A1A1AA] text-sm text-center mb-8">{connError}</Text>
+        <Pressable
+          onPress={() => router.replace('/meetings' as any)}
+          className="bg-[#2563EB] px-6 py-3 rounded-full"
+        >
+          <Text className="text-white font-semibold">Back to Meetings</Text>
+        </Pressable>
+      </View>
+    );
+  }
+
+  if (!token || !serverUrl) {
+    return (
+      <View className="flex-1 bg-[#09090B] justify-center items-center px-8">
         <ActivityIndicator size="large" color="#2563EB" />
-        <Text className="text-[#A1A1AA] mt-4 text-base">Joining secure room...</Text>
+        <Text className="text-[#A1A1AA] mt-4 text-base font-medium">Connecting to meeting...</Text>
       </View>
     );
   }
@@ -250,7 +253,7 @@ export default function MeetingRoomScreen() {
       token={token}
       connect={true}
       audio={mic === '1' ? { autoGainControl: true, echoCancellation: true, noiseSuppression: true } : false}
-      video={camera === '1' ? { resolution: VideoPresets.h1080 } : false}
+      video={camera === '1'}
       options={roomOptions}
       onError={(error) => {
         console.error('[LiveKitRoom] Connection error:', error);
@@ -261,12 +264,12 @@ export default function MeetingRoomScreen() {
         );
       }}
     >
-      <MeetingUI />
+      <MeetingUI initialCameraEnabled={camera === '1'} />
     </LiveKitRoom>
   );
 }
 
-function MeetingUI() {
+function MeetingUI({ initialCameraEnabled }: { initialCameraEnabled?: boolean }) {
   const room = useRoomContext();
   const router = useRouter();
   const { id } = useLocalSearchParams();
@@ -279,13 +282,110 @@ function MeetingUI() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatInput, setChatInput] = useState('');
   const [messages, setMessages] = useState<{ id: string, text: string, sender: string, time: string, isSelf: boolean }[]>([]);
+  const [isSpeakerOn, setIsSpeakerOn] = useState(true);
+  const [connectTimedOut, setConnectTimedOut] = useState(false);
+  const [meetingDetails, setMeetingDetails] = useState<any>(null);
+  const isHost = meetingDetails?.host_id === session?.user?.id;
 
+  useEffect(() => {
+    if (!id) return;
+    supabase
+      .from('meetings')
+      .select('id, host_id, title, status')
+      .eq('id', id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (data) setMeetingDetails(data);
+      });
+  }, [id]);
 
+  const connectionState = useConnectionState(room);
 
+  // Connection timeout fallback: if stuck connecting for > 15 seconds, show retry
+  useEffect(() => {
+    if (connectionState === ConnectionState.Connecting || connectionState === ConnectionState.Reconnecting || connectionState === undefined) {
+      const timeout = setTimeout(() => {
+        setConnectTimedOut(true);
+      }, 15000);
+      return () => clearTimeout(timeout);
+    } else {
+      setConnectTimedOut(false);
+    }
+  }, [connectionState]);
 
-  // Detect active presenter
-  const presenter = participants.find((p: any) => p.isScreenShareEnabled);
-  const screenSharePub = presenter?.getTrackPublication(Track.Source.ScreenShare);
+  const toggleAudioOutput = async () => {
+    try {
+      const targetOutput = isSpeakerOn ? 'earpiece' : 'speaker';
+      const outputs = await AudioSession.getAudioOutputs();
+      if (outputs.includes(targetOutput)) {
+        await AudioSession.selectAudioOutput(targetOutput);
+        setIsSpeakerOn(!isSpeakerOn);
+      } else {
+        // Fallback if specific output is not found
+        await AudioSession.selectAudioOutput(isSpeakerOn ? outputs[0] : 'speaker');
+        setIsSpeakerOn(!isSpeakerOn);
+      }
+    } catch (err) {
+      console.warn('Audio output switch failed:', err);
+    }
+  };
+
+  // Add event listeners for debugging LiveKit connection and tracks
+  useEffect(() => {
+    const onConnected = () => console.log('[LiveKit] Connected to room:', room.name);
+    const onDisconnected = () => console.log('[LiveKit] Disconnected from room');
+    const onStateChanged = (state: ConnectionState) => console.log('[LiveKit] ConnectionStateChanged:', state);
+    const onMediaError = (error: Error) => console.error('[LiveKit] MediaDevicesError:', error);
+    const onTrackSubscribed = (track: Track, pub: RemoteTrackPublication, participant: any) => {
+      console.log(`[LiveKit] TrackSubscribed: ${track.kind} from ${participant.identity}`);
+    };
+    const onTrackPublished = (pub: any, participant: any) => {
+      console.log(`[LiveKit] TrackPublished: ${pub.kind} from ${participant.identity}`);
+    };
+
+    room.on(RoomEvent.Connected, onConnected);
+    room.on(RoomEvent.Disconnected, onDisconnected);
+    room.on(RoomEvent.ConnectionStateChanged, onStateChanged);
+    room.on(RoomEvent.MediaDevicesError, onMediaError);
+    room.on(RoomEvent.TrackSubscribed, onTrackSubscribed);
+    room.on(RoomEvent.TrackPublished, onTrackPublished);
+
+    return () => {
+      room.off(RoomEvent.Connected, onConnected);
+      room.off(RoomEvent.Disconnected, onDisconnected);
+      room.off(RoomEvent.ConnectionStateChanged, onStateChanged);
+      room.off(RoomEvent.MediaDevicesError, onMediaError);
+      room.off(RoomEvent.TrackSubscribed, onTrackSubscribed);
+      room.off(RoomEvent.TrackPublished, onTrackPublished);
+    };
+  }, [room]);
+
+  const [renderCounter, setRenderCounter] = useState(0);
+
+  useEffect(() => {
+    const forceRender = () => setRenderCounter(c => c + 1);
+
+    room.on(RoomEvent.TrackPublished, forceRender);
+    room.on(RoomEvent.TrackUnpublished, forceRender);
+    room.on(RoomEvent.TrackMuted, forceRender);
+    room.on(RoomEvent.TrackUnmuted, forceRender);
+    room.on(RoomEvent.ParticipantConnected, forceRender);
+    room.on(RoomEvent.ParticipantDisconnected, forceRender);
+
+    return () => {
+      room.off(RoomEvent.TrackPublished, forceRender);
+      room.off(RoomEvent.TrackUnpublished, forceRender);
+      room.off(RoomEvent.TrackMuted, forceRender);
+      room.off(RoomEvent.TrackUnmuted, forceRender);
+      room.off(RoomEvent.ParticipantConnected, forceRender);
+      room.off(RoomEvent.ParticipantDisconnected, forceRender);
+    };
+  }, [room]);
+
+  // Screen share listener
+  const screenShareTrack = useTracks([Track.Source.ScreenShare], { onlySubscribed: false })[0];
+  const presenter = screenShareTrack?.participant;
+  const screenSharePub = screenShareTrack?.publication;
 
   useEffect(() => {
     if (presenter && !presenter.isLocal && screenSharePub) {
@@ -299,147 +399,155 @@ function MeetingUI() {
     }
   }, [presenter, screenSharePub]);
 
-  // Automatically force loudspeaker output routing when room connection completes
-  // Automatically force loudspeaker output routing when room connection completes
   useEffect(() => {
     async function selectSpeaker() {
       try {
+        await AudioSession.startAudioSession();
         const outputs = await AudioSession.getAudioOutputs();
+        console.log('[AudioSession] Available outputs:', outputs);
         if (outputs.includes('speaker')) {
           await AudioSession.selectAudioOutput('speaker');
+          console.log('[AudioSession] Selected speaker (loudspeaker)');
+          setIsSpeakerOn(true);
+        } else if (outputs.includes('bluetooth')) {
+          await AudioSession.selectAudioOutput('bluetooth');
+        } else if (outputs.includes('headset')) {
+          await AudioSession.selectAudioOutput('headset');
         }
       } catch (err) {
-        console.warn('Loudspeaker routing force failed:', err);
+        console.warn('Speaker routing force failed:', err);
       }
     }
-    selectSpeaker();
-  }, []);
 
+    if (room.state === ConnectionState.Connected) {
+      selectSpeaker();
+    }
+
+    // Call on connected, track subscribed, and delayed to ensure native routing catches after WebRTC audio track init
+    const timer1 = setTimeout(selectSpeaker, 300);
+    const timer2 = setTimeout(selectSpeaker, 1200);
+
+    room.on(RoomEvent.Connected, selectSpeaker);
+    room.on(RoomEvent.TrackSubscribed, selectSpeaker);
+    return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
+      room.off(RoomEvent.Connected, selectSpeaker);
+      room.off(RoomEvent.TrackSubscribed, selectSpeaker);
+    };
+  }, [room]);
+
+  // Chat data listener (supports both Mobile custom packets and LiveKit standard web Chat component)
   useEffect(() => {
-    const handleData = (payload: Uint8Array, participant?: any) => {
-      let str = '';
+    const handleDataReceived = (payload: Uint8Array, participant?: any, _kind?: any, _topic?: string) => {
       try {
-        if (typeof TextDecoder !== 'undefined') {
-          str = new TextDecoder().decode(payload);
-        } else {
-          // Fallback that avoids stack overflow on large arrays
-          str = payload.reduce((data, byte) => data + String.fromCharCode(byte), '');
+        const decoded = new TextDecoder().decode(payload);
+        let messageText = '';
+        try {
+          const parsed = JSON.parse(decoded);
+          messageText = parsed.message || parsed.text || decoded;
+        } catch {
+          messageText = decoded;
         }
-      } catch (err) {
-        str = payload.reduce((data, byte) => data + String.fromCharCode(byte), '');
-      }
 
-      try {
-        const msg = JSON.parse(str);
-        if (msg.type === 'chat') {
+        if (messageText && messageText.trim()) {
           setMessages(prev => [...prev, {
-            id: Math.random().toString(36).substring(7),
-            text: msg.text,
-            sender: participant?.name || participant?.identity || 'Someone',
+            id: Date.now().toString() + Math.random(),
+            text: messageText,
+            sender: participant?.name || participant?.identity || 'Participant',
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            isSelf: false,
+            isSelf: false
           }]);
         }
-      } catch (e) {}
+      } catch (err) {
+        console.error('Error handling data message:', err);
+      }
     };
-    
-    room.on(RoomEvent.DataReceived, handleData);
-    return () => {
-      room.off(RoomEvent.DataReceived, handleData);
-    };
+
+    room.on(RoomEvent.DataReceived, handleDataReceived);
+    return () => { room.off(RoomEvent.DataReceived, handleDataReceived); };
   }, [room]);
 
   const sendChatMessage = async () => {
     if (!chatInput.trim() || !localParticipant) return;
-    
-    const msgObj = { type: 'chat', text: chatInput.trim() };
-    const str = JSON.stringify(msgObj);
-    
-    let data;
+    const textToSend = chatInput.trim();
+    setChatInput('');
     try {
-      data = new TextEncoder().encode(str);
-    } catch (err) {
-      data = new Uint8Array(str.length);
-      for (let i = 0; i < str.length; i++) data[i] = str.charCodeAt(i);
-    }
-    
-    try {
-      await localParticipant.publishData(data, { reliable: true });
+      // Standard LiveKit Chat Protocol format required by @livekit/components-react web <Chat />
+      const payload = JSON.stringify({
+        id: Date.now().toString(),
+        message: textToSend,
+        text: textToSend,
+        timestamp: Date.now()
+      });
+      await localParticipant.publishData(new TextEncoder().encode(payload), {
+        reliable: true,
+        topic: 'lk-chat-topic'
+      });
       setMessages(prev => [...prev, {
-        id: Math.random().toString(36).substring(7),
-        text: msgObj.text,
-        sender: 'Me',
+        id: Date.now().toString() + Math.random(),
+        text: textToSend,
+        sender: 'You',
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        isSelf: true,
+        isSelf: true
       }]);
-      setChatInput('');
     } catch (e) {
-      console.error('Failed to send message', e);
+      console.error('Failed to send message:', e);
     }
   };
 
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [notesText, setNotesText] = useState('');
-  const [notesId, setNotesId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const saveTimeout = useRef<NodeJS.Timeout | null>(null);
-  const defaultNotesTemplate = `# Meeting Notes\n\n**Agenda:**\n- \n\n**Decisions:**\n- \n\n**Action Items:**\n- `;
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Notes synchronization with backend (shared across web and mobile)
   const openNotes = async () => {
     setIsNotesOpen(true);
-    if (!notesText && session?.user?.id) {
-      const { data } = await supabase
-        .from('meeting_notes')
-        .select('*')
-        .eq('meeting_id', id)
-        .eq('author_id', session.user.id)
-        .limit(1)
-        .single();
-      
-      if (data) {
-        setNotesText(data.content);
-        setNotesId(data.id);
-      } else {
-        setNotesText(defaultNotesTemplate);
-      }
-    }
-  };
-
-  const saveNotes = async (text: string) => {
-    if (!session?.user?.id) return;
-    setIsSaving(true);
+    if (!session?.access_token || !id) return;
     try {
-      if (notesId) {
-        await supabase.from('meeting_notes').update({ content: text, updated_at: new Date().toISOString() }).eq('id', notesId);
-      } else {
-        const { data } = await supabase.from('meeting_notes').insert({
-          meeting_id: id,
-          author_id: session.user.id,
-          content: text
-        }).select('id').single();
-        if (data) setNotesId(data.id);
+      const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
+      const res = await fetch(`${baseUrl}/api/meetings/${id}/notes`, {
+        headers: { Authorization: `Bearer ${session.access_token}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.notes?.content) {
+          setNotesText(data.notes.content);
+        }
       }
-    } catch (e) {
-      console.error('Failed to save notes', e);
-    } finally {
-      setIsSaving(false);
-    }
+    } catch (e) { }
   };
 
   const handleNotesChange = (text: string) => {
     setNotesText(text);
-    if (saveTimeout.current) clearTimeout(saveTimeout.current);
-    saveTimeout.current = setTimeout(() => {
-      saveNotes(text);
-    }, 1500);
+    if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
+    debounceTimeoutRef.current = setTimeout(async () => {
+      if (!session?.access_token || !id) return;
+      setIsSaving(true);
+      try {
+        const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
+        await fetch(`${baseUrl}/api/meetings/${id}/notes`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ content: text })
+        });
+      } catch (e) { } finally {
+        setIsSaving(false);
+      }
+    }, 1000);
   };
 
   useEffect(() => {
     return () => {
-      if (saveTimeout.current) clearTimeout(saveTimeout.current);
+      if (debounceTimeoutRef.current) clearTimeout(debounceTimeoutRef.current);
     };
   }, []);
 
+  // Waiting room management for Host
   useEffect(() => {
     const fetchWaiting = async () => {
       const { data } = await supabase
@@ -449,10 +557,11 @@ function MeetingUI() {
         .eq('admission_status', 'waiting');
       if (data) setWaitingUsers(data);
     };
+
     fetchWaiting();
 
     const channel = supabase
-      .channel(`host_waiting_${id}`)
+      .channel(`waiting_room_host_${id}`)
       .on(
         'postgres_changes',
         { event: '*', schema: 'public', table: 'meeting_participants', filter: `meeting_id=eq.${id}` },
@@ -472,52 +581,87 @@ function MeetingUI() {
     if (error) Alert.alert('Error denying user', error.message);
   };
 
-  // Background service enabled to keep meeting active in background
   const handleLeave = () => {
-    ReactNativeForegroundService.stopAll();
-    router.replace('/meetings' as any);
+    if (isHost) {
+      Alert.alert(
+        'Leave or End Meeting',
+        'As the host, do you want to end the meeting for all participants or just leave?',
+        [
+          {
+            text: 'Leave Only',
+            style: 'default',
+            onPress: () => {
+              try { room.disconnect(); } catch {}
+              router.replace('/meetings' as any);
+            }
+          },
+          {
+            text: 'End Meeting for All',
+            style: 'destructive',
+            onPress: async () => {
+              try {
+                await supabase
+                  .from('meetings')
+                  .update({ status: 'completed', ended_at: new Date().toISOString() })
+                  .eq('id', id);
+
+                const baseUrl = process.env.EXPO_PUBLIC_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
+                if (session?.access_token) {
+                  fetch(`${baseUrl}/api/meetings/${id}/end`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${session.access_token}` }
+                  }).catch(() => {});
+                }
+              } catch (e) {
+                console.error('Error ending meeting:', e);
+              } finally {
+                try { room.disconnect(); } catch {}
+                router.replace('/meetings' as any);
+              }
+            }
+          },
+          { text: 'Cancel', style: 'cancel' }
+        ]
+      );
+    } else {
+      try { room.disconnect(); } catch {}
+      router.replace('/meetings' as any);
+    }
   };
 
-  useEffect(() => {
-    // Start the foreground service with camera + microphone type declared.
-    // On Android 14+, the OS requires the service to declare these types at start-time
-    // Camera + microphone foreground service types are declared in AndroidManifest
-    // via withLiveKitForegroundService.js plugin (camera|microphone|mediaProjection).
-    // That manifest declaration is what tells Android to allow continued camera capture
-    // while backgrounded — no runtime JS property is needed here.
-    ReactNativeForegroundService.start({
-      id: 144,
-      title: "Meeting Active",
-      message: "Camera & microphone active — streaming in background",
-      importance: 'high',
-    });
-
-    return () => {
-      ReactNativeForegroundService.stopAll();
-    };
-  }, []);
-
   const getGridStyle = (count: number): any => {
-    if (count === 0 || count === 1) return { width: '100%', height: '100%' };
-    if (count === 2) return { width: '100%', height: '49%' };
-    if (count === 3 || count === 4) return { width: '49%', height: '49%' };
-    return { width: '48%', height: width * 0.6 };
+    if (count === 0 || count === 1) return { width: '100%', height: '100%', minHeight: 200 };
+    if (count === 2) return { width: '100%', height: '49%', minHeight: 180 };
+    if (count === 3 || count === 4) return { width: '49%', height: '49%', minHeight: 150 };
+    return { width: '48%', height: width * 0.6, minHeight: 140 };
   };
 
   // ── Guard: show spinner while LiveKit is still connecting ────────────────
-  // Without this, the UI renders as a black screen during the WebSocket handshake
-  if (room.state === ConnectionState.Connecting || room.state === ConnectionState.Reconnecting) {
+  if (connectionState === ConnectionState.Connecting || connectionState === ConnectionState.Reconnecting || connectionState === undefined) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#09090B', justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: '#09090B', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
         <ActivityIndicator size="large" color="#2563EB" />
-        <Text style={{ color: '#A1A1AA', marginTop: 16, fontSize: 15 }}>
-          {room.state === ConnectionState.Reconnecting ? 'Reconnecting…' : 'Connecting to room…'}
+        <Text style={{ color: '#A1A1AA', marginTop: 16, fontSize: 15, textAlign: 'center' }}>
+          {connectionState === ConnectionState.Reconnecting ? 'Reconnecting to room…' : 'Connecting to room…'}
         </Text>
+        {connectTimedOut && (
+          <View style={{ marginTop: 24, alignItems: 'center' }}>
+            <Text style={{ color: '#F59E0B', fontSize: 13, textAlign: 'center', marginBottom: 16 }}>
+              Connection is taking longer than expected.
+            </Text>
+            <Pressable
+              onPress={handleLeave}
+              style={{ backgroundColor: '#27272A', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 }}
+            >
+              <Text style={{ color: '#FFFFFF', fontSize: 14, fontWeight: '600' }}>Cancel & Return</Text>
+            </Pressable>
+          </View>
+        )}
       </View>
     );
   }
 
-  if (room.state === ConnectionState.Disconnected) {
+  if (connectionState === ConnectionState.Disconnected) {
     return (
       <View style={{ flex: 1, backgroundColor: '#09090B', justifyContent: 'center', alignItems: 'center', padding: 32 }}>
         <Text style={{ color: '#EF4444', fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>Disconnected</Text>
@@ -572,7 +716,7 @@ function MeetingUI() {
         {presenter && screenSharePub ? (
           /* ── Presenter Mode (Google Meet parity) ── */
           <View className="flex-1 flex-col gap-2">
-            <View className="flex-1 rounded-2xl overflow-hidden bg-black border border-white/10">
+            <View className="flex-1 rounded-2xl bg-black border border-white/10">
               {presenter.isLocal ? (
                 <View className="flex-1 items-center justify-center p-6 bg-[#121214]">
                   <MonitorUp size={48} color="#3B82F6" className="mb-4" />
@@ -580,7 +724,7 @@ function MeetingUI() {
                   <Text className="text-gray-400 text-sm text-center mb-6">Your screen is visible to all meeting participants in 1080p @ 30 FPS.</Text>
                   <Pressable
                     onPress={async () => {
-                      try { await localParticipant?.setScreenShareEnabled(false); } catch (e) {}
+                      try { await localParticipant?.setScreenShareEnabled(false); } catch (e) { }
                     }}
                     className="bg-red-600 px-6 py-3 rounded-full flex-row items-center gap-2"
                   >
@@ -646,7 +790,7 @@ function MeetingUI() {
         <View className="rounded-3xl overflow-hidden shadow-2xl border border-white/10 bg-black/20">
           <BlurView intensity={Platform.OS === 'ios' ? 60 : 100} tint="dark">
             <View className="flex-row justify-evenly items-center py-4 px-2">
-              <Pressable 
+              <Pressable
                 onPress={async () => {
                   try {
                     if (!isMicrophoneEnabled) {
@@ -666,7 +810,7 @@ function MeetingUI() {
                 {isMicrophoneEnabled ? <Mic size={20} color="#FFFFFF" /> : <MicOff size={20} color="#EF4444" />}
               </Pressable>
 
-              <Pressable 
+              <Pressable
                 onPress={async () => {
                   try {
                     if (!isCameraEnabled) {
@@ -686,7 +830,7 @@ function MeetingUI() {
                 {isCameraEnabled ? <Video size={20} color="#FFFFFF" /> : <VideoOff size={20} color="#EF4444" />}
               </Pressable>
 
-              <Pressable 
+              <Pressable
                 onPress={async () => {
                   try {
                     await localParticipant?.setScreenShareEnabled(!isScreenShareEnabled);
@@ -699,14 +843,21 @@ function MeetingUI() {
                 <MonitorUp size={20} color="#FFFFFF" />
               </Pressable>
 
+              <Pressable
+                onPress={toggleAudioOutput}
+                className={`w-12 h-12 rounded-full items-center justify-center ${isSpeakerOn ? 'bg-[#2563EB]' : 'bg-[#18181B]'}`}
+              >
+                {isSpeakerOn ? <Volume2 size={20} color="#FFFFFF" /> : <VolumeX size={20} color="#A1A1AA" />}
+              </Pressable>
+
               <Pressable onPress={openNotes} className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
                 <FileText size={20} color="#FFFFFF" />
               </Pressable>
-              
+
               <Pressable onPress={() => setIsChatOpen(true)} className="w-12 h-12 rounded-full items-center justify-center bg-[#18181B]">
                 <MessageSquare size={20} color="#FFFFFF" />
               </Pressable>
-              
+
               <Pressable onPress={handleLeave} className="w-12 h-12 rounded-full items-center justify-center bg-[#EF4444]">
                 <PhoneOff size={20} color="#FFFFFF" />
               </Pressable>
@@ -753,7 +904,7 @@ function MeetingUI() {
               <X size={24} color="#A1A1AA" />
             </Pressable>
           </View>
-          
+
           <FlatList
             data={messages}
             keyExtractor={item => item.id}
@@ -773,7 +924,7 @@ function MeetingUI() {
               </View>
             }
           />
-          
+
           <View className="p-4 border-t border-white/10 flex-row items-center gap-2 mb-2">
             <TextInput
               className="flex-1 bg-[#27272A] text-white p-3 rounded-full"
@@ -794,48 +945,107 @@ function MeetingUI() {
 }
 
 const ParticipantTile = memo(function ParticipantTile({ participant }: { participant: any }) {
+  const [, setUpdateTrigger] = useState(0);
+
+  useEffect(() => {
+    if (!participant) return;
+    const forceUpdate = () => setUpdateTrigger(v => v + 1);
+
+    if (typeof participant.on === 'function') {
+      participant.on(ParticipantEvent.TrackPublished, forceUpdate);
+      participant.on(ParticipantEvent.TrackUnpublished, forceUpdate);
+      participant.on(ParticipantEvent.TrackSubscribed, forceUpdate);
+      participant.on(ParticipantEvent.TrackUnsubscribed, forceUpdate);
+      participant.on(ParticipantEvent.TrackMuted, forceUpdate);
+      participant.on(ParticipantEvent.TrackUnmuted, forceUpdate);
+      participant.on(ParticipantEvent.IsSpeakingChanged, forceUpdate);
+    }
+
+    return () => {
+      if (typeof participant.off === 'function') {
+        participant.off(ParticipantEvent.TrackPublished, forceUpdate);
+        participant.off(ParticipantEvent.TrackUnpublished, forceUpdate);
+        participant.off(ParticipantEvent.TrackSubscribed, forceUpdate);
+        participant.off(ParticipantEvent.TrackUnsubscribed, forceUpdate);
+        participant.off(ParticipantEvent.TrackMuted, forceUpdate);
+        participant.off(ParticipantEvent.TrackUnmuted, forceUpdate);
+        participant.off(ParticipantEvent.IsSpeakingChanged, forceUpdate);
+      }
+    };
+  }, [participant]);
+
   const participantState = useParticipant(participant);
-  const isSpeaking = participantState.isSpeaking;
-  const isCameraMuted = !participantState.cameraPublication || participantState.cameraPublication.isMuted;
-  
-  const trackRef = participantState.cameraPublication ? {
+  const isSpeaking = participantState?.isSpeaking ?? participant?.isSpeaking ?? false;
+
+  // Use useTracks to retrieve camera tracks
+  const cameraTracks = useTracks([Track.Source.Camera], {
+    onlySubscribed: false,
+  });
+
+  const participantTrackRef = cameraTracks.find(
+    t => t.participant?.identity === participant?.identity
+  );
+
+  const cameraPub = participantTrackRef?.publication || participantState?.cameraPublication ||
+    (typeof participant?.getTrackPublication === 'function' ? participant.getTrackPublication(Track.Source.Camera) : null);
+
+  const isLocal = participant?.isLocal ?? false;
+  const isLocalCamActive = isLocal && Boolean(participant?.isCameraEnabled || (cameraPub && !cameraPub.isMuted));
+  const isRemoteCamActive = !isLocal && Boolean(
+    participant?.isCameraEnabled || (cameraPub && !cameraPub.isMuted) || (participantTrackRef?.publication && !participantTrackRef.publication.isMuted)
+  );
+
+  const hasValidVideo = Boolean(isLocal ? isLocalCamActive : isRemoteCamActive);
+
+  const resolvedTrackRef = participantTrackRef || (cameraPub ? {
     participant,
     source: Track.Source.Camera,
-    publication: participantState.cameraPublication,
-    track: participantState.cameraPublication.track
-  } : null;
+    publication: cameraPub,
+    track: cameraPub.track
+  } : (participant ? {
+    participant,
+    source: Track.Source.Camera
+  } : null));
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
       borderColor: isSpeaking ? '#22C55E' : 'rgba(255,255,255,0.08)',
       borderWidth: isSpeaking ? 2 : 1,
       transform: [
-        { scale: withTiming(isSpeaking ? 1.02 : 1, { duration: 200, easing: Easing.out(Easing.ease) }) }
+        { scale: withTiming(isSpeaking ? 1.02 : 1, { duration: 200 }) }
       ]
     };
   }, [isSpeaking]);
 
+  const initials = ((participant.name || participant.identity || '?').charAt(0) || '?').toUpperCase();
+
   return (
-    <Animated.View className="flex-1 bg-[#18181B] rounded-[20px] overflow-hidden relative shadow-lg" style={animatedStyle}>
-      {isCameraMuted || !trackRef ? (
-        <View className="flex-1 items-center justify-center bg-[#18181B]">
-          <View className="w-16 h-16 rounded-full bg-[#27272A] items-center justify-center">
-            <Text className="text-white text-xl font-bold">
-              {(participant.name || participant.identity || '?').charAt(0).toUpperCase()}
+    <Animated.View className="flex-1 bg-[#18181B] rounded-[20px] relative shadow-lg overflow-hidden" style={[animatedStyle, { flex: 1, backgroundColor: '#18181B' }]}>
+      {(!hasValidVideo || !resolvedTrackRef) ? (
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#18181B' }}>
+          <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#27272A', alignItems: 'center', justifyContent: 'center' }}>
+            <Text style={{ color: '#FFFFFF', fontSize: 22, fontWeight: '700' }}>
+              {initials}
             </Text>
           </View>
         </View>
       ) : (
-        <VideoTrack trackRef={trackRef} style={{ flex: 1 }} />
+        <VideoTrack
+          trackRef={resolvedTrackRef as any}
+          style={{ flex: 1, width: '100%', height: '100%' }}
+          objectFit="cover"
+          mirror={isLocal}
+          zOrder={0}
+        />
       )}
-      
+
       {/* Participant Info Overlay */}
       <View className="absolute bottom-3 left-3 flex-row items-center bg-black/60 px-3 py-1.5 rounded-full backdrop-blur-md">
         {!participant.isMicrophoneEnabled && (
           <MicOff size={14} color="#EF4444" style={{ marginRight: 6 }} />
         )}
         <Text className="text-white text-xs font-semibold" numberOfLines={1}>
-          {participant.name || participant.identity}
+          {participant.name || participant.identity}{isLocal ? ' (You)' : ''}
         </Text>
       </View>
     </Animated.View>

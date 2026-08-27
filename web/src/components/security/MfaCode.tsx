@@ -17,7 +17,7 @@ export function MfaVerify({ onVerify, onCancel }: MfaVerifyProps) {
       </p>
       
       <input
-        className="h-14 rounded-xl border border-white/10 bg-white/5 text-center text-xl font-bold tracking-[0.25em] text-white placeholder-white/40 focus:outline-none focus:border-blue-500 transition-colors"
+        className="h-14 rounded-xl border border-white/10 bg-white/5 text-center text-xl font-bold tracking-[0.25em] text-white placeholder-white/40 focus:outline-none focus:border-primary transition-colors"
         value={code}
         onChange={(e) => {
           const val = e.target.value.replace(/[^0-9]/g, '');
@@ -34,8 +34,8 @@ export function MfaVerify({ onVerify, onCancel }: MfaVerifyProps) {
           className={twMerge(
             "flex-1 h-[50px] rounded-xl font-bold flex items-center justify-center transition-opacity",
             code.length < 6 
-              ? "bg-blue-600/50 text-white/50 cursor-not-allowed" 
-              : "bg-blue-600 hover:bg-blue-500 text-white cursor-pointer"
+              ? "bg-primary/50 text-white/50 cursor-not-allowed" 
+              : "bg-primary hover:bg-primary text-white cursor-pointer"
           )}
         >
           Verify OTP

@@ -95,7 +95,7 @@ export function DiagnosticsOverlay() {
       ) : (
         <div className="bg-[#121214]/95 backdrop-blur-xl border border-white/15 text-white p-4 rounded-2xl w-80 shadow-2xl font-mono text-xs animate-in fade-in zoom-in duration-200">
           <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
-            <span className="font-bold text-blue-400 flex items-center gap-2">
+            <span className="font-bold text-primary flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               LiveKit Telemetry
             </span>
@@ -118,11 +118,11 @@ export function DiagnosticsOverlay() {
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Pub Bitrate:</span>
-              <span className="text-blue-400 font-semibold">{stats.pubBitrate} kbps</span>
+              <span className="text-primary font-semibold">{stats.pubBitrate} kbps</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Rec Bitrate:</span>
-              <span className="text-blue-400 font-semibold">{stats.recBitrate} kbps</span>
+              <span className="text-primary font-semibold">{stats.recBitrate} kbps</span>
             </div>
             <div className="flex justify-between">
               <span className="text-gray-400">Layer:</span>

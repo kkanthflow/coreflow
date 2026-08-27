@@ -75,9 +75,9 @@ export class MeetingsController {
       }
 
       // If caller is not the host, ensure the host has already joined the meeting.
-      // If the host is not active, return a 400 'waiting_room' response so they wait.
+      // If the host is not active/joined, return a 400 'waiting_room' response so they wait.
       if (!isHost) {
-        const { data: hostParticipant } = await (MeetingsService as any).getSupabase()
+        const { data: hostParticipant } = await MeetingsService.getSupabase()
           .from('meeting_participants')
           .select('admission_status, status')
           .eq('meeting_id', meeting.id)
@@ -85,14 +85,14 @@ export class MeetingsController {
           .eq('status', 'joined')
           .maybeSingle();
 
-        if (!hostParticipant || hostParticipant.admission_status !== 'admitted') {
-          // Put attendee in 'waiting' state in meeting_participants
+        if (!hostParticipant || hostParticipant.status !== 'joined' || hostParticipant.admission_status !== 'admitted') {
+          // Track participant in 'waiting' state in meeting_participants
           await MeetingsService.trackParticipant(meeting.id, user.id, meeting.host_id);
           return res.status(400).json({ error: 'waiting_room', details: 'Waiting for the host to join the meeting' });
         }
       }
 
-      // Track participant
+      // Track participant (marks host as 'joined' and attendee as 'joined' once admitted)
       const participant = await MeetingsService.trackParticipant(meeting.id, user.id, meeting.host_id);
       
       // If the participant's admission_status is still 'waiting', return a 400 'waiting_room' response
@@ -100,11 +100,12 @@ export class MeetingsController {
         return res.status(400).json({ error: 'waiting_room', details: 'Waiting for host approval to enter the room' });
       }
 
-      const participantName = user.user_metadata?.full_name || user.email;
+      const participantName = user.user_metadata?.full_name || user.user_metadata?.org_name || user.email || 'Guest';
+      const safeRoomName = meeting.room_name || `coreflow-${meeting.id}`;
 
       // Generate LiveKit Token
       const token = await LiveKitService.generateToken(
-        meeting.room_name,
+        safeRoomName,
         user.id,
         participantName,
         {
@@ -115,7 +116,7 @@ export class MeetingsController {
       );
 
       let roomUrl = process.env.LIVEKIT_URL || "wss://coreflow-eo6z5wme.livekit.cloud";
-      roomUrl = roomUrl.replace(/^["']|["']$/g, '');
+      roomUrl = roomUrl.replace(/^["']|["']$/g, '').trim();
 
       res.json({ token, roomUrl });
     } catch (error: any) {

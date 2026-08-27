@@ -1,5 +1,6 @@
 import { Express, Request, Response } from "express";
 import { createClient } from "@supabase/supabase-js";
+import ws from "ws";
 import { AuthProtectionService, SECURITY_CONFIG } from "./auth-protection";
 import { cache } from "./redis";
 import * as db from "./db";
@@ -13,7 +14,10 @@ const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: false,
     autoRefreshToken: false,
-  }
+  },
+  realtime: {
+    transport: ws as any,
+  },
 });
 
 // Helper for constant time responses

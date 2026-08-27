@@ -26,6 +26,7 @@ import { TaskCard } from '@/components/ui/task-card';
 import { PremiumInput } from '@/components/ui/premium-input';
 import { RoleBadge } from '@/components/ui/role-badge';
 import { MemberAssignModal } from '@/components/ui/member-assign-modal';
+import { MobileWhyModal, type MobileWhyType } from '@/components/causality/MobileWhyModal';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ProjectMember {
@@ -55,6 +56,8 @@ export default function ProjectDetailScreen() {
   const [members, setMembers] = useState<ProjectMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'milestones' | 'tasks' | 'members'>('milestones');
+  const [showWhyModal, setShowWhyModal] = useState(false);
+  const [whyType, setWhyType] = useState<MobileWhyType>('delivery');
 
   // Milestone form
   const [showAddMilestone, setShowAddMilestone] = useState(false);
@@ -296,15 +299,19 @@ export default function ProjectDetailScreen() {
         entity_id: project.id,
         metadata: { project_title: project.title, deleted_by: user?.fullName },
       });
+      // Hard delete dependent records and project
+      await supabase.from('project_members').delete().eq('project_id', project.id);
+      await supabase.from('tasks').delete().eq('project_id', project.id);
+
       const { error } = await supabase
         .from('projects')
-        .update({ status: 'cancelled', deleted_at: new Date().toISOString() })
+        .delete()
         .eq('id', project.id);
       if (error) throw error;
       setShowDeleteModal(false);
       Alert.alert(
         '🗑️ Project Deleted',
-        `"${project.title}" has been deleted and logged in the audit trail.`,
+        `"${project.title}" has been permanently deleted from the database.`,
         [{ text: 'OK', onPress: () => router.replace('/(tabs)/projects' as any) }]
       );
     } catch (e: any) {
@@ -493,6 +500,34 @@ export default function ProjectDetailScreen() {
           </View>
           <View style={styles.progressSection}>
             <ProgressBar progress={projectProgress} showLabel={true} color={project.cover_color} />
+          </View>
+
+          {/* ── Mobile Causality WHY? Quick Action Strip ── */}
+          <View style={{ flexDirection: 'row', gap: 8, marginTop: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border }}>
+            <Pressable
+              onPress={() => { setWhyType('progress'); setShowWhyModal(true); }}
+              style={{ flex: 1, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 8, backgroundColor: `${colors.primary}15`, borderWidth: 1, borderColor: `${colors.primary}30`, alignItems: 'center' }}
+            >
+              <Text style={{ fontSize: 10, fontWeight: '800', color: colors.primary }}>WHY PROGRESS?</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { setWhyType('delivery'); setShowWhyModal(true); }}
+              style={{ flex: 1, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 8, backgroundColor: `${colors.primary}15`, borderWidth: 1, borderColor: `${colors.primary}30`, alignItems: 'center' }}
+            >
+              <Text style={{ fontSize: 10, fontWeight: '800', color: colors.primary }}>WHY DELIVERY?</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { setWhyType('cost'); setShowWhyModal(true); }}
+              style={{ flex: 1, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 8, backgroundColor: `${colors.primary}15`, borderWidth: 1, borderColor: `${colors.primary}30`, alignItems: 'center' }}
+            >
+              <Text style={{ fontSize: 10, fontWeight: '800', color: colors.primary }}>WHY COST?</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => { setWhyType('scope'); setShowWhyModal(true); }}
+              style={{ flex: 1, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 8, backgroundColor: `${colors.primary}15`, borderWidth: 1, borderColor: `${colors.primary}30`, alignItems: 'center' }}
+            >
+              <Text style={{ fontSize: 10, fontWeight: '800', color: colors.primary }}>WHY SCOPE?</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -828,6 +863,14 @@ export default function ProjectDetailScreen() {
           </View>
         )}
       </ScrollView>
+
+      {/* ── Mobile Causality WHY? Bottom Sheet ── */}
+      <MobileWhyModal
+        visible={showWhyModal}
+        onClose={() => setShowWhyModal(false)}
+        projectId={id as string}
+        initialType={whyType}
+      />
     </ScreenContainer>
   );
 }

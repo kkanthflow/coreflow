@@ -1,12 +1,13 @@
-import { useState, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 import { Calendar, dateFnsLocalizer, Views } from 'react-big-calendar';
 import type { SlotInfo } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { enUS } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
 import { Video } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { toast } from '../ui/Toast';
 
 // Initialize the localizer for react-big-calendar
 const locales = {
@@ -56,10 +57,8 @@ function CustomEvent({ event }: any) {
 }
 
 export function CalendarView({ meetings, onJoin }: CalendarViewProps) {
+  const navigate = useNavigate();
   const { session } = useAuth();
-  const [isCreating, setIsCreating] = useState(false);
-  const isCreatingRef = useRef(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   // Map meetings to react-big-calendar event format
   const events = useMemo(() => {
@@ -77,43 +76,15 @@ export function CalendarView({ meetings, onJoin }: CalendarViewProps) {
   };
 
   const handleSelectSlot = async (slotInfo: SlotInfo) => {
-    // Basic slot scheduling: Create a meeting directly in the slot
     if (!session?.user?.id) return;
-    if (isCreatingRef.current) return;
     
     // Prevent scheduling in the past
     if (slotInfo.start < new Date()) {
-      setErrorMsg("Cannot schedule a meeting in the past.");
-      setTimeout(() => setErrorMsg(null), 3000);
+      toast.error("Cannot schedule a meeting in the past.", "Invalid Time");
       return;
     }
 
-    const title = prompt("Enter Meeting Title:", "Scheduled Meeting");
-    if (!title) return;
-
-    isCreatingRef.current = true;
-    setIsCreating(true);
-    try {
-      const duration = Math.round((slotInfo.end.getTime() - slotInfo.start.getTime()) / 60000);
-      
-      await supabase.from('meetings').insert([{
-        title,
-        description: 'Scheduled via Calendar',
-        status: 'scheduled',
-        start_time: slotInfo.start.toISOString(),
-        end_time: slotInfo.end.toISOString(),
-        host_id: session.user.id,
-        duration: duration > 0 ? duration : 60
-      }]);
-      // The Realtime subscription in Dashboard will pick this up automatically
-    } catch (err) {
-      console.error(err);
-      setErrorMsg("Failed to schedule meeting.");
-      setTimeout(() => setErrorMsg(null), 3000);
-    } finally {
-      isCreatingRef.current = false;
-      setIsCreating(false);
-    }
+    navigate('/meetings/new');
   };
 
   const eventPropGetter = (event: any) => {
@@ -151,17 +122,6 @@ export function CalendarView({ meetings, onJoin }: CalendarViewProps) {
 
   return (
     <div className="bg-[#111118] border border-white/5 rounded-3xl p-6 shadow-xl w-full h-[800px] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
-      
-      {/* Beautiful Error Banner */}
-      {errorMsg && (
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-8 fade-in duration-300">
-          <div className="bg-red-500/10 border border-red-500/50 backdrop-blur-md text-red-500 px-6 py-3 rounded-full shadow-lg flex items-center gap-3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-            <span className="font-medium text-sm">{errorMsg}</span>
-          </div>
-        </div>
-      )}
-
       <div className="mb-4 flex items-center justify-between z-10">
         <div>
           <h3 className="font-bold text-white text-base">Workspace Calendar</h3>
@@ -198,6 +158,13 @@ export function CalendarView({ meetings, onJoin }: CalendarViewProps) {
           .rbc-timeslot-group { border-bottom: 1px solid rgba(255,255,255,0.03) !important; min-height: 52px; }
           .rbc-time-slot { border: none !important; } /* Remove dashed half-hour lines for cleaner look */
           .rbc-time-gutter .rbc-timeslot-group { border-color: transparent !important; }
+          
+          /* Vertical Column Dividers */
+          .rbc-day-bg + .rbc-day-bg,
+          .rbc-time-content > * + * > *,
+          .rbc-time-header-content > * + * > * {
+            border-left: 1px dashed rgba(255,255,255,0.05) !important;
+          }
           
           /* Time Gutter Labels */
           .rbc-label { color: #6B7280; font-size: 11px; padding: 0 16px 0 8px; font-weight: 500; }
@@ -300,15 +267,6 @@ export function CalendarView({ meetings, onJoin }: CalendarViewProps) {
           max={new Date(0, 0, 0, 22, 0, 0)} // End day at 10 PM
         />
       </div>
-      
-      {isCreating && (
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-3xl">
-          <div className="bg-[#1D1D29] p-6 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-4">
-            <div className="w-8 h-8 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin" />
-            <span className="font-bold">Scheduling meeting...</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

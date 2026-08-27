@@ -41,6 +41,17 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
       },
+      fontSize: {
+        '2xs': ['0.75rem', { lineHeight: '1rem' }],      // 12px
+        'xs': ['0.825rem', { lineHeight: '1.2rem' }],     // 13.2px (was 12px)
+        'sm': ['0.95rem', { lineHeight: '1.4rem' }],      // 15.2px (was 14px)
+        'base': ['1.05rem', { lineHeight: '1.6rem' }],    // 16.8px (was 16px)
+        'lg': ['1.18rem', { lineHeight: '1.75rem' }],     // 18.8px (was 18px)
+        'xl': ['1.32rem', { lineHeight: '1.85rem' }],     // 21.1px (was 20px)
+        '2xl': ['1.6rem', { lineHeight: '2.1rem' }],      // 25.6px (was 24px)
+        '3xl': ['2rem', { lineHeight: '2.4rem' }],        // 32px
+        '4xl': ['2.45rem', { lineHeight: '2.8rem' }],     // 39px
+      },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
