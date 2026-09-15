@@ -242,10 +242,10 @@ export default function ChannelChatScreen() {
           )
         `)
         .eq('channel_id', channelId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(100);
 
-      const msgs = msgData || [];
+      const msgs = (msgData || []).reverse();
       
       // Decrypt messages
       const decryptedMsgs = symmetricKey

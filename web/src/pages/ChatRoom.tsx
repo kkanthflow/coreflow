@@ -391,10 +391,11 @@ export default function ChatRoom() {
         .from('chat_messages')
         .select(`*, sender:sender_id(full_name, avatar_url), message_reads(user_id), reply_message:reply_to_id(id, content, sender:sender_id(full_name))`)
         .eq('channel_id', channelId)
-        .order('created_at', { ascending: true })
+        .order('created_at', { ascending: false })
         .limit(100);
 
-      const msgs = await Promise.all((msgData || []).map(async (m: any) => {
+      const msgList = (msgData || []).reverse();
+      const msgs = await Promise.all(msgList.map(async (m: any) => {
         let content = m.content;
         if (m.content?.startsWith('__E2EE__:')) {
           if (symmetricKey) {
