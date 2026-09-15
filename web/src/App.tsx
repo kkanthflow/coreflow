@@ -69,7 +69,8 @@ function RootRoute() {
       <div className="min-h-screen bg-[#07070B] flex flex-col items-center justify-center text-white">
         <div className="w-10 h-10 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin mb-4" />
         <p className="text-gray-400 text-sm">Loading...</p>
-      </di    );
+      </div>
+    );
   }
   if (session?.user?.id) return <Navigate to="/dashboard" replace />;
   return <Landing />;
