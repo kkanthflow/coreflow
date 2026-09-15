@@ -435,7 +435,7 @@ export default function RegisterScreen() {
               {isAuthenticated ? 'Setup Workspace' : 'Create Account'}
             </Text>
             <Text className="text-base text-muted">
-              {isAuthenticated ? 'Complete your workspace configuration to continue' : 'Join CoreFlow today'}
+              {isAuthenticated ? 'Complete your workspace configuration to continue' : 'Join AUVRYN today'}
             </Text>
           </View>
 

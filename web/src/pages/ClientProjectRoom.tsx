@@ -35,10 +35,15 @@ export default function ClientProjectRoom() {
   const [respData, setRespData] = useState<any>(null);
   const [pendingCRs, setPendingCRs] = useState<any[]>([]);
 
+  const [clientAccess, setClientAccess] = useState<any>(null);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+
   const fetchRoomData = async () => {
     if (!id) return;
     setLoading(true);
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+
       // 1. Fetch Project
       const { data: pData, error: pErr } = await supabase
         .from('projects')
@@ -49,7 +54,22 @@ export default function ClientProjectRoom() {
       if (pErr) throw pErr;
       setProject(pData);
 
-      // 2. Fetch Deterministic Causality Summaries
+      // 2. Check if current user is an explicit Client Contact vs an Internal Team Member previewing
+      if (user) {
+        const { data: ca } = await supabase
+          .from('project_client_access')
+          .select('*')
+          .eq('project_id', id)
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle();
+
+        setClientAccess(ca);
+        // If user is not in project_client_access, they are viewing via internal permissions (Preview Mode)
+        setIsPreviewMode(!ca);
+      }
+
+      // 3. Fetch Deterministic Causality Summaries
       const [dRes, cRes, pRes, sRes, rRes] = await Promise.all([
         causalityApi.getWhyDelivery(id).catch(() => null),
         causalityApi.getWhyCost(id).catch(() => null),
@@ -64,7 +84,7 @@ export default function ClientProjectRoom() {
       setScopeData(sRes);
       setRespData(rRes);
 
-      // 3. Fetch Pending Change Requests
+      // 4. Fetch Pending Change Requests
       const { data: crs } = await supabase
         .from('project_change_requests')
         .select('*')
@@ -84,6 +104,10 @@ export default function ClientProjectRoom() {
   }, [id]);
 
   const handleDecision = async (crId: string, decision: 'accepted' | 'rejected') => {
+    if (isPreviewMode) {
+      alert('Action disabled: You are in Preview Mode. Only authorized client contacts can make decisions.');
+      return;
+    }
     try {
       await causalityApi.decideChangeRequest(crId, decision, `Client decided: ${decision}`);
       fetchRoomData();
@@ -94,6 +118,10 @@ export default function ClientProjectRoom() {
 
   const handleSeal = async () => {
     if (!id) return;
+    if (isPreviewMode) {
+      alert('Action disabled: You are in Preview Mode. Only authorized client contacts can sign final acceptance.');
+      return;
+    }
     try {
       await causalityApi.sealProject(id, 'Client signed final project acceptance.');
       fetchRoomData();
@@ -105,7 +133,7 @@ export default function ClientProjectRoom() {
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-[70vh]">
+      <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-8 h-8 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -113,9 +141,15 @@ export default function ClientProjectRoom() {
 
   if (!project) {
     return (
-      <div className="p-8 text-center text-zinc-400">
-        <p className="text-xs">Project not found or access restricted.</p>
-        <button onClick={() => navigate('/projects')} className="mt-4 px-3 py-1.5 bg-[#FF6B4A] text-white rounded text-xs">
+      <div className="text-center py-24 font-sans select-none space-y-4">
+        <p className="text-zinc-400 text-sm font-semibold">Access Denied or Project Not Found</p>
+        <p className="text-zinc-600 text-xs max-w-md mx-auto">
+          You do not have authorization to view this client project room, or this project does not exist.
+        </p>
+        <button
+          onClick={() => navigate('/projects')}
+          className="px-4 py-2 bg-[#FF6B4A] text-white rounded text-xs font-semibold hover:bg-[#FF552B] transition-colors"
+        >
           Return to Projects
         </button>
       </div>
@@ -126,6 +160,25 @@ export default function ClientProjectRoom() {
 
   return (
     <div className="flex-1 space-y-6 pb-16 font-sans select-none text-white max-w-6xl mx-auto">
+      {/* ── Preview Mode Warning Banner ── */}
+      {isPreviewMode && (
+        <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+            <span className="text-xs font-bold text-amber-300">CLIENT VIEW PREVIEW</span>
+            <span className="text-xs text-amber-200/70">
+              You are previewing what the client sees. Decision and approval controls are disabled.
+            </span>
+          </div>
+          <button
+            onClick={() => navigate(`/projects/${project.id}`)}
+            className="text-[11px] font-bold px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded border border-amber-500/30 transition-colors self-start sm:self-auto"
+          >
+            Return to Internal Workspace →
+          </button>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
         <div>
@@ -134,6 +187,11 @@ export default function ClientProjectRoom() {
               {isSealed ? 'PROJECT PASSPORT' : 'CLIENT PROJECT ROOM'}
             </span>
             <span className="text-xs text-zinc-500 font-mono">CF-PRJ-{project.id.slice(0, 6)}</span>
+            {clientAccess && (
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold uppercase tracking-wider">
+                {clientAccess.access_role || 'CLIENT'}
+              </span>
+            )}
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white mt-1">{project.title}</h1>
           <p className="text-xs text-zinc-400 mt-0.5">{project.description || 'Transparent client portal & verified project records'}</p>
@@ -270,10 +328,12 @@ export default function ClientProjectRoom() {
               </div>
               <div>
                 <span className="text-2xl font-extrabold text-white tracking-tight font-mono">
-                  ₹{Number(costData?.currentCost || 45000).toLocaleString('en-IN')}
+                  ₹{Number(costData?.currentCost || 0).toLocaleString('en-IN')}
                 </span>
                 <span className="text-[10px] text-zinc-400 block mt-1">
-                  {costData?.totalCostDelta !== 0 ? `${costData?.totalCostDelta > 0 ? '+' : ''}₹${costData?.totalCostDelta} adjusted` : 'Matches Baseline V1'}
+                  {costData?.totalCostDelta !== undefined && costData?.totalCostDelta !== 0
+                    ? `${costData.totalCostDelta > 0 ? '+' : ''}₹${Math.abs(costData.totalCostDelta).toLocaleString('en-IN')} adjusted`
+                    : 'Matches Baseline V1'}
                 </span>
               </div>
               <button
@@ -292,10 +352,10 @@ export default function ClientProjectRoom() {
               </div>
               <div>
                 <span className="text-2xl font-extrabold text-white tracking-tight">
-                  {scopeData?.currentScopeCount || 8} Deliverables
+                  {scopeData?.currentScopeCount ?? (progressData?.totalTasks || 0)} Deliverables
                 </span>
                 <span className="text-[10px] text-zinc-400 block mt-1">
-                  Original: {scopeData?.baselineScopeCount || 8} Items
+                  Original: {scopeData?.baselineScopeCount ?? (progressData?.totalTasks || 0)} Items
                 </span>
               </div>
               <button
@@ -456,7 +516,7 @@ export default function ClientProjectRoom() {
             </button>
           </div>
           <p className="text-xs text-zinc-400 leading-relaxed">
-            Every client approval, milestone acceptance, scope alteration, and final handover generates a permanent verifiable receipt code (e.g. CF-PR-00291) sealed cryptographically in the CoreFlow database.
+            Every client approval, milestone acceptance, scope alteration, and final handover generates a permanent verifiable receipt code (e.g. AV-PR-00291) sealed cryptographically in the AUVRYN database.
           </p>
         </div>
       )}

@@ -947,7 +947,7 @@ export default function NewInvoiceScreen() {
               <ScrollView showsVerticalScrollIndicator={false} className="max-h-96" keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets={true}>
                 <Text className="text-xs font-bold text-muted uppercase tracking-wider mb-2 ml-1">Company Name *</Text>
                 <TextInput
-                  placeholder="CoreFlow Labs Ltd"
+                  placeholder="Acme Corporation"
                   placeholderTextColor={colors.muted}
                   value={orgName}
                   onChangeText={setOrgName}

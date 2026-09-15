@@ -4,13 +4,13 @@ node_modules
 .vscode
 dist
 dist-server
+assets
 android
 ios
 web
-assets
 supabase
 *.apk
 *.log
 *.crt
-*.json
 *.sql
+*.json

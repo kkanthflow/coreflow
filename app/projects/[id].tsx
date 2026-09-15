@@ -332,8 +332,20 @@ export default function ProjectDetailScreen() {
 
   if (!project) {
     return (
-      <ScreenContainer className="justify-center items-center p-6">
-        <Text className="text-lg text-error">Project not found or deleted.</Text>
+      <ScreenContainer className="justify-center items-center p-6 space-y-4">
+        <Ionicons name="lock-closed-outline" size={48} color={colors.muted} />
+        <Text style={{ color: colors.foreground, fontSize: 16, fontWeight: '700', textAlign: 'center', marginTop: 12 }}>
+          Access Restricted or Not Found
+        </Text>
+        <Text style={{ color: colors.muted, fontSize: 13, textAlign: 'center', marginTop: 4, paddingHorizontal: 20 }}>
+          You do not have authorization to view this project, or it may have been removed.
+        </Text>
+        <Pressable
+          onPress={() => router.back()}
+          style={{ marginTop: 16, paddingHorizontal: 20, paddingVertical: 10, backgroundColor: colors.primary, borderRadius: 8 }}
+        >
+          <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Go Back</Text>
+        </Pressable>
       </ScreenContainer>
     );
   }

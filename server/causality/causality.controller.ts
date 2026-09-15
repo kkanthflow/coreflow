@@ -145,4 +145,53 @@ export class CausalityController {
       res.status(500).json({ error: error.message || 'Failed to seal project' });
     }
   }
+
+  static async getPlaybackState(req: any, res: Response) {
+    try {
+      const projectId = req.query.projectId as string;
+      const targetDate = req.query.targetDate as string;
+      if (!projectId || !targetDate) {
+        return res.status(400).json({ error: 'projectId and targetDate are required' });
+      }
+
+      const data = await CausalityService.getPlaybackState(projectId, targetDate, req.user.id);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to fetch historical playback state' });
+    }
+  }
+
+  static async compareStates(req: any, res: Response) {
+    try {
+      const projectId = req.query.projectId as string;
+      const dateA = req.query.dateA as string;
+      const dateB = req.query.dateB as string;
+      if (!projectId || !dateA || !dateB) {
+        return res.status(400).json({ error: 'projectId, dateA, and dateB are required' });
+      }
+
+      const data = await CausalityService.compareStates(projectId, dateA, dateB, req.user.id);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to compare historical project states' });
+    }
+  }
+
+  static async provisionClientUser(req: any, res: Response) {
+    try {
+      const data = await CausalityService.provisionClientUser(req.body, req.user.id);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to create client user account' });
+    }
+  }
+
+  static async createProject(req: any, res: Response) {
+    try {
+      const data = await CausalityService.createProject(req.body, req.user.id);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to initialize project' });
+    }
+  }
 }

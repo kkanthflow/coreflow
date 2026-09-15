@@ -316,19 +316,19 @@ export default function Projects() {
           badge={inspectingProject.status.toUpperCase()}
           onClose={() => setInspectingProject(null)}
           footer={
-            <div className="flex items-center justify-between gap-3">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+              <Link
+                to={`/projects/${inspectingProject.id}/client-room`}
+                className="w-full sm:flex-1 py-2 px-3 bg-[#FF6B4A]/10 hover:bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30 text-xs font-bold rounded text-center transition-colors flex items-center justify-center gap-1.5"
+              >
+                <span>Client Project Room</span>
+              </Link>
               <Link
                 to={`/projects/${inspectingProject.id}`}
-                className="flex-1 py-2 px-3 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded text-center transition-colors"
+                className="w-full sm:flex-1 py-2 px-3 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded text-center transition-colors"
               >
                 Open Project Center
               </Link>
-              <button
-                onClick={() => setInspectingProject(null)}
-                className="py-2 px-3 bg-[#141620] hover:bg-[#1A1D2B] text-zinc-300 text-xs font-medium rounded border border-white/[0.06] transition-colors"
-              >
-                Close
-              </button>
             </div>
           }
         >

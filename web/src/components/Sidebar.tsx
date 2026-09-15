@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useRole } from '../hooks/useRole';
 import { useWorkspace } from '../hooks/useWorkspace';
+import AuvrynLogo from './AuvrynLogo';
 
 function cn(...classes: (string | false | null | undefined)[]) {
   return classes.filter(Boolean).join(' ');
@@ -86,17 +87,17 @@ export default function Sidebar() {
             className="w-7 h-7 rounded-md bg-[#111218] border border-white/[0.08] flex items-center justify-center text-white mx-auto hover:border-[#FF6B4A]/40 transition-colors"
             title="Expand Navigation"
           >
-            <div className="w-2.5 h-2.5 rounded-[2px] bg-[#FF6B4A]" />
+            <AuvrynLogo size={14} />
           </button>
         ) : (
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2 min-w-0">
               <div className="w-5 h-5 rounded-md bg-[#141620] border border-white/[0.08] flex items-center justify-center shrink-0">
-                <div className="w-2 h-2 rounded-[2px] bg-[#FF6B4A]" />
+                <AuvrynLogo size={12} />
               </div>
               <div className="min-w-0">
                 <span className="text-white font-bold text-xs tracking-tight truncate block">
-                  {orgName || 'CoreFlow'}
+                  {orgName || 'AUVRYN'}
                 </span>
               </div>
             </div>

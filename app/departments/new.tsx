@@ -97,7 +97,7 @@ export default function NewDepartmentScreen() {
   };
 
   const colorsList = [
-    '#FF6B4A', // CoreFlow Primary
+    '#FF6B4A', // AUVRYN Primary
     '#1F6FEB', // Blue
     '#238636', // Green
     '#D29922', // Orange/Yellow

@@ -146,7 +146,7 @@ export default function InvoicesReportScreen() {
           </head>
           <body>
             <header>
-              <h1>CoreFlow — Invoice & Billing Report</h1>
+              <h1>AUVRYN — Invoice & Billing Report</h1>
               <div class="subtitle">Organization: ${user?.organizationName || 'My Workspace'} • Generated: ${new Date().toLocaleString()}</div>
             </header>
             
@@ -181,7 +181,7 @@ export default function InvoicesReportScreen() {
                 ${rowsHtml}
               </tbody>
             </table>
-            <footer>Generated automatically by CoreFlow Operating System. All rights reserved.</footer>
+            <footer>Generated automatically by AUVRYN Operating System. All rights reserved.</footer>
           </body>
         </html>
       `;

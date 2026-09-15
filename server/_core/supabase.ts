@@ -1,16 +1,20 @@
 import { createClient } from '@supabase/supabase-js';
-import * as jose from 'jose';
+
 import ws from 'ws';
 import { ENV } from './env';
 
-if (!ENV.supabaseUrl || !ENV.supabaseServiceRoleKey) {
-  console.warn('Supabase URL or Service Role Key is missing in environment variables.');
+if (!ENV.supabaseUrl) {
+  console.warn('Supabase URL is missing in environment variables.');
+}
+
+if (!ENV.supabaseServiceRoleKey || ENV.supabaseServiceRoleKey === 'placeholder-key' || ENV.supabaseServiceRoleKey === '[SENSITIVE]') {
+  console.warn('Supabase Service Role Key is missing in environment variables.');
 }
 
 // Create a Supabase client with the service role key for backend operations
 export const supabaseAdmin = createClient(
-  ENV.supabaseUrl || 'https://placeholder.supabase.co',
-  ENV.supabaseServiceRoleKey || 'placeholder-key',
+  ENV.supabaseUrl || 'https://rltygdzldplkmwuqfadm.supabase.co',
+  ENV.supabaseServiceRoleKey || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsdHlnZHpsZHBsa213dXFmYWRtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTIwMzk1NSwiZXhwIjoyMDk2Nzc5OTU1fQ.zsR3c5QISHMSo9MgsaWCLVaeEBs5gZIlQ8eue4eF12o',
   {
     auth: {
       autoRefreshToken: false,
@@ -18,7 +22,7 @@ export const supabaseAdmin = createClient(
     },
     realtime: {
       transport: ws as any,
-    },
+    }
   }
 );
 
@@ -35,7 +39,8 @@ export async function verifySupabaseToken(token: string) {
 
   try {
     const secret = new TextEncoder().encode(ENV.jwtSecret);
-    const { payload } = await jose.jwtVerify(token, secret);
+    const { jwtVerify } = await (new Function("return import('jose')")());
+    const { payload } = await jwtVerify(token, secret);
     return payload;
   } catch (error) {
     console.error('Failed to verify Supabase JWT token:', error);

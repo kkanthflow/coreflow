@@ -151,7 +151,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                 <span><kbd className="text-zinc-400 font-mono">↑↓</kbd> Navigate</span>
                 <span><kbd className="text-zinc-400 font-mono">↵</kbd> Select</span>
               </div>
-              <span className="font-mono text-[10px]">CoreFlow Command Layer</span>
+              <span className="font-mono text-[10px]">AUVRYN Command Layer</span>
             </div>
           </motion.div>
         </motion.div>

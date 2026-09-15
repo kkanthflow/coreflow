@@ -65,7 +65,7 @@ export default function PrivacyPolicyScreen() {
           <Text style={[styles.subtitle, { color: colors.muted }]}>Last Updated: June 25, 2026</Text>
 
           <Text style={[styles.paragraph, { color: colors.foreground }]}>
-            Welcome to CoreFlow. We are committed to protecting your personal and organizational data. This Privacy Policy explains how we collect, use, store, and share your information when you use our mobile application (CoreFlow) and the associated backend APIs and systems.
+            Welcome to AUVRYN. We are committed to protecting your personal and organizational data. This Privacy Policy explains how we collect, use, store, and share your information when you use our mobile application (AUVRYN) and the associated backend APIs and systems.
           </Text>
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>1. Information We Collect</Text>
@@ -85,7 +85,7 @@ export default function PrivacyPolicyScreen() {
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>2. How We Use Your Information</Text>
           <Text style={[styles.paragraph, { color: colors.foreground }]}>
-            CoreFlow uses your data for the following essential business purposes:
+            AUVRYN uses your data for the following essential business purposes:
           </Text>
           <View style={styles.bulletList}>
             <Text style={[styles.bulletPoint, { color: colors.foreground }]}>• To operate and manage accounts, invoices, and projects.</Text>
@@ -95,12 +95,12 @@ export default function PrivacyPolicyScreen() {
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>3. Data Ownership</Text>
           <Text style={[styles.paragraph, { color: colors.foreground }]}>
-            All organization-owned data remains the property of the organization. CoreFlow acts as a service provider and processor under the direction of the Organization Owner.
+            All organization-owned data remains the property of the organization. AUVRYN acts as a service provider and processor under the direction of the Organization Owner.
           </Text>
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>4. End-to-End Encryption</Text>
           <Text style={[styles.paragraph, { color: colors.foreground }]}>
-            Chat messages are protected using end-to-end encryption (E2EE). CoreFlow does not hold the private keys required to decrypt message content. Users are solely responsible for safeguarding their local encryption keys. No transmission is absolutely guaranteed to be secure.
+            Chat messages are protected using end-to-end encryption (E2EE). AUVRYN does not hold the private keys required to decrypt message content. Users are solely responsible for safeguarding their local encryption keys. No transmission is absolutely guaranteed to be secure.
           </Text>
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>5. Audit Logging</Text>
@@ -110,7 +110,7 @@ export default function PrivacyPolicyScreen() {
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>6. Contact Information</Text>
           <Text style={[styles.paragraph, { color: colors.foreground }]}>
-            If you have questions about this policy, please contact our team at support@coreflow.app.
+            If you have questions about this policy, please contact our team at support@auvryn.com.
           </Text>
           <View style={{ height: 40 }} />
         </ScrollView>

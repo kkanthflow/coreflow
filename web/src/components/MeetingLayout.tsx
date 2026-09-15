@@ -11,6 +11,7 @@ interface MeetingLayoutProps {
 }
 
 import { toast } from './ui/Toast';
+import AuvrynLogo from './AuvrynLogo';
 
 export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
   const room = useRoomContext();
@@ -206,7 +207,7 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
     const url = window.location.origin + `/meetings/${meetingId}`;
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Join my CoreFlow Meeting', url });
+        await navigator.share({ title: 'Join my AUVRYN Meeting', url });
       } catch {}
     } else {
       await navigator.clipboard.writeText(url);
@@ -252,7 +253,7 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
           const a = document.createElement('a');
           a.style.display = 'none';
           a.href = url;
-          a.download = `CoreFlow-Meeting-${new Date().toISOString().slice(0, 10)}.webm`;
+          a.download = `AUVRYN-Meeting-${new Date().toISOString().slice(0, 10)}.webm`;
           document.body.appendChild(a);
           a.click();
           toast.success('Meeting recording saved and downloaded successfully.', 'Recording Saved');
@@ -360,12 +361,9 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
       <div className="h-14 px-3 md:px-6 border-b border-white/10 flex items-center justify-between bg-[#121214] z-30 flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M15 10l4.553-2.069A1 1 0 0 1 21 8.845v6.31a1 1 0 0 1-1.447.894L15 14" />
-              <rect x="3" y="7" width="12" height="10" rx="2" />
-            </svg>
+            <AuvrynLogo size={14} color="white" />
           </div>
-          <span className="text-white font-bold text-sm md:text-base tracking-wide">CoreFlow Meeting</span>
+          <span className="text-white font-bold text-sm md:text-base tracking-wide">AUVRYN Meeting</span>
         </div>
 
         <div className="flex items-center gap-2">

@@ -62,4 +62,14 @@ router.get('/receipts/:code', CausalityController.getReceiptByCode); // Public v
 router.get('/responsibility', requireAuth, CausalityController.getResponsibilityState);
 router.post('/seal', requireAuth, CausalityController.sealProject);
 
+// Playback & Historical Compare
+router.get('/playback', requireAuth, CausalityController.getPlaybackState);
+router.get('/compare', requireAuth, CausalityController.compareStates);
+
+// Client Provisioning & Access Assignment
+router.post('/provision-client', requireAuth, CausalityController.provisionClientUser);
+
+// Project Creation via Central Service
+router.post('/projects', requireAuth, CausalityController.createProject);
+
 export default router;

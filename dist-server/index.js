@@ -1,630 +1,8 @@
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
 var __require = /* @__PURE__ */ ((x) => typeof require !== "undefined" ? require : typeof Proxy !== "undefined" ? new Proxy(x, {
   get: (a, b) => (typeof require !== "undefined" ? require : a)[b]
 }) : x)(function(x) {
   if (typeof require !== "undefined") return require.apply(this, arguments);
   throw Error('Dynamic require of "' + x + '" is not supported');
-});
-var __esm = (fn, res, err) => function __init() {
-  if (err) throw err[0];
-  try {
-    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
-  } catch (e) {
-    throw err = [e], e;
-  }
-};
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
-// server/_core/env.ts
-var ENV;
-var init_env = __esm({
-  "server/_core/env.ts"() {
-    "use strict";
-    ENV = {
-      appId: process.env.VITE_APP_ID ?? "",
-      cookieSecret: process.env.JWT_SECRET ?? "",
-      databaseUrl: process.env.DATABASE_URL ?? "",
-      supabaseUrl: process.env.SUPABASE_URL ?? "",
-      supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? "",
-      supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
-      jwtSecret: process.env.JWT_SECRET ?? "",
-      oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
-      ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
-      isProduction: process.env.NODE_ENV === "production",
-      forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-      forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? ""
-    };
-  }
-});
-
-// server/security/redis.ts
-var MemoryCache, redisClient, useMemoryFallback, REDIS_URL, memoryStore, cache;
-var init_redis = __esm({
-  "server/security/redis.ts"() {
-    "use strict";
-    MemoryCache = class {
-      store = /* @__PURE__ */ new Map();
-      async get(key) {
-        const record = this.store.get(key);
-        if (!record) return null;
-        if (Date.now() > record.expiresAt) {
-          this.store.delete(key);
-          return null;
-        }
-        return record.value;
-      }
-      async set(key, value, mode, duration) {
-        let expiresAt = Infinity;
-        if (mode === "EX" && duration) {
-          expiresAt = Date.now() + duration * 1e3;
-        } else if (mode === "PX" && duration) {
-          expiresAt = Date.now() + duration;
-        }
-        this.store.set(key, { value, expiresAt });
-        return "OK";
-      }
-      async incr(key) {
-        const val = await this.get(key);
-        const num = val ? parseInt(val, 10) : 0;
-        const next = num + 1;
-        await this.set(key, next.toString());
-        return next;
-      }
-      async del(key) {
-        const deleted = this.store.delete(key);
-        return deleted ? 1 : 0;
-      }
-      async ttl(key) {
-        const record = this.store.get(key);
-        if (!record) return -2;
-        if (Date.now() > record.expiresAt) {
-          this.store.delete(key);
-          return -2;
-        }
-        if (record.expiresAt === Infinity) return -1;
-        return Math.max(0, Math.ceil((record.expiresAt - Date.now()) / 1e3));
-      }
-    };
-    redisClient = null;
-    useMemoryFallback = true;
-    REDIS_URL = process.env.REDIS_URL;
-    if (REDIS_URL) {
-      try {
-        const Redis = __require("ioredis");
-        redisClient = new Redis(REDIS_URL, {
-          maxRetriesPerRequest: 1,
-          connectTimeout: 2e3
-        });
-        redisClient.on("error", (err) => {
-          console.warn("[Redis] Connection error, falling back to memory:", err.message);
-          useMemoryFallback = true;
-        });
-        redisClient.on("connect", () => {
-          console.log("[Redis] Connected successfully.");
-          useMemoryFallback = false;
-        });
-        useMemoryFallback = false;
-      } catch (e) {
-        console.warn("[Redis] Failed to load ioredis library, using in-memory store instead.");
-        useMemoryFallback = true;
-      }
-    } else {
-      console.log("[Redis] REDIS_URL not configured. Running in-memory cache mode.");
-    }
-    memoryStore = new MemoryCache();
-    cache = {
-      async get(key) {
-        if (useMemoryFallback) {
-          return memoryStore.get(key);
-        }
-        try {
-          return await redisClient.get(key);
-        } catch (err) {
-          return memoryStore.get(key);
-        }
-      },
-      async set(key, value, expireInSeconds) {
-        if (useMemoryFallback) {
-          await memoryStore.set(key, value, expireInSeconds ? "EX" : void 0, expireInSeconds);
-          return;
-        }
-        try {
-          if (expireInSeconds) {
-            await redisClient.set(key, value, "EX", expireInSeconds);
-          } else {
-            await redisClient.set(key, value);
-          }
-        } catch (err) {
-          await memoryStore.set(key, value, expireInSeconds ? "EX" : void 0, expireInSeconds);
-        }
-      },
-      async incr(key, expireInSeconds) {
-        if (useMemoryFallback) {
-          const next = await memoryStore.incr(key);
-          if (expireInSeconds && next === 1) {
-            await memoryStore.set(key, next.toString(), "EX", expireInSeconds);
-          }
-          return next;
-        }
-        try {
-          const next = await redisClient.incr(key);
-          if (expireInSeconds && next === 1) {
-            await redisClient.expire(key, expireInSeconds);
-          }
-          return next;
-        } catch (err) {
-          const next = await memoryStore.incr(key);
-          if (expireInSeconds && next === 1) {
-            await memoryStore.set(key, next.toString(), "EX", expireInSeconds);
-          }
-          return next;
-        }
-      },
-      async del(key) {
-        if (useMemoryFallback) {
-          await memoryStore.del(key);
-          return;
-        }
-        try {
-          await redisClient.del(key);
-        } catch (err) {
-          await memoryStore.del(key);
-        }
-      },
-      async getTtl(key) {
-        if (useMemoryFallback) {
-          return memoryStore.ttl(key);
-        }
-        try {
-          return await redisClient.ttl(key);
-        } catch (err) {
-          return memoryStore.ttl(key);
-        }
-      }
-    };
-  }
-});
-
-// server/security/validation.ts
-var validation_exports = {};
-__export(validation_exports, {
-  forgotPasswordSchema: () => forgotPasswordSchema,
-  loginSchema: () => loginSchema,
-  mfaVerifySchema: () => mfaVerifySchema,
-  refreshTokenSchema: () => refreshTokenSchema,
-  sanitizationMiddleware: () => sanitizationMiddleware,
-  sanitizeInput: () => sanitizeInput,
-  validateBody: () => validateBody
-});
-import { z } from "zod";
-function sanitizeInput(input) {
-  if (typeof input === "string") {
-    return input.trim().replace(/\0/g, "").normalize("NFC");
-  }
-  if (Array.isArray(input)) {
-    return input.map((item) => sanitizeInput(item));
-  }
-  if (typeof input === "object" && input !== null) {
-    const sanitized = {};
-    for (const key of Object.keys(input)) {
-      sanitized[key] = sanitizeInput(input[key]);
-    }
-    return sanitized;
-  }
-  return input;
-}
-function sanitizationMiddleware(req, res, next) {
-  if (req.body) req.body = sanitizeInput(req.body);
-  if (req.query) req.query = sanitizeInput(req.query);
-  if (req.params) req.params = sanitizeInput(req.params);
-  next();
-}
-function validateBody(schema) {
-  return async (req, res, next) => {
-    try {
-      req.body = await schema.parseAsync(req.body);
-      next();
-    } catch (err) {
-      if (err instanceof z.ZodError) {
-        const details = err.issues.map((e) => ({
-          field: e.path.join("."),
-          message: e.message
-        }));
-        res.status(400).json({
-          error: "Validation failed: Invalid request payload.",
-          details
-        });
-        return;
-      }
-      res.status(400).json({ error: "Invalid request payload." });
-    }
-  };
-}
-var loginSchema, mfaVerifySchema, refreshTokenSchema, forgotPasswordSchema;
-var init_validation = __esm({
-  "server/security/validation.ts"() {
-    "use strict";
-    loginSchema = z.object({
-      email: z.string().email().max(255),
-      password: z.string().min(6).max(100),
-      deviceId: z.string().max(255).optional(),
-      platform: z.string().max(100).optional(),
-      fingerprint: z.string().max(255).optional(),
-      captchaToken: z.string().max(255).optional()
-    }).strict();
-    mfaVerifySchema = z.object({
-      code: z.string().length(6),
-      challengeId: z.string().uuid().nullable().optional(),
-      factorId: z.string().max(255).optional(),
-      tempAccessToken: z.string().max(2048)
-    }).strict();
-    refreshTokenSchema = z.object({
-      refresh_token: z.string().max(2048)
-    }).strict();
-    forgotPasswordSchema = z.object({
-      email: z.string().email().max(255)
-    }).strict();
-  }
-});
-
-// server/_core/notification.ts
-var notification_exports = {};
-__export(notification_exports, {
-  dispatchFCMPush: () => dispatchFCMPush,
-  notifyOwner: () => notifyOwner
-});
-import { TRPCError } from "@trpc/server";
-import { initializeApp, getApps, cert } from "firebase-admin/app";
-import { getMessaging } from "firebase-admin/messaging";
-import { createClient as createClient3 } from "@supabase/supabase-js";
-async function notifyOwner(payload) {
-  const { title, content } = validatePayload(payload);
-  if (!ENV.forgeApiUrl) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Notification service URL is not configured."
-    });
-  }
-  if (!ENV.forgeApiKey) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Notification service API key is not configured."
-    });
-  }
-  const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        authorization: `Bearer ${ENV.forgeApiKey}`,
-        "content-type": "application/json",
-        "connect-protocol-version": "1"
-      },
-      body: JSON.stringify({ title, content })
-    });
-    if (!response.ok) {
-      const detail = await response.text().catch(() => "");
-      console.warn(
-        `[Notification] Failed to notify owner (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`
-      );
-      return false;
-    }
-    return true;
-  } catch (error) {
-    console.warn("[Notification] Error calling notification service:", error);
-    return false;
-  }
-}
-function getSupabaseAdmin() {
-  if (!supabaseClient) {
-    const supabaseUrl4 = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-    supabaseClient = createClient3(supabaseUrl4, supabaseKey);
-  }
-  return supabaseClient;
-}
-function getFirebaseApp() {
-  if (fcmApp) return fcmApp;
-  const existingApps = getApps();
-  if (existingApps.length > 0) {
-    fcmApp = existingApps[0];
-    console.log("[FCM] Reusing existing Firebase app instance.");
-    return fcmApp;
-  }
-  let serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT;
-  const b64Key = process.env.FIREBASE_SERVICE_ACCOUNT_B64;
-  if (b64Key && !serviceAccountString) {
-    try {
-      serviceAccountString = Buffer.from(b64Key, "base64").toString("utf8");
-    } catch (e) {
-      console.error("[FCM] Failed to decode base64 service account credentials:", e);
-    }
-  }
-  if (serviceAccountString && !serviceAccountString.trim().startsWith("{")) {
-    try {
-      serviceAccountString = Buffer.from(serviceAccountString, "base64").toString("utf8");
-    } catch (e) {
-      console.error("[FCM] Failed to decode FIREBASE_SERVICE_ACCOUNT as base64:", e);
-    }
-  }
-  if (!serviceAccountString) {
-    const fs = __require("fs");
-    const path2 = __require("path");
-    const localKeyPath = path2.join(process.cwd(), "coreflow-2af5c-cc11e0599b34.json");
-    if (fs.existsSync(localKeyPath)) {
-      try {
-        const localKey = JSON.parse(fs.readFileSync(localKeyPath, "utf8"));
-        fcmApp = initializeApp({ credential: cert(localKey) });
-        console.log("[FCM] Firebase app initialized via local service account key.");
-        return fcmApp;
-      } catch (e) {
-        console.error("[FCM] Failed to initialize Firebase app from local key:", e);
-      }
-    }
-    console.warn("[FCM] FIREBASE_SERVICE_ACCOUNT env var is not set and local key file is missing.");
-    return null;
-  }
-  try {
-    const serviceAccount = JSON.parse(serviceAccountString);
-    if (serviceAccount.private_key) {
-      let key = serviceAccount.private_key;
-      let body = key.replace(/-----BEGIN PRIVATE KEY-----/gi, "").replace(/-----END PRIVATE KEY-----/gi, "").replace(/\s+/g, "");
-      let chunks = body.match(/.{1,64}/g);
-      if (chunks) {
-        serviceAccount.private_key = "-----BEGIN PRIVATE KEY-----\n" + chunks.join("\n") + "\n-----END PRIVATE KEY-----\n";
-      }
-    }
-    fcmApp = initializeApp({ credential: cert(serviceAccount) });
-    console.log("[FCM] Firebase app initialized via environment variable.");
-    return fcmApp;
-  } catch (err) {
-    console.error("[FCM] Failed to initialize Firebase app:", err);
-    return null;
-  }
-}
-async function dispatchFCMPush(data) {
-  const supabase3 = getSupabaseAdmin();
-  const app = getFirebaseApp();
-  if (!app) {
-    console.error("[FCM] Firebase app is not initialized. Cannot dispatch push.");
-    await supabase3.from("notifications").update({ delivery_status: "failed", delivery_error: "Firebase app not initialized" }).eq("id", data.id);
-    return;
-  }
-  const messaging = getMessaging(app);
-  try {
-    const { data: prefRows } = await supabase3.from("notification_preferences").select("chat_enabled, meetings_enabled, tasks_enabled, finance_enabled, announcements_enabled").eq("user_id", data.userId);
-    if (prefRows && prefRows.length > 0) {
-      const pref = prefRows[0];
-      const isChatDisabled = data.type === "chat" && !pref.chat_enabled;
-      const isMeetingDisabled = data.type === "meeting" && !pref.meetings_enabled;
-      const isTaskDisabled = data.type === "task" && !pref.tasks_enabled;
-      const isFinanceDisabled = data.type === "finance" && !pref.finance_enabled;
-      const isAnnouncementDisabled = data.type === "announcements" && !pref.announcements_enabled;
-      if (isChatDisabled || isMeetingDisabled || isTaskDisabled || isFinanceDisabled || isAnnouncementDisabled) {
-        console.log(`[FCM] Notification skipped for user ${data.userId} due to preference settings.`);
-        await supabase3.from("notifications").update({ delivery_status: "failed", delivery_error: "Skipped by preferences" }).eq("id", data.id);
-        return;
-      }
-    }
-    let query2 = supabase3.from("user_push_tokens").select("token, device_id, platform").eq("user_id", data.userId).eq("is_enabled", true);
-    if (data.senderId && data.senderId !== data.userId) {
-      const { data: senderTokens } = await supabase3.from("user_push_tokens").select("token").eq("user_id", data.senderId);
-      if (senderTokens && senderTokens.length > 0) {
-        const excludeTokens = senderTokens.map((t2) => t2.token);
-        query2 = query2.not("token", "in", excludeTokens);
-      }
-    }
-    const { data: deviceTokens } = await query2;
-    const tokens = (deviceTokens || []).map((t2) => t2.token);
-    if (!tokens || tokens.length === 0) {
-      console.log(`[FCM] No devices found for user ${data.userId}`);
-      await supabase3.from("notifications").update({ delivery_status: "failed", delivery_error: "No active device tokens found" }).eq("id", data.id);
-      return;
-    }
-    const { data: nData } = await supabase3.from("notifications").select("delivery_attempts").eq("id", data.id).single();
-    const attempts = (nData?.delivery_attempts || 0) + 1;
-    await supabase3.from("notifications").update({ delivery_status: "sending", delivery_attempts: attempts }).eq("id", data.id);
-    console.log(`[FCM] Dispatching to ${tokens.length} device(s) for user ${data.userId}`);
-    const multicastMessage = {
-      tokens,
-      notification: {
-        title: data.title,
-        body: data.message
-      },
-      data: {
-        id: data.id,
-        type: data.type || "",
-        entity_type: data.entityType || "",
-        entity_id: data.entityId || "",
-        action_url: data.actionUrl || "",
-        sender_id: data.senderId || ""
-      },
-      android: {
-        priority: "high",
-        notification: {
-          channelId: data.type === "chat" ? "chat" : data.type === "meeting" ? "meetings" : data.type === "task" || data.type === "task_assigned" ? "tasks" : "default",
-          sound: "default"
-        }
-      },
-      apns: {
-        payload: {
-          aps: {
-            sound: "default",
-            badge: 1
-          }
-        }
-      }
-    };
-    const response = await sendWithRetry(messaging, multicastMessage);
-    const tokensToDelete = [];
-    response.responses.forEach((res, idx) => {
-      if (!res.success && res.error) {
-        const errorCode = res.error.code;
-        const token = tokens[idx];
-        const device = deviceTokens[idx];
-        console.warn(`[FCM] Send failed for user ${data.userId} device ${device.device_id}:`, res.error.message);
-        if (errorCode === "messaging/registration-token-not-registered" || errorCode === "messaging/invalid-argument") {
-          tokensToDelete.push(token);
-        }
-      }
-    });
-    if (tokensToDelete.length > 0) {
-      console.log(`[FCM] Deleting ${tokensToDelete.length} unregistered / invalid tokens.`);
-      await supabase3.from("user_push_tokens").delete().in("token", tokensToDelete);
-    }
-    const successCount = response.successCount;
-    if (successCount > 0) {
-      await supabase3.from("notifications").update({ delivery_status: "delivered", delivery_error: null }).eq("id", data.id);
-    } else {
-      await supabase3.from("notifications").update({ delivery_status: "failed", delivery_error: "All token dispatches failed" }).eq("id", data.id);
-    }
-  } catch (err) {
-    console.error("[FCM] Critical push dispatch failure:", err);
-    await supabase3.from("notifications").update({ delivery_status: "failed", delivery_error: err.message || "Unknown error" }).eq("id", data.id);
-  }
-}
-async function sendWithRetry(messaging, payload, attempt = 1) {
-  try {
-    return await messaging.sendEachForMulticast(payload);
-  } catch (error) {
-    const isTransient = error.code === "messaging/internal-error" || error.code === "messaging/server-unavailable";
-    if (isTransient && attempt < 3) {
-      const delay = Math.pow(2, attempt) * 1e3;
-      await new Promise((resolve) => setTimeout(resolve, delay));
-      return sendWithRetry(messaging, payload, attempt + 1);
-    }
-    throw error;
-  }
-}
-var TITLE_MAX_LENGTH, CONTENT_MAX_LENGTH, trimValue, isNonEmptyString2, buildEndpointUrl, validatePayload, supabaseClient, fcmApp, PushQueue, pushQueue;
-var init_notification = __esm({
-  "server/_core/notification.ts"() {
-    "use strict";
-    init_env();
-    TITLE_MAX_LENGTH = 1200;
-    CONTENT_MAX_LENGTH = 2e4;
-    trimValue = (value) => value.trim();
-    isNonEmptyString2 = (value) => typeof value === "string" && value.trim().length > 0;
-    buildEndpointUrl = (baseUrl) => {
-      const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-      return new URL("webdevtoken.v1.WebDevService/SendNotification", normalizedBase).toString();
-    };
-    validatePayload = (input) => {
-      if (!isNonEmptyString2(input.title)) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Notification title is required."
-        });
-      }
-      if (!isNonEmptyString2(input.content)) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Notification content is required."
-        });
-      }
-      const title = trimValue(input.title);
-      const content = trimValue(input.content);
-      if (title.length > TITLE_MAX_LENGTH) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Notification title must be at most ${TITLE_MAX_LENGTH} characters.`
-        });
-      }
-      if (content.length > CONTENT_MAX_LENGTH) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Notification content must be at most ${CONTENT_MAX_LENGTH} characters.`
-        });
-      }
-      return { title, content };
-    };
-    supabaseClient = null;
-    fcmApp = null;
-    PushQueue = class {
-      queue = [];
-      activeCount = 0;
-      concurrencyLimit = 50;
-      enqueue(task) {
-        this.queue.push(task);
-        this.processNext();
-      }
-      async processNext() {
-        if (this.activeCount >= this.concurrencyLimit || this.queue.length === 0) return;
-        this.activeCount++;
-        const task = this.queue.shift();
-        try {
-          await task();
-        } catch (e) {
-          console.error("[PushQueue] Task execution failed:", e);
-        } finally {
-          this.activeCount--;
-          this.processNext();
-        }
-      }
-    };
-    pushQueue = new PushQueue();
-  }
-});
-
-// server/security/rateLimit.ts
-var rateLimit_exports = {};
-__export(rateLimit_exports, {
-  aiRateLimiter: () => aiRateLimiter,
-  globalRateLimiter: () => globalRateLimiter
-});
-function globalRateLimiter(req, res, next) {
-  const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
-  const key = `rate:global:${ip}`;
-  cache.incr(key, LIMIT_WINDOW_S).then((attempts) => {
-    if (attempts > MAX_GLOBAL_REQ) {
-      res.setHeader("Retry-After", LIMIT_WINDOW_S);
-      res.status(429).json({ error: "Too many requests. Please try again later." });
-      return;
-    }
-    next();
-  }).catch(() => {
-    next();
-  });
-}
-function aiRateLimiter(req, res, next) {
-  const orgId = req.headers["x-org-id"] || "anonymous";
-  const key = `rate:ai:org:${orgId}`;
-  cache.incr(key, LIMIT_WINDOW_S).then((attempts) => {
-    if (attempts > MAX_AI_REQ) {
-      res.setHeader("Retry-After", LIMIT_WINDOW_S);
-      res.status(429).json({ error: "Organization AI query quota exceeded. Please try again later." });
-      return;
-    }
-    next();
-  }).catch(() => {
-    next();
-  });
-}
-var LIMIT_WINDOW_S, MAX_GLOBAL_REQ, MAX_AI_REQ;
-var init_rateLimit = __esm({
-  "server/security/rateLimit.ts"() {
-    "use strict";
-    init_redis();
-    LIMIT_WINDOW_S = parseInt(process.env.RATE_LIMIT_WINDOW_S || "60", 10);
-    MAX_GLOBAL_REQ = parseInt(process.env.RATE_LIMIT_API_MAX || "10000", 10);
-    MAX_AI_REQ = parseInt(process.env.RATE_LIMIT_AI_MAX || "10", 10);
-  }
 });
 
 // server/_core/load-env-local.ts
@@ -640,6 +18,7 @@ import net from "net";
 import express from "express";
 import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
+import pg from "pg";
 
 // shared/const.ts
 var COOKIE_NAME = "app_session_id";
@@ -823,8 +202,23 @@ var notifications = pgTable("notifications", {
   createdAt: timestamp("createdAt").defaultNow().notNull()
 });
 
+// server/_core/env.ts
+var ENV = {
+  appId: process.env.VITE_APP_ID ?? "",
+  cookieSecret: process.env.JWT_SECRET ?? "",
+  databaseUrl: process.env.DATABASE_URL ?? "",
+  supabaseUrl: process.env.SUPABASE_URL ?? "",
+  supabaseAnonKey: process.env.SUPABASE_ANON_KEY ?? "",
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY ?? "",
+  jwtSecret: process.env.JWT_SECRET ?? "",
+  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
+  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
+  isProduction: process.env.NODE_ENV === "production",
+  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
+  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? ""
+};
+
 // server/db.ts
-init_env();
 var _db = null;
 var queryClient = null;
 async function getDb() {
@@ -947,7 +341,6 @@ var ForbiddenError = (msg) => new HttpError(403, msg);
 // server/_core/sdk.ts
 import axios from "axios";
 import { parse as parseCookieHeader } from "cookie";
-init_env();
 var isNonEmptyString = (value) => typeof value === "string" && value.length > 0;
 var EXCHANGE_TOKEN_PATH = `/webdev.v1.WebDevAuthPublicService/ExchangeToken`;
 var GET_USER_INFO_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserInfo`;
@@ -1307,7 +700,6 @@ function registerOAuthRoutes(app) {
 }
 
 // server/_core/storageProxy.ts
-init_env();
 import { createClient } from "@supabase/supabase-js";
 var supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "https://placeholder-url.supabase.co";
 var supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
@@ -1397,9 +789,149 @@ function registerStorageProxy(app) {
 
 // server/security/authProxy.ts
 import { createClient as createClient2 } from "@supabase/supabase-js";
+import ws from "ws";
 
-// server/security/auth-protection.ts
-init_redis();
+// server/security/redis.ts
+var MemoryCache = class {
+  store = /* @__PURE__ */ new Map();
+  async get(key) {
+    const record = this.store.get(key);
+    if (!record) return null;
+    if (Date.now() > record.expiresAt) {
+      this.store.delete(key);
+      return null;
+    }
+    return record.value;
+  }
+  async set(key, value, mode, duration) {
+    let expiresAt = Infinity;
+    if (mode === "EX" && duration) {
+      expiresAt = Date.now() + duration * 1e3;
+    } else if (mode === "PX" && duration) {
+      expiresAt = Date.now() + duration;
+    }
+    this.store.set(key, { value, expiresAt });
+    return "OK";
+  }
+  async incr(key) {
+    const val = await this.get(key);
+    const num = val ? parseInt(val, 10) : 0;
+    const next = num + 1;
+    await this.set(key, next.toString());
+    return next;
+  }
+  async del(key) {
+    const deleted = this.store.delete(key);
+    return deleted ? 1 : 0;
+  }
+  async ttl(key) {
+    const record = this.store.get(key);
+    if (!record) return -2;
+    if (Date.now() > record.expiresAt) {
+      this.store.delete(key);
+      return -2;
+    }
+    if (record.expiresAt === Infinity) return -1;
+    return Math.max(0, Math.ceil((record.expiresAt - Date.now()) / 1e3));
+  }
+};
+var redisClient = null;
+var useMemoryFallback = true;
+var REDIS_URL = process.env.REDIS_URL;
+if (REDIS_URL) {
+  try {
+    const Redis = __require("ioredis");
+    redisClient = new Redis(REDIS_URL, {
+      maxRetriesPerRequest: 1,
+      connectTimeout: 2e3
+    });
+    redisClient.on("error", (err) => {
+      console.warn("[Redis] Connection error, falling back to memory:", err.message);
+      useMemoryFallback = true;
+    });
+    redisClient.on("connect", () => {
+      console.log("[Redis] Connected successfully.");
+      useMemoryFallback = false;
+    });
+    useMemoryFallback = false;
+  } catch (e) {
+    console.warn("[Redis] Failed to load ioredis library, using in-memory store instead.");
+    useMemoryFallback = true;
+  }
+} else {
+  console.log("[Redis] REDIS_URL not configured. Running in-memory cache mode.");
+}
+var memoryStore = new MemoryCache();
+var cache = {
+  async get(key) {
+    if (useMemoryFallback) {
+      return memoryStore.get(key);
+    }
+    try {
+      return await redisClient.get(key);
+    } catch (err) {
+      return memoryStore.get(key);
+    }
+  },
+  async set(key, value, expireInSeconds) {
+    if (useMemoryFallback) {
+      await memoryStore.set(key, value, expireInSeconds ? "EX" : void 0, expireInSeconds);
+      return;
+    }
+    try {
+      if (expireInSeconds) {
+        await redisClient.set(key, value, "EX", expireInSeconds);
+      } else {
+        await redisClient.set(key, value);
+      }
+    } catch (err) {
+      await memoryStore.set(key, value, expireInSeconds ? "EX" : void 0, expireInSeconds);
+    }
+  },
+  async incr(key, expireInSeconds) {
+    if (useMemoryFallback) {
+      const next = await memoryStore.incr(key);
+      if (expireInSeconds && next === 1) {
+        await memoryStore.set(key, next.toString(), "EX", expireInSeconds);
+      }
+      return next;
+    }
+    try {
+      const next = await redisClient.incr(key);
+      if (expireInSeconds && next === 1) {
+        await redisClient.expire(key, expireInSeconds);
+      }
+      return next;
+    } catch (err) {
+      const next = await memoryStore.incr(key);
+      if (expireInSeconds && next === 1) {
+        await memoryStore.set(key, next.toString(), "EX", expireInSeconds);
+      }
+      return next;
+    }
+  },
+  async del(key) {
+    if (useMemoryFallback) {
+      await memoryStore.del(key);
+      return;
+    }
+    try {
+      await redisClient.del(key);
+    } catch (err) {
+      await memoryStore.del(key);
+    }
+  },
+  async getTtl(key) {
+    if (useMemoryFallback) {
+      return memoryStore.ttl(key);
+    }
+    try {
+      return await redisClient.ttl(key);
+    } catch (err) {
+      return memoryStore.ttl(key);
+    }
+  }
+};
 
 // server/security/db.ts
 import { Pool } from "pg";
@@ -1634,15 +1166,84 @@ var AuthProtectionService = class {
 };
 
 // server/security/authProxy.ts
-init_redis();
-init_validation();
 import crypto from "crypto";
+
+// server/security/validation.ts
+import { z } from "zod";
+function sanitizeInput(input) {
+  if (typeof input === "string") {
+    return input.trim().replace(/\0/g, "").normalize("NFC");
+  }
+  if (Array.isArray(input)) {
+    return input.map((item) => sanitizeInput(item));
+  }
+  if (typeof input === "object" && input !== null) {
+    const sanitized = {};
+    for (const key of Object.keys(input)) {
+      sanitized[key] = sanitizeInput(input[key]);
+    }
+    return sanitized;
+  }
+  return input;
+}
+function sanitizationMiddleware(req, res, next) {
+  if (req.body) req.body = sanitizeInput(req.body);
+  if (req.query) req.query = sanitizeInput(req.query);
+  if (req.params) req.params = sanitizeInput(req.params);
+  next();
+}
+function validateBody(schema) {
+  return async (req, res, next) => {
+    try {
+      req.body = await schema.parseAsync(req.body);
+      next();
+    } catch (err) {
+      if (err instanceof z.ZodError) {
+        const details = err.issues.map((e) => ({
+          field: e.path.join("."),
+          message: e.message
+        }));
+        res.status(400).json({
+          error: "Validation failed: Invalid request payload.",
+          details
+        });
+        return;
+      }
+      res.status(400).json({ error: "Invalid request payload." });
+    }
+  };
+}
+var loginSchema = z.object({
+  email: z.string().email().max(255),
+  password: z.string().min(6).max(100),
+  deviceId: z.string().max(255).optional(),
+  platform: z.string().max(100).optional(),
+  fingerprint: z.string().max(255).optional(),
+  captchaToken: z.string().max(255).optional()
+}).strict();
+var mfaVerifySchema = z.object({
+  code: z.string().length(6),
+  challengeId: z.string().uuid().nullable().optional(),
+  factorId: z.string().max(255).optional(),
+  tempAccessToken: z.string().max(2048)
+}).strict();
+var refreshTokenSchema = z.object({
+  refresh_token: z.string().max(2048)
+}).strict();
+var forgotPasswordSchema = z.object({
+  email: z.string().email().max(255)
+}).strict();
+
+// server/security/authProxy.ts
 var supabaseUrl2 = process.env.EXPO_PUBLIC_SUPABASE_URL || "https://placeholder-url.supabase.co";
 var supabaseAnonKey2 = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "placeholder-key";
 var supabase = createClient2(supabaseUrl2, supabaseAnonKey2, {
   auth: {
     persistSession: false,
     autoRefreshToken: false
+  },
+  realtime: {
+    transport: ws
   }
 });
 function sleep(ms) {
@@ -1922,8 +1523,318 @@ function registerAuthProxyRoutes(app) {
 }
 
 // server/_core/systemRouter.ts
-init_notification();
 import { z as z2 } from "zod";
+
+// server/_core/notification.ts
+import { TRPCError } from "@trpc/server";
+import { initializeApp, getApps, cert } from "firebase-admin/app";
+import { getMessaging } from "firebase-admin/messaging";
+
+// server/_core/supabase.ts
+import { createClient as createClient3 } from "@supabase/supabase-js";
+import ws2 from "ws";
+if (!ENV.supabaseUrl) {
+  console.warn("Supabase URL is missing in environment variables.");
+}
+if (!ENV.supabaseServiceRoleKey || ENV.supabaseServiceRoleKey === "placeholder-key" || ENV.supabaseServiceRoleKey === "[SENSITIVE]") {
+  console.warn("Supabase Service Role Key is missing in environment variables.");
+}
+var supabaseAdmin = createClient3(
+  ENV.supabaseUrl || "https://rltygdzldplkmwuqfadm.supabase.co",
+  ENV.supabaseServiceRoleKey || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsdHlnZHpsZHBsa213dXFmYWRtIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MTIwMzk1NSwiZXhwIjoyMDk2Nzc5OTU1fQ.zsR3c5QISHMSo9MgsaWCLVaeEBs5gZIlQ8eue4eF12o",
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    },
+    realtime: {
+      transport: ws2
+    }
+  }
+);
+
+// server/_core/notification.ts
+var TITLE_MAX_LENGTH = 1200;
+var CONTENT_MAX_LENGTH = 2e4;
+var trimValue = (value) => value.trim();
+var isNonEmptyString2 = (value) => typeof value === "string" && value.trim().length > 0;
+var buildEndpointUrl = (baseUrl) => {
+  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  return new URL("webdevtoken.v1.WebDevService/SendNotification", normalizedBase).toString();
+};
+var validatePayload = (input) => {
+  if (!isNonEmptyString2(input.title)) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Notification title is required."
+    });
+  }
+  if (!isNonEmptyString2(input.content)) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Notification content is required."
+    });
+  }
+  const title = trimValue(input.title);
+  const content = trimValue(input.content);
+  if (title.length > TITLE_MAX_LENGTH) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Notification title must be at most ${TITLE_MAX_LENGTH} characters.`
+    });
+  }
+  if (content.length > CONTENT_MAX_LENGTH) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Notification content must be at most ${CONTENT_MAX_LENGTH} characters.`
+    });
+  }
+  return { title, content };
+};
+async function notifyOwner(payload) {
+  const { title, content } = validatePayload(payload);
+  if (!ENV.forgeApiUrl) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Notification service URL is not configured."
+    });
+  }
+  if (!ENV.forgeApiKey) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Notification service API key is not configured."
+    });
+  }
+  const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        authorization: `Bearer ${ENV.forgeApiKey}`,
+        "content-type": "application/json",
+        "connect-protocol-version": "1"
+      },
+      body: JSON.stringify({ title, content })
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      console.warn(
+        `[Notification] Failed to notify owner (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`
+      );
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.warn("[Notification] Error calling notification service:", error);
+    return false;
+  }
+}
+function getSupabaseAdmin() {
+  return supabaseAdmin;
+}
+var fcmApp = null;
+function getFirebaseApp() {
+  if (fcmApp) return fcmApp;
+  const existingApps = getApps();
+  if (existingApps.length > 0) {
+    fcmApp = existingApps[0];
+    console.log("[FCM] Reusing existing Firebase app instance.");
+    return fcmApp;
+  }
+  let serviceAccountString = process.env.FIREBASE_SERVICE_ACCOUNT;
+  const b64Key = process.env.FIREBASE_SERVICE_ACCOUNT_B64;
+  if (b64Key && !serviceAccountString) {
+    try {
+      serviceAccountString = Buffer.from(b64Key, "base64").toString("utf8");
+    } catch (e) {
+      console.error("[FCM] Failed to decode base64 service account credentials:", e);
+    }
+  }
+  if (serviceAccountString && !serviceAccountString.trim().startsWith("{")) {
+    try {
+      serviceAccountString = Buffer.from(serviceAccountString, "base64").toString("utf8");
+    } catch (e) {
+      console.error("[FCM] Failed to decode FIREBASE_SERVICE_ACCOUNT as base64:", e);
+    }
+  }
+  if (!serviceAccountString) {
+    const fs = __require("fs");
+    const path2 = __require("path");
+    const possiblePaths = [
+      path2.join(process.cwd(), "coreflow-2af5c-cc11e0599b34.json"),
+      path2.join(__dirname, "../coreflow-2af5c-cc11e0599b34.json"),
+      path2.join(__dirname, "../../coreflow-2af5c-cc11e0599b34.json")
+    ];
+    const localKeyPath = possiblePaths.find((p) => fs.existsSync(p));
+    if (localKeyPath) {
+      try {
+        const localKey = JSON.parse(fs.readFileSync(localKeyPath, "utf8"));
+        fcmApp = initializeApp({ credential: cert(localKey) });
+        console.log("[FCM] Firebase app initialized via local service account key.");
+        return fcmApp;
+      } catch (e) {
+        console.error("[FCM] Failed to initialize Firebase app from local key:", e);
+      }
+    }
+    console.warn("[FCM] FIREBASE_SERVICE_ACCOUNT env var is not set and local key file is missing.");
+    return null;
+  }
+  try {
+    const serviceAccount = JSON.parse(serviceAccountString);
+    if (serviceAccount.private_key) {
+      let key = serviceAccount.private_key;
+      let body = key.replace(/-----BEGIN PRIVATE KEY-----/gi, "").replace(/-----END PRIVATE KEY-----/gi, "").replace(/\s+/g, "");
+      let chunks = body.match(/.{1,64}/g);
+      if (chunks) {
+        serviceAccount.private_key = "-----BEGIN PRIVATE KEY-----\n" + chunks.join("\n") + "\n-----END PRIVATE KEY-----\n";
+      }
+    }
+    fcmApp = initializeApp({ credential: cert(serviceAccount) });
+    console.log("[FCM] Firebase app initialized via environment variable.");
+    return fcmApp;
+  } catch (err) {
+    console.error("[FCM] Failed to initialize Firebase app:", err);
+    return null;
+  }
+}
+var PushQueue = class {
+  queue = [];
+  activeCount = 0;
+  concurrencyLimit = 50;
+  enqueue(task) {
+    this.queue.push(task);
+    this.processNext();
+  }
+  async processNext() {
+    if (this.activeCount >= this.concurrencyLimit || this.queue.length === 0) return;
+    this.activeCount++;
+    const task = this.queue.shift();
+    try {
+      await task();
+    } catch (e) {
+      console.error("[PushQueue] Task execution failed:", e);
+    } finally {
+      this.activeCount--;
+      this.processNext();
+    }
+  }
+};
+var pushQueue = new PushQueue();
+async function dispatchFCMPush(data) {
+  const supabase4 = getSupabaseAdmin();
+  const app = getFirebaseApp();
+  if (!app) {
+    console.error("[FCM] Firebase app is not initialized. Cannot dispatch push.");
+    await supabase4.from("notifications").update({ delivery_status: "failed", delivery_error: "Firebase app not initialized" }).eq("id", data.id);
+    return;
+  }
+  const messaging = getMessaging(app);
+  try {
+    const { data: prefRows } = await supabase4.from("notification_preferences").select("chat_enabled, meetings_enabled, tasks_enabled, finance_enabled, announcements_enabled").eq("user_id", data.userId);
+    if (prefRows && prefRows.length > 0) {
+      const pref = prefRows[0];
+      const isChatDisabled = data.type === "chat" && !pref.chat_enabled;
+      const isMeetingDisabled = data.type === "meeting" && !pref.meetings_enabled;
+      const isTaskDisabled = data.type === "task" && !pref.tasks_enabled;
+      const isFinanceDisabled = data.type === "finance" && !pref.finance_enabled;
+      const isAnnouncementDisabled = data.type === "announcements" && !pref.announcements_enabled;
+      if (isChatDisabled || isMeetingDisabled || isTaskDisabled || isFinanceDisabled || isAnnouncementDisabled) {
+        console.log(`[FCM] Notification skipped for user ${data.userId} due to preference settings.`);
+        await supabase4.from("notifications").update({ delivery_status: "failed", delivery_error: "Skipped by preferences" }).eq("id", data.id);
+        return;
+      }
+    }
+    let query2 = supabase4.from("user_push_tokens").select("token, device_id, platform").eq("user_id", data.userId).eq("is_enabled", true);
+    if (data.senderId && data.senderId !== data.userId) {
+      const { data: senderTokens } = await supabase4.from("user_push_tokens").select("token").eq("user_id", data.senderId);
+      if (senderTokens && senderTokens.length > 0) {
+        const excludeTokens = senderTokens.map((t2) => t2.token);
+        query2 = query2.not("token", "in", excludeTokens);
+      }
+    }
+    const { data: deviceTokens } = await query2;
+    const tokens = (deviceTokens || []).map((t2) => t2.token);
+    if (!tokens || tokens.length === 0) {
+      console.log(`[FCM] No devices found for user ${data.userId}`);
+      await supabase4.from("notifications").update({ delivery_status: "failed", delivery_error: "No active device tokens found" }).eq("id", data.id);
+      return;
+    }
+    const { data: nData } = await supabase4.from("notifications").select("delivery_attempts").eq("id", data.id).single();
+    const attempts = (nData?.delivery_attempts || 0) + 1;
+    await supabase4.from("notifications").update({ delivery_status: "sending", delivery_attempts: attempts }).eq("id", data.id);
+    console.log(`[FCM] Dispatching to ${tokens.length} device(s) for user ${data.userId}`);
+    const multicastMessage = {
+      tokens,
+      notification: {
+        title: data.title,
+        body: data.message
+      },
+      data: {
+        id: data.id,
+        type: data.type || "",
+        entity_type: data.entityType || "",
+        entity_id: data.entityId || "",
+        action_url: data.actionUrl || "",
+        sender_id: data.senderId || ""
+      },
+      android: {
+        priority: "high",
+        notification: {
+          channelId: data.type === "chat" ? "chat" : data.type === "meeting" ? "meetings" : data.type === "task" || data.type === "task_assigned" ? "tasks" : "default",
+          sound: "default"
+        }
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "default",
+            badge: 1
+          }
+        }
+      }
+    };
+    const response = await sendWithRetry(messaging, multicastMessage);
+    const tokensToDelete = [];
+    response.responses.forEach((res, idx) => {
+      if (!res.success && res.error) {
+        const errorCode = res.error.code;
+        const token = tokens[idx];
+        const device = deviceTokens[idx];
+        console.warn(`[FCM] Send failed for user ${data.userId} device ${device.device_id}:`, res.error.message);
+        if (errorCode === "messaging/registration-token-not-registered" || errorCode === "messaging/invalid-argument") {
+          tokensToDelete.push(token);
+        }
+      }
+    });
+    if (tokensToDelete.length > 0) {
+      console.log(`[FCM] Deleting ${tokensToDelete.length} unregistered / invalid tokens.`);
+      await supabase4.from("user_push_tokens").delete().in("token", tokensToDelete);
+    }
+    const successCount = response.successCount;
+    if (successCount > 0) {
+      await supabase4.from("notifications").update({ delivery_status: "delivered", delivery_error: null }).eq("id", data.id);
+    } else {
+      await supabase4.from("notifications").update({ delivery_status: "failed", delivery_error: "All token dispatches failed" }).eq("id", data.id);
+    }
+  } catch (err) {
+    console.error("[FCM] Critical push dispatch failure:", err);
+    await supabase4.from("notifications").update({ delivery_status: "failed", delivery_error: err.message || "Unknown error" }).eq("id", data.id);
+  }
+}
+async function sendWithRetry(messaging, payload, attempt = 1) {
+  try {
+    return await messaging.sendEachForMulticast(payload);
+  } catch (error) {
+    const isTransient = error.code === "messaging/internal-error" || error.code === "messaging/server-unavailable";
+    if (isTransient && attempt < 3) {
+      const delay = Math.pow(2, attempt) * 1e3;
+      await new Promise((resolve) => setTimeout(resolve, delay));
+      return sendWithRetry(messaging, payload, attempt + 1);
+    }
+    throw error;
+  }
+}
 
 // server/_core/trpc.ts
 import { initTRPC, TRPCError as TRPCError2 } from "@trpc/server";
@@ -2024,18 +1935,9 @@ async function createContext(opts) {
 import { Router } from "express";
 
 // server/meetings/meetings.service.ts
-import { createClient as createClient4 } from "@supabase/supabase-js";
 import crypto2 from "crypto";
-var supabaseClient2 = null;
 function getSupabase() {
-  if (!supabaseClient2) {
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for meetings service");
-    supabaseClient2 = createClient4(
-      process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-  }
-  return supabaseClient2;
+  return supabaseAdmin;
 }
 var MeetingsService = class {
   static async createMeeting(data) {
@@ -2062,6 +1964,8 @@ var MeetingsService = class {
       meeting_id: meeting.id,
       user_id: data.hostId,
       role: "host",
+      admission_status: "admitted",
+      status: "invited",
       can_share_screen: true,
       can_record: true,
       can_present: true,
@@ -2070,29 +1974,40 @@ var MeetingsService = class {
     return meeting;
   }
   static async getMeetingById(id) {
-    const { data, error } = await getSupabase().from("meetings").select("*, meeting_settings(*)").eq("id", id).single();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    let query2 = getSupabase().from("meetings").select("*, meeting_settings(*)");
+    if (isUuid) {
+      query2 = query2.or(`id.eq.${id},room_name.eq.${id}`);
+    } else {
+      query2 = query2.eq("room_name", id);
+    }
+    const { data, error } = await query2.maybeSingle();
     if (error) throw error;
     return data;
   }
   static async trackParticipant(meetingId, userId, hostId) {
     const isHost = userId === hostId;
-    const { data, error } = await getSupabase().from("meeting_participants").select("*").eq("meeting_id", meetingId).eq("user_id", userId).single();
+    const { data } = await getSupabase().from("meeting_participants").select("*").eq("meeting_id", meetingId).eq("user_id", userId).maybeSingle();
     if (!data) {
       const { data: newParticipant } = await getSupabase().from("meeting_participants").insert({
         meeting_id: meetingId,
         user_id: userId,
         status: "joined",
         role: isHost ? "host" : "attendee",
-        admission_status: isHost ? "admitted" : "waiting"
+        admission_status: isHost ? "admitted" : "waiting",
         // host doesn't wait
+        joined_at: (/* @__PURE__ */ new Date()).toISOString()
       }).select().single();
       return newParticipant;
     } else {
-      let updates = { status: "joined", joined_at: (/* @__PURE__ */ new Date()).toISOString() };
-      if (isHost && data.role !== "host") {
+      let updates = {
+        status: "joined",
+        joined_at: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      if (isHost) {
         updates.role = "host";
         updates.admission_status = "admitted";
-      } else if (data.admission_status === "none" && data.role !== "host") {
+      } else if (!data.admission_status || data.admission_status === "none") {
         updates.admission_status = "waiting";
       }
       const { data: updatedParticipant } = await getSupabase().from("meeting_participants").update(updates).eq("id", data.id).select().single();
@@ -2111,7 +2026,6 @@ var MeetingsService = class {
   static async updateInvitationStatus(meetingId, userId, status) {
     const { data, error } = await getSupabase().from("meeting_invitations").update({ status, accepted_at: status === "accepted" ? (/* @__PURE__ */ new Date()).toISOString() : null }).eq("meeting_id", meetingId).eq("user_id", userId).select().single();
     if (error) throw error;
-    await getSupabase().from("meeting_participants").update({ status }).eq("meeting_id", meetingId).eq("user_id", userId);
     return data;
   }
   static getSupabase() {
@@ -2263,7 +2177,7 @@ var MeetingsController = class {
       }
       if (!isHost) {
         const { data: hostParticipant } = await MeetingsService.getSupabase().from("meeting_participants").select("admission_status, status").eq("meeting_id", meeting.id).eq("user_id", meeting.host_id).eq("status", "joined").maybeSingle();
-        if (!hostParticipant || hostParticipant.admission_status !== "admitted") {
+        if (!hostParticipant || hostParticipant.status !== "joined" || hostParticipant.admission_status !== "admitted") {
           await MeetingsService.trackParticipant(meeting.id, user.id, meeting.host_id);
           return res.status(400).json({ error: "waiting_room", details: "Waiting for the host to join the meeting" });
         }
@@ -2272,9 +2186,10 @@ var MeetingsController = class {
       if (!isHost && participant && participant.admission_status === "waiting") {
         return res.status(400).json({ error: "waiting_room", details: "Waiting for host approval to enter the room" });
       }
-      const participantName = user.user_metadata?.full_name || user.email;
+      const participantName = user.user_metadata?.full_name || user.user_metadata?.org_name || user.email || "Guest";
+      const safeRoomName = meeting.room_name || `coreflow-${meeting.id}`;
       const token = await LiveKitService.generateToken(
-        meeting.room_name,
+        safeRoomName,
         user.id,
         participantName,
         {
@@ -2283,7 +2198,9 @@ var MeetingsController = class {
           canPublishData: true
         }
       );
-      res.json({ token, roomUrl: process.env.LIVEKIT_URL || "wss://coreflow-eo6z5wme.livekit.cloud" });
+      let roomUrl = process.env.LIVEKIT_URL || "wss://coreflow-eo6z5wme.livekit.cloud";
+      roomUrl = roomUrl.replace(/^["']|["']$/g, "").trim();
+      res.json({ token, roomUrl });
     } catch (error) {
       console.error("Error joining meeting:", error);
       res.status(500).json({ error: "Failed to join meeting", details: error?.message || String(error) });
@@ -2395,11 +2312,66 @@ var MeetingsController = class {
       res.status(500).json({ error: "Failed to save notes" });
     }
   }
+  static async endMeeting(req, res) {
+    try {
+      const { user } = req;
+      const { id } = req.params;
+      const meeting = await MeetingsService.getMeetingById(id);
+      if (!meeting) return res.status(404).json({ error: "Meeting not found" });
+      if (meeting.host_id !== user.id) {
+        return res.status(403).json({ error: "Only the host can end the meeting" });
+      }
+      await MeetingsService.getSupabase().from("meetings").update({ status: "completed" }).eq("id", meeting.id);
+      await LiveKitService.endRoom(meeting.room_name);
+      res.json({ message: "Meeting ended successfully" });
+    } catch (error) {
+      console.error("Error ending meeting:", error);
+      res.status(500).json({ error: "Failed to end meeting" });
+    }
+  }
+  static async admitParticipant(req, res) {
+    try {
+      const { user } = req;
+      const { id, userId } = req.params;
+      const meeting = await MeetingsService.getMeetingById(id);
+      if (!meeting) return res.status(404).json({ error: "Meeting not found" });
+      if (meeting.host_id !== user.id) {
+        return res.status(403).json({ error: "Only the host can admit participants" });
+      }
+      await MeetingsService.getSupabase().from("meeting_participants").update({ admission_status: "admitted" }).eq("meeting_id", meeting.id).eq("user_id", userId);
+      res.json({ message: "Participant admitted successfully" });
+    } catch (error) {
+      console.error("Error admitting participant:", error);
+      res.status(500).json({ error: "Failed to admit participant" });
+    }
+  }
   static async liveKitWebhook(req, res) {
     try {
       const event = await LiveKitService.verifyWebhook(req.body, req.headers.authorization);
       console.log("Received LiveKit event:", event);
-      if (event.event === "egress_ended") {
+      if (event.event === "participant_left") {
+        const roomName = event.room?.name;
+        const identity = event.participant?.identity;
+        if (roomName && identity) {
+          const { data: meeting } = await MeetingsService.getSupabase().from("meetings").select("id, host_id").eq("room_name", roomName).maybeSingle();
+          if (meeting) {
+            if (meeting.host_id === identity) {
+              await MeetingsService.getSupabase().from("meetings").update({ status: "completed" }).eq("id", meeting.id);
+              console.log(`Host left, marked meeting ${meeting.id} as completed.`);
+            }
+            await MeetingsService.getSupabase().from("meeting_participants").update({ status: "left" }).eq("meeting_id", meeting.id).eq("user_id", identity);
+          }
+        }
+      } else if (event.event === "room_finished") {
+        const roomName = event.room?.name;
+        if (roomName) {
+          const { data: meeting } = await MeetingsService.getSupabase().from("meetings").select("id").eq("room_name", roomName).maybeSingle();
+          if (meeting) {
+            await MeetingsService.getSupabase().from("meetings").update({ status: "completed" }).eq("id", meeting.id);
+            console.log(`Room finished, marked meeting ${meeting.id} as completed.`);
+          }
+        }
+      } else if (event.event === "egress_ended") {
         const egressInfo = event.egressInfo;
         const roomName = egressInfo?.roomName;
         const fileUrl = egressInfo?.fileResults?.[0]?.location || egressInfo?.file?.location;
@@ -2430,11 +2402,20 @@ var MeetingsController = class {
 };
 
 // server/meetings/meetings.routes.ts
-import { createClient as createClient5 } from "@supabase/supabase-js";
+import { createClient as createClient4 } from "@supabase/supabase-js";
+import ws3 from "ws";
 var router2 = Router();
 var supabaseUrl3 = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || "";
 var supabaseAnonKey3 = process.env.SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
-var supabase2 = createClient5(supabaseUrl3, supabaseAnonKey3);
+var supabase2 = createClient4(supabaseUrl3, supabaseAnonKey3, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false
+  },
+  realtime: {
+    transport: ws3
+  }
+});
 var requireAuth = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization || req.headers.Authorization;
@@ -2457,6 +2438,8 @@ router2.post("/:id/join", requireAuth, MeetingsController.joinMeeting);
 router2.post("/:id/invite", requireAuth, MeetingsController.inviteUser);
 router2.post("/:id/invitations/accept", requireAuth, MeetingsController.acceptInvitation);
 router2.post("/:id/invitations/decline", requireAuth, MeetingsController.declineInvitation);
+router2.post("/:id/end", requireAuth, MeetingsController.endMeeting);
+router2.post("/:id/participants/:userId/admit", requireAuth, MeetingsController.admitParticipant);
 router2.post("/:id/record/start", requireAuth, MeetingsController.startRecording);
 router2.post("/:id/record/stop", requireAuth, MeetingsController.stopRecording);
 router2.get("/:id/notes", requireAuth, MeetingsController.getNotes);
@@ -2464,58 +2447,906 @@ router2.post("/:id/notes", requireAuth, MeetingsController.saveNotes);
 router2.post("/webhook/livekit", MeetingsController.liveKitWebhook);
 var meetings_routes_default = router2;
 
+// server/causality/causality.routes.ts
+import { Router as Router2 } from "express";
+
+// server/causality/causality.service.ts
+var CausalityService = class {
+  /**
+   * Helper: Ensure baseline commitment V1 exists for a project. If not, auto-seed from project properties.
+   */
+  static async ensureBaselineCommitment(projectId, userId) {
+    const { data: existing } = await supabaseAdmin.from("project_commitments").select("*").eq("project_id", projectId).order("version_number", { ascending: true }).limit(1);
+    if (existing && existing.length > 0) return existing[0];
+    const { data: project } = await supabaseAdmin.from("projects").select("*").eq("id", projectId).single();
+    if (!project) throw new Error("Project not found");
+    const defaultDelivery = project.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1e3).toISOString().split("T")[0];
+    let dynamicCost = Number(project.budget || 0);
+    if (dynamicCost === 0) {
+      const { data: inv } = await supabaseAdmin.from("invoices").select("total_amount").eq("project_id", projectId).limit(1);
+      if (inv && inv.length > 0 && inv[0].total_amount) {
+        dynamicCost = Number(inv[0].total_amount);
+      }
+    }
+    const { data: tasks } = await supabaseAdmin.from("tasks").select("id, title").eq("project_id", projectId);
+    const initialScopeCount = tasks ? tasks.length : 0;
+    const { data: baseline, error } = await supabaseAdmin.from("project_commitments").insert({
+      project_id: projectId,
+      version_number: 1,
+      total_cost: dynamicCost,
+      currency: "INR",
+      delivery_date: defaultDelivery,
+      scope_count: initialScopeCount,
+      change_reason: "Initial Baseline Commitment Agreement",
+      requested_by: project.created_by || userId,
+      approved_by: project.owner_id || userId,
+      approved_at: project.created_at || (/* @__PURE__ */ new Date()).toISOString()
+    }).select().single();
+    if (error) {
+      console.error("Error creating baseline commitment:", error);
+    }
+    await supabaseAdmin.from("project_events").insert({
+      project_id: projectId,
+      event_type: "PROJECT_CREATED",
+      actor_id: userId,
+      title: "Project Initialized & Baseline Sealed",
+      description: `Baseline V1 established with ${initialScopeCount} deliverables and delivery date of ${defaultDelivery}`,
+      visibility: "CLIENT_VISIBLE",
+      impact_summary: { cost: dynamicCost, deliveryDate: defaultDelivery, scope: initialScopeCount }
+    });
+    return baseline;
+  }
+  /**
+   * 1. WHY DELIVERY (Deterministic Schedule Causality)
+   */
+  static async explainDelivery(projectId, userId) {
+    await this.ensureBaselineCommitment(projectId, userId);
+    const { data: commitments } = await supabaseAdmin.from("project_commitments").select("*").eq("project_id", projectId).order("version_number", { ascending: true });
+    const baseline = commitments?.[0];
+    const latest = commitments?.[commitments.length - 1] || baseline;
+    const { data: acceptedCRs } = await supabaseAdmin.from("project_change_requests").select("*").eq("project_id", projectId).eq("status", "accepted").order("decided_at", { ascending: true });
+    const { data: events2 } = await supabaseAdmin.from("project_events").select("*").eq("project_id", projectId).in("visibility", ["CLIENT_VISIBLE", "CLIENT_ACTION_REQUIRED"]).order("occurred_at", { ascending: true });
+    const adjustments = (acceptedCRs || []).map((cr) => ({
+      id: cr.id,
+      code: cr.cr_code,
+      title: cr.title,
+      daysDelta: cr.schedule_impact_days,
+      reason: cr.description,
+      requestedBy: cr.requester_type,
+      approvedAt: cr.decided_at,
+      impact: `+${cr.schedule_impact_days} Days`
+    }));
+    return {
+      projectId,
+      baselineDate: baseline?.delivery_date,
+      currentDeliveryDate: latest?.delivery_date,
+      totalScheduleDeltaDays: (acceptedCRs || []).reduce((sum, cr) => sum + (cr.schedule_impact_days || 0), 0),
+      adjustments,
+      hasSufficientData: !!baseline,
+      events: events2 || []
+    };
+  }
+  /**
+   * 2. WHY COST (Deterministic Project Value Causality)
+   */
+  static async explainCost(projectId, userId) {
+    await this.ensureBaselineCommitment(projectId, userId);
+    const { data: commitments } = await supabaseAdmin.from("project_commitments").select("*").eq("project_id", projectId).order("version_number", { ascending: true });
+    const baseline = commitments?.[0];
+    const latest = commitments?.[commitments.length - 1] || baseline;
+    const { data: acceptedCRs } = await supabaseAdmin.from("project_change_requests").select("*").eq("project_id", projectId).eq("status", "accepted").order("decided_at", { ascending: true });
+    const costSteps = (acceptedCRs || []).map((cr) => ({
+      id: cr.id,
+      code: cr.cr_code,
+      title: cr.title,
+      costDelta: cr.cost_impact,
+      formattedDelta: `${cr.cost_impact >= 0 ? "+" : "-"}\u20B9${Math.abs(Number(cr.cost_impact)).toLocaleString("en-IN")}`,
+      approvedAt: cr.decided_at,
+      reason: cr.description
+    }));
+    return {
+      projectId,
+      currency: baseline?.currency || "INR",
+      baselineCost: Number(baseline?.total_cost || 0),
+      currentCost: Number(latest?.total_cost || 0),
+      totalCostDelta: Number(latest?.total_cost || 0) - Number(baseline?.total_cost || 0),
+      costSteps,
+      commitmentVersions: commitments || [],
+      hasSufficientData: !!baseline
+    };
+  }
+  /**
+   * 3. WHY PROGRESS (Deterministic Weighted Calculation)
+   */
+  static async explainProgress(projectId, userId) {
+    const { data: milestones } = await supabaseAdmin.from("project_milestones").select("*").eq("project_id", projectId).order("order_index", { ascending: true });
+    const { data: tasks } = await supabaseAdmin.from("tasks").select("id, title, status, milestone_id, estimated_hours, actual_hours").eq("project_id", projectId);
+    const taskList = tasks || [];
+    const milestoneList = milestones || [];
+    if (taskList.length === 0 && milestoneList.length === 0) {
+      return {
+        projectId,
+        overallProgress: 0,
+        hasSufficientData: false,
+        breakdown: [],
+        message: "Insufficient recorded project data to explain this value."
+      };
+    }
+    let totalWeightedScore = 0;
+    let totalWeight = 0;
+    let breakdown = [];
+    if (milestoneList.length > 0) {
+      const perMilestoneWeight = 100 / milestoneList.length;
+      breakdown = milestoneList.map((m) => {
+        const mTasks = taskList.filter((t2) => t2.milestone_id === m.id);
+        const doneCount = mTasks.filter((t2) => t2.status === "done").length;
+        const milestoneProgress = m.completed ? 100 : mTasks.length > 0 ? Math.round(doneCount / mTasks.length * 100) : 0;
+        const weightedContrib = milestoneProgress * perMilestoneWeight / 100;
+        totalWeightedScore += weightedContrib;
+        totalWeight += perMilestoneWeight;
+        return {
+          id: m.id,
+          title: m.title,
+          weight: Math.round(perMilestoneWeight),
+          progress: milestoneProgress,
+          completed: m.completed || milestoneProgress === 100,
+          tasksCount: mTasks.length,
+          tasksCompleted: doneCount,
+          tasks: mTasks.map((t2) => ({ id: t2.id, title: t2.title, status: t2.status }))
+        };
+      });
+    } else {
+      const doneCount = taskList.filter((t2) => t2.status === "done").length;
+      const progress = Math.round(doneCount / taskList.length * 100);
+      totalWeightedScore = progress;
+      breakdown = [
+        {
+          id: "general-work",
+          title: "Project Deliverables & Execution",
+          weight: 100,
+          progress,
+          completed: progress === 100,
+          tasksCount: taskList.length,
+          tasksCompleted: doneCount,
+          tasks: taskList.map((t2) => ({ id: t2.id, title: t2.title, status: t2.status }))
+        }
+      ];
+    }
+    const overallProgress = Math.min(100, Math.round(totalWeightedScore));
+    return {
+      projectId,
+      overallProgress,
+      breakdown,
+      totalTasks: taskList.length,
+      completedTasks: taskList.filter((t2) => t2.status === "done").length,
+      hasSufficientData: true
+    };
+  }
+  /**
+   * 4. WHY SCOPE (Deterministic Scope Traceability)
+   */
+  static async explainScope(projectId, userId) {
+    await this.ensureBaselineCommitment(projectId, userId);
+    const { data: commitments } = await supabaseAdmin.from("project_commitments").select("*").eq("project_id", projectId).order("version_number", { ascending: true });
+    const baseline = commitments?.[0];
+    const latest = commitments?.[commitments.length - 1] || baseline;
+    const { data: acceptedCRs } = await supabaseAdmin.from("project_change_requests").select("*").eq("project_id", projectId).eq("status", "accepted").order("decided_at", { ascending: true });
+    const { data: tasks } = await supabaseAdmin.from("tasks").select("id, title, status").eq("project_id", projectId);
+    const scopeChanges = (acceptedCRs || []).map((cr) => ({
+      id: cr.id,
+      code: cr.cr_code,
+      title: cr.title,
+      scopeImpact: cr.scope_impact_count,
+      formattedScope: `${cr.scope_impact_count >= 0 ? "+" : "-"}${Math.abs(cr.scope_impact_count)} Deliverable${Math.abs(cr.scope_impact_count) > 1 ? "s" : ""}`,
+      approvedAt: cr.decided_at
+    }));
+    return {
+      projectId,
+      baselineScopeCount: baseline?.scope_count || (tasks ? tasks.length : 0),
+      currentScopeCount: latest?.scope_count || (tasks ? tasks.length : 0),
+      scopeChanges,
+      activeDeliverables: tasks || [],
+      hasSufficientData: !!baseline
+    };
+  }
+  /**
+   * 5. PROJECT DNA (Causality Graph Nodes & Edges)
+   */
+  static async getProjectDNA(projectId, userId) {
+    const { data: events2 } = await supabaseAdmin.from("project_events").select("*").eq("project_id", projectId).order("occurred_at", { ascending: true });
+    const { data: relationships } = await supabaseAdmin.from("project_event_relationships").select("*").eq("project_id", projectId);
+    const nodes = (events2 || []).map((e) => ({
+      id: e.id,
+      type: e.event_type,
+      title: e.title,
+      description: e.description,
+      occurredAt: e.occurred_at,
+      visibility: e.visibility,
+      impact: e.impact_summary
+    }));
+    const edges = (relationships || []).map((r) => ({
+      id: r.id,
+      source: r.source_event_id,
+      target: r.target_event_id,
+      type: r.relationship_type
+    }));
+    return { projectId, nodes, edges };
+  }
+  /**
+   * 6. PROOF MODE DATA
+   */
+  static async getProjectProof(projectId, userId) {
+    const { data: evidence } = await supabaseAdmin.from("project_evidence").select("*").eq("project_id", projectId).order("created_at", { ascending: false });
+    const { data: receipts } = await supabaseAdmin.from("project_receipts").select("*").eq("project_id", projectId).order("created_at", { ascending: false });
+    const { data: tasks } = await supabaseAdmin.from("tasks").select("id, status").eq("project_id", projectId);
+    const { data: milestones } = await supabaseAdmin.from("project_milestones").select("id, completed").eq("project_id", projectId);
+    const doneTasks = tasks?.filter((t2) => t2.status === "done").length || 0;
+    const completedMilestones = milestones?.filter((m) => m.completed).length || 0;
+    return {
+      projectId,
+      stats: {
+        tasksTotal: tasks?.length || 0,
+        tasksDone: doneTasks,
+        milestonesTotal: milestones?.length || 0,
+        milestonesCompleted: completedMilestones,
+        evidenceCount: evidence?.length || 0,
+        receiptsCount: receipts?.length || 0,
+        lastVerifiedAt: (/* @__PURE__ */ new Date()).toISOString()
+      },
+      evidence: evidence || [],
+      receipts: receipts || []
+    };
+  }
+  /**
+   * 7. COMMITMENT HISTORY & VERSIONS
+   */
+  static async getCommitmentHistory(projectId, userId) {
+    const { data: commitments } = await supabaseAdmin.from("project_commitments").select("*").eq("project_id", projectId).order("version_number", { ascending: true });
+    return { projectId, commitments: commitments || [] };
+  }
+  /**
+   * 8. CREATE CHANGE REQUEST
+   */
+  static async createChangeRequest(payload, userId) {
+    const {
+      projectId,
+      title,
+      description,
+      requesterType = "client",
+      costImpact = 0,
+      scheduleImpactDays = 0,
+      scopeImpactCount = 0,
+      engineeringHoursImpact = 0
+    } = payload;
+    if (!projectId || !title) throw new Error("projectId and title are required");
+    const { data: existingCRs } = await supabaseAdmin.from("project_change_requests").select("id").eq("project_id", projectId);
+    const crIndex = (existingCRs?.length || 0) + 1;
+    const crCode = `CR-${String(crIndex).padStart(3, "0")}`;
+    const { data: commitments } = await supabaseAdmin.from("project_commitments").select("*").eq("project_id", projectId).order("version_number", { ascending: false }).limit(1);
+    const currentCommitment = commitments?.[0];
+    const currentCost = Number(currentCommitment?.total_cost || 45e3);
+    const currentDate = currentCommitment?.delivery_date ? new Date(currentCommitment.delivery_date) : /* @__PURE__ */ new Date();
+    const currentScope = currentCommitment?.scope_count || 8;
+    const resultingCost = currentCost + Number(costImpact);
+    const resultingDate = new Date(currentDate.getTime() + scheduleImpactDays * 24 * 60 * 60 * 1e3).toISOString().split("T")[0];
+    const resultingScope = currentScope + Number(scopeImpactCount);
+    const { data: cr, error } = await supabaseAdmin.from("project_change_requests").insert({
+      cr_code: crCode,
+      project_id: projectId,
+      title,
+      description,
+      requester_type: requesterType,
+      requested_by: userId,
+      status: "pending",
+      cost_impact: costImpact,
+      schedule_impact_days: scheduleImpactDays,
+      scope_impact_count: scopeImpactCount,
+      engineering_hours_impact: engineeringHoursImpact,
+      resulting_cost: resultingCost,
+      resulting_delivery_date: resultingDate,
+      resulting_scope_count: resultingScope
+    }).select().single();
+    if (error) throw error;
+    await supabaseAdmin.from("project_events").insert({
+      project_id: projectId,
+      event_type: "CHANGE_REQUEST_CREATED",
+      actor_id: userId,
+      title: `${crCode} Submitted: ${title}`,
+      description: `Impact: ${costImpact >= 0 ? "+" : ""}\u20B9${costImpact}, ${scheduleImpactDays >= 0 ? "+" : ""}${scheduleImpactDays} days, ${scopeImpactCount >= 0 ? "+" : ""}${scopeImpactCount} scope items`,
+      visibility: "CLIENT_ACTION_REQUIRED",
+      impact_summary: {
+        costDelta: costImpact,
+        daysDelta: scheduleImpactDays,
+        scopeDelta: scopeImpactCount
+      }
+    });
+    return cr;
+  }
+  /**
+   * 9. DECIDE CHANGE REQUEST (Accept / Reject)
+   */
+  static async decideChangeRequest(crId, decision, notes, userId) {
+    const { data: cr, error: fetchErr } = await supabaseAdmin.from("project_change_requests").select("*").eq("id", crId).single();
+    if (fetchErr || !cr) throw new Error("Change request not found");
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const { data: updatedCR, error: updateErr } = await supabaseAdmin.from("project_change_requests").update({
+      status: decision,
+      client_decision_notes: notes,
+      decided_at: now,
+      decided_by: userId
+    }).eq("id", crId).select().single();
+    if (updateErr) throw updateErr;
+    if (decision === "accepted") {
+      const { data: commitments } = await supabaseAdmin.from("project_commitments").select("*").eq("project_id", cr.project_id).order("version_number", { ascending: false }).limit(1);
+      const latestVer = commitments?.[0]?.version_number || 1;
+      const newVersionNum = latestVer + 1;
+      await supabaseAdmin.from("project_commitments").insert({
+        project_id: cr.project_id,
+        version_number: newVersionNum,
+        total_cost: cr.resulting_cost,
+        currency: "INR",
+        delivery_date: cr.resulting_delivery_date,
+        scope_count: cr.resulting_scope_count,
+        change_reason: `Accepted ${cr.cr_code}: ${cr.title}`,
+        change_request_id: cr.id,
+        requested_by: cr.requested_by,
+        approved_by: userId,
+        approved_at: now
+      });
+      await supabaseAdmin.from("projects").update({ due_date: cr.resulting_delivery_date }).eq("id", cr.project_id);
+      const { data: acceptEvent } = await supabaseAdmin.from("project_events").insert({
+        project_id: cr.project_id,
+        event_type: "CHANGE_REQUEST_ACCEPTED",
+        actor_id: userId,
+        title: `${cr.cr_code} Approved: Commitment V${newVersionNum} Established`,
+        description: notes || `Approved ${cr.title}. New delivery date: ${cr.resulting_delivery_date}, value: \u20B9${Number(cr.resulting_cost).toLocaleString("en-IN")}`,
+        visibility: "CLIENT_VISIBLE",
+        impact_summary: {
+          costDelta: cr.cost_impact,
+          daysDelta: cr.schedule_impact_days,
+          scopeDelta: cr.scope_impact_count,
+          newVersion: newVersionNum
+        }
+      }).select().single();
+      const receiptCode = `CF-PR-${Math.floor(1e4 + Math.random() * 9e4)}`;
+      await supabaseAdmin.from("project_receipts").insert({
+        receipt_code: receiptCode,
+        project_id: cr.project_id,
+        receipt_type: "scope_change",
+        title: `${cr.cr_code} Acceptance Receipt`,
+        summary: {
+          crCode: cr.cr_code,
+          title: cr.title,
+          impact: {
+            cost: cr.cost_impact,
+            scheduleDays: cr.schedule_impact_days,
+            scope: cr.scope_impact_count
+          },
+          newCommitmentVersion: newVersionNum
+        },
+        signer_id: userId,
+        signed_at: now
+      });
+    } else {
+      await supabaseAdmin.from("project_events").insert({
+        project_id: cr.project_id,
+        event_type: "CHANGE_REQUEST_REJECTED",
+        actor_id: userId,
+        title: `${cr.cr_code} ${decision.toUpperCase()}`,
+        description: notes || `The change request ${cr.title} was ${decision}.`,
+        visibility: "CLIENT_VISIBLE"
+      });
+    }
+    return updatedCR;
+  }
+  /**
+   * 10. GET RECEIPT BY CODE
+   */
+  static async getReceiptByCode(receiptCode) {
+    const { data: receipt } = await supabaseAdmin.from("project_receipts").select("*, project:project_id(title, status)").eq("receipt_code", receiptCode).single();
+    return receipt;
+  }
+  /**
+   * 11. RESPONSIBILITY STATE
+   */
+  static async getResponsibilityState(projectId, userId) {
+    const { data: activePeriod } = await supabaseAdmin.from("project_responsibility_periods").select("*").eq("project_id", projectId).eq("status", "active").order("started_at", { ascending: false }).limit(1).maybeSingle();
+    if (!activePeriod) {
+      return {
+        heldBy: "PROJECT_OWNER",
+        actionItem: "Active Sprint Execution & Development",
+        startedAt: (/* @__PURE__ */ new Date()).toISOString(),
+        durationFormatted: "18h 42m"
+      };
+    }
+    const elapsedMs = Date.now() - new Date(activePeriod.started_at).getTime();
+    const hours = Math.floor(elapsedMs / (1e3 * 60 * 60));
+    const minutes = Math.floor(elapsedMs % (1e3 * 60 * 60) / (1e3 * 60));
+    return {
+      ...activePeriod,
+      durationFormatted: `${hours}h ${minutes}m`
+    };
+  }
+  /**
+   * 12. PROJECT SEAL & PASSPORT TRANSITION
+   */
+  static async sealProject(projectId, sealNotes, userId) {
+    const sealCode = `CF-P-${Math.floor(1e5 + Math.random() * 9e5)}`;
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    await supabaseAdmin.from("projects").update({ status: "completed" }).eq("id", projectId);
+    const { data: receipt } = await supabaseAdmin.from("project_receipts").insert({
+      receipt_code: sealCode,
+      project_id: projectId,
+      receipt_type: "project_seal",
+      title: "Project Delivery Record & Official Seal",
+      summary: {
+        sealCode,
+        sealedAt: now,
+        notes: sealNotes || "All deliverables accepted and confirmed by project stakeholders."
+      },
+      signer_id: userId,
+      signed_at: now
+    }).select().single();
+    await supabaseAdmin.from("project_events").insert({
+      project_id: projectId,
+      event_type: "PROJECT_SEALED",
+      actor_id: userId,
+      title: `Project Officially Sealed (${sealCode})`,
+      description: "The project delivery is officially accepted and sealed into permanent passport state.",
+      visibility: "CLIENT_VISIBLE"
+    });
+    return receipt;
+  }
+  /**
+   * 13. PROJECT HISTORICAL PLAYBACK
+   */
+  static async getPlaybackState(projectId, targetDateStr, userId) {
+    await this.ensureBaselineCommitment(projectId, userId);
+    const targetDate = new Date(targetDateStr).getTime();
+    const { data: commitments } = await supabaseAdmin.from("project_commitments").select("*").eq("project_id", projectId).lte("approved_at", new Date(targetDate).toISOString()).order("version_number", { ascending: false });
+    const activeCommitment = commitments?.[0] || await supabaseAdmin.from("project_commitments").select("*").eq("project_id", projectId).order("version_number", { ascending: true }).limit(1).then((r) => r.data?.[0]);
+    const { data: events2 } = await supabaseAdmin.from("project_events").select("*").eq("project_id", projectId).lte("occurred_at", new Date(targetDate).toISOString()).order("occurred_at", { ascending: true });
+    const { data: milestones } = await supabaseAdmin.from("project_milestones").select("id, title, completed, completed_at").eq("project_id", projectId);
+    const completedCountAtTime = (milestones || []).filter(
+      (m) => m.completed && m.completed_at && new Date(m.completed_at).getTime() <= targetDate
+    ).length;
+    const totalMilestones = milestones?.length || 1;
+    const progressAtTime = Math.round(completedCountAtTime / totalMilestones * 100);
+    return {
+      projectId,
+      targetDate: targetDateStr,
+      progress: progressAtTime,
+      committedCost: activeCommitment?.total_cost || 0,
+      committedDelivery: activeCommitment?.delivery_date || "Open",
+      scopeCount: activeCommitment?.scope_count || 0,
+      activeCommitmentVersion: activeCommitment?.version_number || 1,
+      milestonesCompleted: completedCountAtTime,
+      milestonesTotal: totalMilestones,
+      eventsCount: events2?.length || 0
+    };
+  }
+  /**
+   * 14. COMPARE STATES
+   */
+  static async compareStates(projectId, dateA, dateB, userId) {
+    const stateA = await this.getPlaybackState(projectId, dateA, userId);
+    const stateB = await this.getPlaybackState(projectId, dateB, userId);
+    const { data: crsBetween } = await supabaseAdmin.from("project_change_requests").select("*").eq("project_id", projectId).eq("status", "accepted").gte("decided_at", new Date(dateA).toISOString()).lte("decided_at", new Date(dateB).toISOString()).order("decided_at", { ascending: true });
+    return {
+      projectId,
+      stateA,
+      stateB,
+      delta: {
+        progressDiff: stateB.progress - stateA.progress,
+        costDiff: stateB.committedCost - stateA.committedCost,
+        scopeDiff: stateB.scopeCount - stateA.scopeCount,
+        deliveryDiffDays: stateA.committedDelivery !== stateB.committedDelivery ? Math.round(
+          (new Date(stateB.committedDelivery).getTime() - new Date(stateA.committedDelivery).getTime()) / (1e3 * 60 * 60 * 24)
+        ) : 0
+      },
+      causalExplanations: (crsBetween || []).map((cr) => ({
+        crCode: cr.cr_code,
+        title: cr.title,
+        costImpact: cr.cost_impact,
+        scheduleImpactDays: cr.schedule_impact_days,
+        scopeImpactCount: cr.scope_impact_count,
+        decidedAt: cr.decided_at
+      }))
+    };
+  }
+  /**
+   * 15. PROVISION CLIENT ACCOUNT & GRANT PERMISSIONS
+   */
+  static async provisionClientUser(payload, actorId) {
+    const {
+      projectId,
+      email,
+      password,
+      fullName = "Client Contact",
+      canApprove = true,
+      canRequestChanges = true,
+      canViewFinancials = true
+    } = payload;
+    if (!projectId || !email || !password) {
+      throw new Error("Project ID, email, and password are required");
+    }
+    if (password.length < 6) {
+      throw new Error("Password must be at least 6 characters long");
+    }
+    let targetUserId = null;
+    const { data: userList } = await supabaseAdmin.auth.admin.listUsers();
+    const existingUser = userList?.users?.find(
+      (u) => u.email?.toLowerCase() === email.trim().toLowerCase()
+    );
+    if (existingUser) {
+      targetUserId = existingUser.id;
+    } else {
+      const { data: newUser, error: createErr } = await supabaseAdmin.auth.admin.createUser({
+        email: email.trim(),
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName.trim(),
+          role: "client"
+        }
+      });
+      if (createErr || !newUser.user) {
+        throw new Error(createErr?.message || "Failed to create client user in auth");
+      }
+      targetUserId = newUser.user.id;
+      await supabaseAdmin.from("users").upsert({
+        id: targetUserId,
+        email: email.trim(),
+        full_name: fullName.trim(),
+        role: "client",
+        created_at: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    }
+    const { data: accessRecord, error: accessErr } = await supabaseAdmin.from("project_client_access").upsert(
+      {
+        project_id: projectId,
+        user_id: targetUserId,
+        can_view: true,
+        can_approve: Boolean(canApprove),
+        can_request_changes: Boolean(canRequestChanges),
+        can_view_financials: Boolean(canViewFinancials),
+        status: "active",
+        invited_by: actorId,
+        invited_at: (/* @__PURE__ */ new Date()).toISOString()
+      },
+      { onConflict: "project_id,user_id" }
+    ).select().single();
+    if (accessErr) {
+      throw new Error(accessErr.message || "Failed to grant project client access");
+    }
+    await supabaseAdmin.from("project_events").insert({
+      project_id: projectId,
+      event_type: "CLIENT_ACCESS_GRANTED",
+      actor_id: actorId,
+      title: `Client Account Configured (${email})`,
+      description: `Client contact ${fullName} was granted direct project access.`,
+      visibility: "CLIENT_VISIBLE"
+    });
+    return {
+      success: true,
+      userId: targetUserId,
+      email: email.trim(),
+      fullName: fullName.trim(),
+      access: accessRecord
+    };
+  }
+  /**
+   * 16. INITIALIZE PROJECT (Backend Service Authority)
+   */
+  static async createProject(payload, userId) {
+    const {
+      title,
+      description,
+      priority = "medium",
+      cover_color = "#FF6B4A",
+      status = "active",
+      due_date = null,
+      department_id = null,
+      org_id = null,
+      budget = 0
+    } = payload;
+    if (!title || !title.trim()) {
+      throw new Error("Project title is required");
+    }
+    const { data: newProj, error: projErr } = await supabaseAdmin.from("projects").insert({
+      title: title.trim(),
+      description: description?.trim() || null,
+      priority,
+      cover_color,
+      status,
+      owner_id: userId,
+      created_by: userId,
+      due_date,
+      department_id: department_id || null,
+      org_id: org_id || null,
+      budget: Number(budget || 0)
+    }).select().single();
+    if (projErr || !newProj) {
+      throw new Error(projErr?.message || "Failed to create project record");
+    }
+    await supabaseAdmin.from("project_members").upsert(
+      {
+        project_id: newProj.id,
+        user_id: userId,
+        role: "owner",
+        is_active: true,
+        added_by: userId,
+        assigned_by: userId
+      },
+      { onConflict: "project_id,user_id" }
+    );
+    await this.ensureBaselineCommitment(newProj.id, userId);
+    return newProj;
+  }
+};
+
+// server/causality/causality.controller.ts
+var CausalityController = class {
+  static async getWhyDelivery(req, res) {
+    try {
+      const projectId = req.query.projectId;
+      if (!projectId) return res.status(400).json({ error: "projectId is required" });
+      const data = await CausalityService.explainDelivery(projectId, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to trace delivery causality" });
+    }
+  }
+  static async getWhyCost(req, res) {
+    try {
+      const projectId = req.query.projectId;
+      if (!projectId) return res.status(400).json({ error: "projectId is required" });
+      const data = await CausalityService.explainCost(projectId, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to trace cost causality" });
+    }
+  }
+  static async getWhyProgress(req, res) {
+    try {
+      const projectId = req.query.projectId;
+      if (!projectId) return res.status(400).json({ error: "projectId is required" });
+      const data = await CausalityService.explainProgress(projectId, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to trace progress causality" });
+    }
+  }
+  static async getWhyScope(req, res) {
+    try {
+      const projectId = req.query.projectId;
+      if (!projectId) return res.status(400).json({ error: "projectId is required" });
+      const data = await CausalityService.explainScope(projectId, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to trace scope causality" });
+    }
+  }
+  static async getProjectDNA(req, res) {
+    try {
+      const projectId = req.query.projectId;
+      if (!projectId) return res.status(400).json({ error: "projectId is required" });
+      const data = await CausalityService.getProjectDNA(projectId, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to fetch Project DNA graph" });
+    }
+  }
+  static async getProjectProof(req, res) {
+    try {
+      const projectId = req.query.projectId;
+      if (!projectId) return res.status(400).json({ error: "projectId is required" });
+      const data = await CausalityService.getProjectProof(projectId, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to fetch Proof data" });
+    }
+  }
+  static async getCommitmentHistory(req, res) {
+    try {
+      const projectId = req.query.projectId;
+      if (!projectId) return res.status(400).json({ error: "projectId is required" });
+      const data = await CausalityService.getCommitmentHistory(projectId, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to fetch commitment history" });
+    }
+  }
+  static async createChangeRequest(req, res) {
+    try {
+      const payload = req.body;
+      const data = await CausalityService.createChangeRequest(payload, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to create change request" });
+    }
+  }
+  static async decideChangeRequest(req, res) {
+    try {
+      const { id } = req.params;
+      const { decision, notes } = req.body;
+      if (!["accepted", "rejected", "withdrawn"].includes(decision)) {
+        return res.status(400).json({ error: "Invalid decision" });
+      }
+      const data = await CausalityService.decideChangeRequest(id, decision, notes, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to decide change request" });
+    }
+  }
+  static async getReceiptByCode(req, res) {
+    try {
+      const { code } = req.params;
+      const data = await CausalityService.getReceiptByCode(code);
+      if (!data) return res.status(404).json({ error: "Project receipt not found" });
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to fetch receipt" });
+    }
+  }
+  static async getResponsibilityState(req, res) {
+    try {
+      const projectId = req.query.projectId;
+      if (!projectId) return res.status(400).json({ error: "projectId is required" });
+      const data = await CausalityService.getResponsibilityState(projectId, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to fetch responsibility status" });
+    }
+  }
+  static async sealProject(req, res) {
+    try {
+      const { projectId, sealNotes } = req.body;
+      if (!projectId) return res.status(400).json({ error: "projectId is required" });
+      const data = await CausalityService.sealProject(projectId, sealNotes, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to seal project" });
+    }
+  }
+  static async getPlaybackState(req, res) {
+    try {
+      const projectId = req.query.projectId;
+      const targetDate = req.query.targetDate;
+      if (!projectId || !targetDate) {
+        return res.status(400).json({ error: "projectId and targetDate are required" });
+      }
+      const data = await CausalityService.getPlaybackState(projectId, targetDate, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to fetch historical playback state" });
+    }
+  }
+  static async compareStates(req, res) {
+    try {
+      const projectId = req.query.projectId;
+      const dateA = req.query.dateA;
+      const dateB = req.query.dateB;
+      if (!projectId || !dateA || !dateB) {
+        return res.status(400).json({ error: "projectId, dateA, and dateB are required" });
+      }
+      const data = await CausalityService.compareStates(projectId, dateA, dateB, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to compare historical project states" });
+    }
+  }
+  static async provisionClientUser(req, res) {
+    try {
+      const data = await CausalityService.provisionClientUser(req.body, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to create client user account" });
+    }
+  }
+  static async createProject(req, res) {
+    try {
+      const data = await CausalityService.createProject(req.body, req.user.id);
+      res.json(data);
+    } catch (error) {
+      res.status(500).json({ error: error.message || "Failed to initialize project" });
+    }
+  }
+};
+
+// server/causality/causality.routes.ts
+import { createClient as createClient5 } from "@supabase/supabase-js";
+import ws4 from "ws";
+var router3 = Router2();
+var supabaseUrl4 = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || "";
+var supabaseAnonKey4 = process.env.SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
+var supabase3 = createClient5(supabaseUrl4, supabaseAnonKey4, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false
+  },
+  realtime: {
+    transport: ws4
+  }
+});
+var requireAuth2 = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    let token;
+    if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+      token = authHeader.slice("Bearer ".length).trim();
+    }
+    if (!token) throw new Error("No token provided");
+    const { data: { user }, error } = await supabase3.auth.getUser(token);
+    if (error || !user) throw new Error("Invalid token");
+    req.user = user;
+    next();
+  } catch (error) {
+    res.status(401).json({ error: "Unauthorized" });
+  }
+};
+router3.get("/why/delivery", requireAuth2, CausalityController.getWhyDelivery);
+router3.get("/why/cost", requireAuth2, CausalityController.getWhyCost);
+router3.get("/why/progress", requireAuth2, CausalityController.getWhyProgress);
+router3.get("/why/scope", requireAuth2, CausalityController.getWhyScope);
+router3.get("/dna", requireAuth2, CausalityController.getProjectDNA);
+router3.get("/proof", requireAuth2, CausalityController.getProjectProof);
+router3.get("/commitments", requireAuth2, CausalityController.getCommitmentHistory);
+router3.post("/change-requests", requireAuth2, CausalityController.createChangeRequest);
+router3.post("/change-requests/:id/decide", requireAuth2, CausalityController.decideChangeRequest);
+router3.get("/receipts/:code", CausalityController.getReceiptByCode);
+router3.get("/responsibility", requireAuth2, CausalityController.getResponsibilityState);
+router3.post("/seal", requireAuth2, CausalityController.sealProject);
+router3.get("/playback", requireAuth2, CausalityController.getPlaybackState);
+router3.get("/compare", requireAuth2, CausalityController.compareStates);
+router3.post("/provision-client", requireAuth2, CausalityController.provisionClientUser);
+router3.post("/projects", requireAuth2, CausalityController.createProject);
+var causality_routes_default = router3;
+
 // server/_core/cron.ts
 import { createClient as createClient6 } from "@supabase/supabase-js";
-var supabaseClient3 = null;
-function getSupabase2() {
-  if (!supabaseClient3) {
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error("SUPABASE_SERVICE_ROLE_KEY is required for cron");
-    supabaseClient3 = createClient6(
-      process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
-  }
-  return supabaseClient3;
-}
+import ws5 from "ws";
 function startCronJobs() {
-  console.log("[Cron] Starting background jobs...");
-  setInterval(async () => {
-    try {
-      const supabase3 = getSupabase2();
-      const now = (/* @__PURE__ */ new Date()).toISOString();
-      const { data: expiredMeetings, error } = await supabase3.from("meetings").select("id, room_name").lt("end_time", now).in("status", ["scheduled", "active"]);
-      if (error) {
-        console.error("[Cron] Error fetching expired meetings:", error);
-        return;
-      }
-      if (!expiredMeetings || expiredMeetings.length === 0) {
-        return;
-      }
-      for (const meeting of expiredMeetings) {
-        const { error: updateError } = await supabase3.from("meetings").update({
-          status: "completed",
-          ended_at: now
-        }).eq("id", meeting.id);
-        if (updateError) {
-          console.error(`[Cron] Failed to complete meeting ${meeting.id}:`, updateError);
-          continue;
-        }
-        console.log(`[Cron] Automatically completed expired meeting: ${meeting.id}`);
-        await supabase3.channel(`meeting-${meeting.id}`).send({
-          type: "broadcast",
-          event: "meeting_completed",
-          payload: { meetingId: meeting.id }
-        });
-        await LiveKitService.endRoom(meeting.room_name);
-      }
-    } catch (err) {
-      console.error("[Cron] Unexpected error in meeting expiration job:", err);
+  console.log("[Cron] Background jobs initialized. Automated meeting termination is disabled; meetings end only when host ends the call.");
+}
+
+// server/security/rateLimit.ts
+var LIMIT_WINDOW_S = parseInt(process.env.RATE_LIMIT_WINDOW_S || "60", 10);
+var MAX_GLOBAL_REQ = parseInt(process.env.RATE_LIMIT_API_MAX || "10000", 10);
+var MAX_AI_REQ = parseInt(process.env.RATE_LIMIT_AI_MAX || "10", 10);
+function globalRateLimiter(req, res, next) {
+  const ip = req.ip || req.headers["x-forwarded-for"] || "unknown";
+  const key = `rate:global:${ip}`;
+  cache.incr(key, LIMIT_WINDOW_S).then((attempts) => {
+    if (attempts > MAX_GLOBAL_REQ) {
+      res.setHeader("Retry-After", LIMIT_WINDOW_S);
+      res.status(429).json({ error: "Too many requests. Please try again later." });
+      return;
     }
-  }, 60 * 1e3);
+    next();
+  }).catch(() => {
+    next();
+  });
 }
 
 // server/_core/app.ts
+var { Client } = pg;
+function createPgClient() {
+  const dbUrl = process.env.DATABASE_URL;
+  if (!dbUrl) return null;
+  return new Client({
+    connectionString: dbUrl
+  });
+}
 function createExpressApp() {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
+  if (process.env.DATABASE_URL) {
+    let cleanUrl = process.env.DATABASE_URL;
+    cleanUrl = cleanUrl.replace(/sslcert=[^&]*/g, "");
+    cleanUrl = cleanUrl.replace(/&&+/g, "&").replace(/\?&/, "?").replace(/&\?/, "?").replace(/\?$/, "").replace(/&$/, "");
+    process.env.DATABASE_URL = cleanUrl;
+    console.log("[DB Info] Sanitized DATABASE_URL:", process.env.DATABASE_URL.replace(/\/\/([^:]+):([^@]+)@/, "//$1:[PASSWORD_HIDDEN]@"));
+  }
   startCronJobs();
   if (!process.env.JWT_SECRET && process.env.SUPABASE_JWT_SECRET) {
     process.env.JWT_SECRET = process.env.SUPABASE_JWT_SECRET;
@@ -2528,6 +3359,106 @@ function createExpressApp() {
     if (!process.env[secret]) {
       throw new Error(`[CRITICAL] Server startup failed: Missing mandatory environment variable "${secret}".`);
     }
+  }
+  const client = createPgClient();
+  if (client) {
+    client.connect().then(async () => {
+      console.log("[Migration] Applying create_project_with_member RPC database function...");
+      await client.query(`
+          -- Drop the old strict signature first to avoid duplicates
+          DROP FUNCTION IF EXISTS public.create_project_with_member(TEXT, TEXT, TEXT, TEXT, TEXT, DATE, UUID, UUID);
+          DROP FUNCTION IF EXISTS public.create_project_with_member(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT);
+
+          CREATE OR REPLACE FUNCTION public.create_project_with_member(
+            p_title        TEXT,
+            p_description  TEXT       DEFAULT NULL,
+            p_priority     TEXT       DEFAULT 'medium',
+            p_cover_color  TEXT       DEFAULT '#1F6FEB',
+            p_status       TEXT       DEFAULT 'active',
+            p_due_date     TEXT       DEFAULT NULL,
+            p_department_id TEXT      DEFAULT NULL,
+            p_org_id       TEXT       DEFAULT NULL
+          )
+          RETURNS JSONB
+          LANGUAGE plpgsql
+          SECURITY DEFINER
+          SET search_path = public
+          AS $$
+          DECLARE
+            v_user_id UUID;
+            v_project_id UUID;
+            v_result JSONB;
+            v_due_date DATE;
+            v_department_id UUID;
+            v_org_id UUID;
+          BEGIN
+            -- 1. Resolve the calling user
+            v_user_id := auth.uid();
+            IF v_user_id IS NULL THEN
+              RAISE EXCEPTION 'Not authenticated';
+            END IF;
+
+            -- Convert and cast TEXT parameters safely to target types
+            v_due_date := NULLIF(p_due_date, '')::DATE;
+            v_department_id := NULLIF(p_department_id, '')::UUID;
+            v_org_id := NULLIF(p_org_id, '')::UUID;
+
+            -- 2. Authorization: user must belong to the org (if org-scoped)
+            IF v_org_id IS NOT NULL THEN
+              IF NOT EXISTS (
+                SELECT 1 FROM public.user_organizations
+                WHERE org_id = v_org_id AND user_id = v_user_id
+              ) THEN
+                RAISE EXCEPTION 'You are not a member of this organization';
+              END IF;
+            END IF;
+
+            -- 3. Insert the project
+            INSERT INTO public.projects (
+              title, description, priority, cover_color, status,
+              owner_id, created_by, due_date, department_id, org_id
+            ) VALUES (
+              p_title, p_description, p_priority, p_cover_color, p_status,
+              v_user_id, v_user_id, v_due_date, v_department_id, v_org_id
+            )
+            RETURNING id INTO v_project_id;
+
+            -- 4. Add creator as project owner member
+            INSERT INTO public.project_members (project_id, user_id, role, is_active, added_by)
+            VALUES (v_project_id, v_user_id, 'owner', true, v_user_id)
+            ON CONFLICT (project_id, user_id) DO UPDATE SET role = 'owner', is_active = true;
+
+            -- 5. Return the created project as JSON
+            SELECT jsonb_build_object(
+              'id', p.id,
+              'title', p.title,
+              'description', p.description,
+              'priority', p.priority,
+              'cover_color', p.cover_color,
+              'status', p.status,
+              'owner_id', p.owner_id,
+              'created_by', p.created_by,
+              'due_date', p.due_date,
+              'department_id', p.department_id,
+              'org_id', p.org_id,
+              'created_at', p.created_at
+            ) INTO v_result
+            FROM public.projects p
+            WHERE p.id = v_project_id;
+
+            RETURN v_result;
+          END;
+          $$;
+
+          GRANT EXECUTE ON FUNCTION public.create_project_with_member(TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT, TEXT) TO authenticated;
+
+          NOTIFY pgrst, 'reload schema';
+        `);
+      console.log("[Migration] \u2713 create_project_with_member database RPC applied successfully");
+      await client.end();
+    }).catch((err) => {
+      console.error("[Migration] Error executing startup database migration:", err);
+    });
   }
   if (!process.env.BUILT_IN_FORGE_API_URL || !process.env.BUILT_IN_FORGE_API_KEY) {
     console.warn("[WARN] Optional AI features (voice transcription, image generation) are disabled: BUILT_IN_FORGE_API_URL or BUILT_IN_FORGE_API_KEY is missing.");
@@ -2558,14 +3489,13 @@ function createExpressApp() {
   });
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
-  const { sanitizationMiddleware: sanitizationMiddleware2 } = (init_validation(), __toCommonJS(validation_exports));
-  app.use(sanitizationMiddleware2);
-  const { globalRateLimiter: globalRateLimiter2 } = (init_rateLimit(), __toCommonJS(rateLimit_exports));
-  app.use(globalRateLimiter2);
+  app.use(sanitizationMiddleware);
+  app.use(globalRateLimiter);
   registerStorageProxy(app);
   registerOAuthRoutes(app);
   registerAuthProxyRoutes(app);
   app.use("/api/meetings", meetings_routes_default);
+  app.use("/api/causality", causality_routes_default);
   app.post("/api/notifications/send-push", async (req, res) => {
     const authHeader = req.headers.authorization;
     const authSecret = "cf_internal_push_secret_2026";
@@ -2578,8 +3508,7 @@ function createExpressApp() {
       res.status(400).json({ error: "Missing required payload parameters" });
       return;
     }
-    const { dispatchFCMPush: dispatchFCMPush2 } = (init_notification(), __toCommonJS(notification_exports));
-    await dispatchFCMPush2({
+    await dispatchFCMPush({
       id,
       userId: user_id,
       title,
@@ -2592,8 +3521,26 @@ function createExpressApp() {
     });
     res.json({ success: true, status: "queued" });
   });
-  app.get("/api/health", (_req, res) => {
-    res.json({ ok: true, timestamp: Date.now() });
+  app.get("/api/health", async (_req, res) => {
+    try {
+      const client2 = createPgClient();
+      if (!client2) {
+        throw new Error("DATABASE_URL not configured");
+      }
+      await client2.connect();
+      const dbRes = await client2.query(`
+        SELECT 
+          p.proname as name,
+          pg_catalog.pg_get_function_identity_arguments(p.oid) as args
+        FROM pg_catalog.pg_proc p
+        LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = 'public' AND p.proname = 'create_project_with_member';
+      `);
+      await client2.end();
+      res.json({ ok: true, timestamp: Date.now(), functions: dbRes.rows });
+    } catch (e) {
+      res.json({ ok: false, error: e instanceof Error ? e.message : String(e) });
+    }
   });
   app.use(
     "/api/trpc",
@@ -2602,13 +3549,82 @@ function createExpressApp() {
       createContext
     })
   );
+  const statusPageHtml = () => `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CoreFlow API</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0a0a0f; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .container { max-width: 640px; width: 100%; padding: 2rem; }
+    .badge { display: inline-flex; align-items: center; gap: 8px; background: #0d2a1f; border: 1px solid #16a34a44; border-radius: 999px; padding: 6px 16px; font-size: 13px; color: #4ade80; margin-bottom: 2rem; }
+    .dot { width: 8px; height: 8px; background: #4ade80; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:.4;} }
+    h1 { font-size: 2rem; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 0.5rem; background: linear-gradient(135deg, #e2e8f0, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .subtitle { color: #64748b; font-size: 0.95rem; margin-bottom: 2rem; }
+    .card { background: #111118; border: 1px solid #1e1e2e; border-radius: 12px; padding: 1.5rem; margin-bottom: 1rem; }
+    .card-title { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; color: #475569; margin-bottom: 1rem; }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #1e1e2e; font-size: 14px; }
+    .row:last-child { border-bottom: none; }
+    .row .label { color: #64748b; }
+    .row .value { color: #e2e8f0; font-family: monospace; font-size: 13px; }
+    .green { color: #4ade80 !important; }
+    .endpoints { display: flex; flex-direction: column; gap: 6px; }
+    .ep { display: flex; align-items: center; gap: 10px; font-size: 13px; font-family: monospace; }
+    .method { background: #1e293b; border-radius: 4px; padding: 2px 8px; font-size: 11px; color: #7dd3fc; }
+    .path { color: #94a3b8; }
+    footer { text-align: center; font-size: 12px; color: #334155; margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <div class="badge"><span class="dot"></span> All Systems Operational</div>
+  <h1>CoreFlow API</h1>
+  <p class="subtitle">Backend server is running. Use <code style="color:#7dd3fc">/api/*</code> routes to interact.</p>
+  <div class="card">
+    <div class="card-title">System Info</div>
+    <div class="row"><span class="label">Status</span><span class="value green">&#9679; Operational</span></div>
+    <div class="row"><span class="label">Environment</span><span class="value">${process.env.NODE_ENV || "production"}</span></div>
+    <div class="row"><span class="label">Platform</span><span class="value">${process.env.VERCEL ? "Vercel Serverless" : "Self-hosted"}</span></div>
+    <div class="row"><span class="label">Node.js</span><span class="value">${process.version}</span></div>
+    <div class="row"><span class="label">Timestamp</span><span class="value">${(/* @__PURE__ */ new Date()).toISOString()}</span></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Available Endpoints</div>
+    <div class="endpoints">
+      <div class="ep"><span class="method">GET</span><span class="path">/api/health</span></div>
+      <div class="ep"><span class="method">ANY</span><span class="path">/api/trpc/*</span></div>
+      <div class="ep"><span class="method">ANY</span><span class="path">/api/meetings/*</span></div>
+      <div class="ep"><span class="method">ANY</span><span class="path">/api/causality/*</span></div>
+      <div class="ep"><span class="method">POST</span><span class="path">/api/notifications/send-push</span></div>
+      <div class="ep"><span class="method">ANY</span><span class="path">/auth/*</span></div>
+      <div class="ep"><span class="method">ANY</span><span class="path">/storage/*</span></div>
+    </div>
+  </div>
+  <footer>CoreFlow &copy; ${(/* @__PURE__ */ new Date()).getFullYear()} &mdash; Powered by Express + tRPC</footer>
+</div>
+</body>
+</html>`;
   if (process.env.NODE_ENV === "production") {
     const distPath = path.join(process.cwd(), "dist");
-    app.use(express.static(distPath));
-    app.get("*", (req, res, next) => {
-      if (req.path.startsWith("/api")) return next();
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+    if (__require("fs").existsSync(path.join(distPath, "index.html"))) {
+      app.use(express.static(distPath));
+      app.get("*", (req, res, next) => {
+        if (req.path.startsWith("/api")) return next();
+        res.sendFile(path.join(distPath, "index.html"));
+      });
+    } else {
+      app.use((req, res, next) => {
+        if (req.path.startsWith("/api")) return next();
+        if (req.method === "GET" && (req.path === "/" || req.path === "")) {
+          res.setHeader("Content-Type", "text/html");
+          return res.send(statusPageHtml());
+        }
+        res.status(404).json({ error: "Not found", hint: "This is an API server. Use /api/* routes." });
+      });
+    }
   }
   return app;
 }

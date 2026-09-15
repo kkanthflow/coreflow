@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { ArrowLeft, Save } from 'lucide-react';
 import { PageHeader } from '../components/ui/ObsidianPrimitives';
+import { toast } from '../components/ui/Toast';
 
 const COVER_COLORS = [
   '#FF6B4A', '#60A5FA', '#34D399', '#FBBF24',
@@ -41,32 +42,25 @@ export default function NewProject() {
     setSaving(true);
     setErrorMsg(null);
     try {
-      const payload: any = {
-        title: title.trim(),
-        description: description.trim() || null,
-        priority,
-        cover_color: coverColor,
-        status: 'active',
-        owner_id: user.id,
-        created_by: user.id,
-        due_date: dueDate || null,
-        department_id: departmentId || null,
-      };
-      if (orgId) payload.org_id = orgId;
+      // Use SECURITY DEFINER RPC to atomically create project + owner membership
+      const { data, error } = await supabase.rpc('create_project_with_member', {
+        p_title: title.trim(),
+        p_description: description.trim() || null,
+        p_priority: priority,
+        p_cover_color: coverColor,
+        p_status: 'active',
+        p_due_date: dueDate || null,
+        p_department_id: departmentId || null,
+        p_org_id: orgId || null,
+      });
 
-      const { data, error } = await supabase.from('projects').insert(payload).select().single();
       if (error) throw error;
 
-      if (data?.id) {
-        await supabase.from('project_members').insert({
-          project_id: data.id,
-          user_id: user.id,
-          role: 'owner',
-          added_by: user.id,
-        });
+      const createdProj = data;
+      if (createdProj?.id) {
+        toast.success('Project initialized successfully');
+        navigate(`/projects/${createdProj.id}`);
       }
-
-      navigate(`/projects/${data.id}`);
     } catch (e: any) {
       console.error('Failed to create project:', e);
       setErrorMsg(e.message || 'Failed to create project.');

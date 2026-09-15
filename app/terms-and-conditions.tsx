@@ -64,7 +64,7 @@ export default function TermsAndConditionsScreen() {
           <Text style={[styles.subtitle, { color: colors.muted }]}>Last Updated: June 25, 2026</Text>
 
           <Text style={[styles.paragraph, { color: colors.foreground }]}>
-            Please read these Terms of Service ("Terms") carefully before using the CoreFlow mobile application and any backend systems, tools, or APIs provided by CoreFlow (collectively, the "Services").
+            Please read these Terms of Service ("Terms") carefully before using the AUVRYN mobile application and any backend systems, tools, or APIs provided by AUVRYN (collectively, the "Services").
           </Text>
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>1. Acceptance of Terms</Text>
@@ -74,7 +74,7 @@ export default function TermsAndConditionsScreen() {
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>2. User Responsibilities & Account Security</Text>
           <Text style={[styles.paragraph, { color: colors.foreground }]}>
-            You are responsible for maintaining the confidentiality of your account credentials, OAuth tokens, and safeguarding the cryptographic keys used for end-to-end encrypted chats. CoreFlow does not hold copy recovery phrases for your local storage keys.
+            You are responsible for maintaining the confidentiality of your account credentials, OAuth tokens, and safeguarding the cryptographic keys used for end-to-end encrypted chats. AUVRYN does not hold copy recovery phrases for your local storage keys.
           </Text>
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>3. Organization Administration</Text>
@@ -89,7 +89,7 @@ export default function TermsAndConditionsScreen() {
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>5. Acceptable Use Policy</Text>
           <Text style={[styles.paragraph, { color: colors.foreground }]}>
-            You agree not to upload illegal or malicious content, attempt to bypass Supabase database Row-Level Security (RLS), launch denial-of-service attacks, or reverse-engineer the CoreFlow mobile application.
+            You agree not to upload illegal or malicious content, attempt to bypass Supabase database Row-Level Security (RLS), launch denial-of-service attacks, or reverse-engineer the AUVRYN mobile application.
           </Text>
           <Text style={[styles.paragraph, { color: colors.foreground }]}>
             By using Voice Messages, you authorize the app to access your device microphone to capture audio and store recordings in your workspace storage. Users assume full liability for the content of voice recordings. By enabling Push Notifications, you agree to receive automated notifications dispatched via Firebase Cloud Messaging based on your organization configurations.
@@ -107,7 +107,7 @@ export default function TermsAndConditionsScreen() {
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>8. Limitation of Liability</Text>
           <Text style={[styles.paragraph, { color: colors.foreground }]}>
-            CoreFlow shall not be liable for any indirect, incidental, special, or consequential damages resulting from data loss, server interruptions, or unauthorized database access.
+            AUVRYN shall not be liable for any indirect, incidental, special, or consequential damages resulting from data loss, server interruptions, or unauthorized database access.
           </Text>
 
           <Text style={[styles.sectionTitle, { color: colors.primary }]}>9. Governing Law</Text>

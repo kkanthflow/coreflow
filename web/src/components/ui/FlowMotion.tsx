@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
 import { EASINGS } from '../../lib/motionSystem';
 
-// ── 1. Flow Line & Flow Node (CoreFlow Signature) ──────────────────────────
+// ── 1. Flow Line & Flow Node (AUVRYN Signature) ──────────────────────────
 export interface FlowLineProps {
   progress: number; // 0 to 100
   color?: string;

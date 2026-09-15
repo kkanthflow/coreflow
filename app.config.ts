@@ -28,7 +28,7 @@ const schemeFromBundleId = `manus${timestamp}`;
 
 const env = {
   // App branding - update these values directly (do not use env vars)
-  appName: "CoreFlow",
+  appName: "AUVRYN",
   appSlug: "krishnakanth",
   // S3 URL of the app logo - set this to the URL returned by generate_image when creating custom logo
   // Leave empty to use the default icon from assets/images/icon.png
@@ -119,13 +119,13 @@ const config: ExpoConfig = {
     [
       "expo-image-picker",
       {
-        photosPermission: "Allow CoreFlow to access your photos to select invoice and bill images."
+        photosPermission: "Allow AUVRYN to access your photos to select invoice and bill images."
       }
     ],
     [
       "expo-local-authentication",
       {
-        faceIDPermission: "Allow CoreFlow to use Face ID for quick authentication."
+        faceIDPermission: "Allow AUVRYN to use Face ID for quick authentication."
       }
     ],
     [

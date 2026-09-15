@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, StatusBar } from 'react-native';
 import { useColors } from '@/hooks/use-colors';
 import { Ionicons } from '@expo/vector-icons';
+import AuvrynLogo from '@/components/AuvrynLogo';
 
 export default function Index() {
   const colors = useColors();
@@ -93,14 +94,17 @@ export default function Index() {
             },
           ]}
         >
-          <Ionicons name="flash" size={42} color={colors.primary} />
+          <AuvrynLogo size={42} color={colors.primary} />
         </Animated.View>
 
         {/* Brand Name & Tagline */}
         <Animated.View style={{ opacity: textOpacity, alignItems: 'center', marginTop: 24 }}>
-          <Text style={[styles.brandText, { color: colors.foreground }]}>CoreFlow</Text>
+          <Text style={[styles.brandText, { color: colors.foreground }]}>AUVRYN</Text>
           <Text style={[styles.tagline, { color: colors.muted }]}>
-            Enterprise Workspace Platform
+            Unite. Evolve. Rise.
+          </Text>
+          <Text style={{ fontSize: 10, color: colors.muted, opacity: 0.6, marginTop: 4, fontWeight: '500' }}>
+            by Skavelon Technologies
           </Text>
         </Animated.View>
       </View>

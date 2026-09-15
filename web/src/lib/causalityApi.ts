@@ -1,10 +1,14 @@
 import { supabase } from '../lib/supabase';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_BASE = import.meta.env.VITE_API_URL || '/api';
 
-async function getAuthHeader() {
+async function getAuthHeader(): Promise<Record<string, string>> {
   const { data: { session } } = await supabase.auth.getSession();
-  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+  const headers: Record<string, string> = {};
+  if (session?.access_token) {
+    headers.Authorization = `Bearer ${session.access_token}`;
+  }
+  return headers;
 }
 
 export const causalityApi = {
@@ -100,6 +104,62 @@ export const causalityApi = {
       body: JSON.stringify({ projectId, sealNotes: notes }),
     });
     if (!res.ok) throw new Error('Failed to seal Project');
+    return res.json();
+  },
+
+  async getPlaybackState(projectId: string, targetDate: string) {
+    const headers = await getAuthHeader();
+    const res = await fetch(
+      `${API_BASE}/causality/playback?projectId=${projectId}&targetDate=${encodeURIComponent(targetDate)}`,
+      { headers }
+    );
+    if (!res.ok) throw new Error('Failed to fetch Playback state');
+    return res.json();
+  },
+
+  async compareStates(projectId: string, dateA: string, dateB: string) {
+    const headers = await getAuthHeader();
+    const res = await fetch(
+      `${API_BASE}/causality/compare?projectId=${projectId}&dateA=${encodeURIComponent(dateA)}&dateB=${encodeURIComponent(dateB)}`,
+      { headers }
+    );
+    if (!res.ok) throw new Error('Failed to compare project states');
+    return res.json();
+  },
+
+  async provisionClientUser(payload: {
+    projectId: string;
+    email: string;
+    password: string;
+    fullName?: string;
+    canApprove?: boolean;
+    canRequestChanges?: boolean;
+    canViewFinancials?: boolean;
+  }) {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE}/causality/provision-client`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to create client user account');
+    }
+    return res.json();
+  },
+
+  async createProject(payload: any) {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE}/causality/projects`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to initialize project');
+    }
     return res.json();
   },
 };

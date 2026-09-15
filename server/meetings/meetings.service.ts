@@ -1,26 +1,8 @@
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '../_core/supabase';
 import crypto from 'crypto';
-import ws from 'ws';
 
-let supabaseClient: any = null;
 function getSupabase(): any {
-  if (!supabaseClient) {
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
-    if (!supabaseUrl || !supabaseKey) {
-      throw new Error("Supabase URL or Key is missing for meetings service");
-    }
-    supabaseClient = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      realtime: {
-        transport: ws as any,
-      },
-    });
-  }
-  return supabaseClient;
+  return supabaseAdmin;
 }
 
 export class MeetingsService {

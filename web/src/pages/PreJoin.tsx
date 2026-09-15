@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
 import { Video, Mic, MicOff, VideoOff, LogOut, Smartphone, Calendar, Shield } from 'lucide-react';
+import AuvrynLogo from '../components/AuvrynLogo';
 
 const isMobileDevice = () =>
   /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -246,7 +247,7 @@ export default function PreJoin() {
               <Smartphone className="w-4 h-4 text-white" />
             </div>
             <div>
-              <p className="font-bold text-white text-xs">CoreFlow Mobile</p>
+              <p className="font-bold text-white text-xs">AUVRYN Mobile</p>
               <p className="text-zinc-400 text-[10px]">Optimized for mobile calling</p>
             </div>
           </div>
@@ -262,10 +263,8 @@ export default function PreJoin() {
       {/* Top Navbar Actions */}
       <div className="absolute top-6 left-6 right-6 z-40 flex items-center justify-between">
         <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] backdrop-blur-md">
-          <div className="w-6 h-6 rounded-lg bg-gradient-to-tr from-[#FF6B4A] to-[#FF8E75] flex items-center justify-center">
-            <Video className="w-3.5 h-3.5 text-white" />
-          </div>
-          <span className="text-white font-bold text-sm tracking-tight">CoreFlow</span>
+          <AuvrynLogo size={14} />
+          <span className="text-white font-bold text-sm tracking-tight">AUVRYN</span>
         </div>
 
         <button 

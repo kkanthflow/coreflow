@@ -74,7 +74,7 @@ export default function TasksReportScreen() {
       // 2. Share using built-in OS share sheet (works on all devices)
       await Share.share({
         message: csvContent,
-        title: 'CoreFlow Tasks Report',
+        title: 'AUVRYN Tasks Report',
       });
     } catch (e: any) {
       console.error(e);

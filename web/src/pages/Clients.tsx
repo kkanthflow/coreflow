@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -6,7 +7,7 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { hasPermission } from '../lib/permissions';
 import {
   Building, Plus, Search,
-  Edit2, Trash2, X, RefreshCw
+  Edit2, Trash2, X, RefreshCw, ExternalLink
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import { toast } from '../components/ui/Toast';
@@ -29,6 +30,7 @@ interface Client {
 }
 
 export default function Clients() {
+  const navigate = useNavigate();
   const { user, role } = useAuth();
   const { orgId } = useWorkspace();
   const canManage = hasPermission(role, 'manage_clients');
@@ -343,6 +345,15 @@ export default function Clients() {
           onClose={() => setInspectingClient(null)}
           footer={
             <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  navigate(`/projects`);
+                }}
+                className="px-3 py-1.5 bg-[#10121A] hover:bg-[#151822] text-zinc-300 hover:text-white border border-white/[0.06] text-xs font-semibold rounded transition-colors flex items-center gap-1.5"
+              >
+                <ExternalLink size={12} className="text-[#FF6B4A]" />
+                <span>Associated Projects</span>
+              </button>
               <button
                 onClick={() => { openEditModal(inspectingClient); setInspectingClient(null); }}
                 className="px-3 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded transition-colors"

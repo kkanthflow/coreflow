@@ -4,13 +4,15 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import {
   ArrowLeft, CheckSquare, Check, Trash2,
-  HelpCircle, Layers, ShieldCheck, GitBranch
+  HelpCircle, Layers, ShieldCheck, GitBranch, UserPlus,
+  Building, User, Edit3, X, Save
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import WhyModal, { type WhyType } from '../components/causality/WhyModal';
 import ProjectDnaModal from '../components/causality/ProjectDnaModal';
 import ProofModeModal from '../components/causality/ProofModeModal';
 import ChangeRequestModal from '../components/causality/ChangeRequestModal';
+import InviteClientModal from '../components/causality/InviteClientModal';
 import {
   PageHeader, MetricStrip, StatusSignal, type MetricItem
 } from '../components/ui/ObsidianPrimitives';
@@ -32,6 +34,15 @@ export default function ProjectDetails() {
   const [isDnaOpen, setIsDnaOpen] = useState(false);
   const [isProofOpen, setIsProofOpen] = useState(false);
   const [isCROpen, setIsCROpen] = useState(false);
+  const [isInviteOpen, setIsInviteOpen] = useState(false);
+
+  // Edit Project Details State
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editStatus, setEditStatus] = useState('active');
+  const [editDueDate, setEditDueDate] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Quick Task State
   const [taskTitle, setTaskTitle] = useState('');
@@ -41,18 +52,43 @@ export default function ProjectDetails() {
     if (!id) return;
     setLoading(true);
     try {
-      const { data: pData, error: pError } = await supabase
+      let pData = null;
+      const { data: primaryData, error: pError } = await supabase
         .from('projects')
         .select(`
           *,
           owner:owner_id(full_name, email, avatar_url),
-          department:department_id(name, color)
+          department:department_id(name, color),
+          organization:org_id(name),
+          client:client_id(name, company_name)
         `)
         .eq('id', id)
-        .single();
+        .maybeSingle();
 
-      if (pError) throw pError;
+      if (pError || !primaryData) {
+        // Fallback to simple select without joins if RLS blocked a relation
+        const { data: simpleData, error: simpleErr } = await supabase
+          .from('projects')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (simpleErr || !simpleData) {
+          setProject(null);
+          return;
+        }
+        pData = simpleData;
+      } else {
+        pData = primaryData;
+      }
+
       setProject(pData);
+      if (pData) {
+        setEditTitle(pData.title || '');
+        setEditDescription(pData.description || '');
+        setEditStatus(pData.status || 'active');
+        setEditDueDate(pData.due_date ? pData.due_date.split('T')[0] : '');
+      }
 
       // Fetch project tasks
       const { data: tData } = await supabase
@@ -70,6 +106,37 @@ export default function ProjectDetails() {
   }, [id]);
 
   useEffect(() => { fetchDetails(); }, [fetchDetails]);
+
+  const handleSaveProjectEdit = async () => {
+    if (!project || !editTitle.trim()) return;
+    setSavingEdit(true);
+    try {
+      const updates: any = {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        status: editStatus,
+        due_date: editDueDate ? new Date(editDueDate).toISOString() : null,
+      };
+
+      const { data, error } = await supabase
+        .from('projects')
+        .update(updates)
+        .eq('id', project.id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setProject((prev: any) => ({ ...prev, ...data }));
+      setIsEditing(false);
+      toast.success('Project details updated successfully', 'Saved');
+    } catch (e: any) {
+      console.error('Failed to update project:', e);
+      toast.error(e.message || 'Failed to save changes.', 'Update Failed');
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const handleQuickAddTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,9 +209,12 @@ export default function ProjectDetails() {
 
   if (!project) {
     return (
-      <div className="text-center py-20 font-sans select-none">
-        <p className="text-zinc-500 text-xs">Project initiative not found.</p>
-        <button onClick={() => navigate('/projects')} className="mt-4 px-3.5 py-1.5 bg-[#FF6B4A] text-white rounded text-xs font-semibold">
+      <div className="text-center py-24 font-sans select-none space-y-4">
+        <p className="text-zinc-400 text-sm font-semibold">Access Denied or Project Not Found</p>
+        <p className="text-zinc-600 text-xs max-w-md mx-auto">
+          You do not have authorization to view this project initiative, or it does not exist.
+        </p>
+        <button onClick={() => navigate('/projects')} className="px-4 py-2 bg-[#FF6B4A] text-white rounded text-xs font-semibold hover:bg-[#FF552B] transition-colors">
           Return to Projects
         </button>
       </div>
@@ -178,6 +248,17 @@ export default function ProjectDetails() {
         actions={
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setIsEditing(!isEditing)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                isEditing
+                  ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
+                  : 'bg-[#10121A] hover:bg-[#151822] text-zinc-300 hover:text-white border-white/[0.06]'
+              }`}
+            >
+              {isEditing ? <X size={13} /> : <Edit3 size={13} />}
+              <span>{isEditing ? 'Cancel Edit' : 'Edit Project'}</span>
+            </button>
+            <button
               onClick={() => { setWhyInitialType('delivery'); setIsWhyOpen(true); }}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF6B4A]/10 hover:bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30 text-xs font-bold transition-colors shadow-sm"
             >
@@ -206,6 +287,13 @@ export default function ProjectDetails() {
               <span>Change Request</span>
             </button>
             <button
+              onClick={() => setIsInviteOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF6B4A] hover:bg-[#FF5530] text-white text-xs font-bold transition-colors shadow-sm"
+            >
+              <UserPlus size={13} />
+              <span>Invite Client</span>
+            </button>
+            <button
               onClick={() => navigate('/projects')}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] text-xs transition-colors"
             >
@@ -225,6 +313,39 @@ export default function ProjectDetails() {
 
       {/* ── Metric Strip ── */}
       <MetricStrip metrics={metrics} />
+
+      {/* ── Internal Provider & Client Reporting Banner ── */}
+      <div className="p-4 rounded-xl bg-[#0C0D12] border border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-zinc-300">
+            {project.organization?.name ? (
+              <Building size={18} className="text-blue-400" />
+            ) : (
+              <User size={18} className="text-emerald-400" />
+            )}
+          </div>
+          <div>
+            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">
+              {project.organization?.name ? 'ORGANIZATION REPORTING TO CLIENT' : 'INDEPENDENT FREELANCER REPORTING TO CLIENT'}
+            </span>
+            <span className="text-sm font-bold text-white mt-0.5 block">
+              {project.organization?.name || project.owner?.full_name || 'Project Lead'}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-[11px] font-mono px-2.5 py-1 rounded bg-white/[0.03] text-zinc-400 border border-white/[0.06]">
+            Mode: <strong className="text-zinc-200">{project.organization?.name ? 'Organization' : 'Freelancer'}</strong>
+          </span>
+          <button
+            onClick={() => navigate(`/projects/${project.id}/client-room`)}
+            className="text-[11px] font-mono px-3 py-1 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 font-bold transition-colors"
+          >
+            Preview Client Project Room →
+          </button>
+        </div>
+      </div>
 
       {/* ── Interactive Causality Quick Triggers ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#0C0D12] p-3 rounded-lg border border-white/[0.06]">
@@ -342,32 +463,123 @@ export default function ProjectDetails() {
           <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4 space-y-4">
             <div className="flex items-center justify-between border-b border-white/[0.05] pb-2">
               <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
-                Workstream Scope
+                {isEditing ? 'Edit Project Settings' : 'Workstream Scope'}
               </h3>
-              <span className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: coverColor }} />
-            </div>
-            
-            <div>
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 block mb-1">Description</span>
-              <p className="text-xs text-zinc-300 leading-relaxed bg-[#07080B] p-2.5 rounded border border-white/[0.04]">
-                {project.description || 'No detailed scope description provided.'}
-              </p>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-[2px]" style={{ backgroundColor: coverColor }} />
+                {!isEditing && (
+                  <button
+                    onClick={() => setIsEditing(true)}
+                    className="text-[10px] font-mono text-[#FF6B4A] hover:underline flex items-center gap-1"
+                  >
+                    <Edit3 size={11} />
+                    <span>Edit</span>
+                  </button>
+                )}
+              </div>
             </div>
 
-            <div className="space-y-2 font-mono text-[11px]">
-              <div className="flex justify-between py-1 border-b border-white/[0.03]">
-                <span className="text-zinc-500">INITIATIVE ID</span>
-                <span className="text-zinc-300">{project.id.slice(0, 8)}...</span>
+            {isEditing ? (
+              <div className="space-y-3 font-sans">
+                <div>
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                    Project Title
+                  </label>
+                  <input
+                    type="text"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full bg-[#07080B] border border-white/[0.08] focus:border-[#FF6B4A] rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none"
+                    placeholder="Project title..."
+                  />
+                </div>
+
+                <div>
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                    Scope & Objectives Description
+                  </label>
+                  <textarea
+                    rows={4}
+                    value={editDescription}
+                    onChange={(e) => setEditDescription(e.target.value)}
+                    className="w-full bg-[#07080B] border border-white/[0.08] focus:border-[#FF6B4A] rounded px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none resize-none"
+                    placeholder="Outline key deliverables, scope, and objectives..."
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                      Status
+                    </label>
+                    <select
+                      value={editStatus}
+                      onChange={(e) => setEditStatus(e.target.value)}
+                      className="w-full bg-[#07080B] border border-white/[0.08] focus:border-[#FF6B4A] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                    >
+                      <option value="active">Active</option>
+                      <option value="review">In Review</option>
+                      <option value="completed">Completed</option>
+                      <option value="on_hold">On Hold</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                      Target Deadline
+                    </label>
+                    <input
+                      type="date"
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
+                      className="w-full bg-[#07080B] border border-white/[0.08] focus:border-[#FF6B4A] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-white/[0.05]">
+                  <button
+                    onClick={handleSaveProjectEdit}
+                    disabled={savingEdit || !editTitle.trim()}
+                    className="flex-1 px-3 py-2 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-50 text-white font-semibold text-xs rounded transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                  >
+                    <Save size={13} />
+                    <span>{savingEdit ? 'Saving...' : 'Save Changes'}</span>
+                  </button>
+                  <button
+                    onClick={() => setIsEditing(false)}
+                    disabled={savingEdit}
+                    className="px-3 py-2 bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] text-xs rounded transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
               </div>
-              <div className="flex justify-between py-1 border-b border-white/[0.03]">
-                <span className="text-zinc-500">CREATION DATE</span>
-                <span className="text-zinc-300">{new Date(project.created_at).toLocaleDateString()}</span>
-              </div>
-              <div className="flex justify-between py-1">
-                <span className="text-zinc-500">ASSIGNED MEMBERS</span>
-                <span className="text-zinc-300">{project.project_members?.length || 0} Operators</span>
-              </div>
-            </div>
+            ) : (
+              <>
+                <div>
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 block mb-1">Description</span>
+                  <p className="text-xs text-zinc-300 leading-relaxed bg-[#07080B] p-2.5 rounded border border-white/[0.04]">
+                    {project.description || 'No detailed scope description provided.'}
+                  </p>
+                </div>
+
+                <div className="space-y-2 font-mono text-[11px]">
+                  <div className="flex justify-between py-1 border-b border-white/[0.03]">
+                    <span className="text-zinc-500">INITIATIVE ID</span>
+                    <span className="text-zinc-300">{project.id.slice(0, 8)}...</span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-white/[0.03]">
+                    <span className="text-zinc-500">CREATION DATE</span>
+                    <span className="text-zinc-300">{new Date(project.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <div className="flex justify-between py-1">
+                    <span className="text-zinc-500">ASSIGNED MEMBERS</span>
+                    <span className="text-zinc-300">{project.project_members?.length || 0} Operators</span>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -415,6 +627,13 @@ export default function ProjectDetails() {
         onClose={() => setIsCROpen(false)}
         projectId={project.id}
         onCreated={() => fetchDetails()}
+      />
+
+      <InviteClientModal
+        isOpen={isInviteOpen}
+        onClose={() => setIsInviteOpen(false)}
+        projectId={project.id}
+        projectTitle={project.title}
       />
 
     </div>

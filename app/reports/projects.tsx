@@ -108,7 +108,7 @@ export default function ProjectsReportScreen() {
           </head>
           <body>
             <header>
-              <h1>CoreFlow — Project Performance Report</h1>
+              <h1>AUVRYN — Project Performance Report</h1>
               <div class="subtitle">Organization: ${user?.organizationName || 'My Workspace'} • Generated: ${new Date().toLocaleString()}</div>
             </header>
             <table>
@@ -126,7 +126,7 @@ export default function ProjectsReportScreen() {
                 ${rowsHtml}
               </tbody>
             </table>
-            <footer>Generated automatically by CoreFlow Operating System. All rights reserved.</footer>
+            <footer>Generated automatically by AUVRYN Operating System. All rights reserved.</footer>
           </body>
         </html>
       `;

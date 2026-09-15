@@ -416,7 +416,7 @@ function BiometricAppLock({ children }: { children: React.ReactNode }) {
       }
 
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Unlock CoreFlow',
+        promptMessage: 'Unlock AUVRYN',
         fallbackLabel: 'Cancel',
         disableDeviceFallback: false,
       });

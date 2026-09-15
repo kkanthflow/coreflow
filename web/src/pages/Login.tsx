@@ -3,8 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { Layers, Lock, ArrowRight, Eye, EyeOff, Check, AlertCircle, Shield, Activity } from 'lucide-react';
+import { Lock, ArrowRight, Eye, EyeOff, Check, AlertCircle, Shield, Activity } from 'lucide-react';
 import { EASINGS } from '../lib/motionSystem';
+import AuvrynLogo from '../components/AuvrynLogo';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -152,7 +153,7 @@ export default function Login() {
         className="relative z-10 w-full max-w-[960px] grid grid-cols-1 lg:grid-cols-12 gap-8 items-center"
       >
         
-        {/* Left Column: CoreFlow Operating System Statement */}
+        {/* Left Column: AUVRYN Operating System Statement */}
         <div className="hidden lg:flex lg:col-span-7 flex-col justify-between space-y-6 pr-6">
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-[#0C0D12] border border-white/[0.06] text-[11px] font-mono text-zinc-400">
@@ -160,7 +161,7 @@ export default function Login() {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF6B4A] opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF6B4A]" />
               </span>
-              <span className="font-bold text-white uppercase tracking-wider">CoreFlow OS</span>
+              <span className="font-bold text-white uppercase tracking-wider">AUVRYN OS</span>
               <span className="text-zinc-600">/</span>
               <span>Workspace Unlock</span>
             </div>
@@ -212,10 +213,10 @@ export default function Login() {
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-[#141622] border border-[#FF6B4A]/40 flex items-center justify-center text-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.25)]">
-                  <Layers size={16} />
+                  <AuvrynLogo size={16} />
                 </div>
                 <div>
-                  <span className="font-bold text-sm tracking-tight text-white uppercase font-mono block leading-none">CoreFlow</span>
+                  <span className="font-bold text-sm tracking-tight text-white uppercase font-mono block leading-none">AUVRYN</span>
                   <span className="text-[9px] font-mono text-zinc-500 uppercase">Command Layer</span>
                 </div>
               </div>
@@ -346,7 +347,7 @@ export default function Login() {
                   ) : loading ? (
                     <span className="flex items-center gap-2">
                       <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Verifying with CoreFlow...</span>
+                      <span>Verifying with AUVRYN...</span>
                     </span>
                   ) : (
                     <>

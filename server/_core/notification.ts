@@ -113,25 +113,10 @@ export async function notifyOwner(payload: NotificationPayload): Promise<boolean
 // ENTERPRISE FCM DISPATCH PIPELINE
 // ─────────────────────────────────────────────────────────────────────────
 
-import { createClient } from "@supabase/supabase-js";
-import ws from "ws";
+import { supabaseAdmin } from "./supabase";
 
-let supabaseClient: ReturnType<typeof createClient> | null = null;
 function getSupabaseAdmin() {
-  if (!supabaseClient) {
-    const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || "";
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
-    supabaseClient = createClient(supabaseUrl, supabaseKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-      realtime: {
-        transport: ws as any,
-      },
-    });
-  }
-  return supabaseClient;
+  return supabaseAdmin;
 }
 
 let fcmApp: App | null = null;
@@ -171,8 +156,14 @@ function getFirebaseApp(): App | null {
   if (!serviceAccountString) {
     const fs = require("fs");
     const path = require("path");
-    const localKeyPath = path.join(process.cwd(), "coreflow-2af5c-cc11e0599b34.json");
-    if (fs.existsSync(localKeyPath)) {
+    const possiblePaths = [
+      path.join(process.cwd(), "coreflow-2af5c-cc11e0599b34.json"),
+      path.join(__dirname, "../coreflow-2af5c-cc11e0599b34.json"),
+      path.join(__dirname, "../../coreflow-2af5c-cc11e0599b34.json")
+    ];
+    const localKeyPath = possiblePaths.find(p => fs.existsSync(p));
+    
+    if (localKeyPath) {
       try {
         const localKey = JSON.parse(fs.readFileSync(localKeyPath, "utf8"));
         fcmApp = initializeApp({ credential: cert(localKey) });

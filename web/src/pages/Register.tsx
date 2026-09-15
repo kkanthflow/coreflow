@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
-  Layers, 
   Lock, 
   ArrowRight, 
   Eye, 
@@ -16,6 +15,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { SUPPORTED_CURRENCIES } from '../lib/currency';
+import AuvrynLogo from '../components/AuvrynLogo';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -23,7 +23,7 @@ export default function Register() {
 
   // Redirect if already authenticated
   if (user) {
-    navigate('/dashboard', { replace: true });
+    navigate('/', { replace: true });
     return null;
   }
 
@@ -285,9 +285,9 @@ export default function Register() {
       onPointerMove={handlePointerMove}
       className="min-h-screen w-full flex items-center justify-center bg-[#060709] selection:bg-[#FF6B4A]/30 selection:text-white p-4 sm:p-6 lg:p-8 font-sans select-none text-zinc-300 relative overflow-hidden"
     >
-      {/* Living CoreFlow Atmospheric Background Canvas */}
+      {/* Living AUVRYN Atmospheric Background Canvas */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        {/* Cursor-responsive living CoreFlow atmospheric gradient aura */}
+        {/* Cursor-responsive living AUVRYN atmospheric gradient aura */}
         <div 
           className="absolute inset-0 transition-opacity duration-700 ease-out"
           style={{
@@ -316,7 +316,7 @@ export default function Register() {
           <div className="space-y-4">
             <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-[#0C0D12] border border-white/[0.06] text-[11px] font-mono text-zinc-400">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B4A]" />
-              <span className="font-bold text-white uppercase tracking-wider">CoreFlow OS</span>
+              <span className="font-bold text-white uppercase tracking-wider">AUVRYN OS</span>
               <span className="text-zinc-600">/</span>
               <span>Account Provisioning</span>
             </div>
@@ -364,9 +364,9 @@ export default function Register() {
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
               <div className="flex items-center gap-2.5">
                 <div className="w-7 h-7 rounded bg-[#12141F] border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A]">
-                  <Layers size={15} />
+                  <AuvrynLogo size={15} />
                 </div>
-                <span className="font-bold text-sm tracking-tight text-white uppercase font-mono">CoreFlow</span>
+                <span className="font-bold text-sm tracking-tight text-white uppercase font-mono">AUVRYN</span>
               </div>
               <span className="text-[10px] font-mono text-zinc-500 uppercase">Registration</span>
             </div>

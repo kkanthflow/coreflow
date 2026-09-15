@@ -197,7 +197,7 @@ export default function OrganizationScreen() {
               autoFocus
             />
             <Text style={[styles.helpText, { color: colors.muted }]}>
-              The user must already have a Coreflow account.
+              The user must already have a AUVRYN account.
             </Text>
 
             <View style={styles.modalActions}>

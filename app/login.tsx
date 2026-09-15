@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { PremiumInput } from '@/components/ui/premium-input';
 import { GradientButton } from '@/components/ui/gradient-button';
 import { supabase } from '@/lib/supabase';
+import AuvrynLogo from '@/components/AuvrynLogo';
 
 import { useColors } from '@/hooks/use-colors';
 import { useAuth } from '@/hooks/use-auth';
@@ -107,7 +108,7 @@ export default function LoginScreen() {
         return;
       }
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: 'Authenticate to access CoreFlow',
+        promptMessage: 'Authenticate to access AUVRYN',
         fallbackLabel: 'Use Password',
       });
       if (result.success) {
@@ -420,11 +421,11 @@ export default function LoginScreen() {
           <Animated.View style={[styles.logoArea, { transform: [{ scale: logoScale }], opacity: logoOpacity }]}>
             <View style={styles.logoRing}>
               <View style={styles.logoInner}>
-                <Ionicons name="flash" size={32} color="#FF6B4A" />
+                <AuvrynLogo size={32} color="#FF6B4A" />
               </View>
             </View>
-            <Text style={[styles.brand, { color: C.text }]}>CoreFlow</Text>
-            <Text style={[styles.brandTagline, { color: C.muted }]}>Enterprise workspace platform</Text>
+            <Text style={[styles.brand, { color: C.text }]}>AUVRYN</Text>
+            <Text style={[styles.brandTagline, { color: C.muted }]}>Unite. Evolve. Rise.</Text>
           </Animated.View>
 
           {/* Form card */}

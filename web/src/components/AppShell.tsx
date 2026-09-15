@@ -35,9 +35,9 @@ export default function AppShell() {
       onPointerMove={handlePointerMove}
       className="flex h-screen w-full bg-[#08090D] overflow-hidden text-white selection:bg-[#FF6B4A]/30 selection:text-white font-sans antialiased relative"
     >
-      {/* Living CoreFlow Atmospheric Background Canvas */}
+      {/* Living AUVRYN Atmospheric Background Canvas */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        {/* Cursor-responsive living CoreFlow atmospheric gradient aura */}
+        {/* Cursor-responsive living AUVRYN atmospheric gradient aura */}
         <div 
           className="absolute inset-0 transition-opacity duration-700 ease-out"
           style={{

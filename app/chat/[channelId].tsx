@@ -27,7 +27,6 @@ import {
   generateRandomSymmetricKey,
   encryptKeyForRecipient,
   decryptKeyWithSender,
-  encryptMessagePayload,
   decryptMessagePayload,
 } from '@/lib/crypto';
 
@@ -612,6 +611,8 @@ export default function ChannelChatScreen() {
 
     try {
       let finalContent = textToSend;
+      // E2EE temporarily disabled to fix cross-device sync issues
+      /*
       if (channelSymmetricKey) {
         // Encrypt the message payload
         const encryptedData = await encryptMessagePayload(
@@ -620,6 +621,7 @@ export default function ChannelChatScreen() {
         );
         finalContent = `__E2EE__:${encryptedData}`;
       }
+      */
 
       const { error } = await supabase.from('chat_messages').insert({
         channel_id: channelId,

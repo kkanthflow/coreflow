@@ -122,6 +122,10 @@ export default function ChatScreen() {
                   const { data: senderKeyData } = await supabase
                     .from('user_public_keys')
                     .select('public_key')
+
+
+
+                     
                     .eq('user_id', senderId)
                     .maybeSingle();
 

@@ -274,7 +274,7 @@ export default function InvoiceDetail() {
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="w-2 h-2 rounded-[2px] bg-[#FF6B4A]" />
-              <span className="font-bold text-white text-sm">CoreFlow Operations</span>
+              <span className="font-bold text-white text-sm">AUVRYN Operations</span>
             </div>
             <p className="text-zinc-500 font-mono text-[11px]">Enterprise Operating System</p>
           </div>

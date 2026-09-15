@@ -25,7 +25,7 @@ const DURATION_OPTIONS = [
 ];
 
 const LINK_TYPE_OPTIONS = [
-  { label: 'CoreFlow Video', value: 'coreflow' },
+  { label: 'AUVRYN Video', value: 'coreflow' },
   { label: 'In-Person (No Link)', value: 'none' },
 ];
 

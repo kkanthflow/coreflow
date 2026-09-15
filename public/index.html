@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CoreFlow API Layer</title>
+  <title>AUVRYN API Layer</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
@@ -11,8 +11,8 @@
       --card-bg: #111827;
       --text-main: #f3f4f6;
       --text-muted: #9ca3af;
-      --primary: #3b82f6;
-      --primary-hover: #2563eb;
+      --primary: #FF6B4A;
+      --primary-hover: #E85A3A;
       --border-color: #1f2937;
     }
     
@@ -35,7 +35,7 @@
       position: absolute;
       width: 600px;
       height: 600px;
-      background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(0,0,0,0) 70%);
+      background: radial-gradient(circle, rgba(255, 107, 74, 0.15) 0%, rgba(0,0,0,0) 70%);
       top: -100px;
       right: -100px;
       z-index: 1;
@@ -45,7 +45,7 @@
       position: absolute;
       width: 500px;
       height: 500px;
-      background: radial-gradient(circle, rgba(147, 197, 253, 0.1) 0%, rgba(0,0,0,0) 70%);
+      background: radial-gradient(circle, rgba(255, 142, 117, 0.1) 0%, rgba(0,0,0,0) 70%);
       bottom: -150px;
       left: -150px;
       z-index: 1;
@@ -71,13 +71,13 @@
     .logo {
       width: 80px;
       height: 80px;
-      background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+      background: linear-gradient(135deg, #ff8e75 0%, #ff6b4a 100%);
       border-radius: 20px;
       margin: 0 auto 24px;
       display: flex;
       align-items: center;
       justify-content: center;
-      box-shadow: 0 10px 15px -3px rgba(59, 130, 246, 0.3);
+      box-shadow: 0 10px 15px -3px rgba(255, 107, 74, 0.3);
     }
 
     .logo-text {
@@ -92,7 +92,7 @@
       font-weight: 700;
       margin-top: 0;
       margin-bottom: 12px;
-      background: linear-gradient(to right, #ffffff, #93c5fd);
+      background: linear-gradient(to right, #ffffff, #ff8e75);
       -webkit-background-clip: text;
       background-clip: text;
       -webkit-text-fill-color: transparent;
@@ -161,9 +161,9 @@
   <div class="container">
     <div class="card">
       <div class="logo">
-        <span class="logo-text">CF</span>
+        <span class="logo-text">AV</span>
       </div>
-      <h1>CoreFlow API Gateway</h1>
+      <h1>AUVRYN API Gateway</h1>
       <p class="description">Secure and production-ready middleware interface facilitating Android client synchronization and Supabase cloud operations.</p>
       
       <div class="status-badge">

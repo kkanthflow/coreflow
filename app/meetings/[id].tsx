@@ -193,7 +193,7 @@ export default function MeetingDetailsScreen() {
     const link = `${process.env.EXPO_PUBLIC_WEB_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app'}/meetings/${meeting.id}`;
     try {
       await Share.share({
-        message: `Join my meeting "${meeting.title}" on CoreFlow: ${link}`,
+        message: `Join my meeting "${meeting.title}" on AUVRYN: ${link}`,
         url: link,
         title: meeting.title,
       });
@@ -234,7 +234,7 @@ export default function MeetingDetailsScreen() {
             </div>
             <div class="content">${meetingNotes.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
             <div class="footer">
-              Confidential &bull; Generated securely via CoreFlow
+              Confidential &bull; Generated securely via AUVRYN
             </div>
           </body>
         </html>
@@ -352,7 +352,7 @@ export default function MeetingDetailsScreen() {
                 ) : (
                   <View className="flex-row items-center justify-between">
                     <Text className="text-base font-semibold text-foreground capitalize">
-                      {meeting.room_name ? 'CoreFlow Native' : 'External Link'}
+                      {meeting.room_name ? 'AUVRYN Native' : 'External Link'}
                     </Text>
                     <View className="flex-row items-center gap-2">
                       <Pressable onPress={handleShareMeeting} className="bg-primary/10 px-4 py-1.5 rounded-full">

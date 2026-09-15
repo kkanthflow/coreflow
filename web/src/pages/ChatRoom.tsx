@@ -27,7 +27,6 @@ import {
   generateRandomSymmetricKey,
   encryptKeyForRecipient,
   decryptKeyWithSender,
-  encryptMessagePayload,
   decryptMessagePayload,
 } from '../lib/crypto';
 
@@ -610,12 +609,15 @@ export default function ChatRoom() {
 
     try {
       let finalContent = text;
+      // E2EE temporarily disabled to fix cross-device sync issues
+      /*
       const key = symmetricKeyRef.current;
       if (key && text) {
         const payload = { text };
         const encrypted = await encryptMessagePayload(payload, key);
         finalContent = `__E2EE__:${encrypted}`;
       }
+      */
 
       const { error } = await supabase.from('chat_messages').insert({
         channel_id: channelId,

@@ -61,6 +61,28 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+// Smart root: redirect authenticated users to dashboard, else show landing
+function RootRoute() {
+  const { session, loading } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#07070B] flex flex-col items-center justify-center text-white">
+        <div className="w-10 h-10 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin mb-4" />
+        <p className="text-gray-400 text-sm">Loading...</p>
+      </di    );
+  }
+  if (session?.user?.id) return <Navigate to="/dashboard" replace />;
+  return <Landing />;
+}
+
+// Redirect already-logged-in users away from auth pages
+function GuestRoute({ children }: { children: React.ReactNode }) {
+  const { session, loading } = useAuth();
+  if (loading) return null;
+  if (session?.user?.id) return <Navigate to="/dashboard" replace />;
+  return <>{children}</>;
+}
+
 import { ToastProvider } from './components/ui/Toast';
 
 function App() {
@@ -90,10 +112,10 @@ function App() {
               <WorkspaceProvider>
                 <BrowserRouter>
                   <Routes>
-                    <Route path="/" element={<Landing />} />
+                    <Route path="/" element={<RootRoute />} />
                     <Route path="/landing" element={<Landing />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/register" element={<Register />} />
+                    <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
+                    <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
 
                     {/* ── All shell-wrapped protected routes ── */}
                     <Route element={<AuthGuard><AppShell /></AuthGuard>}>

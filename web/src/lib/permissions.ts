@@ -1,5 +1,5 @@
 // ============================================================
-// CoreFlow Permission-Based Access Control (PBAC)
+// AUVRYN Permission-Based Access Control (PBAC)
 // All feature gates MUST use hasPermission() — never role names
 // ============================================================
 
@@ -15,6 +15,8 @@ export type AppPermission =
   | 'assign_projects'
   | 'manage_projects'
   | 'view_projects'
+  | 'view_all_projects'
+  | 'manage_all_projects'
   // Task Management
   | 'create_tasks'
   | 'assign_tasks'
@@ -72,7 +74,7 @@ const ROLE_PERMISSIONS: Record<string, AppPermission[]> = {
   owner: [
     'manage_organization', 'manage_departments', 'manage_roles',
     'invite_users', 'remove_users',
-    'create_projects', 'assign_projects', 'manage_projects', 'view_projects',
+    'create_projects', 'assign_projects', 'manage_projects', 'view_projects', 'view_all_projects', 'manage_all_projects',
     'create_tasks', 'assign_tasks', 'manage_tasks',
     'upload_files', 'download_files',
     'send_messages', 'manage_chat',
@@ -87,7 +89,7 @@ const ROLE_PERMISSIONS: Record<string, AppPermission[]> = {
   administrator: [
     'manage_organization', 'manage_departments', 'manage_roles',
     'invite_users', 'remove_users',
-    'create_projects', 'assign_projects', 'manage_projects', 'view_projects',
+    'create_projects', 'assign_projects', 'manage_projects', 'view_projects', 'view_all_projects', 'manage_all_projects',
     'create_tasks', 'assign_tasks', 'manage_tasks',
     'upload_files', 'download_files',
     'send_messages', 'manage_chat',
@@ -287,7 +289,7 @@ export function hasPermission(
     fType = roleOrUser.freelancerType;
   }
 
-  if (typeof permission === 'string' && (permission.includes('.') || ['organization', 'independent'].includes(fType || ''))) {
+  if (typeof permission === 'string' && permission.includes('.')) {
     const resolvedPerms = resolveWorkspacePermissions(
       (fType === 'organization' ? 'organization' : 'independent') as any,
       [role]
@@ -364,4 +366,24 @@ export function isHigherRole(
   roleB: string | undefined | null
 ): boolean {
   return getRoleLevel(roleA) > getRoleLevel(roleB);
+}
+
+export type ProjectAccessScopeType = 'all' | 'department' | 'assigned' | 'own';
+
+export interface ProjectScopeContext {
+  userId: string;
+  role: string | null;
+  departmentId?: string | null;
+  isOwner?: boolean;
+}
+
+export function resolveProjectScope(ctx: ProjectScopeContext): ProjectAccessScopeType {
+  const { role, isOwner } = ctx;
+  if (isOwner || role === 'owner' || role === 'managing_director' || role === 'ceo' || role === 'cto' || role === 'administrator') {
+    return 'all';
+  }
+  if (role === 'director' || role === 'senior_manager' || role === 'manager' || role === 'project_manager') {
+    return ctx.departmentId ? 'department' : 'assigned';
+  }
+  return 'assigned';
 }

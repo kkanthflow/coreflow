@@ -1,15 +1,4 @@
-import { createClient } from '@supabase/supabase-js';
-import ws from 'ws';
-
-const supabaseUrl = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: { persistSession: false, autoRefreshToken: false },
-  realtime: {
-    transport: ws as any,
-  },
-});
+import { supabaseAdmin as supabase } from '../_core/supabase';
 
 export class CausalityService {
   /**
@@ -35,21 +24,34 @@ export class CausalityService {
     if (!project) throw new Error('Project not found');
 
     const defaultDelivery = project.due_date || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const defaultCost = 45000;
+    
+    // Check if project has an explicit budget or associated invoice
+    let dynamicCost = Number(project.budget || 0);
+    if (dynamicCost === 0) {
+      // Check for project invoice
+      const { data: inv } = await supabase
+        .from('invoices')
+        .select('total_amount')
+        .eq('project_id', projectId)
+        .limit(1);
+      if (inv && inv.length > 0 && inv[0].total_amount) {
+        dynamicCost = Number(inv[0].total_amount);
+      }
+    }
 
     const { data: tasks } = await supabase
       .from('tasks')
       .select('id, title')
       .eq('project_id', projectId);
 
-    const initialScopeCount = tasks && tasks.length > 0 ? tasks.length : 8;
+    const initialScopeCount = tasks ? tasks.length : 0;
 
     const { data: baseline, error } = await supabase
       .from('project_commitments')
       .insert({
         project_id: projectId,
         version_number: 1,
-        total_cost: defaultCost,
+        total_cost: dynamicCost,
         currency: 'INR',
         delivery_date: defaultDelivery,
         scope_count: initialScopeCount,
@@ -73,7 +75,7 @@ export class CausalityService {
       title: 'Project Initialized & Baseline Sealed',
       description: `Baseline V1 established with ${initialScopeCount} deliverables and delivery date of ${defaultDelivery}`,
       visibility: 'CLIENT_VISIBLE',
-      impact_summary: { cost: defaultCost, deliveryDate: defaultDelivery, scope: initialScopeCount },
+      impact_summary: { cost: dynamicCost, deliveryDate: defaultDelivery, scope: initialScopeCount },
     });
 
     return baseline;
@@ -694,5 +696,282 @@ export class CausalityService {
     });
 
     return receipt;
+  }
+
+  /**
+   * 13. PROJECT HISTORICAL PLAYBACK
+   */
+  static async getPlaybackState(projectId: string, targetDateStr: string, userId: string) {
+    await this.ensureBaselineCommitment(projectId, userId);
+    const targetDate = new Date(targetDateStr).getTime();
+
+    // 1. Get commitments up to targetDate
+    const { data: commitments } = await supabase
+      .from('project_commitments')
+      .select('*')
+      .eq('project_id', projectId)
+      .lte('approved_at', new Date(targetDate).toISOString())
+      .order('version_number', { ascending: false });
+
+    // Fallback to baseline if none before targetDate
+    const activeCommitment = commitments?.[0] || (await supabase
+      .from('project_commitments')
+      .select('*')
+      .eq('project_id', projectId)
+      .order('version_number', { ascending: true })
+      .limit(1)
+      .then(r => r.data?.[0]));
+
+    // 2. Get events up to targetDate
+    const { data: events } = await supabase
+      .from('project_events')
+      .select('*')
+      .eq('project_id', projectId)
+      .lte('occurred_at', new Date(targetDate).toISOString())
+      .order('occurred_at', { ascending: true });
+
+    // 3. Get milestone completion status at that point in time
+    const { data: milestones } = await supabase
+      .from('project_milestones')
+      .select('id, title, completed, completed_at')
+      .eq('project_id', projectId);
+
+    const completedCountAtTime = (milestones || []).filter(
+      (m) => m.completed && m.completed_at && new Date(m.completed_at).getTime() <= targetDate
+    ).length;
+
+    const totalMilestones = milestones?.length || 1;
+    const progressAtTime = Math.round((completedCountAtTime / totalMilestones) * 100);
+
+    return {
+      projectId,
+      targetDate: targetDateStr,
+      progress: progressAtTime,
+      committedCost: activeCommitment?.total_cost || 0,
+      committedDelivery: activeCommitment?.delivery_date || 'Open',
+      scopeCount: activeCommitment?.scope_count || 0,
+      activeCommitmentVersion: activeCommitment?.version_number || 1,
+      milestonesCompleted: completedCountAtTime,
+      milestonesTotal: totalMilestones,
+      eventsCount: events?.length || 0,
+    };
+  }
+
+  /**
+   * 14. COMPARE STATES
+   */
+  static async compareStates(projectId: string, dateA: string, dateB: string, userId: string) {
+    const stateA = await this.getPlaybackState(projectId, dateA, userId);
+    const stateB = await this.getPlaybackState(projectId, dateB, userId);
+
+    // Fetch accepted CRs between dateA and dateB to explain differences
+    const { data: crsBetween } = await supabase
+      .from('project_change_requests')
+      .select('*')
+      .eq('project_id', projectId)
+      .eq('status', 'accepted')
+      .gte('decided_at', new Date(dateA).toISOString())
+      .lte('decided_at', new Date(dateB).toISOString())
+      .order('decided_at', { ascending: true });
+
+    return {
+      projectId,
+      stateA,
+      stateB,
+      delta: {
+        progressDiff: stateB.progress - stateA.progress,
+        costDiff: stateB.committedCost - stateA.committedCost,
+        scopeDiff: stateB.scopeCount - stateA.scopeCount,
+        deliveryDiffDays:
+          stateA.committedDelivery !== stateB.committedDelivery
+            ? Math.round(
+                (new Date(stateB.committedDelivery).getTime() -
+                  new Date(stateA.committedDelivery).getTime()) /
+                  (1000 * 60 * 60 * 24)
+              )
+            : 0,
+      },
+      causalExplanations: (crsBetween || []).map((cr) => ({
+        crCode: cr.cr_code,
+        title: cr.title,
+        costImpact: cr.cost_impact,
+        scheduleImpactDays: cr.schedule_impact_days,
+        scopeImpactCount: cr.scope_impact_count,
+        decidedAt: cr.decided_at,
+      })),
+    };
+  }
+
+  /**
+   * 15. PROVISION CLIENT ACCOUNT & GRANT PERMISSIONS
+   */
+  static async provisionClientUser(payload: {
+    projectId: string;
+    email: string;
+    password: string;
+    fullName?: string;
+    canApprove?: boolean;
+    canRequestChanges?: boolean;
+    canViewFinancials?: boolean;
+  }, actorId: string) {
+    const {
+      projectId,
+      email,
+      password,
+      fullName = 'Client Contact',
+      canApprove = true,
+      canRequestChanges = true,
+      canViewFinancials = true,
+    } = payload;
+
+    if (!projectId || !email || !password) {
+      throw new Error('Project ID, email, and password are required');
+    }
+
+    if (password.length < 6) {
+      throw new Error('Password must be at least 6 characters long');
+    }
+
+    // 1. Check if user already exists in auth.users via admin API
+    let targetUserId: string | null = null;
+
+    const { data: userList } = await supabase.auth.admin.listUsers();
+    const existingUser = userList?.users?.find(
+      (u: any) => u.email?.toLowerCase() === email.trim().toLowerCase()
+    );
+
+    if (existingUser) {
+      targetUserId = existingUser.id;
+    } else {
+      // 2. Create the user in auth.users
+      const { data: newUser, error: createErr } = await supabase.auth.admin.createUser({
+        email: email.trim(),
+        password,
+        email_confirm: true,
+        user_metadata: {
+          full_name: fullName.trim(),
+          role: 'client',
+        },
+      });
+
+      if (createErr || !newUser.user) {
+        throw new Error(createErr?.message || 'Failed to create client user in auth');
+      }
+
+      targetUserId = newUser.user.id;
+
+      // 3. Ensure profile in public.users
+      await supabase.from('users').upsert({
+        id: targetUserId,
+        email: email.trim(),
+        full_name: fullName.trim(),
+        role: 'client',
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    // 4. Grant explicit client permissions in public.project_client_access
+    const { data: accessRecord, error: accessErr } = await supabase
+      .from('project_client_access')
+      .upsert(
+        {
+          project_id: projectId,
+          user_id: targetUserId,
+          can_view: true,
+          can_approve: Boolean(canApprove),
+          can_request_changes: Boolean(canRequestChanges),
+          can_view_financials: Boolean(canViewFinancials),
+          status: 'active',
+          invited_by: actorId,
+          invited_at: new Date().toISOString(),
+        },
+        { onConflict: 'project_id,user_id' }
+      )
+      .select()
+      .single();
+
+    if (accessErr) {
+      throw new Error(accessErr.message || 'Failed to grant project client access');
+    }
+
+    // 5. Register activity event
+    await supabase.from('project_events').insert({
+      project_id: projectId,
+      event_type: 'CLIENT_ACCESS_GRANTED',
+      actor_id: actorId,
+      title: `Client Account Configured (${email})`,
+      description: `Client contact ${fullName} was granted direct project access.`,
+      visibility: 'CLIENT_VISIBLE',
+    });
+
+    return {
+      success: true,
+      userId: targetUserId,
+      email: email.trim(),
+      fullName: fullName.trim(),
+      access: accessRecord,
+    };
+  }
+
+  /**
+   * 16. INITIALIZE PROJECT (Backend Service Authority)
+   */
+  static async createProject(payload: any, userId: string) {
+    const {
+      title,
+      description,
+      priority = 'medium',
+      cover_color = '#FF6B4A',
+      status = 'active',
+      due_date = null,
+      department_id = null,
+      org_id = null,
+      budget = 0,
+    } = payload;
+
+    if (!title || !title.trim()) {
+      throw new Error('Project title is required');
+    }
+
+    // 1. Create project row
+    const { data: newProj, error: projErr } = await supabase
+      .from('projects')
+      .insert({
+        title: title.trim(),
+        description: description?.trim() || null,
+        priority,
+        cover_color,
+        status,
+        owner_id: userId,
+        created_by: userId,
+        due_date,
+        department_id: department_id || null,
+        org_id: org_id || null,
+        budget: Number(budget || 0),
+      })
+      .select()
+      .single();
+
+    if (projErr || !newProj) {
+      throw new Error(projErr?.message || 'Failed to create project record');
+    }
+
+    // 2. Add creator as project owner member
+    await supabase.from('project_members').upsert(
+      {
+        project_id: newProj.id,
+        user_id: userId,
+        role: 'owner',
+        is_active: true,
+        added_by: userId,
+        assigned_by: userId,
+      },
+      { onConflict: 'project_id,user_id' }
+    );
+
+    // 3. Ensure Baseline Commitment V1
+    await this.ensureBaselineCommitment(newProj.id, userId);
+
+    return newProj;
   }
 }

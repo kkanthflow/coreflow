@@ -221,7 +221,7 @@ export default function NotificationDropdown() {
 
             {/* Footer */}
             <div className="p-2.5 border-t border-white/[0.06] bg-white/[0.02] text-center">
-              <span className="text-[10px] font-semibold text-zinc-500">CoreFlow Real-Time Notifications</span>
+              <span className="text-[10px] font-semibold text-zinc-500">AUVRYN Real-Time Notifications</span>
             </div>
           </motion.div>
         )}

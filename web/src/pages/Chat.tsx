@@ -429,7 +429,7 @@ export default function Chat() {
           </div>
 
           <div>
-            <h2 className="text-sm font-bold text-white tracking-tight">CoreFlow Secure Messaging</h2>
+            <h2 className="text-sm font-bold text-white tracking-tight">AUVRYN Secure Messaging</h2>
             <p className="text-xs text-zinc-500 mt-1">
               Select an active conversation or initialize a new direct encrypted thread with team members.
             </p>

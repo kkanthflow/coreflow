@@ -5,7 +5,6 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useAuth } from '../hooks/useAuth';
 import {
-  Layers,
   ArrowRight,
   Activity,
   CheckCircle2,
@@ -20,6 +19,7 @@ import {
   Monitor,
   LayoutDashboard
 } from 'lucide-react';
+import AuvrynLogo from '../components/AuvrynLogo';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -245,10 +245,10 @@ export default function Landing() {
         <nav className="bg-[#0C0D12]/95 backdrop-blur-xl border border-white/[0.08] rounded-full px-5 sm:px-7 py-3 flex items-center justify-between shadow-2xl">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <div className="w-7 h-7 rounded-lg bg-[#141622] border border-[#FF6B4A]/40 flex items-center justify-center text-[#FF6B4A] shadow-[0_0_10px_rgba(255,107,74,0.3)]">
-              <Layers size={15} />
+              <AuvrynLogo size={15} />
             </div>
             <div className="flex items-baseline gap-1.5">
-              <span className="font-bold text-xs tracking-wider uppercase font-mono text-white">CoreFlow</span>
+              <span className="font-bold text-xs tracking-wider uppercase font-mono text-white">AUVRYN</span>
               <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">OS</span>
             </div>
           </div>
@@ -293,7 +293,7 @@ export default function Landing() {
       </header>
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* ── SECTION 1: HERO ASSEMBLY & COREFLOW ACTIVATION ────────── */}
+      {/* ── SECTION 1: HERO ASSEMBLY & AUVRYN ACTIVATION ────────── */}
       {/* ──────────────────────────────────────────────────────────── */}
       <section className="relative z-10 min-h-screen pt-32 pb-20 px-4 sm:px-6 max-w-6xl mx-auto flex flex-col items-center justify-center text-center">
         
@@ -372,7 +372,7 @@ export default function Landing() {
               <span className="w-2.5 h-2.5 rounded-full bg-red-500/80" />
               <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/80" />
               <span className="w-2.5 h-2.5 rounded-full bg-green-500/80" />
-              <span className="ml-2 text-zinc-500">coreflow.os // workbench</span>
+              <span className="ml-2 text-zinc-500">auvryn.os // workbench</span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
@@ -488,12 +488,12 @@ export default function Landing() {
             <div className="flex justify-between items-center pb-4 border-b border-white/[0.06]">
               <div>
                 <span className="text-xs font-mono text-zinc-500 uppercase block">PROJECT REPOSITORY</span>
-                <span className="text-base font-bold text-white">CoreFlow Enterprise 2.0</span>
+                <span className="text-base font-bold text-white">AUVRYN Enterprise 2.0</span>
               </div>
               <span className="text-xl font-mono font-extrabold text-[#FF6B4A]">{projectProgress}%</span>
             </div>
 
-            {/* Moving CoreFlow Flow Line Trajectory */}
+            {/* Moving AUVRYN Flow Line Trajectory */}
             <div className="space-y-2">
               <div className="flex justify-between text-[11px] font-mono text-zinc-400">
                 <span>Trajectory Velocity</span>
@@ -877,12 +877,12 @@ export default function Landing() {
         className="relative z-10 min-h-screen flex flex-col items-center justify-center text-center px-4 sm:px-6 py-24 border-t border-white/[0.05]"
       >
         <div className="w-12 h-12 rounded-2xl bg-[#141622] border border-[#FF6B4A]/40 flex items-center justify-center text-[#FF6B4A] shadow-[0_0_24px_rgba(255,107,74,0.4)] mb-6">
-          <Layers size={24} />
+          <AuvrynLogo size={24} />
         </div>
 
         <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-[#0C0D12] border border-white/[0.08] text-[11px] font-mono text-zinc-400 mb-4 shadow-sm">
           <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B4A]" />
-          <span>CoreFlow Operating Architecture</span>
+          <span>AUVRYN Operating Architecture</span>
         </div>
 
         <h2 className="text-4xl sm:text-5xl md:text-6xl font-extrabold text-white tracking-tight leading-tight max-w-3xl mb-6">
@@ -934,7 +934,7 @@ export default function Landing() {
         </div>
 
         <div className="mt-20 pt-8 border-t border-white/[0.04] w-full max-w-4xl flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono text-zinc-500">
-          <span>© 2026 CoreFlow Inc. Enterprise Operating System.</span>
+          <span>© 2026 AUVRYN by Skavelon Technologies.</span>
           <span>NIST P-256 · TLS 1.3 · LiveKit SFU</span>
         </div>
       </section>

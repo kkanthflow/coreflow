@@ -97,7 +97,7 @@ export default function SecurityCenterScreen() {
 
       await Share.share({
         message: csvContent,
-        title: 'CoreFlow Security Log Export',
+        title: 'AUVRYN Security Log Export',
       });
     } catch (e) {
       console.error(e);

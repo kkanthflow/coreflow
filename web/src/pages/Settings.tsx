@@ -1177,7 +1177,7 @@ export default function Settings() {
                 </label>
                 <input
                   type="text"
-                  placeholder="CoreFlow Labs Ltd"
+                  placeholder="Acme Corporation"
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
                   className="w-full px-4 py-3 rounded-2xl border border-white/[0.08] bg-[#07080B] text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors"

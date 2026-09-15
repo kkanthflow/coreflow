@@ -2,12 +2,15 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/index.ts",
-      "use": "@vercel/node"
+      "src": "api/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["api/index.js"]
+      }
     }
   ],
   "routes": [
-    { "src": "/(.*)", "dest": "/api/index.ts" }
+    { "src": "/(.*)", "dest": "/api/index.js" }
   ],
   "env": {
     "VITE_SUPABASE_URL": "https://rltygdzldplkmwuqfadm.supabase.co",
