@@ -142,7 +142,7 @@ export default function NewInvoice() {
   };
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       <PageHeader
         title="Generate Invoice & Billing Claim"
         breadcrumbs={[
@@ -153,7 +153,7 @@ export default function NewInvoice() {
         actions={
           <button
             onClick={() => navigate('/invoices')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] text-xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs transition-colors"
           >
             <ArrowLeft size={13} />
             <span>Cancel</span>
@@ -167,19 +167,19 @@ export default function NewInvoice() {
         </div>
       )}
 
-      <form onSubmit={handleCreate} className="max-w-4xl bg-[#0C0D12] border border-white/[0.06] rounded-lg p-5 sm:p-6 space-y-5">
+      <form onSubmit={handleCreate} className="max-w-4xl bg-card-bg border border-divider rounded-lg p-5 sm:p-6 space-y-5">
         
         {/* Invoice Metadata Row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <div>
-            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
               Client Account <span className="text-[#FF6B4A]">*</span>
             </label>
             <select
               required
               value={clientId}
               onChange={e => setClientId(e.target.value)}
-              className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
             >
               {clients.map(c => (
                 <option key={c.id} value={c.id}>{c.company_name || c.name}</option>
@@ -188,7 +188,7 @@ export default function NewInvoice() {
           </div>
 
           <div>
-            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
               Invoice Identifier <span className="text-[#FF6B4A]">*</span>
             </label>
             <input
@@ -196,12 +196,12 @@ export default function NewInvoice() {
               required
               value={invoiceNumber}
               onChange={e => setInvoiceNumber(e.target.value)}
-              className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-2.5 py-1.5 text-xs text-white font-mono focus:outline-none"
+              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-2.5 py-1.5 text-xs text-main font-mono focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
               Issue Date
             </label>
             <input
@@ -209,12 +209,12 @@ export default function NewInvoice() {
               required
               value={issueDate}
               onChange={e => setIssueDate(e.target.value)}
-              className="w-full bg-[#07080B] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+              className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
               Due Date
             </label>
             <input
@@ -222,19 +222,19 @@ export default function NewInvoice() {
               required
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
-              className="w-full bg-[#07080B] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+              className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
             />
           </div>
         </div>
 
         {/* Line Items Table */}
-        <div className="space-y-3 pt-3 border-t border-white/[0.04]">
+        <div className="space-y-3 pt-3 border-t border-divider">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-white">Line Items Breakdown</span>
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-main">Line Items Breakdown</span>
             <button
               type="button"
               onClick={addItem}
-              className="flex items-center gap-1 px-2.5 py-1 bg-[#12141F] hover:bg-[#181B28] text-white text-xs font-semibold rounded border border-white/[0.06] transition-colors"
+              className="flex items-center gap-1 px-2.5 py-1 bg-hover hover:bg-hover text-main text-xs font-semibold rounded border border-divider transition-colors"
             >
               <Plus size={12} />
               <span>Add Item</span>
@@ -243,7 +243,7 @@ export default function NewInvoice() {
 
           <div className="space-y-2">
             {items.map((it) => (
-              <div key={it.id} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-[#07080B] p-2.5 rounded border border-white/[0.04]">
+              <div key={it.id} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-[#07080B] p-2.5 rounded border border-divider">
                 <div className="flex-1 w-full">
                   <input
                     type="text"
@@ -251,7 +251,7 @@ export default function NewInvoice() {
                     required
                     value={it.description}
                     onChange={e => updateItem(it.id, 'description', e.target.value)}
-                    className="w-full bg-transparent border-0 text-xs text-white placeholder-zinc-500 focus:outline-none"
+                    className="w-full bg-transparent border-0 text-xs text-main placeholder-zinc-500 focus:outline-none"
                   />
                 </div>
 
@@ -263,7 +263,7 @@ export default function NewInvoice() {
                       placeholder="Qty"
                       value={it.quantity}
                       onChange={e => updateItem(it.id, 'quantity', parseFloat(e.target.value) || 1)}
-                      className="w-full bg-[#0C0D12] border border-white/[0.06] rounded px-2 py-1 text-right text-white focus:outline-none"
+                      className="w-full bg-card-bg border border-divider rounded px-2 py-1 text-right text-main focus:outline-none"
                     />
                   </div>
 
@@ -274,7 +274,7 @@ export default function NewInvoice() {
                       placeholder="Rate"
                       value={it.rate}
                       onChange={e => updateItem(it.id, 'rate', parseFloat(e.target.value) || 0)}
-                      className="w-full bg-[#0C0D12] border border-white/[0.06] rounded px-2 py-1 text-right text-white focus:outline-none"
+                      className="w-full bg-card-bg border border-divider rounded px-2 py-1 text-right text-main focus:outline-none"
                     />
                   </div>
 
@@ -284,7 +284,7 @@ export default function NewInvoice() {
                       placeholder="Tax%"
                       value={it.tax_rate}
                       onChange={e => updateItem(it.id, 'tax_rate', parseFloat(e.target.value) || 0)}
-                      className="w-full bg-[#0C0D12] border border-white/[0.06] rounded px-2 py-1 text-right text-white focus:outline-none"
+                      className="w-full bg-card-bg border border-divider rounded px-2 py-1 text-right text-main focus:outline-none"
                     />
                   </div>
 
@@ -292,7 +292,7 @@ export default function NewInvoice() {
                     type="button"
                     onClick={() => removeItem(it.id)}
                     disabled={items.length <= 1}
-                    className="p-1 text-zinc-500 hover:text-red-400 disabled:opacity-20 transition-colors"
+                    className="p-1 text-muted hover:text-red-400 disabled:opacity-20 transition-colors"
                   >
                     <Trash2 size={13} />
                   </button>
@@ -303,15 +303,15 @@ export default function NewInvoice() {
         </div>
 
         {/* Currency & Financial Totals */}
-        <div className="pt-4 border-t border-white/[0.04] flex flex-col sm:flex-row justify-between items-end gap-4">
+        <div className="pt-4 border-t border-divider flex flex-col sm:flex-row justify-between items-end gap-4">
           <div className="w-full sm:max-w-xs">
-            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
               Billing Currency
             </label>
             <select
               value={currency}
               onChange={e => setCurrency(e.target.value)}
-              className="w-full bg-[#07080B] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+              className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
             >
               <option value="USD">USD ($)</option>
               <option value="INR">INR (₹)</option>
@@ -322,34 +322,34 @@ export default function NewInvoice() {
             </select>
           </div>
 
-          <div className="w-full sm:max-w-xs space-y-1.5 text-xs bg-[#07080B] p-3.5 rounded border border-white/[0.04] font-mono tabular-nums">
-            <div className="flex justify-between text-zinc-400">
+          <div className="w-full sm:max-w-xs space-y-1.5 text-xs bg-[#07080B] p-3.5 rounded border border-divider font-mono tabular-nums">
+            <div className="flex justify-between text-muted">
               <span>Subtotal:</span>
-              <span className="text-white font-medium">{currency} {subtotal.toFixed(2)}</span>
+              <span className="text-main font-medium">{currency} {subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-zinc-400">
+            <div className="flex justify-between text-muted">
               <span>Tax ({totalTax > 0 ? 'Calculated' : '0%'}):</span>
-              <span className="text-white font-medium">{currency} {totalTax.toFixed(2)}</span>
+              <span className="text-main font-medium">{currency} {totalTax.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between pt-2 border-t border-white/[0.04] text-xs font-bold text-white">
+            <div className="flex justify-between pt-2 border-t border-divider text-xs font-bold text-main">
               <span>Total Balance Due:</span>
               <span className="text-[#FF6B4A] text-sm">{currency} {totalAmount.toFixed(2)}</span>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.04]">
+        <div className="flex justify-end gap-2 pt-3 border-t border-divider">
           <button
             type="button"
             onClick={() => navigate('/invoices')}
-            className="px-3.5 py-1.5 bg-[#10121A] hover:bg-[#151822] text-zinc-300 text-xs rounded border border-white/[0.06] transition-colors"
+            className="px-3.5 py-1.5 bg-hover hover:bg-hover text-muted text-xs rounded border border-divider transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving || !clientId || items.length === 0}
-            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-white font-semibold text-xs rounded transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors shadow-sm"
           >
             <Save size={13} />
             <span>{saving ? 'Creating...' : 'Issue Invoice'}</span>

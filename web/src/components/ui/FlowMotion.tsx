@@ -141,7 +141,7 @@ export function FlowStepper({
                   isCurrent
                     ? 'bg-[#08090D] border-2 border-[#FF6B4A] text-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.35)] scale-105'
                     : isPassed
-                    ? 'bg-[#0E1016] border border-[#FF6B4A]/60 text-white'
+                    ? 'bg-[#0E1016] border border-[#FF6B4A]/60 text-main'
                     : 'bg-[#08090D] border border-white/[0.1] text-zinc-600'
                 }`}
               >
@@ -160,16 +160,16 @@ export function FlowStepper({
               <span
                 className={`text-[10px] font-mono font-semibold tracking-wider uppercase mt-1.5 transition-colors ${
                   isCurrent
-                    ? 'text-white'
+                    ? 'text-main'
                     : isPassed
-                    ? 'text-zinc-300'
+                    ? 'text-muted'
                     : 'text-zinc-600'
                 }`}
               >
                 {step.label}
               </span>
               {step.subtitle && (
-                <span className="text-[9px] text-zinc-500 font-mono mt-0.5">
+                <span className="text-[9px] text-muted font-mono mt-0.5">
                   {step.subtitle}
                 </span>
               )}

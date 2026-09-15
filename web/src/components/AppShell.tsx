@@ -33,7 +33,7 @@ export default function AppShell() {
   return (
     <div 
       onPointerMove={handlePointerMove}
-      className="flex h-screen w-full bg-[#08090D] overflow-hidden text-white selection:bg-[#FF6B4A]/30 selection:text-white font-sans antialiased relative"
+      className="flex h-screen w-full bg-[#08090D] overflow-hidden text-main selection:bg-[#FF6B4A]/30 selection:text-main font-sans antialiased relative"
     >
       {/* Living AUVRYN Atmospheric Background Canvas */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">

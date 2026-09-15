@@ -75,7 +75,7 @@ export default function Payments() {
   ], [totalCollected, payments, defaultCurrency]);
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       
       {/* ── Page Header Standard ── */}
       <PageHeader
@@ -84,7 +84,7 @@ export default function Payments() {
         actions={
           <button
             onClick={fetchPayments}
-            className="p-2 rounded bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] transition-colors"
+            className="p-2 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider transition-colors"
             title="Sync settlements"
           >
             <RefreshCw size={13} />
@@ -96,12 +96,12 @@ export default function Payments() {
       <MetricStrip metrics={metrics} />
 
       {/* ── Signature Animation: Settlement Rail Telemetry ── */}
-      <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+      <div className="bg-card-bg border border-divider rounded-lg p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
         <div className="flex items-center gap-3">
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-[11px] font-mono text-zinc-300 font-semibold uppercase tracking-wider">Settlement Rail: Automated Clearing House (ACH) / Direct Wire</span>
+          <span className="text-[11px] font-mono text-muted font-semibold uppercase tracking-wider">Settlement Rail: Automated Clearing House (ACH) / Direct Wire</span>
         </div>
-        <div className="flex items-center gap-4 text-[10px] font-mono text-zinc-500">
+        <div className="flex items-center gap-4 text-[10px] font-mono text-muted">
           <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Authorized</span>
           <span className="text-zinc-600">→</span>
           <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Settled</span>
@@ -111,18 +111,18 @@ export default function Payments() {
       </div>
 
       {/* ── Search Bar ── */}
-      <div className="flex items-center justify-between gap-3 bg-[#0C0D12] border border-white/[0.06] rounded-lg p-2.5 max-w-md">
+      <div className="flex items-center justify-between gap-3 bg-card-bg border border-divider rounded-lg p-2.5 max-w-md">
         <div className="relative w-full">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
             placeholder="Search invoice number, client, or reference ID..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-8 pr-7 py-1.5 bg-[#07080B] border border-white/[0.05] focus:border-[#FF6B4A]/40 rounded text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+            className="w-full pl-8 pr-7 py-1.5 bg-[#07080B] border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white">
+            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
               <X size={12} />
             </button>
           )}
@@ -139,8 +139,8 @@ export default function Payments() {
           description={search ? "No settlements match this query." : "Payment settlements will appear here as incoming receivables are cleared."}
         />
       ) : (
-        <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg overflow-hidden">
-          <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-white/[0.05] text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider bg-[#090A0E]">
+        <div className="bg-card-bg border border-divider rounded-lg overflow-hidden">
+          <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-card-bg">
             <div className="col-span-4">Invoice / Client</div>
             <div className="col-span-2">Payment Method</div>
             <div className="col-span-3">Transaction Reference</div>
@@ -154,25 +154,25 @@ export default function Payments() {
                 <div className="col-span-4 min-w-0 pr-2">
                   <Link
                     to={`/invoices/${p.invoices?.id}`}
-                    className="font-mono font-bold text-white hover:text-[#FF6B4A] transition-colors flex items-center gap-1.5"
+                    className="font-mono font-bold text-main hover:text-[#FF6B4A] transition-colors flex items-center gap-1.5"
                   >
                     <span>{p.invoices?.invoice_number || 'Unknown Invoice'}</span>
-                    <ArrowUpRight size={12} className="text-zinc-500" />
+                    <ArrowUpRight size={12} className="text-muted" />
                   </Link>
-                  <div className="text-[11px] text-zinc-500 truncate mt-0.5">
+                  <div className="text-[11px] text-muted truncate mt-0.5">
                     {p.invoices?.clients?.company_name || p.invoices?.clients?.name || 'General Client'}
                   </div>
                 </div>
 
-                <div className="col-span-2 text-zinc-400 capitalize text-[11px]">
+                <div className="col-span-2 text-muted capitalize text-[11px]">
                   {p.payment_method?.replace(/_/g, ' ') || 'Direct Transfer'}
                 </div>
 
-                <div className="col-span-3 font-mono text-[11px] text-zinc-400 truncate">
+                <div className="col-span-3 font-mono text-[11px] text-muted truncate">
                   {p.transaction_reference || '—'}
                 </div>
 
-                <div className="col-span-1 text-[11px] font-mono text-zinc-500">
+                <div className="col-span-1 text-[11px] font-mono text-muted">
                   {new Date(p.payment_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                 </div>
 

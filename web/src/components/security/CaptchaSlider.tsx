@@ -62,9 +62,9 @@ export function CaptchaSlider({ onVerify }: CaptchaSliderProps) {
   }, [isDragging, isVerified, onVerify]);
 
   return (
-    <div className="p-4 rounded-3xl bg-[#131C33] border border-white/10 mb-5">
-      <h3 className="text-base font-bold mb-1 text-center text-white">Security Verification</h3>
-      <p className="text-xs mb-4 text-center text-white/60">
+    <div className="p-4 rounded-3xl bg-[#131C33] border border-divider mb-5">
+      <h3 className="text-base font-bold mb-1 text-center text-main">Security Verification</h3>
+      <p className="text-xs mb-4 text-center text-main/60">
         Drag the slider to the right to complete verification
       </p>
       
@@ -73,7 +73,7 @@ export function CaptchaSlider({ onVerify }: CaptchaSliderProps) {
         className={`h-[54px] rounded-full border p-0.5 flex flex-row items-center relative overflow-hidden transition-colors ${
           isVerified 
             ? 'bg-emerald-500/15 border-emerald-500' 
-            : 'bg-white/5 border-white/10'
+            : 'bg-white/5 border-divider'
         }`}
       >
         {/* Background fill */}
@@ -88,7 +88,7 @@ export function CaptchaSlider({ onVerify }: CaptchaSliderProps) {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
           <span 
             className={`text-sm font-semibold transition-colors ${
-              isVerified ? 'text-emerald-500' : 'text-white/60'
+              isVerified ? 'text-emerald-500' : 'text-main/60'
             }`}
           >
             {isVerified ? "Verification Successful" : "Slide to Verify"}
@@ -105,9 +105,9 @@ export function CaptchaSlider({ onVerify }: CaptchaSliderProps) {
           style={{ transform: `translateX(${dragOffset}px)`, transition: isDragging ? 'none' : 'transform 0.3s ease' }}
         >
           {isVerified ? (
-            <Check className="text-white" size={22} strokeWidth={3} />
+            <Check className="text-main" size={22} strokeWidth={3} />
           ) : (
-            <ChevronRight className="text-white" size={22} strokeWidth={3} />
+            <ChevronRight className="text-main" size={22} strokeWidth={3} />
           )}
         </div>
       </div>

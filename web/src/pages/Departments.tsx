@@ -171,7 +171,7 @@ export default function Departments() {
   ], [departments, assignedLeadsCount, members]);
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       
       {/* ── Page Header Standard ── */}
       <PageHeader
@@ -181,7 +181,7 @@ export default function Departments() {
           <div className="flex items-center gap-2">
             <button
               onClick={fetchDepartments}
-              className="p-2 rounded bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] transition-colors"
+              className="p-2 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider transition-colors"
               title="Sync departments"
             >
               <RefreshCw size={13} />
@@ -189,7 +189,7 @@ export default function Departments() {
             {canManage && (
               <button
                 onClick={openCreateModal}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold transition-colors shadow-sm"
               >
                 <Plus size={14} />
                 <span>Add Department</span>
@@ -203,18 +203,18 @@ export default function Departments() {
       <MetricStrip metrics={metrics} />
 
       {/* ── Search & Filter ── */}
-      <div className="flex items-center justify-between gap-3 bg-[#0C0D12] border border-white/[0.06] rounded-lg p-2.5 max-w-md">
+      <div className="flex items-center justify-between gap-3 bg-card-bg border border-divider rounded-lg p-2.5 max-w-md">
         <div className="relative w-full">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
             placeholder="Search departments or domains..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-8 pr-7 py-1.5 bg-[#07080B] border border-white/[0.05] focus:border-[#FF6B4A]/40 rounded text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+            className="w-full pl-8 pr-7 py-1.5 bg-[#07080B] border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white">
+            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
               <X size={12} />
             </button>
           )}
@@ -232,7 +232,7 @@ export default function Departments() {
           action={canManage && !search ? { label: "Add First Department", onClick: openCreateModal } : undefined}
         />
       ) : (
-        <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg divide-y divide-white/[0.03] overflow-hidden">
+        <div className="bg-card-bg border border-divider rounded-lg divide-y divide-white/[0.03] overflow-hidden">
           {filtered.map((dept, idx) => {
             const deptColor = dept.color || '#FF6B4A';
             return (
@@ -252,11 +252,11 @@ export default function Departments() {
                   </div>
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 mb-0.5">
-                      <span className="font-semibold text-white text-xs">{dept.name}</span>
+                      <span className="font-semibold text-main text-xs">{dept.name}</span>
                       <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: deptColor }} />
                     </div>
                     {dept.description && (
-                      <p className="text-[11px] text-zinc-500 truncate max-w-lg">{dept.description}</p>
+                      <p className="text-[11px] text-muted truncate max-w-lg">{dept.description}</p>
                     )}
                   </div>
                 </div>
@@ -264,8 +264,8 @@ export default function Departments() {
                 <div className="flex items-center gap-4 shrink-0">
                   {dept.head_user ? (
                     <div className="text-right hidden sm:block">
-                      <div className="text-[11px] font-semibold text-white">{dept.head_user.full_name}</div>
-                      <div className="text-[10px] font-mono text-zinc-500">Department Lead</div>
+                      <div className="text-[11px] font-semibold text-main">{dept.head_user.full_name}</div>
+                      <div className="text-[10px] font-mono text-muted">Department Lead</div>
                     </div>
                   ) : (
                     <div className="text-[10px] font-mono text-zinc-600 hidden sm:block">No Lead Assigned</div>
@@ -275,14 +275,14 @@ export default function Departments() {
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => openEditModal(dept)}
-                        className="p-1 rounded hover:bg-white/[0.05] text-zinc-400 hover:text-white transition-colors"
+                        className="p-1 rounded hover:bg-white/[0.05] text-muted hover:text-main transition-colors"
                         title="Edit Department"
                       >
                         <Edit2 size={13} />
                       </button>
                       <button
                         onClick={() => setDeleteDeptId(dept.id)}
-                        className="p-1 rounded hover:bg-red-500/10 text-zinc-400 hover:text-red-400 transition-colors"
+                        className="p-1 rounded hover:bg-red-500/10 text-muted hover:text-red-400 transition-colors"
                         title="Delete Department"
                       >
                         <Trash2 size={13} />
@@ -299,20 +299,20 @@ export default function Departments() {
       {/* ── Modal ── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#0C0D12] border border-white/[0.08] rounded-xl p-5 sm:p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+          <div className="w-full max-w-md bg-card-bg border border-divider rounded-xl p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
+              <h2 className="text-sm font-bold text-main uppercase tracking-wider font-mono flex items-center gap-2">
                 <Building2 size={15} className="text-[#FF6B4A]" />
                 <span>{editingDept ? 'Edit Department' : 'New Department'}</span>
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-zinc-500 hover:text-white">
+              <button onClick={() => setIsModalOpen(false)} className="text-muted hover:text-main">
                 <X size={15} />
               </button>
             </div>
 
             <form onSubmit={handleSave} className="space-y-4">
               <div>
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   Department Name <span className="text-[#FF6B4A]">*</span>
                 </label>
                 <input
@@ -321,12 +321,12 @@ export default function Departments() {
                   placeholder="e.g. Product Architecture"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   Description & Scope
                 </label>
                 <textarea
@@ -334,18 +334,18 @@ export default function Departments() {
                   placeholder="Responsibilities, domain ownership..."
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors resize-none"
+                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   Department Lead
                 </label>
                 <select
                   value={headUserId}
                   onChange={e => setHeadUserId(e.target.value)}
-                  className="w-full bg-[#07080B] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                  className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                 >
                   <option value="">None / Unassigned</option>
                   {members.map(m => (
@@ -355,7 +355,7 @@ export default function Departments() {
               </div>
 
               <div>
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   Accent Color
                 </label>
                 <div className="flex gap-2 flex-wrap pt-1">
@@ -371,18 +371,18 @@ export default function Departments() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.04]">
+              <div className="flex justify-end gap-2 pt-3 border-t border-divider">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-3.5 py-1.5 bg-[#10121A] hover:bg-[#151822] text-zinc-300 text-xs rounded border border-white/[0.06] transition-colors"
+                  className="px-3.5 py-1.5 bg-hover hover:bg-hover text-muted text-xs rounded border border-divider transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving || !name.trim()}
-                  className="px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-white font-semibold text-xs rounded transition-colors"
+                  className="px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors"
                 >
                   {saving ? 'Saving...' : editingDept ? 'Update' : 'Create Department'}
                 </button>

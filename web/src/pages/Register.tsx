@@ -283,7 +283,7 @@ export default function Register() {
   return (
     <div 
       onPointerMove={handlePointerMove}
-      className="min-h-screen w-full flex items-center justify-center bg-[#060709] selection:bg-[#FF6B4A]/30 selection:text-white p-4 sm:p-6 lg:p-8 font-sans select-none text-zinc-300 relative overflow-hidden"
+      className="min-h-screen w-full flex items-center justify-center bg-app selection:bg-[#FF6B4A]/30 selection:text-main p-4 sm:p-6 lg:p-8 font-sans select-none text-muted relative overflow-hidden"
     >
       {/* Living AUVRYN Atmospheric Background Canvas */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -314,43 +314,43 @@ export default function Register() {
         {/* Left Column: Platform Identity & Perks */}
         <div className="hidden lg:flex lg:col-span-5 flex-col justify-between space-y-6 sticky top-8">
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-[#0C0D12] border border-white/[0.06] text-[11px] font-mono text-zinc-400">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-card-bg border border-divider text-[11px] font-mono text-muted">
               <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B4A]" />
-              <span className="font-bold text-white uppercase tracking-wider">AUVRYN OS</span>
+              <span className="font-bold text-main uppercase tracking-wider">AUVRYN OS</span>
               <span className="text-zinc-600">/</span>
               <span>Account Provisioning</span>
             </div>
 
-            <h1 className="text-3xl xl:text-4xl font-extrabold text-white tracking-tight leading-tight">
+            <h1 className="text-3xl xl:text-4xl font-extrabold text-main tracking-tight leading-tight">
               Scale operations & <br />
               <span className="text-[#FF6B4A]">unify your enterprise.</span>
             </h1>
 
-            <p className="text-zinc-400 text-xs sm:text-sm leading-relaxed">
+            <p className="text-muted text-xs sm:text-sm leading-relaxed">
               Create an organization account or register as an independent contractor to manage projects, WebRTC conferences, and automated billing.
             </p>
           </div>
 
-          <div className="space-y-2.5 pt-4 border-t border-white/[0.04] text-xs">
-            <div className="flex items-center gap-2.5 p-3 rounded bg-[#0C0D12] border border-white/[0.04]">
+          <div className="space-y-2.5 pt-4 border-t border-divider text-xs">
+            <div className="flex items-center gap-2.5 p-3 rounded bg-card-bg border border-divider">
               <Building2 size={16} className="text-[#FF6B4A]" />
               <div>
-                <div className="text-white font-semibold">Multi-Tenant Hierarchy</div>
-                <div className="text-[10px] text-zinc-500">Autonomous organization workspaces with role-based policies.</div>
+                <div className="text-main font-semibold">Multi-Tenant Hierarchy</div>
+                <div className="text-[10px] text-muted">Autonomous organization workspaces with role-based policies.</div>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 p-3 rounded bg-[#0C0D12] border border-white/[0.04]">
+            <div className="flex items-center gap-2.5 p-3 rounded bg-card-bg border border-divider">
               <Briefcase size={16} className="text-[#FF6B4A]" />
               <div>
-                <div className="text-white font-semibold">Freelancer Portal</div>
-                <div className="text-[10px] text-zinc-500">Independent billing, client invoicing, and cross-team scopes.</div>
+                <div className="text-main font-semibold">Freelancer Portal</div>
+                <div className="text-[10px] text-muted">Independent billing, client invoicing, and cross-team scopes.</div>
               </div>
             </div>
-            <div className="flex items-center gap-2.5 p-3 rounded bg-[#0C0D12] border border-white/[0.04]">
+            <div className="flex items-center gap-2.5 p-3 rounded bg-card-bg border border-divider">
               <ShieldCheck size={16} className="text-[#FF6B4A]" />
               <div>
-                <div className="text-white font-semibold">Military-Grade Privacy</div>
-                <div className="text-[10px] text-zinc-500">ECDH P-256 chat E2EE with Postgres Row-Level Security.</div>
+                <div className="text-main font-semibold">Military-Grade Privacy</div>
+                <div className="text-[10px] text-muted">ECDH P-256 chat E2EE with Postgres Row-Level Security.</div>
               </div>
             </div>
           </div>
@@ -358,22 +358,22 @@ export default function Register() {
 
         {/* Right Column: Registration Console */}
         <div className="lg:col-span-7 w-full max-w-[620px] mx-auto">
-          <div className="bg-[#0C0D12] border border-white/[0.08] rounded-xl p-6 sm:p-8 shadow-2xl space-y-6">
+          <div className="bg-card-bg border border-divider rounded-xl p-6 sm:p-8 shadow-2xl space-y-6">
             
             {/* Top Brand Marker */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
               <div className="flex items-center gap-2.5">
-                <div className="w-7 h-7 rounded bg-[#12141F] border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A]">
+                <div className="w-7 h-7 rounded bg-hover border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A]">
                   <AuvrynLogo size={15} />
                 </div>
-                <span className="font-bold text-sm tracking-tight text-white uppercase font-mono">AUVRYN</span>
+                <span className="font-bold text-sm tracking-tight text-main uppercase font-mono">AUVRYN</span>
               </div>
-              <span className="text-[10px] font-mono text-zinc-500 uppercase">Registration</span>
+              <span className="text-[10px] font-mono text-muted uppercase">Registration</span>
             </div>
 
             <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">Create Workspace Account</h2>
-              <p className="text-xs text-zinc-400 mt-1">Configure your membership mode, organization details, and credentials.</p>
+              <h2 className="text-xl font-bold text-main tracking-tight">Create Workspace Account</h2>
+              <p className="text-xs text-muted mt-1">Configure your membership mode, organization details, and credentials.</p>
             </div>
 
             {error && (
@@ -387,7 +387,7 @@ export default function Register() {
               {/* Personal Identity */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted mb-1.5">
                     Full Name <span className="text-[#FF6B4A]">*</span>
                   </label>
                   <input
@@ -396,13 +396,13 @@ export default function Register() {
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="John Doe"
                     disabled={loading}
-                    className={`w-full bg-[#07080B] border ${errors.fullName ? 'border-red-500' : 'border-white/[0.06]'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors`}
+                    className={`w-full bg-[#07080B] border ${errors.fullName ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
                   />
                   {errors.fullName && <div className="text-[10px] text-red-400 mt-1">{errors.fullName}</div>}
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted mb-1.5">
                     Email Address <span className="text-[#FF6B4A]">*</span>
                   </label>
                   <input
@@ -411,7 +411,7 @@ export default function Register() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@company.com"
                     disabled={loading}
-                    className={`w-full bg-[#07080B] border ${errors.email ? 'border-red-500' : 'border-white/[0.06]'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors`}
+                    className={`w-full bg-[#07080B] border ${errors.email ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
                   />
                   {errors.email && <div className="text-[10px] text-red-400 mt-1">{errors.email}</div>}
                 </div>
@@ -419,7 +419,7 @@ export default function Register() {
 
               {/* Account Type Selector */}
               <div className="space-y-2">
-                <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted">
                   I want to...
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -434,15 +434,15 @@ export default function Register() {
                       onClick={() => setAccountType(item.id as any)}
                       className={`p-3 rounded-lg border text-left transition-all ${
                         accountType === item.id 
-                          ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-white' 
-                          : 'bg-[#07080B] border-white/[0.05] text-zinc-400 hover:border-white/[0.1]'
+                          ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-main' 
+                          : 'bg-[#07080B] border-divider text-muted hover:border-white/[0.1]'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs font-semibold">{item.title}</span>
                         {accountType === item.id && <Check size={13} className="text-[#FF6B4A]" />}
                       </div>
-                      <p className="text-[10px] text-zinc-500">{item.desc}</p>
+                      <p className="text-[10px] text-muted">{item.desc}</p>
                     </button>
                   ))}
                 </div>
@@ -450,8 +450,8 @@ export default function Register() {
 
               {/* Freelancer Scope (if Freelancer chosen) */}
               {accountType === 'freelancer' && (
-                <div className="space-y-2 p-3.5 bg-[#07080B] border border-white/[0.05] rounded-lg">
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                <div className="space-y-2 p-3.5 bg-[#07080B] border border-divider rounded-lg">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted">
                     Freelancer Engagement Model
                   </label>
                   <div className="grid grid-cols-2 gap-2">
@@ -460,24 +460,24 @@ export default function Register() {
                       onClick={() => setFreelancerWorkType('organization')}
                       className={`p-2.5 rounded border text-left transition-all ${
                         freelancerWorkType === 'organization'
-                          ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-white'
-                          : 'bg-white/[0.02] border-white/[0.05] text-zinc-400'
+                          ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-main'
+                          : 'bg-white/[0.02] border-divider text-muted'
                       }`}
                     >
                       <div className="text-xs font-semibold">Join Organization</div>
-                      <div className="text-[10px] text-zinc-500">Contract within an agency</div>
+                      <div className="text-[10px] text-muted">Contract within an agency</div>
                     </button>
                     <button
                       type="button"
                       onClick={() => setFreelancerWorkType('independent')}
                       className={`p-2.5 rounded border text-left transition-all ${
                         freelancerWorkType === 'independent'
-                          ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-white'
-                          : 'bg-white/[0.02] border-white/[0.05] text-zinc-400'
+                          ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-main'
+                          : 'bg-white/[0.02] border-divider text-muted'
                       }`}
                     >
                       <div className="text-xs font-semibold">Work Independently</div>
-                      <div className="text-[10px] text-zinc-500">Solo client invoicing</div>
+                      <div className="text-[10px] text-muted">Solo client invoicing</div>
                     </button>
                   </div>
                 </div>
@@ -486,7 +486,7 @@ export default function Register() {
               {/* Organization Input (for Join, Create, or Org Freelancer) */}
               {((accountType !== 'freelancer') || (accountType === 'freelancer' && freelancerWorkType === 'organization')) && (
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted mb-1.5">
                     {accountType === 'create' ? 'New Organization Name' : 'Organization Name to Join'} <span className="text-[#FF6B4A]">*</span>
                   </label>
                   <input
@@ -495,7 +495,7 @@ export default function Register() {
                     onChange={(e) => setOrganization(e.target.value)}
                     placeholder="Acme Corp"
                     disabled={loading}
-                    className={`w-full bg-[#07080B] border ${errors.organization ? 'border-red-500' : 'border-white/[0.06]'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors`}
+                    className={`w-full bg-[#07080B] border ${errors.organization ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
                   />
                   {errors.organization && <div className="text-[10px] text-red-400 mt-1">{errors.organization}</div>}
                 </div>
@@ -504,13 +504,13 @@ export default function Register() {
               {/* Role Picker (when joining organization) */}
               {accountType === 'join' && (
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted mb-1.5">
                     Requested Workspace Role
                   </label>
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full bg-[#07080B] border border-white/[0.06] rounded px-3 py-2 text-xs text-white focus:outline-none"
+                    className="w-full bg-[#07080B] border border-divider rounded px-3 py-2 text-xs text-main focus:outline-none"
                   >
                     <option value="administrator">Administrator — Org-wide management</option>
                     <option value="director">Director — Senior leadership</option>
@@ -533,13 +533,13 @@ export default function Register() {
                       <Sparkles size={13} />
                       <span>Role: Organization Owner</span>
                     </div>
-                    <p className="text-[11px] text-zinc-400 mt-1">
+                    <p className="text-[11px] text-muted mt-1">
                       As the founder, you will be assigned the <strong>Owner</strong> role with complete access to administrative controls, global audit logs, and invoicing.
                     </p>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                    <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted mb-1.5">
                       Default Organization Currency
                     </label>
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
@@ -552,8 +552,8 @@ export default function Register() {
                             onClick={() => setDefaultCurrency(curr.code)}
                             className={`p-2 rounded border text-left flex items-center justify-between transition-all ${
                               isSelected
-                                ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-white'
-                                : 'bg-[#07080B] border-white/[0.05] text-zinc-400 hover:border-white/[0.1]'
+                                ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-main'
+                                : 'bg-[#07080B] border-divider text-muted hover:border-white/[0.1]'
                             }`}
                           >
                             <span className="text-xs font-semibold">{curr.name}</span>
@@ -569,7 +569,7 @@ export default function Register() {
               {/* Passwords */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted mb-1.5">
                     Passphrase <span className="text-[#FF6B4A]">*</span>
                   </label>
                   <div className="relative">
@@ -579,12 +579,12 @@ export default function Register() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
                       disabled={loading}
-                      className={`w-full bg-[#07080B] border ${errors.password ? 'border-red-500' : 'border-white/[0.06]'} focus:border-[#FF6B4A]/50 rounded pl-3 pr-9 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors`}
+                      className={`w-full bg-[#07080B] border ${errors.password ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded pl-3 pr-9 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main"
                     >
                       {showPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                     </button>
@@ -593,7 +593,7 @@ export default function Register() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 mb-1.5">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted mb-1.5">
                     Confirm Passphrase <span className="text-[#FF6B4A]">*</span>
                   </label>
                   <div className="relative">
@@ -603,12 +603,12 @@ export default function Register() {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••••••"
                       disabled={loading}
-                      className={`w-full bg-[#07080B] border ${errors.confirmPassword ? 'border-red-500' : 'border-white/[0.06]'} focus:border-[#FF6B4A]/50 rounded pl-3 pr-9 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors`}
+                      className={`w-full bg-[#07080B] border ${errors.confirmPassword ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded pl-3 pr-9 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main"
                     >
                       {showConfirmPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                     </button>
@@ -626,7 +626,7 @@ export default function Register() {
                     onChange={(e) => setAgreed(e.target.checked)}
                     className="mt-0.5 rounded border-white/[0.1] bg-[#07080B] text-[#FF6B4A] focus:ring-0 focus:outline-none"
                   />
-                  <span className="text-[11px] text-zinc-400 leading-relaxed">
+                  <span className="text-[11px] text-muted leading-relaxed">
                     I acknowledge and agree to the{' '}
                     <span className="text-[#FF6B4A] font-semibold hover:underline">Privacy Policy</span> and{' '}
                     <span className="text-[#FF6B4A] font-semibold hover:underline">Terms & Conditions</span>.
@@ -640,7 +640,7 @@ export default function Register() {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-white font-semibold text-xs rounded transition-colors shadow-sm"
+                  className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors shadow-sm"
                 >
                   {loading ? (
                     <span>Provisioning workspace...</span>
@@ -655,22 +655,22 @@ export default function Register() {
 
               {/* Divider & Google OAuth */}
               <div className="relative flex items-center justify-center pt-2">
-                <div className="w-full border-t border-white/[0.06]" />
-                <span className="absolute bg-[#0C0D12] px-3 text-[10px] font-mono text-zinc-500 uppercase">or</span>
+                <div className="w-full border-t border-divider" />
+                <span className="absolute bg-card-bg px-3 text-[10px] font-mono text-muted uppercase">or</span>
               </div>
 
               <button
                 type="button"
                 onClick={handleGoogleSignUp}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-2 py-2 bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.08] text-white font-semibold text-xs rounded transition-colors"
+                className="w-full flex items-center justify-center gap-2 py-2 bg-white/[0.03] hover:bg-white/[0.06] border border-divider text-main font-semibold text-xs rounded transition-colors"
               >
                 <Globe size={14} />
                 <span>Continue with Google</span>
               </button>
 
               {/* Sign In Link */}
-              <div className="pt-2 text-center text-xs text-zinc-400">
+              <div className="pt-2 text-center text-xs text-muted">
                 Already registered?{' '}
                 <Link to="/login" className="text-[#FF6B4A] hover:text-[#FF552B] font-semibold transition-colors">
                   Access existing session
@@ -678,7 +678,7 @@ export default function Register() {
               </div>
             </form>
 
-            <div className="pt-3 border-t border-white/[0.04] flex items-center justify-center gap-2 text-[10px] font-mono text-zinc-600">
+            <div className="pt-3 border-t border-divider flex items-center justify-center gap-2 text-[10px] font-mono text-zinc-600">
               <Lock size={11} />
               <span>TLS 1.3 · Postgres RLS Encrypted</span>
             </div>

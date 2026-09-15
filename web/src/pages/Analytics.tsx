@@ -139,7 +139,7 @@ export default function Analytics() {
   }, [isManagement, orgStats, personalStats, currency]);
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       
       {/* ── Page Header Standard ── */}
       <PageHeader
@@ -147,7 +147,7 @@ export default function Analytics() {
         description={isManagement ? "Pipeline realization rates, sprint velocity, and financial efficiency curves." : "Personal milestone throughput and task deliverable trajectories."}
         actions={
           <div className="flex items-center gap-2">
-            <div className="flex bg-[#0C0D12] border border-white/[0.06] rounded p-0.5 relative">
+            <div className="flex bg-card-bg border border-divider rounded p-0.5 relative">
               {PERIODS.map(p => {
                 const isActive = period === p.key;
                 return (
@@ -156,14 +156,14 @@ export default function Analytics() {
                     onClick={() => setPeriod(p.key)}
                     className={`relative px-2.5 py-1 rounded text-[11px] font-medium transition-colors z-10 ${
                       isActive
-                        ? 'text-white font-semibold'
-                        : 'text-zinc-400 hover:text-zinc-200'
+                        ? 'text-main font-semibold'
+                        : 'text-muted hover:text-zinc-200'
                     }`}
                   >
                     {isActive && (
                       <motion.div
                         layoutId="activePeriodPill"
-                        className="absolute inset-0 bg-[#151822] rounded -z-10 shadow-sm border border-white/[0.05]"
+                        className="absolute inset-0 bg-hover rounded -z-10 shadow-sm border border-divider"
                         transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
                       />
                     )}
@@ -176,7 +176,7 @@ export default function Analytics() {
             <button
               onClick={handleRefresh}
               disabled={refreshing}
-              className="p-2 rounded bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] transition-colors"
+              className="p-2 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider transition-colors"
               title="Refresh Telemetry"
             >
               <RefreshCw size={13} className={refreshing ? 'animate-spin text-[#FF6B4A]' : ''} />
@@ -194,22 +194,22 @@ export default function Analytics() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* Workstream Completion Trajectory */}
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.05]">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
+          <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-main flex items-center gap-2">
                 <Briefcase size={14} className="text-[#FF6B4A]" />
                 <span>Initiative Realization</span>
               </span>
-              <span className="text-[11px] font-mono text-zinc-400">
+              <span className="text-[11px] font-mono text-muted">
                 {orgStats.completedProjects} / {orgStats.totalProjects} Completed
               </span>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <div className="flex justify-between text-zinc-400 mb-1 text-[11px]">
+                <div className="flex justify-between text-muted mb-1 text-[11px]">
                   <span>Completed Initiatives</span>
-                  <span className="text-white font-mono">{orgStats.completedProjects}</span>
+                  <span className="text-main font-mono">{orgStats.completedProjects}</span>
                 </div>
                 <TrajectoryProgress
                   value={orgStats.totalProjects > 0 ? (orgStats.completedProjects / orgStats.totalProjects) * 100 : 0}
@@ -218,9 +218,9 @@ export default function Analytics() {
               </div>
 
               <div>
-                <div className="flex justify-between text-zinc-400 mb-1 text-[11px]">
+                <div className="flex justify-between text-muted mb-1 text-[11px]">
                   <span>Active Workstreams</span>
-                  <span className="text-white font-mono">{orgStats.totalProjects - orgStats.completedProjects}</span>
+                  <span className="text-main font-mono">{orgStats.totalProjects - orgStats.completedProjects}</span>
                 </div>
                 <TrajectoryProgress
                   value={orgStats.totalProjects > 0 ? ((orgStats.totalProjects - orgStats.completedProjects) / orgStats.totalProjects) * 100 : 0}
@@ -231,22 +231,22 @@ export default function Analytics() {
           </div>
 
           {/* Task Throughput */}
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.05]">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
+          <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-main flex items-center gap-2">
                 <CheckSquare size={14} className="text-[#FF6B4A]" />
                 <span>Task Throughput & Velocity</span>
               </span>
-              <span className="text-[11px] font-mono text-zinc-400">
+              <span className="text-[11px] font-mono text-muted">
                 {orgStats.doneTasks} / {orgStats.totalTasks} Done
               </span>
             </div>
 
             <div className="space-y-3 text-xs">
               <div>
-                <div className="flex justify-between text-zinc-400 mb-1 text-[11px]">
+                <div className="flex justify-between text-muted mb-1 text-[11px]">
                   <span>Completed Deliverables</span>
-                  <span className="text-white font-mono">{orgStats.doneTasks}</span>
+                  <span className="text-main font-mono">{orgStats.doneTasks}</span>
                 </div>
                 <TrajectoryProgress
                   value={orgStats.totalTasks > 0 ? (orgStats.doneTasks / orgStats.totalTasks) * 100 : 0}
@@ -255,9 +255,9 @@ export default function Analytics() {
               </div>
 
               <div>
-                <div className="flex justify-between text-zinc-400 mb-1 text-[11px]">
+                <div className="flex justify-between text-muted mb-1 text-[11px]">
                   <span>In Progress Deliverables</span>
-                  <span className="text-white font-mono">{orgStats.inProgressTasks}</span>
+                  <span className="text-main font-mono">{orgStats.inProgressTasks}</span>
                 </div>
                 <TrajectoryProgress
                   value={orgStats.totalTasks > 0 ? (orgStats.inProgressTasks / orgStats.totalTasks) * 100 : 0}
@@ -268,9 +268,9 @@ export default function Analytics() {
           </div>
 
           {/* Revenue Realization */}
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.05]">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
+          <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-main flex items-center gap-2">
                 <DollarSign size={14} className="text-[#FF6B4A]" />
                 <span>Financial Realization Rate</span>
               </span>
@@ -283,9 +283,9 @@ export default function Analytics() {
 
             <div className="space-y-3 text-xs">
               <div>
-                <div className="flex justify-between text-zinc-400 mb-1 text-[11px] font-mono">
+                <div className="flex justify-between text-muted mb-1 text-[11px] font-mono">
                   <span>Cleared Revenue ({currency})</span>
-                  <span className="text-white font-bold">{fmt(orgStats.paidValue, currency)}</span>
+                  <span className="text-main font-bold">{fmt(orgStats.paidValue, currency)}</span>
                 </div>
                 <TrajectoryProgress
                   value={orgStats.paidValue + orgStats.pendingValue > 0 ? (orgStats.paidValue / (orgStats.paidValue + orgStats.pendingValue)) * 100 : 100}
@@ -294,7 +294,7 @@ export default function Analytics() {
               </div>
 
               <div>
-                <div className="flex justify-between text-zinc-400 mb-1 text-[11px] font-mono">
+                <div className="flex justify-between text-muted mb-1 text-[11px] font-mono">
                   <span>Pending Receivables ({currency})</span>
                   <span className="text-amber-400 font-bold">{fmt(orgStats.pendingValue, currency)}</span>
                 </div>
@@ -307,9 +307,9 @@ export default function Analytics() {
           </div>
 
           {/* System & Architecture Telemetry */}
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-5 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.05]">
-              <span className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
+          <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
+              <span className="text-xs font-mono font-bold uppercase tracking-wider text-main flex items-center gap-2">
                 <Activity size={14} className="text-[#FF6B4A]" />
                 <span>Architecture Health</span>
               </span>
@@ -317,16 +317,16 @@ export default function Analytics() {
             </div>
 
             <div className="space-y-2 text-xs font-mono">
-              <div className="flex items-center justify-between p-2.5 rounded bg-[#08090C] border border-white/[0.04]">
-                <span className="text-zinc-400">Realtime SFU Protocol</span>
+              <div className="flex items-center justify-between p-2.5 rounded bg-card-bg border border-divider">
+                <span className="text-muted">Realtime SFU Protocol</span>
                 <span className="text-emerald-400 font-semibold">Healthy · 0 dropouts</span>
               </div>
-              <div className="flex items-center justify-between p-2.5 rounded bg-[#08090C] border border-white/[0.04]">
-                <span className="text-zinc-400">E2EE Cryptographic Mesh</span>
+              <div className="flex items-center justify-between p-2.5 rounded bg-card-bg border border-divider">
+                <span className="text-muted">E2EE Cryptographic Mesh</span>
                 <span className="text-emerald-400 font-semibold">P-256 ECDH Synced</span>
               </div>
-              <div className="flex items-center justify-between p-2.5 rounded bg-[#08090C] border border-white/[0.04]">
-                <span className="text-zinc-400">Database Postgres RLS</span>
+              <div className="flex items-center justify-between p-2.5 rounded bg-card-bg border border-divider">
+                <span className="text-muted">Database Postgres RLS</span>
                 <span className="text-emerald-400 font-semibold">Isolated & Active</span>
               </div>
             </div>
@@ -334,25 +334,25 @@ export default function Analytics() {
 
         </div>
       ) : (
-        <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-5 space-y-4 max-w-xl">
-          <div className="flex items-center justify-between pb-3 border-b border-white/[0.05]">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-white">Personal Milestone Progress</span>
-            <span className="text-xs font-mono text-zinc-400">{personalStats.done} of {personalStats.total} done</span>
+        <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4 max-w-xl">
+          <div className="flex items-center justify-between pb-3 border-b border-divider">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-main">Personal Milestone Progress</span>
+            <span className="text-xs font-mono text-muted">{personalStats.done} of {personalStats.total} done</span>
           </div>
 
           <div className="space-y-3 text-xs">
             <div>
-              <div className="flex justify-between text-zinc-400 mb-1 text-[11px]">
+              <div className="flex justify-between text-muted mb-1 text-[11px]">
                 <span>Completed</span>
-                <span className="text-white font-mono">{personalStats.done}</span>
+                <span className="text-main font-mono">{personalStats.done}</span>
               </div>
               <TrajectoryProgress value={personalStats.total > 0 ? (personalStats.done / personalStats.total) * 100 : 0} color="#10B981" />
             </div>
 
             <div>
-              <div className="flex justify-between text-zinc-400 mb-1 text-[11px]">
+              <div className="flex justify-between text-muted mb-1 text-[11px]">
                 <span>In Progress</span>
-                <span className="text-white font-mono">{personalStats.inProgress}</span>
+                <span className="text-main font-mono">{personalStats.inProgress}</span>
               </div>
               <TrajectoryProgress value={personalStats.total > 0 ? (personalStats.inProgress / personalStats.total) * 100 : 0} color="#FF6B4A" />
             </div>

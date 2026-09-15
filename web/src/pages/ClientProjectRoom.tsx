@@ -142,13 +142,13 @@ export default function ClientProjectRoom() {
   if (!project) {
     return (
       <div className="text-center py-24 font-sans select-none space-y-4">
-        <p className="text-zinc-400 text-sm font-semibold">Access Denied or Project Not Found</p>
+        <p className="text-muted text-sm font-semibold">Access Denied or Project Not Found</p>
         <p className="text-zinc-600 text-xs max-w-md mx-auto">
           You do not have authorization to view this client project room, or this project does not exist.
         </p>
         <button
           onClick={() => navigate('/projects')}
-          className="px-4 py-2 bg-[#FF6B4A] text-white rounded text-xs font-semibold hover:bg-[#FF552B] transition-colors"
+          className="px-4 py-2 bg-[#FF6B4A] text-main rounded text-xs font-semibold hover:bg-[#FF552B] transition-colors"
         >
           Return to Projects
         </button>
@@ -159,7 +159,7 @@ export default function ClientProjectRoom() {
   const isSealed = project.status === 'completed';
 
   return (
-    <div className="flex-1 space-y-6 pb-16 font-sans select-none text-white max-w-6xl mx-auto">
+    <div className="flex-1 space-y-6 pb-16 font-sans select-none text-main max-w-6xl mx-auto">
       {/* ── Preview Mode Warning Banner ── */}
       {isPreviewMode && (
         <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -180,48 +180,48 @@ export default function ClientProjectRoom() {
       )}
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white/[0.06] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-divider pb-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#FF6B4A]/10 text-[#FF6B4A] border border-[#FF6B4A]/20 font-bold uppercase tracking-wider">
               {isSealed ? 'PROJECT PASSPORT' : 'CLIENT PROJECT ROOM'}
             </span>
-            <span className="text-xs text-zinc-500 font-mono">CF-PRJ-{project.id.slice(0, 6)}</span>
+            <span className="text-xs text-muted font-mono">CF-PRJ-{project.id.slice(0, 6)}</span>
             {clientAccess && (
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-semibold uppercase tracking-wider">
                 {clientAccess.access_role || 'CLIENT'}
               </span>
             )}
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white mt-1">{project.title}</h1>
-          <p className="text-xs text-zinc-400 mt-0.5">{project.description || 'Transparent client portal & verified project records'}</p>
+          <h1 className="text-2xl font-bold tracking-tight text-main mt-1">{project.title}</h1>
+          <p className="text-xs text-muted mt-0.5">{project.description || 'Transparent client portal & verified project records'}</p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={() => { setWhyType('delivery'); setIsWhyOpen(true); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-bold transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-bold transition-colors shadow-sm"
           >
             <HelpCircle size={14} />
             <span>ASK WHY?</span>
           </button>
           <button
             onClick={() => setIsDnaOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10121A] hover:bg-[#151822] text-zinc-300 hover:text-white border border-white/[0.06] text-xs font-semibold"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs font-semibold"
           >
             <Layers size={14} className="text-emerald-400" />
             <span>Project DNA</span>
           </button>
           <button
             onClick={() => setIsProofOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10121A] hover:bg-[#151822] text-zinc-300 hover:text-white border border-white/[0.06] text-xs font-semibold"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs font-semibold"
           >
             <ShieldCheck size={14} className="text-emerald-400" />
             <span>Proof Mode</span>
           </button>
           <button
             onClick={() => navigate(`/projects/${project.id}`)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] text-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs"
           >
             <ArrowLeft size={13} />
             <span>Workspace</span>
@@ -230,7 +230,7 @@ export default function ClientProjectRoom() {
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-white/[0.06] gap-2 overflow-x-auto">
+      <div className="flex border-b border-divider gap-2 overflow-x-auto">
         {[
           { id: 'overview', label: 'OVERVIEW' },
           { id: 'journey', label: 'PROJECT JOURNEY' },
@@ -244,7 +244,7 @@ export default function ClientProjectRoom() {
             className={`px-4 py-2 text-xs font-bold tracking-wider rounded-t-lg transition-colors border-b-2 ${
               activeTab === tab.id
                 ? 'border-[#FF6B4A] text-[#FF6B4A] bg-white/[0.02]'
-                : 'border-transparent text-zinc-400 hover:text-zinc-200'
+                : 'border-transparent text-muted hover:text-zinc-200'
             }`}
           >
             {tab.label}
@@ -256,37 +256,37 @@ export default function ClientProjectRoom() {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           {/* Responsibility Clock Banner */}
-          <div className="p-4 rounded-xl bg-gradient-to-r from-[#12141F] to-[#0A0B10] border border-white/[0.08] flex items-center justify-between">
+          <div className="p-4 rounded-xl bg-gradient-to-r from-[#12141F] to-[#0A0B10] border border-divider flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A]">
                 <Clock size={20} />
               </div>
               <div>
-                <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider block">CURRENT RESPONSIBILITY CLOCK</span>
-                <span className="text-sm font-bold text-white mt-0.5 flex items-center gap-2">
+                <span className="text-[10px] font-mono text-muted uppercase tracking-wider block">CURRENT RESPONSIBILITY CLOCK</span>
+                <span className="text-sm font-bold text-main mt-0.5 flex items-center gap-2">
                   With {respData?.held_by === 'CLIENT' ? 'CLIENT (Your Review)' : 'PROJECT OWNER (Active Sprint)'}
-                  <span className="text-[10px] font-mono font-normal px-2 py-0.5 rounded bg-white/[0.05] text-zinc-300">
+                  <span className="text-[10px] font-mono font-normal px-2 py-0.5 rounded bg-white/[0.05] text-muted">
                     {respData?.durationFormatted || 'Active'}
                   </span>
                 </span>
               </div>
             </div>
-            <span className="text-xs text-zinc-400 font-mono">{respData?.action_item || 'Execution ongoing'}</span>
+            <span className="text-xs text-muted font-mono">{respData?.action_item || 'Execution ongoing'}</span>
           </div>
 
           {/* 4 Flagship WHY Metric Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Progress */}
-            <div className="p-4 rounded-xl bg-[#0C0D12] border border-white/[0.06] flex flex-col justify-between space-y-3">
+            <div className="p-4 rounded-xl bg-card-bg border border-divider flex flex-col justify-between space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">PROJECT PROGRESS</span>
+                <span className="text-[10px] font-mono text-muted uppercase tracking-wider">PROJECT PROGRESS</span>
                 <Activity size={16} className="text-[#FF6B4A]" />
               </div>
               <div>
                 <span className="text-3xl font-extrabold text-[#FF6B4A] tracking-tight font-mono">
                   {progressData?.overallProgress || 0}%
                 </span>
-                <span className="text-[10px] text-zinc-400 block mt-1">
+                <span className="text-[10px] text-muted block mt-1">
                   {progressData?.completedTasks || 0} / {progressData?.totalTasks || 0} Deliverables Done
                 </span>
               </div>
@@ -299,16 +299,16 @@ export default function ClientProjectRoom() {
             </div>
 
             {/* Delivery */}
-            <div className="p-4 rounded-xl bg-[#0C0D12] border border-white/[0.06] flex flex-col justify-between space-y-3">
+            <div className="p-4 rounded-xl bg-card-bg border border-divider flex flex-col justify-between space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">COMMITTED DELIVERY</span>
+                <span className="text-[10px] font-mono text-muted uppercase tracking-wider">COMMITTED DELIVERY</span>
                 <Calendar size={16} className="text-blue-400" />
               </div>
               <div>
-                <span className="text-xl font-extrabold text-white tracking-tight">
+                <span className="text-xl font-extrabold text-main tracking-tight">
                   {deliveryData?.currentDeliveryDate ? new Date(deliveryData.currentDeliveryDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Open'}
                 </span>
-                <span className="text-[10px] text-zinc-400 block mt-1">
+                <span className="text-[10px] text-muted block mt-1">
                   Baseline: {deliveryData?.baselineDate ? new Date(deliveryData.baselineDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : '—'}
                 </span>
               </div>
@@ -321,16 +321,16 @@ export default function ClientProjectRoom() {
             </div>
 
             {/* Cost */}
-            <div className="p-4 rounded-xl bg-[#0C0D12] border border-white/[0.06] flex flex-col justify-between space-y-3">
+            <div className="p-4 rounded-xl bg-card-bg border border-divider flex flex-col justify-between space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">PROJECT VALUE</span>
+                <span className="text-[10px] font-mono text-muted uppercase tracking-wider">PROJECT VALUE</span>
                 <DollarSign size={16} className="text-emerald-400" />
               </div>
               <div>
-                <span className="text-2xl font-extrabold text-white tracking-tight font-mono">
+                <span className="text-2xl font-extrabold text-main tracking-tight font-mono">
                   ₹{Number(costData?.currentCost || 0).toLocaleString('en-IN')}
                 </span>
-                <span className="text-[10px] text-zinc-400 block mt-1">
+                <span className="text-[10px] text-muted block mt-1">
                   {costData?.totalCostDelta !== undefined && costData?.totalCostDelta !== 0
                     ? `${costData.totalCostDelta > 0 ? '+' : ''}₹${Math.abs(costData.totalCostDelta).toLocaleString('en-IN')} adjusted`
                     : 'Matches Baseline V1'}
@@ -345,16 +345,16 @@ export default function ClientProjectRoom() {
             </div>
 
             {/* Scope */}
-            <div className="p-4 rounded-xl bg-[#0C0D12] border border-white/[0.06] flex flex-col justify-between space-y-3">
+            <div className="p-4 rounded-xl bg-card-bg border border-divider flex flex-col justify-between space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider">SCOPE COUNT</span>
+                <span className="text-[10px] font-mono text-muted uppercase tracking-wider">SCOPE COUNT</span>
                 <Layers size={16} className="text-purple-400" />
               </div>
               <div>
-                <span className="text-2xl font-extrabold text-white tracking-tight">
+                <span className="text-2xl font-extrabold text-main tracking-tight">
                   {scopeData?.currentScopeCount ?? (progressData?.totalTasks || 0)} Deliverables
                 </span>
-                <span className="text-[10px] text-zinc-400 block mt-1">
+                <span className="text-[10px] text-muted block mt-1">
                   Original: {scopeData?.baselineScopeCount ?? (progressData?.totalTasks || 0)} Items
                 </span>
               </div>
@@ -369,14 +369,14 @@ export default function ClientProjectRoom() {
 
           {/* Seal / Completion Action for Completed Project */}
           {!isSealed && (
-            <div className="p-4 rounded-xl bg-[#10121A] border border-white/[0.06] flex items-center justify-between">
+            <div className="p-4 rounded-xl bg-hover border border-divider flex items-center justify-between">
               <div>
-                <span className="text-xs font-bold text-white block">Project Ready for Final Delivery Seal?</span>
-                <span className="text-[11px] text-zinc-400">Lock immutable project passport and seal contractual records permanently.</span>
+                <span className="text-xs font-bold text-main block">Project Ready for Final Delivery Seal?</span>
+                <span className="text-[11px] text-muted">Lock immutable project passport and seal contractual records permanently.</span>
               </div>
               <button
                 onClick={handleSeal}
-                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors flex items-center gap-2"
+                className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-main text-xs font-bold transition-colors flex items-center gap-2"
               >
                 <Award size={14} />
                 <span>SIGN FINAL ACCEPTANCE & SEAL</span>
@@ -388,33 +388,33 @@ export default function ClientProjectRoom() {
 
       {/* ── 2. PROJECT JOURNEY TAB ── */}
       {activeTab === 'journey' && (
-        <div className="p-6 bg-[#0C0D12] border border-white/[0.06] rounded-xl space-y-6">
-          <h2 className="text-sm font-bold text-zinc-300 uppercase tracking-wider">Milestone Execution Trajectory</h2>
+        <div className="p-6 bg-card-bg border border-divider rounded-xl space-y-6">
+          <h2 className="text-sm font-bold text-muted uppercase tracking-wider">Milestone Execution Trajectory</h2>
           <div className="relative pl-6 space-y-6 before:absolute before:left-2.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-white/[0.1]">
             {project.project_milestones && project.project_milestones.length > 0 ? (
               project.project_milestones.map((m: any, idx: number) => (
                 <div key={m.id} className="relative flex items-start gap-4">
                   <div className={`absolute -left-6 top-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    m.completed ? 'bg-emerald-500 text-black' : 'bg-[#181A24] border-2 border-zinc-500 text-zinc-400'
+                    m.completed ? 'bg-emerald-500 text-black' : 'bg-[#181A24] border-2 border-zinc-500 text-muted'
                   }`}>
                     {m.completed ? '✓' : idx + 1}
                   </div>
-                  <div className="flex-1 bg-[#10121A] border border-white/[0.05] p-4 rounded-lg">
+                  <div className="flex-1 bg-hover border border-divider p-4 rounded-lg">
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-bold text-white">{m.title}</span>
-                      <span className="text-xs font-mono text-zinc-400">
+                      <span className="text-sm font-bold text-main">{m.title}</span>
+                      <span className="text-xs font-mono text-muted">
                         {m.due_date ? new Date(m.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'Open'}
                       </span>
                     </div>
-                    <p className="text-xs text-zinc-400 mt-1">{m.description || 'Milestone deliverables and validation criteria.'}</p>
-                    <div className="mt-3 flex items-center justify-between text-[11px] font-mono text-zinc-500">
+                    <p className="text-xs text-muted mt-1">{m.description || 'Milestone deliverables and validation criteria.'}</p>
+                    <div className="mt-3 flex items-center justify-between text-[11px] font-mono text-muted">
                       <span>Status: {m.completed ? 'COMPLETED & VERIFIED' : 'IN PROGRESS'}</span>
                     </div>
                   </div>
                 </div>
               ))
             ) : (
-              <p className="text-xs text-zinc-500">No milestones mapped for this initiative.</p>
+              <p className="text-xs text-muted">No milestones mapped for this initiative.</p>
             )}
           </div>
         </div>
@@ -424,12 +424,12 @@ export default function ClientProjectRoom() {
       {activeTab === 'changes' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-400">
+            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-muted">
               Formal Change Requests & Impact Decisions
             </h2>
             <button
               onClick={() => setIsCROpen(true)}
-              className="px-3 py-1.5 rounded-lg bg-[#FF6B4A] hover:bg-[#FF5530] text-white text-xs font-bold transition-colors flex items-center gap-1.5"
+              className="px-3 py-1.5 rounded-lg bg-[#FF6B4A] hover:bg-[#FF5530] text-main text-xs font-bold transition-colors flex items-center gap-1.5"
             >
               <GitBranch size={13} />
               <span>Propose Change Request</span>
@@ -439,13 +439,13 @@ export default function ClientProjectRoom() {
           {pendingCRs.length > 0 ? (
             <div className="space-y-3">
               {pendingCRs.map((cr) => (
-                <div key={cr.id} className="p-4 bg-[#0C0D12] border border-white/[0.06] rounded-xl space-y-3">
+                <div key={cr.id} className="p-4 bg-card-bg border border-divider rounded-xl space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono font-bold px-2 py-0.5 rounded bg-[#FF6B4A]/10 text-[#FF6B4A] border border-[#FF6B4A]/20">
                         {cr.cr_code}
                       </span>
-                      <span className="text-sm font-bold text-white">{cr.title}</span>
+                      <span className="text-sm font-bold text-main">{cr.title}</span>
                     </div>
                     <span className={`text-[10px] font-mono px-2 py-0.5 rounded uppercase font-bold ${
                       cr.status === 'accepted' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
@@ -456,25 +456,25 @@ export default function ClientProjectRoom() {
                     </span>
                   </div>
 
-                  <p className="text-xs text-zinc-400">{cr.description || 'No additional rationale.'}</p>
+                  <p className="text-xs text-muted">{cr.description || 'No additional rationale.'}</p>
 
                   <div className="grid grid-cols-3 gap-2 bg-[#12141C] p-3 rounded-lg text-xs font-mono">
                     <div>
-                      <span className="text-[10px] text-zinc-500 block">Cost Impact</span>
-                      <span className="text-white font-bold">{cr.cost_impact >= 0 ? '+' : ''}₹{cr.cost_impact}</span>
+                      <span className="text-[10px] text-muted block">Cost Impact</span>
+                      <span className="text-main font-bold">{cr.cost_impact >= 0 ? '+' : ''}₹{cr.cost_impact}</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-zinc-500 block">Schedule Impact</span>
-                      <span className="text-white font-bold">{cr.schedule_impact_days >= 0 ? '+' : ''}{cr.schedule_impact_days} Days</span>
+                      <span className="text-[10px] text-muted block">Schedule Impact</span>
+                      <span className="text-main font-bold">{cr.schedule_impact_days >= 0 ? '+' : ''}{cr.schedule_impact_days} Days</span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-zinc-500 block">Scope Impact</span>
-                      <span className="text-white font-bold">{cr.scope_impact_count >= 0 ? '+' : ''}{cr.scope_impact_count} Deliverables</span>
+                      <span className="text-[10px] text-muted block">Scope Impact</span>
+                      <span className="text-main font-bold">{cr.scope_impact_count >= 0 ? '+' : ''}{cr.scope_impact_count} Deliverables</span>
                     </div>
                   </div>
 
                   {cr.status === 'pending' && (
-                    <div className="pt-2 flex items-center justify-end gap-2 border-t border-white/[0.04]">
+                    <div className="pt-2 flex items-center justify-end gap-2 border-t border-divider">
                       <button
                         onClick={() => handleDecision(cr.id, 'rejected')}
                         className="px-3 py-1.5 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-semibold border border-red-500/20 transition-colors"
@@ -483,7 +483,7 @@ export default function ClientProjectRoom() {
                       </button>
                       <button
                         onClick={() => handleDecision(cr.id, 'accepted')}
-                        className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-colors"
+                        className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-main text-xs font-bold transition-colors"
                       >
                         Accept & Update Commitment Baseline
                       </button>
@@ -493,7 +493,7 @@ export default function ClientProjectRoom() {
               ))}
             </div>
           ) : (
-            <div className="p-8 bg-[#0C0D12] border border-white/[0.04] rounded-xl text-center text-xs text-zinc-500">
+            <div className="p-8 bg-card-bg border border-divider rounded-xl text-center text-xs text-muted">
               No change requests submitted. Contractual commitment matches Baseline V1.
             </div>
           )}
@@ -502,20 +502,20 @@ export default function ClientProjectRoom() {
 
       {/* ── 4. PROOF & RECEIPTS TAB ── */}
       {activeTab === 'proof' && (
-        <div className="p-6 bg-[#0C0D12] border border-white/[0.06] rounded-xl space-y-4">
+        <div className="p-6 bg-card-bg border border-divider rounded-xl space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-muted flex items-center gap-2">
               <Award size={16} className="text-[#FF6B4A]" />
               Immutable Project Receipts & Proof Vault
             </h2>
             <button
               onClick={() => setIsProofOpen(true)}
-              className="px-3 py-1.5 bg-white/[0.04] hover:bg-white/[0.08] text-xs font-semibold rounded border border-white/[0.06]"
+              className="px-3 py-1.5 bg-white/[0.04] hover:bg-white/[0.08] text-xs font-semibold rounded border border-divider"
             >
               Open Proof Inspector
             </button>
           </div>
-          <p className="text-xs text-zinc-400 leading-relaxed">
+          <p className="text-xs text-muted leading-relaxed">
             Every client approval, milestone acceptance, scope alteration, and final handover generates a permanent verifiable receipt code (e.g. AV-PR-00291) sealed cryptographically in the AUVRYN database.
           </p>
         </div>
@@ -523,11 +523,11 @@ export default function ClientProjectRoom() {
 
       {/* ── 5. PASSPORT TAB (For Sealed Projects) ── */}
       {activeTab === 'passport' && isSealed && (
-        <div className="p-6 bg-[#0C0D12] border border-emerald-500/30 rounded-xl space-y-6">
-          <div className="flex items-center justify-between border-b border-white/[0.06] pb-4">
+        <div className="p-6 bg-card-bg border border-emerald-500/30 rounded-xl space-y-6">
+          <div className="flex items-center justify-between border-b border-divider pb-4">
             <div>
               <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-wider block font-bold">OFFICIAL PROJECT PASSPORT</span>
-              <h2 className="text-xl font-bold text-white mt-1">Permanent Handover Record</h2>
+              <h2 className="text-xl font-bold text-main mt-1">Permanent Handover Record</h2>
             </div>
             <span className="px-3 py-1 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-mono text-xs font-bold">
               SEALED & ARCHIVED
@@ -535,17 +535,17 @@ export default function ClientProjectRoom() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-4 bg-[#10121A] rounded-lg border border-white/[0.05]">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase block">Deliverables Delivered</span>
-              <span className="text-lg font-bold text-white mt-1 block font-mono">100% Complete</span>
+            <div className="p-4 bg-hover rounded-lg border border-divider">
+              <span className="text-[10px] font-mono text-muted uppercase block">Deliverables Delivered</span>
+              <span className="text-lg font-bold text-main mt-1 block font-mono">100% Complete</span>
             </div>
-            <div className="p-4 bg-[#10121A] rounded-lg border border-white/[0.05]">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase block">Warranty Period</span>
+            <div className="p-4 bg-hover rounded-lg border border-divider">
+              <span className="text-[10px] font-mono text-muted uppercase block">Warranty Period</span>
               <span className="text-lg font-bold text-emerald-400 mt-1 block">90 Days Active</span>
             </div>
-            <div className="p-4 bg-[#10121A] rounded-lg border border-white/[0.05]">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase block">Handover Repository</span>
-              <span className="text-lg font-bold text-white mt-1 block">Production Handoff Verified</span>
+            <div className="p-4 bg-hover rounded-lg border border-divider">
+              <span className="text-[10px] font-mono text-muted uppercase block">Handover Repository</span>
+              <span className="text-lg font-bold text-main mt-1 block">Production Handoff Verified</span>
             </div>
           </div>
         </div>

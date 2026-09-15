@@ -62,10 +62,10 @@ export function RecordingsView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] text-white">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] text-main">
       <div className="p-8 pb-4">
         <h1 className="text-3xl font-bold mb-2">Recordings</h1>
-        <p className="text-gray-400">View and manage all your saved meeting recordings.</p>
+        <p className="text-muted">View and manage all your saved meeting recordings.</p>
       </div>
 
       <div className="flex-1 overflow-y-auto p-8 pt-4">
@@ -74,7 +74,7 @@ export function RecordingsView() {
             Loading recordings...
           </div>
         ) : recordings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-center border-2 border-dashed border-white/10 rounded-2xl">
+          <div className="flex flex-col items-center justify-center h-64 text-center border-2 border-dashed border-divider rounded-2xl">
             <Video size={48} className="text-gray-600 mb-4" />
             <h3 className="text-xl font-bold mb-2">No Recordings Found</h3>
             <p className="text-gray-500 max-w-sm">
@@ -111,7 +111,7 @@ export function RecordingsView() {
                   <h3 className="font-bold text-lg mb-1 truncate">
                     {recording.meetings?.title || 'Untitled Meeting'}
                   </h3>
-                  <p className="text-gray-400 text-xs mb-4">
+                  <p className="text-muted text-xs mb-4">
                     {new Date(recording.started_at).toLocaleDateString()} at {new Date(recording.started_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                   </p>
                   
@@ -134,7 +134,7 @@ export function RecordingsView() {
                     {recording.recording_status === 'completed' && recording.file_url && (
                       <button 
                         onClick={() => window.open(recording.file_url, '_blank')}
-                        className="text-gray-400 hover:text-white transition-colors"
+                        className="text-muted hover:text-main transition-colors"
                         title="Download"
                       >
                         <Download size={18} />

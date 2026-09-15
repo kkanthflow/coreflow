@@ -272,13 +272,13 @@ export default function Dashboard() {
   const nextMeeting = upcomingMeetings[0];
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       
       {/* ── 1. Top Greeting & Operational Statement ── */}
-      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 border-b border-white/[0.05] pb-4">
+      <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 border-b border-divider pb-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted">
               {orgName ? `${orgName} Command` : 'Single Operator Workspace'}
             </span>
             <span className="w-1 h-1 rounded-full bg-zinc-600" />
@@ -287,10 +287,10 @@ export default function Dashboard() {
               Operational
             </span>
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+          <h1 className="text-xl sm:text-2xl font-bold text-main tracking-tight">
             Good afternoon, {firstName}
           </h1>
-          <p className="text-xs text-zinc-400 mt-0.5 font-normal">
+          <p className="text-xs text-muted mt-0.5 font-normal">
             Here is what needs your attention today across active pipelines.
           </p>
         </div>
@@ -299,7 +299,7 @@ export default function Dashboard() {
           <button
             onClick={handleRefresh}
             disabled={refreshing}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white text-[11px] font-mono border border-white/[0.06] transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-muted hover:text-main text-[11px] font-mono border border-divider transition-colors"
           >
             <RefreshCw size={12} className={refreshing ? 'animate-spin text-[#FF6B4A]' : ''} />
             <span>SYNC</span>
@@ -308,7 +308,7 @@ export default function Dashboard() {
           {hasPermission(role, 'schedule_meetings') && (
             <button
               onClick={() => navigate('/meetings/new')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-[11px] font-semibold transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-[11px] font-semibold transition-colors shadow-sm"
             >
               <Plus size={13} />
               <span>New Meeting</span>
@@ -319,8 +319,8 @@ export default function Dashboard() {
 
       {/* ── 2. Attention Center (Signal Line Resolve Motion) ── */}
       {attentionItems.length > 0 && (
-        <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-3 sm:p-4">
-          <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 mb-2.5 flex items-center gap-1.5">
+        <div className="bg-card-bg border border-divider rounded-lg p-3 sm:p-4">
+          <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted mb-2.5 flex items-center gap-1.5">
             <AlertCircle size={12} className="text-[#FF6B4A]" />
             <span>Attention Required</span>
           </div>
@@ -351,16 +351,16 @@ export default function Dashboard() {
                     <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${
                       item.isWarning ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
                       item.isOrange ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] border border-[#FF6B4A]/20' :
-                      'bg-zinc-800 text-zinc-400 border border-white/[0.06]'
+                      'bg-zinc-800 text-muted border border-divider'
                     }`}>
                       {item.type}
                     </span>
                     <div>
-                      <div className="text-xs font-semibold text-white group-hover:text-[#FF6B4A] transition-colors">{item.title}</div>
-                      <div className="text-[11px] text-zinc-500">{item.subtitle}</div>
+                      <div className="text-xs font-semibold text-main group-hover:text-[#FF6B4A] transition-colors">{item.title}</div>
+                      <div className="text-[11px] text-muted">{item.subtitle}</div>
                     </div>
                   </div>
-                  <ArrowRight size={13} className="text-zinc-600 group-hover:text-zinc-300 group-hover:translate-x-0.5 transition-all" />
+                  <ArrowRight size={13} className="text-zinc-600 group-hover:text-muted group-hover:translate-x-0.5 transition-all" />
                 </Link>
               </motion.div>
             ))}
@@ -369,10 +369,10 @@ export default function Dashboard() {
       )}
 
       {/* ── 3. Workspace Pulse Wave & Telemetry Trajectory (Command Center Activation) ── */}
-      <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-card-bg border border-divider rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1.5">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1.5">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
               <Activity size={12} className="text-[#FF6B4A] animate-pulse" />
               <span>Workspace Pulse Wave</span>
               {isFromAuthUnlock && (
@@ -381,7 +381,7 @@ export default function Dashboard() {
                 </span>
               )}
             </span>
-            <span className="text-xs font-mono font-bold text-white">92% · Stable</span>
+            <span className="text-xs font-mono font-bold text-main">92% · Stable</span>
           </div>
 
           {/* Precision Trajectory Line with Pulse Wave Travelling Node */}
@@ -412,7 +412,7 @@ export default function Dashboard() {
             />
           </div>
 
-          <div className="flex items-center gap-4 mt-2 text-[10px] font-mono text-zinc-500">
+          <div className="flex items-center gap-4 mt-2 text-[10px] font-mono text-muted">
             <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#FF6B4A]" /> {projects.length} Active Workstreams</span>
             <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {stats.upcoming} Upcoming Sessions</span>
             <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-zinc-600" /> 0 Critical Blockers</span>
@@ -430,13 +430,13 @@ export default function Dashboard() {
         <div className="xl:col-span-8 space-y-6">
           
           {/* Active Projects (Compact Engineering Objects with Horizontal Trajectory) */}
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4">
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.05]">
+          <div className="bg-card-bg border border-divider rounded-lg p-4">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-divider">
               <div className="flex items-center gap-2">
                 <FolderKanban size={14} className="text-[#FF6B4A]" />
-                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Active Projects</h2>
+                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-main">Active Projects</h2>
               </div>
-              <Link to="/projects" className="text-[11px] text-zinc-400 hover:text-[#FF6B4A] transition-colors font-medium flex items-center gap-1">
+              <Link to="/projects" className="text-[11px] text-muted hover:text-[#FF6B4A] transition-colors font-medium flex items-center gap-1">
                 <span>View all</span>
                 <ChevronRight size={12} />
               </Link>
@@ -448,7 +448,7 @@ export default function Dashboard() {
                 <div className="h-10 bg-white/[0.02] rounded animate-pulse" />
               </div>
             ) : projects.length === 0 ? (
-              <div className="py-8 text-center text-xs text-zinc-500">
+              <div className="py-8 text-center text-xs text-muted">
                 No active projects found. <Link to="/projects/new" className="text-[#FF6B4A] font-semibold">Create project →</Link>
               </div>
             ) : (
@@ -462,16 +462,16 @@ export default function Dashboard() {
                   >
                     <Link
                       to={`/projects/${p.id}`}
-                      className="block p-3 rounded bg-[#08090C] hover:bg-[#10121A] border border-white/[0.04] hover:border-white/[0.1] transition-all group"
+                      className="block p-3 rounded bg-card-bg hover:bg-hover border border-divider hover:border-white/[0.1] transition-all group"
                     >
                       <div className="flex items-center justify-between gap-4 mb-2">
                         <div className="flex items-center gap-2.5 min-w-0">
                           <span className="w-2 h-2 rounded-[2px] shrink-0" style={{ backgroundColor: p.cover_color || '#FF6B4A' }} />
-                          <span className="text-xs font-semibold text-white group-hover:text-[#FF6B4A] transition-colors truncate">
+                          <span className="text-xs font-semibold text-main group-hover:text-[#FF6B4A] transition-colors truncate">
                             {p.title}
                           </span>
                         </div>
-                        <span className="text-[10px] font-mono text-zinc-400 shrink-0">
+                        <span className="text-[10px] font-mono text-muted shrink-0">
                           {p.doneCount}/{p.deliverablesCount} Deliverables
                         </span>
                       </div>
@@ -501,13 +501,13 @@ export default function Dashboard() {
           </div>
 
           {/* Assigned Deliverables Queue */}
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4">
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.05]">
+          <div className="bg-card-bg border border-divider rounded-lg p-4">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-divider">
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-[#FF6B4A]" />
-                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Assigned Deliverables</h2>
+                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-main">Assigned Deliverables</h2>
               </div>
-              <Link to="/tasks" className="text-[11px] text-zinc-400 hover:text-[#FF6B4A] transition-colors font-medium flex items-center gap-1">
+              <Link to="/tasks" className="text-[11px] text-muted hover:text-[#FF6B4A] transition-colors font-medium flex items-center gap-1">
                 <span>Open Kanban</span>
                 <ChevronRight size={12} />
               </Link>
@@ -519,7 +519,7 @@ export default function Dashboard() {
                 <div className="h-9 bg-white/[0.02] rounded animate-pulse" />
               </div>
             ) : todoTasks.length === 0 ? (
-              <div className="py-8 text-center text-xs text-zinc-500">
+              <div className="py-8 text-center text-xs text-muted">
                 All assigned deliverables completed.
               </div>
             ) : (
@@ -540,10 +540,10 @@ export default function Dashboard() {
                           isCrit ? 'bg-red-500' : isHigh ? 'bg-[#FF6B4A]' : 'bg-zinc-600'
                         }`} />
                         <div className="min-w-0">
-                          <span className="text-xs font-semibold text-white truncate block group-hover:text-[#FF6B4A] transition-colors">
+                          <span className="text-xs font-semibold text-main truncate block group-hover:text-[#FF6B4A] transition-colors">
                             {t.title}
                           </span>
-                          <span className="text-[10px] font-mono text-zinc-500 block">
+                          <span className="text-[10px] font-mono text-muted block">
                             {t.projects?.title || 'Core Project'} · Due {t.due_date ? new Date(t.due_date).toLocaleDateString() : 'Today'}
                           </span>
                         </div>
@@ -552,7 +552,7 @@ export default function Dashboard() {
                       <span className={`text-[9px] font-mono uppercase px-2 py-0.5 rounded shrink-0 ${
                         isCrit ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
                         isHigh ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] border border-[#FF6B4A]/20' :
-                        'bg-zinc-800 text-zinc-400 border border-white/[0.05]'
+                        'bg-zinc-800 text-muted border border-divider'
                       }`}>
                         {t.priority || 'Normal'}
                       </span>
@@ -569,58 +569,58 @@ export default function Dashboard() {
         <div className="xl:col-span-4 space-y-6">
           
           {/* Upcoming Meetings (Without Calendar Box) */}
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4">
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.05]">
+          <div className="bg-card-bg border border-divider rounded-lg p-4">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-divider">
               <div className="flex items-center gap-2">
                 <Video size={14} className="text-[#FF6B4A]" />
-                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Upcoming Sessions</h2>
+                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-main">Upcoming Sessions</h2>
               </div>
-              <Link to="/meetings" className="text-[11px] text-zinc-400 hover:text-[#FF6B4A] transition-colors font-medium">
+              <Link to="/meetings" className="text-[11px] text-muted hover:text-[#FF6B4A] transition-colors font-medium">
                 Conferences
               </Link>
             </div>
 
             {nextMeeting ? (
-              <div className="p-3 rounded bg-[#10121A] border border-[#FF6B4A]/30 mb-3">
+              <div className="p-3 rounded bg-hover border border-[#FF6B4A]/30 mb-3">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[9px] font-mono font-bold text-[#FF6B4A] uppercase tracking-wider flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B4A] animate-ping" />
                     Next Meeting
                   </span>
-                  <span className="text-[10px] font-mono text-zinc-400">
+                  <span className="text-[10px] font-mono text-muted">
                     {new Date(nextMeeting.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
 
-                <div className="text-xs font-bold text-white mb-1">{nextMeeting.title || 'Executive Sync'}</div>
-                <div className="text-[10px] text-zinc-500 mb-3">{nextMeeting.participants?.length || 1} participant(s) registered</div>
+                <div className="text-xs font-bold text-main mb-1">{nextMeeting.title || 'Executive Sync'}</div>
+                <div className="text-[10px] text-muted mb-3">{nextMeeting.participants?.length || 1} participant(s) registered</div>
 
                 <Link
                   to={`/meetings/${nextMeeting.id}/prejoin`}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded transition-colors"
+                  className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold rounded transition-colors"
                 >
                   <Video size={13} />
                   <span>Join Session</span>
                 </Link>
               </div>
             ) : (
-              <div className="py-6 text-center text-xs text-zinc-500">
+              <div className="py-6 text-center text-xs text-muted">
                 No meetings scheduled.
               </div>
             )}
 
             {/* Other chronologically ordered meetings */}
             {upcomingMeetings.slice(1).map((m) => (
-              <div key={m.id} className="py-2 flex items-center justify-between border-t border-white/[0.04]">
+              <div key={m.id} className="py-2 flex items-center justify-between border-t border-divider">
                 <div>
                   <span className="text-xs text-zinc-200 block">{m.title}</span>
-                  <span className="text-[10px] font-mono text-zinc-500">
+                  <span className="text-[10px] font-mono text-muted">
                     {new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
                 <Link
                   to={`/meetings/${m.id}/prejoin`}
-                  className="px-2 py-1 text-[10px] font-semibold text-zinc-300 bg-white/[0.04] hover:bg-white/[0.08] rounded transition-colors"
+                  className="px-2 py-1 text-[10px] font-semibold text-muted bg-white/[0.04] hover:bg-white/[0.08] rounded transition-colors"
                 >
                   Enter
                 </Link>
@@ -630,13 +630,13 @@ export default function Dashboard() {
 
           {/* Team Workload Trajectory (for Managers & Executives) */}
           {teamWorkload.length > 0 && (
-            <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4">
-              <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.05]">
+            <div className="bg-card-bg border border-divider rounded-lg p-4">
+              <div className="flex items-center justify-between pb-3 mb-3 border-b border-divider">
                 <div className="flex items-center gap-2">
                   <Users size={14} className="text-[#FF6B4A]" />
-                  <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Team Workload</h2>
+                  <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-main">Team Workload</h2>
                 </div>
-                <span className="text-[10px] font-mono text-zinc-500">Active</span>
+                <span className="text-[10px] font-mono text-muted">Active</span>
               </div>
 
               <div className="space-y-3">
@@ -645,7 +645,7 @@ export default function Dashboard() {
                     <div className="min-w-0 flex-1 mr-3">
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-xs text-zinc-200 truncate">{member.name}</span>
-                        <span className="text-[10px] font-mono text-zinc-500">{member.activeTasks} tasks</span>
+                        <span className="text-[10px] font-mono text-muted">{member.activeTasks} tasks</span>
                       </div>
                       <div className="w-full h-1 bg-[#171922] rounded-full overflow-hidden">
                         <div
@@ -661,11 +661,11 @@ export default function Dashboard() {
           )}
 
           {/* Operational Activity Timeline */}
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4">
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.05]">
+          <div className="bg-card-bg border border-divider rounded-lg p-4">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-divider">
               <div className="flex items-center gap-2">
                 <Zap size={14} className="text-[#FF6B4A]" />
-                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-white">System Telemetry</h2>
+                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-main">System Telemetry</h2>
               </div>
             </div>
 
@@ -674,8 +674,8 @@ export default function Dashboard() {
                 <div key={idx} className="flex items-start gap-3 relative z-10 text-[11px]">
                   <span className="w-2 h-2 rounded-full bg-[#FF6B4A] ring-4 ring-[#0C0D12] mt-1 shrink-0" />
                   <div className="min-w-0">
-                    <span className="font-mono text-zinc-500 text-[10px] mr-2">{act.time}</span>
-                    <span className="text-zinc-300 font-medium">{act.action}</span>
+                    <span className="font-mono text-muted text-[10px] mr-2">{act.time}</span>
+                    <span className="text-muted font-medium">{act.action}</span>
                   </div>
                 </div>
               ))}

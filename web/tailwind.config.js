@@ -40,6 +40,12 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        app: "var(--bg-app)",
+        "card-bg": "var(--bg-card)",
+        hover: "var(--bg-hover)",
+        divider: "var(--border-app)",
+        main: "var(--text-main)",
+        muted: "var(--text-muted)",
       },
       fontSize: {
         '2xs': ['0.75rem', { lineHeight: '1rem' }],      // 12px

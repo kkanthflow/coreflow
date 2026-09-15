@@ -74,7 +74,7 @@ function Bubble({
     <div className={`flex gap-2.5 group ${isMe ? 'flex-row-reverse' : 'flex-row'} items-end my-1`}>
       {/* Compact Avatar for other party */}
       {!isMe && (
-        <div className="w-7 h-7 rounded-md bg-[#13151D] border border-white/[0.08] flex items-center justify-center text-[10px] font-bold text-white shrink-0 mb-1">
+        <div className="w-7 h-7 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-[10px] font-bold text-main shrink-0 mb-1">
           {msg.sender?.avatar_url
             ? <img src={msg.sender.avatar_url} className="w-7 h-7 rounded-md object-cover" alt={initials} />
             : initials}
@@ -84,14 +84,14 @@ function Bubble({
       <div className={`max-w-[72%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
         {/* Sender name for channel context */}
         {showSender && !isMe && (
-          <span className="text-[10px] font-mono text-zinc-500 mb-1 ml-1">
+          <span className="text-[10px] font-mono text-muted mb-1 ml-1">
             {msg.sender?.full_name || 'Team Member'}
           </span>
         )}
 
         {/* Reply preview */}
         {msg.reply_message && (
-          <div className={`mb-1 px-2.5 py-1 rounded border-l-2 border-[#FF6B4A] bg-white/[0.03] text-[11px] text-zinc-400 max-w-full ${isMe ? 'mr-1' : 'ml-1'}`}>
+          <div className={`mb-1 px-2.5 py-1 rounded border-l-2 border-[#FF6B4A] bg-white/[0.03] text-[11px] text-muted max-w-full ${isMe ? 'mr-1' : 'ml-1'}`}>
             <span className="text-[#FF6B4A] font-semibold">{msg.reply_message.sender?.full_name}: </span>
             <span className="truncate">{msg.reply_message.content}</span>
           </div>
@@ -102,7 +102,7 @@ function Bubble({
           className={`relative px-3.5 py-2 rounded-lg text-[13px] leading-relaxed transition-all ${
             isMe
               ? 'bg-[#151722] text-zinc-100 border border-[#FF6B4A]/30 rounded-br-none shadow-sm'
-              : 'bg-[#0E1016] text-zinc-200 border border-white/[0.06] rounded-bl-none'
+              : 'bg-[#0E1016] text-zinc-200 border border-divider rounded-bl-none'
           } ${msg.isOptimistic ? 'opacity-60' : ''}`}
         >
           {msg.content && <p>{msg.content}</p>}
@@ -111,7 +111,7 @@ function Bubble({
           {msg.file_url && (
             <div className={`${msg.content ? 'mt-2' : ''}`}>
               {msg.file_type?.startsWith('image/') || msg.file_url?.match(/\.(jpeg|jpg|gif|png|webp)($|\?)/i) ? (
-                <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-md border border-white/[0.08] hover:opacity-90 transition-opacity">
+                <a href={msg.file_url} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-md border border-divider hover:opacity-90 transition-opacity">
                   <img src={msg.file_url} alt={msg.file_name || 'Attachment'} className="max-w-xs max-h-60 object-cover rounded-md" />
                 </a>
               ) : (
@@ -120,14 +120,14 @@ function Bubble({
                   target="_blank"
                   rel="noopener noreferrer"
                   download={msg.file_name}
-                  className="flex items-center gap-2 p-2 rounded bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-xs transition-colors"
+                  className="flex items-center gap-2 p-2 rounded bg-white/[0.04] hover:bg-white/[0.08] border border-divider text-xs transition-colors"
                 >
                   <FileText size={16} className="text-[#FF6B4A] shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <div className="text-white font-medium truncate">{msg.file_name || 'Attachment'}</div>
-                    <div className="text-[10px] text-zinc-500 font-mono uppercase">{msg.file_type?.split('/')[1] || 'FILE'}</div>
+                    <div className="text-main font-medium truncate">{msg.file_name || 'Attachment'}</div>
+                    <div className="text-[10px] text-muted font-mono uppercase">{msg.file_type?.split('/')[1] || 'FILE'}</div>
                   </div>
-                  <ChevronRight size={14} className="text-zinc-500 shrink-0" />
+                  <ChevronRight size={14} className="text-muted shrink-0" />
                 </a>
               )}
             </div>
@@ -147,7 +147,7 @@ function Bubble({
 
           <button
             onClick={() => onReply(msg)}
-            className="p-1 rounded hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="p-1 rounded hover:bg-white/[0.06] text-muted hover:text-muted transition-colors"
             title="Reply"
           >
             <CornerUpLeft size={11} />
@@ -155,7 +155,7 @@ function Bubble({
 
           <button
             onClick={handleCopy}
-            className="p-1 rounded hover:bg-white/[0.06] text-zinc-500 hover:text-zinc-300 transition-colors"
+            className="p-1 rounded hover:bg-white/[0.06] text-muted hover:text-muted transition-colors"
             title={copied ? 'Copied' : 'Copy'}
           >
             <Copy size={11} className={copied ? 'text-[#FF6B4A]' : ''} />
@@ -164,7 +164,7 @@ function Bubble({
           {canDelete && !msg.isOptimistic && (
             <button
               onClick={() => onDelete(msg.id)}
-              className="p-1 rounded hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition-colors"
+              className="p-1 rounded hover:bg-red-500/10 text-muted hover:text-red-400 transition-colors"
               title="Delete"
             >
               <Trash2 size={11} />
@@ -670,21 +670,21 @@ export default function ChatRoom() {
   );
 
   return (
-    <div className="h-full flex flex-1 -m-4 sm:-m-6 lg:-m-7 bg-[#08090C] text-zinc-300 select-none overflow-hidden font-sans">
+    <div className="h-full flex flex-1 -m-4 sm:-m-6 lg:-m-7 bg-card-bg text-muted select-none overflow-hidden font-sans">
       
       {/* ── Panel 1: Conversation Navigator (280px - 320px) ── */}
-      <div className="w-80 border-r border-white/[0.05] bg-[#0A0B10] flex flex-col h-full shrink-0 hidden md:flex">
+      <div className="w-80 border-r border-divider bg-[#0A0B10] flex flex-col h-full shrink-0 hidden md:flex">
         
         {/* Navigator Header */}
-        <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.05]">
+        <div className="h-14 px-4 flex items-center justify-between border-b border-divider">
           <div className="flex items-center gap-2">
-            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Chat</h2>
-            <span className="text-[10px] font-mono text-zinc-500">· {allChannels.length}</span>
+            <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-main">Chat</h2>
+            <span className="text-[10px] font-mono text-muted">· {allChannels.length}</span>
           </div>
 
           <button
             onClick={() => navigate('/chat')}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#13151D] hover:bg-[#181B26] border border-white/[0.06] text-zinc-300 hover:text-white text-[11px] font-medium transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#13151D] hover:bg-[#181B26] border border-divider text-muted hover:text-main text-[11px] font-medium transition-colors"
             title="Compose new conversation"
           >
             <Plus size={12} className="text-[#FF6B4A]" />
@@ -693,15 +693,15 @@ export default function ChatRoom() {
         </div>
 
         {/* Navigator Search */}
-        <div className="p-3 border-b border-white/[0.05]">
+        <div className="p-3 border-b border-divider">
           <div className="relative">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
             <input
               type="text"
               placeholder="Search conversations..."
               value={searchNav}
               onChange={e => setSearchNav(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 bg-[#07080A] border border-white/[0.05] focus:border-[#FF6B4A]/40 rounded-md text-[11px] text-white placeholder-zinc-500 focus:outline-none transition-colors"
+              className="w-full pl-8 pr-7 py-1.5 bg-[#07080A] border border-divider focus:border-[#FF6B4A]/40 rounded-md text-[11px] text-main placeholder-zinc-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -719,8 +719,8 @@ export default function ChatRoom() {
                   to={`/chat/${ch.id}`}
                   className={`relative flex items-center gap-2.5 px-2.5 py-2 rounded-md transition-colors group ${
                     isSelected
-                      ? 'bg-white/[0.06] text-white font-semibold'
-                      : 'hover:bg-white/[0.025] text-zinc-400'
+                      ? 'bg-white/[0.06] text-main font-semibold'
+                      : 'hover:bg-white/[0.025] text-muted'
                   }`}
                 >
                   {/* Selected Indicator */}
@@ -730,7 +730,7 @@ export default function ChatRoom() {
 
                   {/* Avatar / Hash */}
                   <div className="relative shrink-0">
-                    <div className="w-7 h-7 rounded-md bg-[#13151D] border border-white/[0.08] flex items-center justify-center text-[10px] font-bold text-white">
+                    <div className="w-7 h-7 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-[10px] font-bold text-main">
                       {ch.type === 'direct'
                         ? (ch.name || 'U').charAt(0).toUpperCase()
                         : <Hash size={13} className="text-[#FF6B4A]" />
@@ -743,20 +743,20 @@ export default function ChatRoom() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline justify-between mb-0.5">
-                      <span className={`text-[12px] truncate ${isSelected ? 'text-white font-bold' : 'text-zinc-300'}`}>
+                      <span className={`text-[12px] truncate ${isSelected ? 'text-main font-bold' : 'text-muted'}`}>
                         {ch.type === 'direct' ? ch.name : `#${ch.name}`}
                       </span>
                       <span className="text-[9px] font-mono text-zinc-600 shrink-0 ml-1">
                         {timeAgo(ch.lastMessageTime)}
                       </span>
                     </div>
-                    <div className="text-[11px] text-zinc-500 truncate">
+                    <div className="text-[11px] text-muted truncate">
                       {ch.lastMessageText}
                     </div>
                   </div>
 
                   {hasUnread && !isSelected && (
-                    <span className="shrink-0 min-w-[16px] h-4 px-1 rounded bg-[#FF6B4A] text-white text-[9px] font-mono font-bold flex items-center justify-center shadow-sm">
+                    <span className="shrink-0 min-w-[16px] h-4 px-1 rounded bg-[#FF6B4A] text-main text-[9px] font-mono font-bold flex items-center justify-center shadow-sm">
                       {ch.unreadCount}
                     </span>
                   )}
@@ -767,7 +767,7 @@ export default function ChatRoom() {
         </div>
 
         {/* Security / Encryption Status Footer */}
-        <div className="p-3 border-t border-white/[0.05] bg-[#07080A] flex items-center justify-between text-[10px] font-mono text-zinc-500">
+        <div className="p-3 border-t border-divider bg-[#07080A] flex items-center justify-between text-[10px] font-mono text-muted">
           <span className="flex items-center gap-1.5">
             <Lock size={11} className="text-emerald-400" />
             <span>P-256 ECDH Encrypted</span>
@@ -781,9 +781,9 @@ export default function ChatRoom() {
       <div className="flex-1 flex flex-col h-full bg-[#07080B] overflow-hidden min-w-0">
         
         {/* Active Conversation Topbar */}
-        <div className="h-14 px-4 sm:px-6 border-b border-white/[0.05] bg-[#0A0B10] flex items-center justify-between shrink-0">
+        <div className="h-14 px-4 sm:px-6 border-b border-divider bg-[#0A0B10] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-md bg-[#13151D] border border-white/[0.08] flex items-center justify-center text-xs font-bold text-white relative shrink-0">
+            <div className="w-8 h-8 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-xs font-bold text-main relative shrink-0">
               {isDirect ? (
                 displayName.charAt(0).toUpperCase()
               ) : (
@@ -798,18 +798,18 @@ export default function ChatRoom() {
 
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-white truncate">{displayName}</span>
-                <span className="text-[10px] font-mono text-zinc-500 hidden sm:inline">
+                <span className="text-xs font-bold text-main truncate">{displayName}</span>
+                <span className="text-[10px] font-mono text-muted hidden sm:inline">
                   {isDirect ? (otherMember?.role || 'Team Member') : 'Team Channel'}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500">
+              <div className="flex items-center gap-2 text-[10px] font-mono text-muted">
                 <span className="flex items-center gap-1 text-emerald-400 font-medium">
                   <Lock size={10} />
                   <span>End-to-end encrypted</span>
                 </span>
                 <span>·</span>
-                <span className={otherOnline ? 'text-emerald-400' : 'text-zinc-500'}>
+                <span className={otherOnline ? 'text-emerald-400' : 'text-muted'}>
                   {otherOnline ? 'Online' : 'Offline'}
                 </span>
               </div>
@@ -820,7 +820,7 @@ export default function ChatRoom() {
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => navigate('/meetings/new')}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#13151D] hover:bg-[#181B26] border border-white/[0.06] text-zinc-300 hover:text-white text-[11px] font-medium transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#13151D] hover:bg-[#181B26] border border-divider text-muted hover:text-main text-[11px] font-medium transition-colors"
               title="Start or schedule LiveKit meeting"
             >
               <Video size={12} className="text-[#FF6B4A]" />
@@ -831,8 +831,8 @@ export default function ChatRoom() {
               onClick={() => setShowInspector(!showInspector)}
               className={`p-1.5 rounded border transition-colors ${
                 showInspector
-                  ? 'bg-white/[0.06] border-white/[0.1] text-white'
-                  : 'bg-[#13151D] border-white/[0.06] text-zinc-400 hover:text-white'
+                  ? 'bg-white/[0.06] border-white/[0.1] text-main'
+                  : 'bg-[#13151D] border-divider text-muted hover:text-main'
               }`}
               title="Toggle Details Inspector"
             >
@@ -854,13 +854,13 @@ export default function ChatRoom() {
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-16">
-              <div className="w-10 h-10 rounded-lg bg-[#11131B] border border-white/[0.08] flex items-center justify-center text-[#FF6B4A] mb-3">
+              <div className="w-10 h-10 rounded-lg bg-[#11131B] border border-divider flex items-center justify-center text-[#FF6B4A] mb-3">
                 <Lock size={18} />
               </div>
-              <p className="text-white text-xs font-bold">
+              <p className="text-main text-xs font-bold">
                 {isDirect ? `Encrypted session with ${displayName}` : `Welcome to #${displayName}`}
               </p>
-              <p className="text-zinc-500 text-[11px] mt-0.5 max-w-xs">
+              <p className="text-muted text-[11px] mt-0.5 max-w-xs">
                 Messages in this thread are securely encrypted on your device.
               </p>
             </div>
@@ -886,7 +886,7 @@ export default function ChatRoom() {
 
           {/* Realtime Typing Indicator */}
           {typingUsers.length > 0 && (
-            <div className="flex items-center gap-2 pl-9 py-1 text-[10px] font-mono text-zinc-500">
+            <div className="flex items-center gap-2 pl-9 py-1 text-[10px] font-mono text-muted">
               <div className="flex gap-1">
                 {[0, 1, 2].map(i => (
                   <div
@@ -905,13 +905,13 @@ export default function ChatRoom() {
 
         {/* Reply Preview Banner */}
         {replyTo && (
-          <div className="px-4 py-2 border-t border-white/[0.05] bg-[#0A0B10] flex items-center justify-between text-xs shrink-0">
-            <div className="flex items-center gap-2 text-zinc-400">
+          <div className="px-4 py-2 border-t border-divider bg-[#0A0B10] flex items-center justify-between text-xs shrink-0">
+            <div className="flex items-center gap-2 text-muted">
               <CornerUpLeft size={13} className="text-[#FF6B4A]" />
-              <span>Replying to <strong className="text-white">{replyTo.sender?.full_name}</strong></span>
-              <span className="text-zinc-500 truncate max-w-xs">{replyTo.content}</span>
+              <span>Replying to <strong className="text-main">{replyTo.sender?.full_name}</strong></span>
+              <span className="text-muted truncate max-w-xs">{replyTo.content}</span>
             </div>
-            <button onClick={() => setReplyTo(null)} className="text-zinc-500 hover:text-white p-1">
+            <button onClick={() => setReplyTo(null)} className="text-muted hover:text-main p-1">
               <X size={13} />
             </button>
           </div>
@@ -919,25 +919,25 @@ export default function ChatRoom() {
 
         {/* File Attachment Preview Banner */}
         {fileAttachment && (
-          <div className="px-4 py-2 border-t border-white/[0.05] bg-[#0E1017] flex items-center justify-between text-xs shrink-0">
+          <div className="px-4 py-2 border-t border-divider bg-[#0E1017] flex items-center justify-between text-xs shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-6 h-6 rounded bg-[#FF6B4A]/10 border border-[#FF6B4A]/20 flex items-center justify-center text-[#FF6B4A]">
                 <Paperclip size={12} />
               </div>
               <div className="min-w-0">
-                <span className="text-white font-medium truncate block">{fileAttachment.name}</span>
-                <span className="text-[10px] text-zinc-500 font-mono uppercase">{fileAttachment.type.split('/')[1] || 'FILE'}</span>
+                <span className="text-main font-medium truncate block">{fileAttachment.name}</span>
+                <span className="text-[10px] text-muted font-mono uppercase">{fileAttachment.type.split('/')[1] || 'FILE'}</span>
               </div>
             </div>
-            <button onClick={() => setFileAttachment(null)} className="text-zinc-500 hover:text-white p-1">
+            <button onClick={() => setFileAttachment(null)} className="text-muted hover:text-main p-1">
               <X size={14} />
             </button>
           </div>
         )}
 
         {/* Command Message Composer */}
-        <div className="p-3 sm:p-4 border-t border-white/[0.05] bg-[#0A0B10] shrink-0">
-          <div className="flex items-end gap-2 bg-[#07080A] border border-white/[0.06] focus-within:border-[#FF6B4A]/50 rounded-lg p-2 transition-colors">
+        <div className="p-3 sm:p-4 border-t border-divider bg-[#0A0B10] shrink-0">
+          <div className="flex items-end gap-2 bg-[#07080A] border border-divider focus-within:border-[#FF6B4A]/50 rounded-lg p-2 transition-colors">
             
             {/* Hidden File Input */}
             <input
@@ -951,7 +951,7 @@ export default function ChatRoom() {
               type="button"
               disabled={uploadingAttachment}
               onClick={() => fileInputRef.current?.click()}
-              className="p-1.5 text-zinc-400 hover:text-white rounded hover:bg-white/[0.06] transition-colors disabled:opacity-40"
+              className="p-1.5 text-muted hover:text-main rounded hover:bg-white/[0.06] transition-colors disabled:opacity-40"
               title="Attach Document or Image"
             >
               {uploadingAttachment ? (
@@ -977,14 +977,14 @@ export default function ChatRoom() {
                 }
               }}
               placeholder={`Message ${displayName}...`}
-              className="flex-1 resize-none bg-transparent border-0 text-xs text-white placeholder-zinc-500 focus:outline-none max-h-[120px] overflow-y-auto leading-relaxed"
+              className="flex-1 resize-none bg-transparent border-0 text-xs text-main placeholder-zinc-500 focus:outline-none max-h-[120px] overflow-y-auto leading-relaxed"
               style={{ height: '28px' }}
             />
 
             <button
               onClick={handleSend}
               disabled={(!inputText.trim() && !fileAttachment) || sending || uploadingAttachment}
-              className="px-3 py-1.5 bg-[#FF6B4A] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#FF552B] text-white text-[11px] font-semibold rounded transition-all shrink-0 flex items-center gap-1"
+              className="px-3 py-1.5 bg-[#FF6B4A] disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#FF552B] text-main text-[11px] font-semibold rounded transition-all shrink-0 flex items-center gap-1"
             >
               <span>Send</span>
               <Send size={11} />
@@ -996,12 +996,12 @@ export default function ChatRoom() {
 
       {/* ── Panel 3: Context Inspector (300px - 360px) ── */}
       {showInspector && (
-        <div className="w-80 border-l border-white/[0.05] bg-[#0A0B10] flex flex-col h-full shrink-0 overflow-y-auto hidden lg:flex font-sans">
+        <div className="w-80 border-l border-divider bg-[#0A0B10] flex flex-col h-full shrink-0 overflow-y-auto hidden lg:flex font-sans">
           
           {/* Inspector Header */}
-          <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.05]">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-white">Conversation Details</span>
-            <button onClick={() => setShowInspector(false)} className="text-zinc-500 hover:text-white p-1">
+          <div className="h-14 px-4 flex items-center justify-between border-b border-divider">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-main">Conversation Details</span>
+            <button onClick={() => setShowInspector(false)} className="text-muted hover:text-main p-1">
               <X size={13} />
             </button>
           </div>
@@ -1009,8 +1009,8 @@ export default function ChatRoom() {
           <div className="p-4 space-y-6">
             
             {/* Identity Profile Card */}
-            <div className="text-center pb-4 border-b border-white/[0.05]">
-              <div className="w-12 h-12 rounded-lg bg-[#13151D] border border-white/[0.08] flex items-center justify-center text-sm font-bold text-white mx-auto mb-2 relative">
+            <div className="text-center pb-4 border-b border-divider">
+              <div className="w-12 h-12 rounded-lg bg-[#13151D] border border-divider flex items-center justify-center text-sm font-bold text-main mx-auto mb-2 relative">
                 {isDirect ? displayName.charAt(0).toUpperCase() : <Hash size={20} className="text-[#FF6B4A]" />}
                 {isDirect && (
                   <span className={`w-2.5 h-2.5 rounded-full absolute -bottom-0.5 -right-0.5 ring-2 ring-[#0A0B10] ${
@@ -1018,28 +1018,28 @@ export default function ChatRoom() {
                   }`} />
                 )}
               </div>
-              <h3 className="text-xs font-bold text-white">{displayName}</h3>
-              <p className="text-[10px] font-mono text-zinc-500 mt-0.5">
+              <h3 className="text-xs font-bold text-main">{displayName}</h3>
+              <p className="text-[10px] font-mono text-muted mt-0.5">
                 {isDirect ? (otherMember?.role || 'Employee') : 'Organization Channel'}
               </p>
             </div>
 
             {/* Security Telemetry */}
-            <div className="p-3 rounded bg-[#07080A] border border-white/[0.04] space-y-2">
-              <div className="text-[9px] font-mono font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+            <div className="p-3 rounded bg-[#07080A] border border-divider space-y-2">
+              <div className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
                 <Lock size={11} className="text-emerald-400" />
                 <span>Security Telemetry</span>
               </div>
-              <div className="text-[11px] text-zinc-400 space-y-1">
-                <div className="flex justify-between"><span>Protocol:</span><span className="font-mono text-zinc-300">P-256 ECDH</span></div>
-                <div className="flex justify-between"><span>Cipher:</span><span className="font-mono text-zinc-300">AES-GCM-256</span></div>
+              <div className="text-[11px] text-muted space-y-1">
+                <div className="flex justify-between"><span>Protocol:</span><span className="font-mono text-muted">P-256 ECDH</span></div>
+                <div className="flex justify-between"><span>Cipher:</span><span className="font-mono text-muted">AES-GCM-256</span></div>
                 <div className="flex justify-between"><span>Ratchets:</span><span className="text-emerald-400 font-semibold">Active</span></div>
               </div>
             </div>
 
             {/* Related Work (Work OS Connection) */}
             <div className="space-y-2">
-              <div className="text-[9px] font-mono font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+              <div className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
                 <Briefcase size={11} className="text-[#FF6B4A]" />
                 <span>Related Work</span>
               </div>
@@ -1049,15 +1049,15 @@ export default function ChatRoom() {
                   <Link
                     key={p.id}
                     to={`/projects/${p.id}`}
-                    className="p-2.5 rounded bg-[#07080A] border border-white/[0.04] hover:border-white/[0.1] block transition-colors group"
+                    className="p-2.5 rounded bg-[#07080A] border border-divider hover:border-white/[0.1] block transition-colors group"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-xs font-semibold text-white group-hover:text-[#FF6B4A] transition-colors truncate">
+                      <span className="text-xs font-semibold text-main group-hover:text-[#FF6B4A] transition-colors truncate">
                         {p.title}
                       </span>
-                      <ChevronRight size={12} className="text-zinc-600 group-hover:text-zinc-300" />
+                      <ChevronRight size={12} className="text-zinc-600 group-hover:text-muted" />
                     </div>
-                    <div className="text-[10px] font-mono text-zinc-500">Project · {p.status || 'Active'}</div>
+                    <div className="text-[10px] font-mono text-muted">Project · {p.status || 'Active'}</div>
                   </Link>
                 ))}
               </div>
@@ -1065,23 +1065,23 @@ export default function ChatRoom() {
 
             {/* Shared Content Summary */}
             <div className="space-y-2">
-              <div className="text-[9px] font-mono font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
-                <FileText size={11} className="text-zinc-400" />
+              <div className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
+                <FileText size={11} className="text-muted" />
                 <span>Shared Telemetry</span>
               </div>
 
               <div className="divide-y divide-white/[0.04] text-[11px]">
-                <div className="py-2 flex justify-between text-zinc-400">
+                <div className="py-2 flex justify-between text-muted">
                   <span>Encrypted Messages</span>
-                  <span className="font-mono text-white">{messages.length}</span>
+                  <span className="font-mono text-main">{messages.length}</span>
                 </div>
-                <div className="py-2 flex justify-between text-zinc-400">
+                <div className="py-2 flex justify-between text-muted">
                   <span>Channel Members</span>
-                  <span className="font-mono text-white">{channel?.channel_members?.length || 2}</span>
+                  <span className="font-mono text-main">{channel?.channel_members?.length || 2}</span>
                 </div>
-                <div className="py-2 flex justify-between text-zinc-400">
+                <div className="py-2 flex justify-between text-muted">
                   <span>Meeting History</span>
-                  <span className="font-mono text-zinc-500">LiveKit Link</span>
+                  <span className="font-mono text-muted">LiveKit Link</span>
                 </div>
               </div>
             </div>

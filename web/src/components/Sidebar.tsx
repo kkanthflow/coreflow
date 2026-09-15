@@ -77,14 +77,14 @@ export default function Sidebar() {
     <motion.aside 
       animate={{ width: collapsed ? 58 : 224 }}
       transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-      className="relative flex flex-col h-full bg-[#08090C] border-r border-white/[0.05] z-20 shrink-0 font-sans select-none overflow-hidden"
+      className="relative flex flex-col h-full bg-card-bg border-r border-divider z-20 shrink-0 font-sans select-none overflow-hidden"
     >
       {/* Workspace Header */}
-      <div className="flex h-12 items-center px-3 border-b border-white/[0.05] overflow-hidden">
+      <div className="flex h-12 items-center px-3 border-b border-divider overflow-hidden">
         {collapsed ? (
           <button 
             onClick={() => setCollapsed(false)}
-            className="w-7 h-7 rounded-md bg-[#111218] border border-white/[0.08] flex items-center justify-center text-white mx-auto hover:border-[#FF6B4A]/40 transition-colors"
+            className="w-7 h-7 rounded-md bg-[#111218] border border-divider flex items-center justify-center text-main mx-auto hover:border-[#FF6B4A]/40 transition-colors"
             title="Expand Navigation"
           >
             <AuvrynLogo size={14} />
@@ -92,18 +92,18 @@ export default function Sidebar() {
         ) : (
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-5 h-5 rounded-md bg-[#141620] border border-white/[0.08] flex items-center justify-center shrink-0">
+              <div className="w-5 h-5 rounded-md bg-[#141620] border border-divider flex items-center justify-center shrink-0">
                 <AuvrynLogo size={12} />
               </div>
               <div className="min-w-0">
-                <span className="text-white font-bold text-xs tracking-tight truncate block">
+                <span className="text-main font-bold text-xs tracking-tight truncate block">
                   {orgName || 'AUVRYN'}
                 </span>
               </div>
             </div>
             <button
               onClick={() => setCollapsed(true)}
-              className="p-1 text-zinc-500 hover:text-zinc-300 rounded hover:bg-white/[0.04] transition-colors"
+              className="p-1 text-muted hover:text-muted rounded hover:bg-white/[0.04] transition-colors"
               title="Collapse Rail"
             >
               <ChevronLeft size={13} />
@@ -134,8 +134,8 @@ export default function Sidebar() {
                     'relative flex items-center rounded-md transition-all duration-150 text-xs font-medium group',
                     collapsed ? 'h-9 w-9 mx-auto justify-center' : 'px-2.5 py-1.5 justify-between',
                     isActive
-                      ? 'bg-white/[0.06] text-white font-semibold'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-white/[0.025]'
+                      ? 'bg-white/[0.06] text-main font-semibold'
+                      : 'text-muted hover:text-zinc-200 hover:bg-white/[0.025]'
                   )}
                 >
                   {({ isActive }) => (
@@ -157,7 +157,7 @@ export default function Sidebar() {
                           size={15}
                           className={cn(
                             "shrink-0 transition-all duration-150 group-hover:translate-x-0.5",
-                            isActive ? "text-[#FF6B4A]" : "text-zinc-400 group-hover:text-zinc-200"
+                            isActive ? "text-[#FF6B4A]" : "text-muted group-hover:text-zinc-200"
                           )}
                         />
                         {!collapsed && (
@@ -166,7 +166,7 @@ export default function Sidebar() {
                       </div>
 
                       {!collapsed && item.shortcut && (
-                        <span className="text-[9px] font-mono text-zinc-600 group-hover:text-zinc-400">
+                        <span className="text-[9px] font-mono text-zinc-600 group-hover:text-muted">
                           {item.shortcut}
                         </span>
                       )}
@@ -180,14 +180,14 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer Settings */}
-      <div className="p-1.5 border-t border-white/[0.05] space-y-0.5">
+      <div className="p-1.5 border-t border-divider space-y-0.5">
         <NavLink
           to="/settings"
           title={collapsed ? "Settings" : undefined}
           className={({ isActive }) => cn(
             'relative flex items-center rounded-md transition-all text-xs group',
             collapsed ? 'h-9 w-9 mx-auto justify-center' : 'px-2.5 py-1.5 justify-between',
-            isActive ? 'bg-white/[0.06] text-white' : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.025]'
+            isActive ? 'bg-white/[0.06] text-main' : 'text-muted hover:text-muted hover:bg-white/[0.025]'
           )}
         >
           {({ isActive }) => (
@@ -203,7 +203,7 @@ export default function Sidebar() {
                 />
               )}
               <div className="flex items-center gap-2">
-                <Settings size={15} className={cn("transition-transform group-hover:translate-x-0.5", isActive ? "text-[#FF6B4A]" : "text-zinc-500 group-hover:text-zinc-300")} />
+                <Settings size={15} className={cn("transition-transform group-hover:translate-x-0.5", isActive ? "text-[#FF6B4A]" : "text-muted group-hover:text-muted")} />
                 {!collapsed && <span className="text-[12px] font-medium">Settings</span>}
               </div>
             </>

@@ -6,6 +6,7 @@ import superjson from 'superjson';
 
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { WorkspaceProvider } from './hooks/useWorkspace';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { trpc } from './lib/trpc';
 import AppShell from './components/AppShell';
 
@@ -51,9 +52,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   const { session, loading } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#07070B] flex flex-col items-center justify-center text-white">
+      <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
         <div className="w-10 h-10 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-gray-400 text-sm">Authenticating session...</p>
+        <p className="text-muted text-sm">Authenticating session...</p>
       </div>
     );
   }
@@ -66,9 +67,9 @@ function RootRoute() {
   const { session, loading } = useAuth();
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#07070B] flex flex-col items-center justify-center text-white">
+      <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
         <div className="w-10 h-10 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-gray-400 text-sm">Loading...</p>
+        <p className="text-muted text-sm">Loading...</p>
       </div>
     );
   }
@@ -108,10 +109,11 @@ function App() {
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
-          <div className="dark min-h-screen bg-[#07070B] text-white antialiased">
-            <AuthProvider>
-              <WorkspaceProvider>
-                <BrowserRouter>
+          <ThemeProvider>
+            <div className="min-h-screen bg-app text-main antialiased">
+              <AuthProvider>
+                <WorkspaceProvider>
+                  <BrowserRouter>
                   <Routes>
                     <Route path="/" element={<RootRoute />} />
                     <Route path="/landing" element={<Landing />} />
@@ -169,10 +171,11 @@ function App() {
 
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
-                </BrowserRouter>
-              </WorkspaceProvider>
-            </AuthProvider>
-          </div>
+                  </BrowserRouter>
+                </WorkspaceProvider>
+              </AuthProvider>
+            </div>
+          </ThemeProvider>
         </ToastProvider>
       </QueryClientProvider>
     </trpc.Provider>

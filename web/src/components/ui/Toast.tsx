@@ -89,7 +89,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   ? 'bg-[#0D0808]/95 border-red-500/30 text-red-100'
                   : isWarning
                   ? 'bg-[#0D0B08]/95 border-amber-500/30 text-amber-100'
-                  : 'bg-[#0C0D12]/95 border-white/[0.08] text-zinc-100'
+                  : 'bg-card-bg/95 border-divider text-zinc-100'
               }`}
             >
               {/* Icon */}
@@ -103,17 +103,17 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               {/* Message Content */}
               <div className="min-w-0 flex-1">
                 {t.title && (
-                  <h4 className="text-xs font-semibold font-mono tracking-wide text-white mb-0.5">
+                  <h4 className="text-xs font-semibold font-mono tracking-wide text-main mb-0.5">
                     {t.title}
                   </h4>
                 )}
-                <p className="text-xs text-zinc-300 leading-relaxed break-words">{t.message}</p>
+                <p className="text-xs text-muted leading-relaxed break-words">{t.message}</p>
               </div>
 
               {/* Close Button */}
               <button
                 onClick={() => removeToast(t.id)}
-                className="shrink-0 p-1 text-zinc-500 hover:text-white rounded transition-colors"
+                className="shrink-0 p-1 text-muted hover:text-main rounded transition-colors"
               >
                 <X size={13} />
               </button>

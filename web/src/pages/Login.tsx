@@ -78,14 +78,14 @@ export default function Login() {
   return (
     <div 
       onPointerMove={handlePointerMove}
-      className="min-h-screen w-full flex items-center justify-center bg-[#060709] selection:bg-[#FF6B4A]/30 selection:text-white p-4 sm:p-6 lg:p-8 font-sans select-none text-zinc-300 relative overflow-hidden"
+      className="min-h-screen w-full flex items-center justify-center bg-app selection:bg-[#FF6B4A]/30 selection:text-main p-4 sm:p-6 lg:p-8 font-sans select-none text-muted relative overflow-hidden"
     >
       {/* ── 1. Locked Inactive Workspace Preview Silhouette (Dormant Operating System) ── */}
       <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden flex flex-col justify-between p-8 opacity-25 filter blur-[1px]">
         {/* Top Dormant Navigation Bar Mock */}
-        <div className="flex items-center justify-between border-b border-white/[0.05] pb-4">
+        <div className="flex items-center justify-between border-b border-divider pb-4">
           <div className="flex items-center gap-3">
-            <div className="w-6 h-6 rounded bg-[#12141F] border border-white/[0.08]" />
+            <div className="w-6 h-6 rounded bg-hover border border-divider" />
             <div className="h-3 w-32 bg-white/[0.04] rounded" />
           </div>
           <div className="flex items-center gap-4">
@@ -97,23 +97,23 @@ export default function Login() {
         {/* Faint Dormant Trajectories & Metric Widgets */}
         <div className="grid grid-cols-12 gap-6 my-auto max-w-6xl mx-auto w-full opacity-60">
           <div className="col-span-8 space-y-4">
-            <div className="p-4 rounded-lg bg-[#0C0D12]/60 border border-white/[0.03] space-y-3">
+            <div className="p-4 rounded-lg bg-card-bg/60 border border-divider space-y-3">
               <div className="h-3 w-40 bg-white/[0.05] rounded" />
               <div className="h-1.5 w-full bg-white/[0.03] rounded-full" />
             </div>
             <div className="grid grid-cols-3 gap-3">
-              <div className="h-20 bg-[#0C0D12]/40 rounded-lg border border-white/[0.02]" />
-              <div className="h-20 bg-[#0C0D12]/40 rounded-lg border border-white/[0.02]" />
-              <div className="h-20 bg-[#0C0D12]/40 rounded-lg border border-white/[0.02]" />
+              <div className="h-20 bg-card-bg/40 rounded-lg border border-divider" />
+              <div className="h-20 bg-card-bg/40 rounded-lg border border-divider" />
+              <div className="h-20 bg-card-bg/40 rounded-lg border border-divider" />
             </div>
           </div>
           <div className="col-span-4 space-y-3">
-            <div className="h-44 bg-[#0C0D12]/50 rounded-lg border border-white/[0.03]" />
+            <div className="h-44 bg-card-bg/50 rounded-lg border border-divider" />
           </div>
         </div>
 
         {/* Bottom Status Bar */}
-        <div className="flex items-center justify-between border-t border-white/[0.04] pt-4 text-[10px] font-mono text-zinc-600">
+        <div className="flex items-center justify-between border-t border-divider pt-4 text-[10px] font-mono text-zinc-600">
           <span>LOCKED SYSTEM ENVIRONMENT</span>
           <span>AWAITING AUTHORIZED ACCESS TOKEN</span>
         </div>
@@ -156,49 +156,49 @@ export default function Login() {
         {/* Left Column: AUVRYN Operating System Statement */}
         <div className="hidden lg:flex lg:col-span-7 flex-col justify-between space-y-6 pr-6">
           <div className="space-y-4">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-[#0C0D12] border border-white/[0.06] text-[11px] font-mono text-zinc-400">
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded bg-card-bg border border-divider text-[11px] font-mono text-muted">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#FF6B4A] opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#FF6B4A]" />
               </span>
-              <span className="font-bold text-white uppercase tracking-wider">AUVRYN OS</span>
+              <span className="font-bold text-main uppercase tracking-wider">AUVRYN OS</span>
               <span className="text-zinc-600">/</span>
               <span>Workspace Unlock</span>
             </div>
 
-            <h1 className="text-3xl xl:text-4xl font-extrabold text-white tracking-tight leading-tight">
+            <h1 className="text-3xl xl:text-4xl font-extrabold text-main tracking-tight leading-tight">
               Enter your workspace. <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF6B4A] via-[#FF8E75] to-white">
                 Start the flow.
               </span>
             </h1>
 
-            <p className="text-zinc-400 text-xs sm:text-sm leading-relaxed max-w-md">
+            <p className="text-muted text-xs sm:text-sm leading-relaxed max-w-md">
               Sign in to unlock your unified command center for engineering deliverables, encrypted communications, LiveKit video rooms, and ledger telemetry.
             </p>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-white/[0.05] text-xs">
-            <div className="p-3 rounded bg-[#0C0D12]/80 border border-white/[0.05] space-y-1 backdrop-blur-sm">
-              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+          <div className="grid grid-cols-2 gap-3 pt-4 border-t border-divider text-xs">
+            <div className="p-3 rounded bg-card-bg/80 border border-divider space-y-1 backdrop-blur-sm">
+              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
                 <Activity size={12} className="text-[#FF6B4A]" />
                 <span>DYNAMIC FLOW</span>
               </div>
-              <div className="text-white font-semibold">Realtime Velocity</div>
+              <div className="text-main font-semibold">Realtime Velocity</div>
             </div>
-            <div className="p-3 rounded bg-[#0C0D12]/80 border border-white/[0.05] space-y-1 backdrop-blur-sm">
-              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5">
+            <div className="p-3 rounded bg-card-bg/80 border border-divider space-y-1 backdrop-blur-sm">
+              <div className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
                 <Shield size={12} className="text-emerald-400" />
                 <span>ZERO-TRUST SEC</span>
               </div>
-              <div className="text-white font-semibold">P-256 ECDH Ratchet</div>
+              <div className="text-main font-semibold">P-256 ECDH Ratchet</div>
             </div>
           </div>
         </div>
 
         {/* Right Column: Obsidian Auth Console & Structural Signal Line */}
         <div className="lg:col-span-5 w-full max-w-[420px] mx-auto">
-          <div className="relative bg-[#0C0D12]/95 border border-white/[0.09] rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-5 overflow-hidden">
+          <div className="relative bg-card-bg/95 border border-divider rounded-2xl p-6 sm:p-8 shadow-2xl backdrop-blur-xl space-y-5 overflow-hidden">
             
             {/* Structural Assembly Signal Line */}
             <motion.div
@@ -210,19 +210,19 @@ export default function Login() {
             />
 
             {/* Top Brand Marker */}
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-lg bg-[#141622] border border-[#FF6B4A]/40 flex items-center justify-center text-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.25)]">
                   <AuvrynLogo size={16} />
                 </div>
                 <div>
-                  <span className="font-bold text-sm tracking-tight text-white uppercase font-mono block leading-none">AUVRYN</span>
-                  <span className="text-[9px] font-mono text-zinc-500 uppercase">Command Layer</span>
+                  <span className="font-bold text-sm tracking-tight text-main uppercase font-mono block leading-none">AUVRYN</span>
+                  <span className="text-[9px] font-mono text-muted uppercase">Command Layer</span>
                 </div>
               </div>
               
               {/* Traveling Focus Signal Node */}
-              <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/[0.03] border border-white/[0.06]">
+              <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-white/[0.03] border border-divider">
                 <motion.div 
                   animate={{
                     backgroundColor: isFormValid ? '#10B981' : '#FF6B4A',
@@ -230,15 +230,15 @@ export default function Login() {
                   }}
                   className="w-1.5 h-1.5 rounded-full"
                 />
-                <span className="text-[9px] font-mono text-zinc-400 font-semibold uppercase">
+                <span className="text-[9px] font-mono text-muted font-semibold uppercase">
                   {authSuccess ? 'Unlocked' : isFormValid ? 'Ready' : 'Locked'}
                 </span>
               </div>
             </div>
 
             <div>
-              <h2 className="text-lg font-bold text-white tracking-tight">Unlock Workspace</h2>
-              <p className="text-xs text-zinc-400 mt-0.5 font-normal">Provide authorized credentials to initialize session.</p>
+              <h2 className="text-lg font-bold text-main tracking-tight">Unlock Workspace</h2>
+              <p className="text-xs text-muted mt-0.5 font-normal">Provide authorized credentials to initialize session.</p>
             </div>
 
             {error && (
@@ -256,7 +256,7 @@ export default function Login() {
               {/* Email Field with Active Focus Flow Accent */}
               <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted">
                     Operator Identity
                   </label>
                   {email.includes('@') && email.includes('.') && (
@@ -272,10 +272,10 @@ export default function Login() {
                     onFocus={() => setActiveField('email')}
                     onBlur={() => setActiveField('none')}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={`w-full bg-[#07080B] border rounded-lg px-3.5 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none transition-all ${
+                    className={`w-full bg-[#07080B] border rounded-lg px-3.5 py-2.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-all ${
                       activeField === 'email'
                         ? 'border-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.2)] ring-1 ring-[#FF6B4A]/30'
-                        : 'border-white/[0.08] hover:border-white/[0.14]'
+                        : 'border-divider hover:border-white/[0.14]'
                     }`}
                     placeholder="operator@company.com"
                     required
@@ -287,7 +287,7 @@ export default function Login() {
               {/* Password Field */}
               <div>
                 <div className="flex justify-between items-center mb-1.5">
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted">
                     Security Passphrase
                   </label>
                   {password.length >= 6 && (
@@ -303,10 +303,10 @@ export default function Login() {
                     onFocus={() => setActiveField('password')}
                     onBlur={() => setActiveField('none')}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`w-full bg-[#07080B] border rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-white placeholder-zinc-500 focus:outline-none transition-all ${
+                    className={`w-full bg-[#07080B] border rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-all ${
                       activeField === 'password'
                         ? 'border-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.2)] ring-1 ring-[#FF6B4A]/30'
-                        : 'border-white/[0.08] hover:border-white/[0.14]'
+                        : 'border-divider hover:border-white/[0.14]'
                     }`}
                     placeholder="••••••••••••"
                     required
@@ -315,7 +315,7 @@ export default function Login() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white transition-colors"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted hover:text-main transition-colors"
                   >
                     {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
@@ -329,10 +329,10 @@ export default function Login() {
                   disabled={loading || !isFormValid || authSuccess}
                   className={`w-full relative overflow-hidden flex items-center justify-center gap-2 py-3 font-semibold text-xs rounded-xl transition-all shadow-lg ${
                     authSuccess
-                      ? 'bg-emerald-500 text-white shadow-emerald-500/30'
+                      ? 'bg-emerald-500 text-main shadow-emerald-500/30'
                       : isFormValid
-                      ? 'bg-[#FF6B4A] hover:bg-[#FF552B] text-white shadow-[#FF6B4A]/25 cursor-pointer'
-                      : 'bg-white/[0.05] text-zinc-500 border border-white/[0.06] cursor-not-allowed'
+                      ? 'bg-[#FF6B4A] hover:bg-[#FF552B] text-main shadow-[#FF6B4A]/25 cursor-pointer'
+                      : 'bg-white/[0.05] text-muted border border-divider cursor-not-allowed'
                   }`}
                 >
                   {/* Subtle sweep line on ready */}
@@ -359,7 +359,7 @@ export default function Login() {
               </div>
 
               {/* Sign Up Link */}
-              <div className="pt-2 text-center text-xs text-zinc-400">
+              <div className="pt-2 text-center text-xs text-muted">
                 Don't have an account?{' '}
                 <button
                   type="button"
@@ -371,7 +371,7 @@ export default function Login() {
               </div>
             </form>
 
-            <div className="pt-3 border-t border-white/[0.05] flex items-center justify-between text-[10px] font-mono text-zinc-500">
+            <div className="pt-3 border-t border-divider flex items-center justify-between text-[10px] font-mono text-muted">
               <span className="flex items-center gap-1">
                 <Lock size={11} className="text-emerald-400" />
                 <span>NIST ECDH Secured</span>

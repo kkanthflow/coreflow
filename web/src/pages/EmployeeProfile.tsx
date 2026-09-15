@@ -93,8 +93,8 @@ export default function EmployeeProfile() {
   if (!profile) {
     return (
       <div className="text-center py-20 font-sans select-none">
-        <p className="text-zinc-500 text-xs">Team member profile not found.</p>
-        <button onClick={() => navigate('/employees')} className="mt-4 px-3.5 py-1.5 bg-[#FF6B4A] text-white rounded text-xs font-semibold">
+        <p className="text-muted text-xs">Team member profile not found.</p>
+        <button onClick={() => navigate('/employees')} className="mt-4 px-3.5 py-1.5 bg-[#FF6B4A] text-main rounded text-xs font-semibold">
           Return to Directory
         </button>
       </div>
@@ -114,7 +114,7 @@ export default function EmployeeProfile() {
   ];
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       
       {/* ── Page Header ── */}
       <PageHeader
@@ -127,7 +127,7 @@ export default function EmployeeProfile() {
         actions={
           <button
             onClick={() => navigate('/employees')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] text-xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs transition-colors"
           >
             <ArrowLeft size={13} />
             <span>Directory</span>
@@ -143,31 +143,31 @@ export default function EmployeeProfile() {
         
         {/* Left Column: Identity & Access */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-5 text-center flex flex-col items-center">
-            <div className="w-16 h-16 rounded-md bg-[#13151D] border border-white/[0.08] text-white flex items-center justify-center font-bold text-xl mb-3">
+          <div className="bg-card-bg border border-divider rounded-lg p-5 text-center flex flex-col items-center">
+            <div className="w-16 h-16 rounded-md bg-[#13151D] border border-divider text-main flex items-center justify-center font-bold text-xl mb-3">
               {profile.avatar_url ? (
                 <img src={profile.avatar_url} className="w-16 h-16 rounded-md object-cover" />
               ) : (
                 (profile.full_name || profile.email || 'U').charAt(0).toUpperCase()
               )}
             </div>
-            <h2 className="text-sm font-bold text-white">{profile.full_name || 'Member'}</h2>
-            <p className="text-[11px] text-zinc-500 font-mono mt-0.5">{profile.email}</p>
+            <h2 className="text-sm font-bold text-main">{profile.full_name || 'Member'}</h2>
+            <p className="text-[11px] text-muted font-mono mt-0.5">{profile.email}</p>
 
-            <div className="w-full space-y-2 mt-4 pt-4 border-t border-white/[0.04] text-left text-xs text-zinc-400">
+            <div className="w-full space-y-2 mt-4 pt-4 border-t border-divider text-left text-xs text-muted">
               <div className="flex items-center gap-2">
-                <Mail size={12} className="text-zinc-500" />
+                <Mail size={12} className="text-muted" />
                 <span className="truncate">{profile.email}</span>
               </div>
               {profile.phone && (
                 <div className="flex items-center gap-2">
-                  <Phone size={12} className="text-zinc-500" />
+                  <Phone size={12} className="text-muted" />
                   <span>{profile.phone}</span>
                 </div>
               )}
               {profile.department && (
                 <div className="flex items-center gap-2">
-                  <Building2 size={12} className="text-zinc-500" />
+                  <Building2 size={12} className="text-muted" />
                   <span>{profile.department}</span>
                 </div>
               )}
@@ -176,15 +176,15 @@ export default function EmployeeProfile() {
 
           {/* Role Manager */}
           {canManageRoles && (
-            <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4 space-y-3">
-              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block">
+            <div className="bg-card-bg border border-divider rounded-lg p-4 space-y-3">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block">
                 Access & RBAC Role
               </span>
               <div>
                 <select
                   value={selectedRole}
                   onChange={e => setSelectedRole(e.target.value)}
-                  className="w-full bg-[#07080B] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs text-white capitalize focus:outline-none"
+                  className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main capitalize focus:outline-none"
                 >
                   {ALL_ROLES.map(r => (
                     <option key={r} value={r}>{r.replace('_', ' ')}</option>
@@ -195,7 +195,7 @@ export default function EmployeeProfile() {
               <button
                 onClick={handleUpdateRole}
                 disabled={saving || selectedRole === profile.role}
-                className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-white font-semibold text-xs rounded transition-colors shadow-sm"
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors shadow-sm"
               >
                 <Save size={12} />
                 <span>{saving ? 'Updating...' : savedSuccess ? 'Role Saved' : 'Update Role'}</span>
@@ -206,24 +206,24 @@ export default function EmployeeProfile() {
 
         {/* Right Column: Assigned Deliverables */}
         <div className="lg:col-span-8 space-y-6">
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4 space-y-3">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.05]">
+          <div className="bg-card-bg border border-divider rounded-lg p-4 space-y-3">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
               <div className="flex items-center gap-2">
                 <CheckSquare size={14} className="text-[#FF6B4A]" />
-                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Assigned Deliverables ({tasks.length})</h3>
+                <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-main">Assigned Deliverables ({tasks.length})</h3>
               </div>
-              <span className="text-[10px] font-mono text-zinc-500">{doneCount} completed</span>
+              <span className="text-[10px] font-mono text-muted">{doneCount} completed</span>
             </div>
 
             <div className="divide-y divide-white/[0.03]">
               {tasks.length === 0 ? (
-                <div className="py-8 text-center text-xs text-zinc-500 italic">No tasks currently assigned.</div>
+                <div className="py-8 text-center text-xs text-muted italic">No tasks currently assigned.</div>
               ) : (
                 tasks.map(t => (
                   <div key={t.id} className="py-2.5 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-2 min-w-0">
                       <span className={`w-1.5 h-1.5 rounded-full ${t.status === 'done' ? 'bg-emerald-400' : 'bg-blue-400'}`} />
-                      <span className={`truncate ${t.status === 'done' ? 'line-through text-zinc-500' : 'text-zinc-200'}`}>
+                      <span className={`truncate ${t.status === 'done' ? 'line-through text-muted' : 'text-zinc-200'}`}>
                         {t.title}
                       </span>
                     </div>
@@ -231,7 +231,7 @@ export default function EmployeeProfile() {
                     <div className="flex items-center gap-3 shrink-0">
                       <StatusSignal status={t.status} />
                       {t.due_date && (
-                        <span className="text-[10px] font-mono text-zinc-500">
+                        <span className="text-[10px] font-mono text-muted">
                           {new Date(t.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
                         </span>
                       )}

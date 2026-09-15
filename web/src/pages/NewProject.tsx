@@ -70,7 +70,7 @@ export default function NewProject() {
   };
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       <PageHeader
         title="Initialize New Project"
         breadcrumbs={[
@@ -81,7 +81,7 @@ export default function NewProject() {
         actions={
           <button
             onClick={() => navigate('/projects')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] text-xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs transition-colors"
           >
             <ArrowLeft size={13} />
             <span>Cancel</span>
@@ -95,9 +95,9 @@ export default function NewProject() {
         </div>
       )}
 
-      <form onSubmit={handleCreate} className="max-w-2xl bg-[#0C0D12] border border-white/[0.06] rounded-lg p-5 sm:p-6 space-y-5">
+      <form onSubmit={handleCreate} className="max-w-2xl bg-card-bg border border-divider rounded-lg p-5 sm:p-6 space-y-5">
         <div>
-          <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1.5">
+          <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1.5">
             Workstream Title <span className="text-[#FF6B4A]">*</span>
           </label>
           <input
@@ -106,12 +106,12 @@ export default function NewProject() {
             placeholder="e.g. Next-Gen Mobile App Architecture Overhaul"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+            className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
           />
         </div>
 
         <div>
-          <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1.5">
+          <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1.5">
             Scope & Specifications
           </label>
           <textarea
@@ -119,19 +119,19 @@ export default function NewProject() {
             placeholder="Technical goals, target deliverables, architecture requirements..."
             value={description}
             onChange={e => setDescription(e.target.value)}
-            className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors resize-none"
+            className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
           />
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1.5">
+            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1.5">
               Priority
             </label>
             <select
               value={priority}
               onChange={e => setPriority(e.target.value as any)}
-              className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-white focus:outline-none transition-colors"
+              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main focus:outline-none transition-colors"
             >
               <option value="low">Low Priority</option>
               <option value="medium">Medium Priority</option>
@@ -141,27 +141,27 @@ export default function NewProject() {
           </div>
 
           <div>
-            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1.5">
+            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1.5">
               Target Deadline
             </label>
             <input
               type="date"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
-              className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-white focus:outline-none transition-colors"
+              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main focus:outline-none transition-colors"
             />
           </div>
         </div>
 
         {orgId && departments.length > 0 && (
           <div>
-            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1.5">
+            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1.5">
               Department
             </label>
             <select
               value={departmentId}
               onChange={e => setDepartmentId(e.target.value)}
-              className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-white focus:outline-none transition-colors"
+              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main focus:outline-none transition-colors"
             >
               <option value="">General / Cross-functional</option>
               {departments.map(d => (
@@ -172,7 +172,7 @@ export default function NewProject() {
         )}
 
         <div>
-          <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1.5">
+          <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1.5">
             Accent Trajectory Color
           </label>
           <div className="flex gap-2 flex-wrap pt-1">
@@ -188,18 +188,18 @@ export default function NewProject() {
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t border-white/[0.04]">
+        <div className="flex justify-end gap-2 pt-4 border-t border-divider">
           <button
             type="button"
             onClick={() => navigate('/projects')}
-            className="px-4 py-2 bg-[#10121A] hover:bg-[#151822] text-zinc-300 text-xs font-medium rounded border border-white/[0.06] transition-colors"
+            className="px-4 py-2 bg-hover hover:bg-hover text-muted text-xs font-medium rounded border border-divider transition-colors"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving || !title.trim()}
-            className="flex items-center gap-1.5 px-4 py-2 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-white font-semibold text-xs rounded transition-colors shadow-sm"
+            className="flex items-center gap-1.5 px-4 py-2 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors shadow-sm"
           >
             <Save size={13} />
             <span>{saving ? 'Creating...' : 'Initialize Project'}</span>

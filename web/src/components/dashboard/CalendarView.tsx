@@ -124,13 +124,13 @@ export function CalendarView({ meetings, onJoin }: CalendarViewProps) {
     <div className="bg-[#111118] border border-white/5 rounded-3xl p-6 shadow-xl w-full h-[800px] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
       <div className="mb-4 flex items-center justify-between z-10">
         <div>
-          <h3 className="font-bold text-white text-base">Workspace Calendar</h3>
+          <h3 className="font-bold text-main text-base">Workspace Calendar</h3>
           <p className="text-xs text-gray-500 mt-0.5">Click any empty slot to schedule a new meeting</p>
         </div>
       </div>
       
       {/* Calendar Grid */}
-      <div className="flex-1 calendar-container text-white min-h-0">
+      <div className="flex-1 calendar-container text-main min-h-0">
         <style>{`
           .rbc-calendar { font-family: inherit; }
           

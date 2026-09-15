@@ -61,7 +61,7 @@ export default function Calendar() {
   ], [meetings, tasks, month, year]);
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       
       {/* ── Page Header Standard ── */}
       <PageHeader
@@ -69,23 +69,23 @@ export default function Calendar() {
         description="Unified delivery timeline of conferences, milestone deadlines, and team commitments."
         actions={
           <div className="flex items-center gap-2">
-            <div className="flex items-center bg-[#0C0D12] border border-white/[0.06] rounded p-0.5">
+            <div className="flex items-center bg-card-bg border border-divider rounded p-0.5">
               <button
                 onClick={prevMonth}
-                className="p-1 rounded hover:bg-white/[0.05] text-zinc-400 hover:text-white transition-colors"
+                className="p-1 rounded hover:bg-white/[0.05] text-muted hover:text-main transition-colors"
                 title="Previous month"
               >
                 <ChevronLeft size={13} />
               </button>
               <button
                 onClick={today}
-                className="px-2.5 py-0.5 text-xs font-mono font-medium text-zinc-300 hover:text-white"
+                className="px-2.5 py-0.5 text-xs font-mono font-medium text-muted hover:text-main"
               >
                 Today
               </button>
               <button
                 onClick={nextMonth}
-                className="p-1 rounded hover:bg-white/[0.05] text-zinc-400 hover:text-white transition-colors"
+                className="p-1 rounded hover:bg-white/[0.05] text-muted hover:text-main transition-colors"
                 title="Next month"
               >
                 <ChevronRight size={13} />
@@ -94,7 +94,7 @@ export default function Calendar() {
 
             <button
               onClick={fetchCalendarEvents}
-              className="p-2 rounded bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] transition-colors"
+              className="p-2 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider transition-colors"
               title="Sync events"
             >
               <RefreshCw size={13} />
@@ -102,7 +102,7 @@ export default function Calendar() {
 
             <button
               onClick={() => navigate('/meetings/new')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold transition-colors shadow-sm"
             >
               <Plus size={14} />
               <span>Schedule Call</span>
@@ -115,9 +115,9 @@ export default function Calendar() {
       <MetricStrip metrics={metrics} />
 
       {/* ── Calendar Grid Surface ── */}
-      <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4 sm:p-5 flex flex-col">
+      <div className="bg-card-bg border border-divider rounded-lg p-4 sm:p-5 flex flex-col">
         {/* Day headers */}
-        <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 pb-2.5 border-b border-white/[0.05]">
+        <div className="grid grid-cols-7 gap-1.5 text-center text-[10px] font-mono font-bold uppercase tracking-wider text-muted pb-2.5 border-b border-divider">
           <span>Sun</span>
           <span>Mon</span>
           <span>Tue</span>
@@ -147,11 +147,11 @@ export default function Calendar() {
                 className={`p-2 rounded border transition-all flex flex-col justify-between min-h-[90px] ${
                   isToday
                     ? 'bg-[#FF6B4A]/5 border-[#FF6B4A]/40'
-                    : 'bg-[#07080B] border-white/[0.04] hover:border-white/[0.08]'
+                    : 'bg-[#07080B] border-divider hover:border-divider'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
-                  <span className={`text-xs font-mono font-bold ${isToday ? 'text-[#FF6B4A]' : 'text-zinc-400'}`}>
+                  <span className={`text-xs font-mono font-bold ${isToday ? 'text-[#FF6B4A]' : 'text-muted'}`}>
                     {dayNum < 10 ? `0${dayNum}` : dayNum}
                   </span>
                   {(dayMeetings.length > 0 || dayTasks.length > 0) && (

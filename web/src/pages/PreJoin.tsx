@@ -241,19 +241,19 @@ export default function PreJoin() {
       </div>
 
       {isMobile && (
-        <div className="fixed top-0 left-0 right-0 p-3.5 bg-[#12141D]/90 border-b border-white/[0.08] backdrop-blur-xl z-50 flex items-center justify-between shadow-2xl">
+        <div className="fixed top-0 left-0 right-0 p-3.5 bg-[#12141D]/90 border-b border-divider backdrop-blur-xl z-50 flex items-center justify-between shadow-2xl">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#FF6B4A] to-[#FF8E75] flex items-center justify-center">
-              <Smartphone className="w-4 h-4 text-white" />
+              <Smartphone className="w-4 h-4 text-main" />
             </div>
             <div>
-              <p className="font-bold text-white text-xs">AUVRYN Mobile</p>
-              <p className="text-zinc-400 text-[10px]">Optimized for mobile calling</p>
+              <p className="font-bold text-main text-xs">AUVRYN Mobile</p>
+              <p className="text-muted text-[10px]">Optimized for mobile calling</p>
             </div>
           </div>
           <button
             onClick={handleOpenApp}
-            className="px-3 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-white font-bold rounded-xl text-xs transition-colors shadow-md shadow-[#FF6B4A]/20"
+            className="px-3 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-main font-bold rounded-xl text-xs transition-colors shadow-md shadow-[#FF6B4A]/20"
           >
             Open in App
           </button>
@@ -262,9 +262,9 @@ export default function PreJoin() {
 
       {/* Top Navbar Actions */}
       <div className="absolute top-6 left-6 right-6 z-40 flex items-center justify-between">
-        <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] backdrop-blur-md">
+        <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-white/[0.04] border border-divider backdrop-blur-md">
           <AuvrynLogo size={14} />
-          <span className="text-white font-bold text-sm tracking-tight">AUVRYN</span>
+          <span className="text-main font-bold text-sm tracking-tight">AUVRYN</span>
         </div>
 
         <button 
@@ -272,7 +272,7 @@ export default function PreJoin() {
             await supabase.auth.signOut();
             navigate('/', { replace: true });
           }}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-zinc-300 hover:text-white border border-white/[0.08] text-xs font-semibold backdrop-blur-md transition-all"
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/[0.04] hover:bg-white/[0.08] text-muted hover:text-main border border-divider text-xs font-semibold backdrop-blur-md transition-all"
         >
           <LogOut className="w-3.5 h-3.5" />
           <span>Sign Out</span>
@@ -289,12 +289,12 @@ export default function PreJoin() {
                 <Shield className="w-3.5 h-3.5" />
                 <span>Enterprise Meeting</span>
               </div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{meetingDetails.title}</h1>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-main tracking-tight">{meetingDetails.title}</h1>
               {meetingDetails.description && (
-                <p className="text-zinc-400 text-sm mt-1.5 max-w-md mx-auto">{meetingDetails.description}</p>
+                <p className="text-muted text-sm mt-1.5 max-w-md mx-auto">{meetingDetails.description}</p>
               )}
               {meetingDetails.start_time && (
-                <div className="inline-flex items-center gap-2 text-xs font-medium text-zinc-400 mt-3 px-3 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06]">
+                <div className="inline-flex items-center gap-2 text-xs font-medium text-muted mt-3 px-3 py-1 rounded-lg bg-white/[0.04] border border-divider">
                   <Calendar className="w-3.5 h-3.5 text-[#FF8E75]" />
                   <span>{new Date(meetingDetails.start_time).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
                 </div>
@@ -302,8 +302,8 @@ export default function PreJoin() {
             </>
           ) : (
             <>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">Ready to join?</h1>
-              <p className="text-zinc-400 text-sm mt-1 font-medium">Verify your audio and video stream before entering</p>
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-main tracking-tight">Ready to join?</h1>
+              <p className="text-muted text-sm mt-1 font-medium">Verify your audio and video stream before entering</p>
             </>
           )}
         </div>
@@ -313,7 +313,7 @@ export default function PreJoin() {
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="relative aspect-video w-full rounded-2xl overflow-hidden bg-[#0A0B10] border border-white/[0.08] shadow-inner mb-6 flex items-center justify-center"
+          className="relative aspect-video w-full rounded-2xl overflow-hidden bg-[#0A0B10] border border-divider shadow-inner mb-6 flex items-center justify-center"
         >
           {videoEnabled && !cameraError ? (
             <video
@@ -325,24 +325,24 @@ export default function PreJoin() {
             />
           ) : (
             <div className="flex flex-col items-center justify-center p-6 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-white/[0.08] flex items-center justify-center mb-3">
-                <VideoOff className="w-7 h-7 text-zinc-500" />
+              <div className="w-16 h-16 rounded-2xl bg-white/[0.04] border border-divider flex items-center justify-center mb-3">
+                <VideoOff className="w-7 h-7 text-muted" />
               </div>
-              <p className="text-zinc-400 text-sm font-medium">
+              <p className="text-muted text-sm font-medium">
                 {cameraError ? cameraError : 'Camera is muted'}
               </p>
             </div>
           )}
 
           {/* Floating Camera / Audio Controls */}
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 shadow-2xl">
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-3 bg-black/60 backdrop-blur-xl px-4 py-2 rounded-full border border-divider shadow-2xl">
             <button
               type="button"
               onClick={() => setAudioEnabled(v => !v)}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                 audioEnabled
-                  ? 'bg-white/15 text-white hover:bg-white/25 border border-white/20'
-                  : 'bg-red-500 text-white shadow-lg shadow-red-500/25'
+                  ? 'bg-white/15 text-main hover:bg-white/25 border border-divider'
+                  : 'bg-red-500 text-main shadow-lg shadow-red-500/25'
               }`}
             >
               {audioEnabled ? <Mic className="w-3.5 h-3.5 text-emerald-400" /> : <MicOff className="w-3.5 h-3.5" />}
@@ -354,8 +354,8 @@ export default function PreJoin() {
               onClick={() => setVideoEnabled(v => !v)}
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
                 videoEnabled
-                  ? 'bg-white/15 text-white hover:bg-white/25 border border-white/20'
-                  : 'bg-red-500 text-white shadow-lg shadow-red-500/25'
+                  ? 'bg-white/15 text-main hover:bg-white/25 border border-divider'
+                  : 'bg-red-500 text-main shadow-lg shadow-red-500/25'
               }`}
             >
               {videoEnabled ? <Video className="w-3.5 h-3.5 text-emerald-400" /> : <VideoOff className="w-3.5 h-3.5" />}
@@ -370,13 +370,13 @@ export default function PreJoin() {
             <div className="grid grid-cols-2 gap-3">
               <button 
                 onClick={handleAcceptInvitation} 
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-2xl py-3.5 text-sm transition-all shadow-lg shadow-emerald-600/20"
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-main font-bold rounded-2xl py-3.5 text-sm transition-all shadow-lg shadow-emerald-600/20"
               >
                 Accept Invitation
               </button>
               <button 
                 onClick={handleDeclineInvitation} 
-                className="w-full bg-white/[0.04] hover:bg-red-500/10 border border-white/[0.08] hover:border-red-500/30 text-zinc-300 hover:text-red-400 font-bold rounded-2xl py-3.5 text-sm transition-all"
+                className="w-full bg-white/[0.04] hover:bg-red-500/10 border border-divider hover:border-red-500/30 text-muted hover:text-red-400 font-bold rounded-2xl py-3.5 text-sm transition-all"
               >
                 Decline
               </button>
@@ -384,14 +384,14 @@ export default function PreJoin() {
           )}
 
           {meetingState === 'declined' && (
-            <div className="w-full bg-white/[0.03] border border-white/[0.06] text-center rounded-2xl py-3.5">
-              <span className="text-zinc-400 font-bold text-sm">Invitation Declined</span>
+            <div className="w-full bg-white/[0.03] border border-divider text-center rounded-2xl py-3.5">
+              <span className="text-muted font-bold text-sm">Invitation Declined</span>
             </div>
           )}
 
           {meetingState === 'ended' && (
-            <div className="w-full bg-white/[0.03] border border-white/[0.06] text-center rounded-2xl py-3.5">
-              <span className="text-zinc-400 font-bold text-sm">Meeting Ended</span>
+            <div className="w-full bg-white/[0.03] border border-divider text-center rounded-2xl py-3.5">
+              <span className="text-muted font-bold text-sm">Meeting Ended</span>
             </div>
           )}
 
@@ -405,7 +405,7 @@ export default function PreJoin() {
             <button
               onClick={handleJoin}
               disabled={!id || meetingState === 'loading'}
-              className="w-full relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#FF6B4A] via-[#FF5722] to-[#FF4500] text-white font-bold py-3.5 text-sm shadow-xl shadow-[#FF6B4A]/25 hover:shadow-2xl hover:shadow-[#FF6B4A]/35 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#FF6B4A] via-[#FF5722] to-[#FF4500] text-main font-bold py-3.5 text-sm shadow-xl shadow-[#FF6B4A]/25 hover:shadow-2xl hover:shadow-[#FF6B4A]/35 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {meetingState === 'loading' ? 'Checking Access...' : 'Join Meeting Now'}
             </button>

@@ -80,11 +80,11 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.96, y: -10, opacity: 0 }}
             transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            className="w-full max-w-xl bg-[#0C0D12] border border-white/[0.12] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            className="w-full max-w-xl bg-card-bg border border-white/[0.12] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
             onClick={e => e.stopPropagation()}
           >
             {/* Input Bar */}
-            <div className="flex items-center px-4 py-3.5 border-b border-white/[0.08] gap-3">
+            <div className="flex items-center px-4 py-3.5 border-b border-divider gap-3">
               <Search size={16} className="text-[#FF6B4A] shrink-0" />
               <input
                 type="text"
@@ -95,9 +95,9 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                   setQuery(e.target.value);
                   setSelectedIndex(0);
                 }}
-                className="w-full bg-transparent text-sm text-white placeholder-zinc-500 focus:outline-none font-medium"
+                className="w-full bg-transparent text-sm text-main placeholder-zinc-500 focus:outline-none font-medium"
               />
-              <kbd className="px-2 py-0.5 text-[10px] font-mono font-bold text-zinc-400 bg-white/[0.06] border border-white/[0.08] rounded">
+              <kbd className="px-2 py-0.5 text-[10px] font-mono font-bold text-muted bg-white/[0.06] border border-divider rounded">
                 ESC
               </kbd>
             </div>
@@ -105,7 +105,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             {/* Action List with physical layout reorganization */}
             <div className="max-h-80 overflow-y-auto p-2 space-y-1">
               {filtered.length === 0 ? (
-                <div className="p-8 text-center text-xs text-zinc-500 font-medium">
+                <div className="p-8 text-center text-xs text-muted font-medium">
                   No matching commands or pages found.
                 </div>
               ) : (
@@ -123,18 +123,18 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                       onMouseEnter={() => setSelectedIndex(idx)}
                       className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl cursor-pointer transition-all text-xs ${
                         isSelected
-                          ? 'bg-[#FF6B4A] text-white shadow-lg shadow-[#FF6B4A]/25'
-                          : 'text-zinc-300 hover:bg-white/[0.04]'
+                          ? 'bg-[#FF6B4A] text-main shadow-lg shadow-[#FF6B4A]/25'
+                          : 'text-muted hover:bg-white/[0.04]'
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <Icon size={15} className={isSelected ? 'text-white' : 'text-zinc-400'} />
+                        <Icon size={15} className={isSelected ? 'text-main' : 'text-muted'} />
                         <span className="font-semibold">{action.title}</span>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${
-                          isSelected ? 'bg-black/20 text-white font-bold' : 'bg-white/[0.05] text-zinc-400 border border-white/[0.06]'
+                          isSelected ? 'bg-black/20 text-main font-bold' : 'bg-white/[0.05] text-muted border border-divider'
                         }`}>
                           {action.shortcut}
                         </span>
@@ -146,10 +146,10 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
             </div>
 
             {/* Footer Navigation Hints */}
-            <div className="px-4 py-2 bg-white/[0.02] border-t border-white/[0.06] flex items-center justify-between text-[11px] text-zinc-500 font-medium">
+            <div className="px-4 py-2 bg-white/[0.02] border-t border-divider flex items-center justify-between text-[11px] text-muted font-medium">
               <div className="flex items-center gap-3">
-                <span><kbd className="text-zinc-400 font-mono">↑↓</kbd> Navigate</span>
-                <span><kbd className="text-zinc-400 font-mono">↵</kbd> Select</span>
+                <span><kbd className="text-muted font-mono">↑↓</kbd> Navigate</span>
+                <span><kbd className="text-muted font-mono">↵</kbd> Select</span>
               </div>
               <span className="font-mono text-[10px]">AUVRYN Command Layer</span>
             </div>

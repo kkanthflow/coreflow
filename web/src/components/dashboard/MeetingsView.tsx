@@ -195,8 +195,8 @@ export function MeetingsView() {
               <Calendar className="text-primary" size={24} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white tracking-tight">Schedule Meeting</h2>
-              <p className="text-sm text-gray-400 mt-1">Configure your secure enterprise meeting</p>
+              <h2 className="text-xl font-bold text-main tracking-tight">Schedule Meeting</h2>
+              <p className="text-sm text-muted mt-1">Configure your secure enterprise meeting</p>
             </div>
           </div>
 
@@ -222,7 +222,7 @@ export function MeetingsView() {
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. Q3 Roadmap Planning"
-                className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors"
+                className="w-full bg-[#0B0B0D] border border-divider rounded-xl px-4 py-3 text-main placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors"
               />
             </div>
 
@@ -233,7 +233,7 @@ export function MeetingsView() {
                 onChange={e => setDescription(e.target.value)}
                 placeholder="Brief agenda or context for attendees..."
                 rows={3}
-                className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors resize-none"
+                className="w-full bg-[#0B0B0D] border border-divider rounded-xl px-4 py-3 text-main placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors resize-none"
               />
             </div>
 
@@ -247,7 +247,7 @@ export function MeetingsView() {
                     required
                     value={date}
                     onChange={e => setDate(e.target.value)}
-                    className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
+                    className="w-full bg-[#0B0B0D] border border-divider rounded-xl pl-10 pr-4 py-3 text-main focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
                   />
                 </div>
               </div>
@@ -261,7 +261,7 @@ export function MeetingsView() {
                     required
                     value={time}
                     onChange={e => setTime(e.target.value)}
-                    className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
+                    className="w-full bg-[#0B0B0D] border border-divider rounded-xl pl-10 pr-4 py-3 text-main focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
                   />
                 </div>
               </div>
@@ -272,7 +272,7 @@ export function MeetingsView() {
               <select
                 value={duration}
                 onChange={e => setDuration(e.target.value)}
-                className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary/50 transition-colors"
+                className="w-full bg-[#0B0B0D] border border-divider rounded-xl px-4 py-3 text-main focus:outline-none focus:border-primary/50 transition-colors"
               >
                 <option value="15">15 Minutes</option>
                 <option value="30">30 Minutes</option>
@@ -294,8 +294,8 @@ export function MeetingsView() {
               <Users className="text-purple-500" size={20} />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-white tracking-tight">Invite Attendees</h3>
-              <p className="text-xs text-gray-400 mt-1">{selectedUsers.size} selected for RSVP</p>
+              <h3 className="text-lg font-bold text-main tracking-tight">Invite Attendees</h3>
+              <p className="text-xs text-muted mt-1">{selectedUsers.size} selected for RSVP</p>
             </div>
           </div>
 
@@ -306,7 +306,7 @@ export function MeetingsView() {
               placeholder="Search users..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full bg-[#0B0B0D] border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+              className="w-full bg-[#0B0B0D] border border-divider rounded-xl pl-10 pr-4 py-2.5 text-sm text-main placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
             />
           </div>
 
@@ -317,7 +317,7 @@ export function MeetingsView() {
               </div>
             ) : filteredUsers.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-32 text-center">
-                <p className="text-sm text-gray-400">No users found.</p>
+                <p className="text-sm text-muted">No users found.</p>
               </div>
             ) : (
               filteredUsers.map(u => {
@@ -334,11 +334,11 @@ export function MeetingsView() {
                     }`}
                   >
                     <div className="flex items-center gap-3 overflow-hidden">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-700 to-gray-600 flex items-center justify-center text-xs font-bold text-white shrink-0">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-gray-700 to-gray-600 flex items-center justify-center text-xs font-bold text-main shrink-0">
                         {nameToDisplay.charAt(0).toUpperCase()}
                       </div>
                       <div className="min-w-0">
-                        <p className={`text-sm font-semibold truncate ${selectedUsers.has(u.id) ? 'text-purple-400' : 'text-white'}`}>
+                        <p className={`text-sm font-semibold truncate ${selectedUsers.has(u.id) ? 'text-purple-400' : 'text-main'}`}>
                           {nameToDisplay}
                         </p>
                         {u.role && <p className="text-[10px] text-gray-500 capitalize">{u.role}</p>}
@@ -346,7 +346,7 @@ export function MeetingsView() {
                     </div>
                     {selectedUsers.has(u.id) ? (
                       <div className="w-5 h-5 rounded-full bg-purple-500 flex items-center justify-center shrink-0">
-                        <Check size={12} className="text-white" />
+                        <Check size={12} className="text-main" />
                       </div>
                     ) : (
                       <div className="w-5 h-5 rounded-full border border-gray-600 shrink-0" />
@@ -362,7 +362,7 @@ export function MeetingsView() {
               form="schedule-form"
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary disabled:bg-[#2c2c2e] disabled:text-gray-500 disabled:cursor-not-allowed text-white font-bold rounded-xl px-4 py-4 transition-all shadow-lg"
+              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary disabled:bg-[#2c2c2e] disabled:text-gray-500 disabled:cursor-not-allowed text-main font-bold rounded-xl px-4 py-4 transition-all shadow-lg"
             >
               {loading ? (
                 <span>Scheduling...</span>

@@ -77,22 +77,22 @@ export default function InviteClientModal({
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="w-full max-w-lg bg-[#0B0C10] border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden flex flex-col text-white"
+        className="w-full max-w-lg bg-[#0B0C10] border border-divider rounded-xl shadow-2xl overflow-hidden flex flex-col text-main"
       >
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-white/[0.06] bg-[#0E1017] flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-divider bg-[#0E1017] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A]">
               <UserPlus size={18} />
             </div>
             <div>
-              <h2 className="text-base font-bold text-white tracking-tight">
+              <h2 className="text-base font-bold text-main tracking-tight">
                 Create Client Contact Account
               </h2>
-              <p className="text-xs text-zinc-400 truncate max-w-sm">{projectTitle}</p>
+              <p className="text-xs text-muted truncate max-w-sm">{projectTitle}</p>
             </div>
           </div>
-          <button onClick={handleResetAndClose} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-zinc-400 hover:text-white">
+          <button onClick={handleResetAndClose} className="p-1.5 rounded-lg hover:bg-white/[0.06] text-muted hover:text-main">
             <X size={18} />
           </button>
         </div>
@@ -106,18 +106,18 @@ export default function InviteClientModal({
               </div>
               <div>
                 <h3 className="text-sm font-bold text-emerald-300">Client Account Created</h3>
-                <p className="text-xs text-zinc-300 mt-1">
+                <p className="text-xs text-muted mt-1">
                   User credentials have been registered in the database with direct project room access.
                 </p>
               </div>
-              <div className="p-3 bg-[#07080B] rounded-lg border border-white/[0.06] text-left text-xs font-mono space-y-1.5">
-                <div className="text-zinc-400">Email: <span className="text-white font-bold">{successResult.email}</span></div>
-                <div className="text-zinc-400">Name: <span className="text-white">{successResult.fullName}</span></div>
-                <div className="text-zinc-400">Role: <span className="text-emerald-400 font-bold">CLIENT</span></div>
+              <div className="p-3 bg-[#07080B] rounded-lg border border-divider text-left text-xs font-mono space-y-1.5">
+                <div className="text-muted">Email: <span className="text-main font-bold">{successResult.email}</span></div>
+                <div className="text-muted">Name: <span className="text-main">{successResult.fullName}</span></div>
+                <div className="text-muted">Role: <span className="text-emerald-400 font-bold">CLIENT</span></div>
               </div>
               <button
                 onClick={handleResetAndClose}
-                className="w-full py-2 bg-[#FF6B4A] hover:bg-[#FF552B] text-white rounded-lg text-xs font-bold transition-colors"
+                className="w-full py-2 bg-[#FF6B4A] hover:bg-[#FF552B] text-main rounded-lg text-xs font-bold transition-colors"
               >
                 Done
               </button>
@@ -127,9 +127,9 @@ export default function InviteClientModal({
               {/* Security Protection Banner */}
               <div className="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-lg flex items-start gap-2.5">
                 <Shield size={16} className="text-emerald-400 shrink-0 mt-0.5" />
-                <div className="text-xs text-zinc-300 space-y-0.5">
+                <div className="text-xs text-muted space-y-0.5">
                   <span className="font-bold text-emerald-400 block">Verified Database Credentials</span>
-                  <p className="text-[11px] text-zinc-400">
+                  <p className="text-[11px] text-muted">
                     Creates an authenticated client user in the database with access strictly scoped to this Client Project Room.
                   </p>
                 </div>
@@ -137,47 +137,47 @@ export default function InviteClientModal({
 
               {/* Full Name */}
               <div>
-                <label className="text-xs font-semibold text-zinc-300 block mb-1">
+                <label className="text-xs font-semibold text-muted block mb-1">
                   Client Contact Name
                 </label>
                 <div className="relative">
-                  <User size={14} className="absolute left-3 top-2.5 text-zinc-500" />
+                  <User size={14} className="absolute left-3 top-2.5 text-muted" />
                   <input
                     type="text"
                     required
                     placeholder="e.g. Sarah Jenkins"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-[#12141C] border border-white/[0.08] text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
+                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-[#12141C] border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
                   />
                 </div>
               </div>
 
               {/* Email Address */}
               <div>
-                <label className="text-xs font-semibold text-zinc-300 block mb-1">
+                <label className="text-xs font-semibold text-muted block mb-1">
                   Client Email Address
                 </label>
                 <div className="relative">
-                  <Mail size={14} className="absolute left-3 top-2.5 text-zinc-500" />
+                  <Mail size={14} className="absolute left-3 top-2.5 text-muted" />
                   <input
                     type="email"
                     required
                     placeholder="client@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-[#12141C] border border-white/[0.08] text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
+                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-[#12141C] border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
                   />
                 </div>
               </div>
 
               {/* Password */}
               <div>
-                <label className="text-xs font-semibold text-zinc-300 block mb-1">
+                <label className="text-xs font-semibold text-muted block mb-1">
                   Initial Password
                 </label>
                 <div className="relative">
-                  <Lock size={14} className="absolute left-3 top-2.5 text-zinc-500" />
+                  <Lock size={14} className="absolute left-3 top-2.5 text-muted" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     required
@@ -185,12 +185,12 @@ export default function InviteClientModal({
                     placeholder="Set 6+ character password..."
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-9 pr-9 py-2 rounded-lg bg-[#12141C] border border-white/[0.08] text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
+                    className="w-full pl-9 pr-9 py-2 rounded-lg bg-[#12141C] border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-2.5 text-zinc-500 hover:text-zinc-300"
+                    className="absolute right-3 top-2.5 text-muted hover:text-muted"
                   >
                     {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                   </button>
@@ -198,52 +198,52 @@ export default function InviteClientModal({
               </div>
 
               {/* Granular Client Permissions */}
-              <div className="p-3 rounded-lg bg-[#07080B] border border-white/[0.04] space-y-2">
-                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+              <div className="p-3 rounded-lg bg-[#07080B] border border-divider space-y-2">
+                <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   Client Permissions Granted
                 </span>
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-muted">
                   <input
                     type="checkbox"
                     checked={canApprove}
                     onChange={(e) => setCanApprove(e.target.checked)}
-                    className="rounded border-white/20 bg-[#12141C] text-[#FF6B4A] focus:ring-0"
+                    className="rounded border-divider bg-[#12141C] text-[#FF6B4A] focus:ring-0"
                   />
                   <span>Can Approve Deliverables & Milestones</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-muted">
                   <input
                     type="checkbox"
                     checked={canRequestChanges}
                     onChange={(e) => setCanRequestChanges(e.target.checked)}
-                    className="rounded border-white/20 bg-[#12141C] text-[#FF6B4A] focus:ring-0"
+                    className="rounded border-divider bg-[#12141C] text-[#FF6B4A] focus:ring-0"
                   />
                   <span>Can Submit Change Requests (CR)</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer text-xs text-zinc-300">
+                <label className="flex items-center gap-2 cursor-pointer text-xs text-muted">
                   <input
                     type="checkbox"
                     checked={canViewFinancials}
                     onChange={(e) => setCanViewFinancials(e.target.checked)}
-                    className="rounded border-white/20 bg-[#12141C] text-[#FF6B4A] focus:ring-0"
+                    className="rounded border-divider bg-[#12141C] text-[#FF6B4A] focus:ring-0"
                   />
                   <span>Can View Project Value & Cost Causality</span>
                 </label>
               </div>
 
               {/* Action Buttons */}
-              <div className="pt-2 flex justify-end gap-2 border-t border-white/[0.06]">
+              <div className="pt-2 flex justify-end gap-2 border-t border-divider">
                 <button
                   type="button"
                   onClick={handleResetAndClose}
-                  className="px-3.5 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-zinc-400 hover:text-white text-xs font-semibold"
+                  className="px-3.5 py-2 rounded-lg bg-white/[0.04] hover:bg-white/[0.08] text-muted hover:text-main text-xs font-semibold"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={creating || !email.trim() || !password}
-                  className="px-4 py-2 rounded-lg bg-[#FF6B4A] hover:bg-[#FF5530] disabled:opacity-50 text-white text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
+                  className="px-4 py-2 rounded-lg bg-[#FF6B4A] hover:bg-[#FF5530] disabled:opacity-50 text-main text-xs font-bold transition-colors flex items-center gap-1.5 shadow-sm"
                 >
                   <UserPlus size={14} />
                   <span>{creating ? 'Creating Account...' : 'Create Client Account'}</span>

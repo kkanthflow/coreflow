@@ -87,21 +87,21 @@ export function DiagnosticsOverlay() {
       {!isOpen ? (
         <button
           onClick={() => setIsOpen(true)}
-          className="bg-black/80 hover:bg-black backdrop-blur-md border border-white/20 text-white/80 hover:text-white px-3 py-1.5 rounded-full text-xs font-mono flex items-center gap-1.5 shadow-lg transition-all"
+          className="bg-black/80 hover:bg-black backdrop-blur-md border border-divider text-main/80 hover:text-main px-3 py-1.5 rounded-full text-xs font-mono flex items-center gap-1.5 shadow-lg transition-all"
         >
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           WebRTC Stats
         </button>
       ) : (
-        <div className="bg-[#121214]/95 backdrop-blur-xl border border-white/15 text-white p-4 rounded-2xl w-80 shadow-2xl font-mono text-xs animate-in fade-in zoom-in duration-200">
-          <div className="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+        <div className="bg-[#121214]/95 backdrop-blur-xl border border-white/15 text-main p-4 rounded-2xl w-80 shadow-2xl font-mono text-xs animate-in fade-in zoom-in duration-200">
+          <div className="flex items-center justify-between border-b border-divider pb-2 mb-3">
             <span className="font-bold text-primary flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               LiveKit Telemetry
             </span>
             <button
               onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-white transition-colors"
+              className="text-muted hover:text-main transition-colors"
             >
               ✕
             </button>
@@ -109,31 +109,31 @@ export function DiagnosticsOverlay() {
 
           <div className="space-y-2 text-gray-300">
             <div className="flex justify-between">
-              <span className="text-gray-400">Resolution:</span>
+              <span className="text-muted">Resolution:</span>
               <span className="text-emerald-400 font-semibold">{stats.resolution}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Target FPS:</span>
+              <span className="text-muted">Target FPS:</span>
               <span className="text-emerald-400 font-semibold">{stats.fps} FPS</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Pub Bitrate:</span>
+              <span className="text-muted">Pub Bitrate:</span>
               <span className="text-primary font-semibold">{stats.pubBitrate} kbps</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Rec Bitrate:</span>
+              <span className="text-muted">Rec Bitrate:</span>
               <span className="text-primary font-semibold">{stats.recBitrate} kbps</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Layer:</span>
+              <span className="text-muted">Layer:</span>
               <span className="text-purple-400 font-semibold">{stats.layer}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Track Priority:</span>
+              <span className="text-muted">Track Priority:</span>
               <span className="text-yellow-400 font-semibold">{stats.priority}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Net Quality:</span>
+              <span className="text-muted">Net Quality:</span>
               <span className="text-emerald-400 font-semibold">{stats.connectionQuality}</span>
             </div>
           </div>

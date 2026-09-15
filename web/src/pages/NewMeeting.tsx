@@ -158,7 +158,7 @@ export default function NewMeeting() {
   const otherMembers = members.filter(m => m.id !== user?.id);
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       <PageHeader
         title="Schedule Video Session"
         breadcrumbs={[
@@ -169,7 +169,7 @@ export default function NewMeeting() {
         actions={
           <button
             onClick={() => navigate('/meetings')}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] text-xs transition-colors"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs transition-colors"
           >
             <ArrowLeft size={13} />
             <span>Cancel</span>
@@ -184,18 +184,18 @@ export default function NewMeeting() {
         </div>
       )}
 
-      <div className="max-w-2xl bg-[#0C0D12] border border-white/[0.06] rounded-lg p-5 sm:p-6 space-y-5">
+      <div className="max-w-2xl bg-card-bg border border-divider rounded-lg p-5 sm:p-6 space-y-5">
         
         {/* Instant Launch Action Strip */}
-        <div className="p-4 rounded bg-[#08090C] border border-[#FF6B4A]/25 flex items-center justify-between gap-4">
+        <div className="p-4 rounded bg-card-bg border border-[#FF6B4A]/25 flex items-center justify-between gap-4">
           <div>
-            <h3 className="text-xs font-bold text-white uppercase tracking-wider font-mono">Instant Session</h3>
-            <p className="text-[11px] text-zinc-400 mt-0.5">Start an instant conference right now without advance scheduling.</p>
+            <h3 className="text-xs font-bold text-main uppercase tracking-wider font-mono">Instant Session</h3>
+            <p className="text-[11px] text-muted mt-0.5">Start an instant conference right now without advance scheduling.</p>
           </div>
           <button
             onClick={() => handleCreate(true)}
             disabled={saving}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-white font-semibold text-xs rounded transition-colors shadow-sm shrink-0 disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-main font-semibold text-xs rounded transition-colors shadow-sm shrink-0 disabled:opacity-50"
           >
             <Play size={12} fill="currentColor" />
             <span>{saving ? 'Starting...' : 'Start Now'}</span>
@@ -205,7 +205,7 @@ export default function NewMeeting() {
         {/* Schedule Form */}
         <form onSubmit={(e) => { e.preventDefault(); handleCreate(false); }} className="space-y-4 pt-2">
           <div>
-            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
               Meeting Title <span className="text-[#FF6B4A]">*</span>
             </label>
             <input
@@ -214,12 +214,12 @@ export default function NewMeeting() {
               placeholder="e.g. Sprint Architecture & Delivery Review"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
             />
           </div>
 
           <div>
-            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
               Agenda & Scope
             </label>
             <textarea
@@ -227,13 +227,13 @@ export default function NewMeeting() {
               placeholder="Topics, agenda items, reference links..."
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors resize-none"
+              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+              <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                 Date
               </label>
               <input
@@ -241,12 +241,12 @@ export default function NewMeeting() {
                 required
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full bg-[#07080B] border border-white/[0.06] rounded px-3 py-1.5 text-xs text-white focus:outline-none"
+                className="w-full bg-[#07080B] border border-divider rounded px-3 py-1.5 text-xs text-main focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+              <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                 Start Time
               </label>
               <input
@@ -254,18 +254,18 @@ export default function NewMeeting() {
                 required
                 value={time}
                 onChange={e => setTime(e.target.value)}
-                className="w-full bg-[#07080B] border border-white/[0.06] rounded px-3 py-1.5 text-xs text-white focus:outline-none"
+                className="w-full bg-[#07080B] border border-divider rounded px-3 py-1.5 text-xs text-main focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+              <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                 Duration
               </label>
               <select
                 value={duration}
                 onChange={e => setDuration(e.target.value)}
-                className="w-full bg-[#07080B] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
               >
                 <option value="15">15 mins</option>
                 <option value="30">30 mins</option>
@@ -277,14 +277,14 @@ export default function NewMeeting() {
           </div>
 
           {/* Attendees & Host Section */}
-          <div className="pt-3 border-t border-white/[0.04] space-y-3">
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block">
+          <div className="pt-3 border-t border-divider space-y-3">
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block">
               Meeting Attendees & Roles
             </span>
 
             {/* Logged in User as Host */}
             <div>
-              <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider block mb-1">
+              <span className="text-[9px] font-mono text-muted uppercase tracking-wider block mb-1">
                 Organizer & Host
               </span>
               <div className="p-2.5 rounded bg-[#07080B] border border-[#FF6B4A]/30 flex items-center justify-between text-xs">
@@ -293,11 +293,11 @@ export default function NewMeeting() {
                     {hostDisplayName.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <span className="font-semibold text-white block truncate">
-                      {hostDisplayName} <span className="text-zinc-500 text-[11px] font-normal">(You)</span>
+                    <span className="font-semibold text-main block truncate">
+                      {hostDisplayName} <span className="text-muted text-[11px] font-normal">(You)</span>
                     </span>
                     {user?.email && (
-                      <span className="text-[10px] font-mono text-zinc-500 block truncate">
+                      <span className="text-[10px] font-mono text-muted block truncate">
                         {user.email}
                       </span>
                     )}
@@ -315,10 +315,10 @@ export default function NewMeeting() {
             {otherMembers.length > 0 && (
               <div className="space-y-1.5 pt-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider">
+                  <span className="text-[9px] font-mono text-muted uppercase tracking-wider">
                     Invite Team Members
                   </span>
-                  <span className="text-[10px] font-mono text-zinc-400">
+                  <span className="text-[10px] font-mono text-muted">
                     {selectedInvited.length} invited
                   </span>
                 </div>
@@ -332,12 +332,12 @@ export default function NewMeeting() {
                         onClick={() => toggleInvite(m.id)}
                         className={`p-2 rounded border flex items-center justify-between text-xs cursor-pointer transition-colors ${
                           isSelected
-                            ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]/30 text-white font-semibold'
-                            : 'bg-[#07080B] border-white/[0.04] text-zinc-400 hover:text-white'
+                            ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]/30 text-main font-semibold'
+                            : 'bg-[#07080B] border-divider text-muted hover:text-main'
                         }`}
                       >
                         <span className="truncate">{m.full_name || m.email}</span>
-                        <span className="text-[10px] font-mono text-zinc-500 shrink-0 ml-2">
+                        <span className="text-[10px] font-mono text-muted shrink-0 ml-2">
                           {isSelected ? '✓ Invited' : '+ Add'}
                         </span>
                       </div>
@@ -348,18 +348,18 @@ export default function NewMeeting() {
             )}
           </div>
 
-          <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.04]">
+          <div className="flex justify-end gap-2 pt-3 border-t border-divider">
             <button
               type="button"
               onClick={() => navigate('/meetings')}
-              className="px-3.5 py-1.5 bg-[#10121A] hover:bg-[#151822] text-zinc-300 text-xs rounded border border-white/[0.06] transition-colors"
+              className="px-3.5 py-1.5 bg-hover hover:bg-hover text-muted text-xs rounded border border-divider transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={saving || !title.trim()}
-              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-white font-semibold text-xs rounded transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors shadow-sm"
             >
               <Save size={13} />
               <span>{saving ? 'Scheduling...' : 'Schedule Conference'}</span>

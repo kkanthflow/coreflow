@@ -92,7 +92,7 @@ export default function Meetings() {
   ], [upcomingMeetings, pastMeetings]);
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       
       {/* ── Page Header Standard ── */}
       <PageHeader
@@ -102,19 +102,19 @@ export default function Meetings() {
           <div className="flex items-center gap-2">
             <form onSubmit={handleJoinWithCode} className="flex items-center gap-1.5">
               <div className="relative">
-                <Key size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <Key size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
                   placeholder="Enter meeting room code..."
                   value={meetingCode}
                   onChange={e => setMeetingCode(e.target.value)}
-                  className="w-48 pl-7 pr-3 py-1.5 bg-[#0C0D12] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded text-xs text-white placeholder-zinc-500 focus:outline-none font-mono transition-colors"
+                  className="w-48 pl-7 pr-3 py-1.5 bg-card-bg border border-divider focus:border-[#FF6B4A]/50 rounded text-xs text-main placeholder-zinc-500 focus:outline-none font-mono transition-colors"
                 />
               </div>
               <button
                 type="submit"
                 disabled={!meetingCode.trim()}
-                className="px-2.5 py-1.5 bg-[#12141F] hover:bg-[#181B28] disabled:opacity-40 text-white text-xs font-semibold rounded border border-white/[0.06] transition-colors"
+                className="px-2.5 py-1.5 bg-hover hover:bg-hover disabled:opacity-40 text-main text-xs font-semibold rounded border border-divider transition-colors"
               >
                 Join
               </button>
@@ -122,7 +122,7 @@ export default function Meetings() {
 
             <button
               onClick={fetchMeetings}
-              className="p-2 rounded bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] transition-colors"
+              className="p-2 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider transition-colors"
               title="Sync schedule"
             >
               <RefreshCw size={13} />
@@ -131,7 +131,7 @@ export default function Meetings() {
             {canSchedule && (
               <button
                 onClick={() => navigate('/meetings/new')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold transition-colors shadow-sm"
               >
                 <Plus size={14} />
                 <span>Schedule Call</span>
@@ -152,31 +152,31 @@ export default function Meetings() {
           
           {/* Active / Next Prominent Meeting Banner */}
           {filter === 'upcoming' && nextMeeting && (
-            <div className="bg-[#0C0D12] border border-[#FF6B4A]/30 rounded-lg p-4 relative overflow-hidden">
+            <div className="bg-card-bg border border-[#FF6B4A]/30 rounded-lg p-4 relative overflow-hidden">
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[9px] font-mono font-bold text-[#FF6B4A] uppercase tracking-wider flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B4A] animate-pulse" />
                   Next Scheduled Session
                 </span>
-                <span className="text-xs font-mono text-zinc-400">
+                <span className="text-xs font-mono text-muted">
                   {formatDate(nextMeeting.start_time)} · {formatTime(nextMeeting.start_time)}
                 </span>
               </div>
 
-              <h2 className="text-base font-bold text-white mb-1">{nextMeeting.title || 'Team Conference'}</h2>
+              <h2 className="text-base font-bold text-main mb-1">{nextMeeting.title || 'Team Conference'}</h2>
               {nextMeeting.description && (
-                <p className="text-xs text-zinc-400 mb-3 line-clamp-1">{nextMeeting.description}</p>
+                <p className="text-xs text-muted mb-3 line-clamp-1">{nextMeeting.description}</p>
               )}
 
-              <div className="flex items-center justify-between pt-2 border-t border-white/[0.04] mt-2">
-                <div className="flex items-center gap-3 text-[11px] text-zinc-500 font-mono">
+              <div className="flex items-center justify-between pt-2 border-t border-divider mt-2">
+                <div className="flex items-center gap-3 text-[11px] text-muted font-mono">
                   <span>Duration: {getDurationMinutes(nextMeeting)} mins</span>
                   <span>Host: {nextMeeting.host?.full_name?.split(' ')[0] || 'Team'}</span>
                 </div>
 
                 <Link
                   to={`/meetings/${nextMeeting.id}`}
-                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded transition-colors shadow-sm"
+                  className="flex items-center gap-1.5 px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold rounded transition-colors shadow-sm"
                 >
                   <Play size={12} fill="currentColor" />
                   <span>Enter Room</span>
@@ -187,11 +187,11 @@ export default function Meetings() {
 
           {/* Schedule Navigation Tabs */}
           <div className="flex items-center justify-between">
-            <div className="flex bg-[#0C0D12] border border-white/[0.06] rounded p-0.5">
+            <div className="flex bg-card-bg border border-divider rounded p-0.5">
               <button
                 onClick={() => setFilter('upcoming')}
                 className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                  filter === 'upcoming' ? 'bg-[#151822] text-white font-semibold' : 'text-zinc-400 hover:text-zinc-200'
+                  filter === 'upcoming' ? 'bg-hover text-main font-semibold' : 'text-muted hover:text-zinc-200'
                 }`}
               >
                 Upcoming Sessions ({upcomingMeetings.length})
@@ -199,7 +199,7 @@ export default function Meetings() {
               <button
                 onClick={() => setFilter('past')}
                 className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                  filter === 'past' ? 'bg-[#151822] text-white font-semibold' : 'text-zinc-400 hover:text-zinc-200'
+                  filter === 'past' ? 'bg-hover text-main font-semibold' : 'text-muted hover:text-zinc-200'
                 }`}
               >
                 Past Conferences ({pastMeetings.length})
@@ -218,7 +218,7 @@ export default function Meetings() {
               action={canSchedule && filter === 'upcoming' ? { label: "Schedule First Meeting", onClick: () => navigate('/meetings/new') } : undefined}
             />
           ) : (
-            <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg divide-y divide-white/[0.03] overflow-hidden">
+            <div className="bg-card-bg border border-divider rounded-lg divide-y divide-white/[0.03] overflow-hidden">
               {displayed.map(meeting => {
                 const isLive = meeting.status === 'active';
                 return (
@@ -234,7 +234,7 @@ export default function Meetings() {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2 mb-0.5">
-                          <span className="text-xs font-semibold text-white group-hover:text-[#FF6B4A] transition-colors truncate">
+                          <span className="text-xs font-semibold text-main group-hover:text-[#FF6B4A] transition-colors truncate">
                             {meeting.title}
                           </span>
                           {isLive && (
@@ -243,7 +243,7 @@ export default function Meetings() {
                             </span>
                           )}
                         </div>
-                        <div className="flex items-center gap-3 text-[10px] font-mono text-zinc-500">
+                        <div className="flex items-center gap-3 text-[10px] font-mono text-muted">
                           <span>{formatDate(meeting.start_time)}</span>
                           <span>{formatTime(meeting.start_time)} ({getDurationMinutes(meeting)}m)</span>
                           {meeting.host && <span>Host: {meeting.host.full_name?.split(' ')[0]}</span>}
@@ -255,8 +255,8 @@ export default function Meetings() {
                       to={`/meetings/${meeting.id}`}
                       className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors shrink-0 flex items-center gap-1.5 ${
                         isLive
-                          ? 'bg-emerald-600 hover:bg-emerald-500 text-white'
-                          : 'bg-[#151822] hover:bg-[#1C2030] text-zinc-200 border border-white/[0.06]'
+                          ? 'bg-emerald-600 hover:bg-emerald-500 text-main'
+                          : 'bg-hover hover:bg-[#1C2030] text-zinc-200 border border-divider'
                       }`}
                     >
                       <span>{isLive ? 'Join Live' : 'Open'}</span>
@@ -271,38 +271,38 @@ export default function Meetings() {
 
         {/* Right Column: Infrastructure & Ad-hoc Room (4 cols) */}
         <div className="xl:col-span-4 space-y-6">
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4 space-y-3">
-            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white flex items-center gap-2">
+          <div className="bg-card-bg border border-divider rounded-lg p-4 space-y-3">
+            <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-main flex items-center gap-2">
               <Sparkles size={13} className="text-[#FF6B4A]" />
               <span>LiveKit Protocol</span>
             </h3>
-            <p className="text-xs text-zinc-400 leading-relaxed font-normal">
+            <p className="text-xs text-muted leading-relaxed font-normal">
               High performance selective forwarding unit (SFU) with dynamic bitrates, adaptive resolution switching, and end-to-end security.
             </p>
 
-            <div className="pt-2 border-t border-white/[0.04] space-y-2 text-xs">
+            <div className="pt-2 border-t border-divider space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-zinc-500 font-mono text-[10px]">SFU TOPOLOGY</span>
-                <span className="text-white font-mono text-[11px]">LiveKit Cloud</span>
+                <span className="text-muted font-mono text-[10px]">SFU TOPOLOGY</span>
+                <span className="text-main font-mono text-[11px]">LiveKit Cloud</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-zinc-500 font-mono text-[10px]">BITRATE MAX</span>
-                <span className="text-white font-mono text-[11px]">1080p @ 30fps</span>
+                <span className="text-muted font-mono text-[10px]">BITRATE MAX</span>
+                <span className="text-main font-mono text-[11px]">1080p @ 30fps</span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-zinc-500 font-mono text-[10px]">GLOBAL LATENCY</span>
+                <span className="text-muted font-mono text-[10px]">GLOBAL LATENCY</span>
                 <span className="text-emerald-400 font-mono text-[11px]">&lt; 140ms</span>
               </div>
             </div>
           </div>
 
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4">
-            <span className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">Instant Session</span>
-            <p className="text-xs text-zinc-500 mb-3">Launch an ad-hoc room immediately without calendar registration.</p>
+          <div className="bg-card-bg border border-divider rounded-lg p-4">
+            <span className="text-xs font-mono font-bold uppercase tracking-wider text-muted block mb-1">Instant Session</span>
+            <p className="text-xs text-muted mb-3">Launch an ad-hoc room immediately without calendar registration.</p>
             {canSchedule && (
               <button
                 onClick={() => navigate('/meetings/new')}
-                className="w-full py-2 bg-[#12141F] hover:bg-[#181B28] text-white text-xs font-semibold rounded border border-white/[0.06] transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2 bg-hover hover:bg-hover text-main text-xs font-semibold rounded border border-divider transition-colors flex items-center justify-center gap-2"
               >
                 <Video size={13} className="text-[#FF6B4A]" />
                 <span>Launch Instant Room</span>

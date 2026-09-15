@@ -210,11 +210,11 @@ export default function ProjectDetails() {
   if (!project) {
     return (
       <div className="text-center py-24 font-sans select-none space-y-4">
-        <p className="text-zinc-400 text-sm font-semibold">Access Denied or Project Not Found</p>
+        <p className="text-muted text-sm font-semibold">Access Denied or Project Not Found</p>
         <p className="text-zinc-600 text-xs max-w-md mx-auto">
           You do not have authorization to view this project initiative, or it does not exist.
         </p>
-        <button onClick={() => navigate('/projects')} className="px-4 py-2 bg-[#FF6B4A] text-white rounded text-xs font-semibold hover:bg-[#FF552B] transition-colors">
+        <button onClick={() => navigate('/projects')} className="px-4 py-2 bg-[#FF6B4A] text-main rounded text-xs font-semibold hover:bg-[#FF552B] transition-colors">
           Return to Projects
         </button>
       </div>
@@ -235,7 +235,7 @@ export default function ProjectDetails() {
   ];
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       
       {/* ── Page Header ── */}
       <PageHeader
@@ -252,7 +252,7 @@ export default function ProjectDetails() {
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
                 isEditing
                   ? 'bg-amber-500/20 border-amber-500/40 text-amber-300'
-                  : 'bg-[#10121A] hover:bg-[#151822] text-zinc-300 hover:text-white border-white/[0.06]'
+                  : 'bg-hover hover:bg-hover text-muted hover:text-main border-divider'
               }`}
             >
               {isEditing ? <X size={13} /> : <Edit3 size={13} />}
@@ -267,35 +267,35 @@ export default function ProjectDetails() {
             </button>
             <button
               onClick={() => setIsDnaOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10121A] hover:bg-[#151822] text-zinc-300 hover:text-white border border-white/[0.06] text-xs font-semibold transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs font-semibold transition-colors"
             >
               <Layers size={13} className="text-emerald-400" />
               <span>Project DNA</span>
             </button>
             <button
               onClick={() => setIsProofOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10121A] hover:bg-[#151822] text-zinc-300 hover:text-white border border-white/[0.06] text-xs font-semibold transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs font-semibold transition-colors"
             >
               <ShieldCheck size={13} className="text-emerald-400" />
               <span>Proof</span>
             </button>
             <button
               onClick={() => setIsCROpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10121A] hover:bg-[#151822] text-zinc-300 hover:text-white border border-white/[0.06] text-xs font-semibold transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs font-semibold transition-colors"
             >
               <GitBranch size={13} className="text-[#FF6B4A]" />
               <span>Change Request</span>
             </button>
             <button
               onClick={() => setIsInviteOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF6B4A] hover:bg-[#FF5530] text-white text-xs font-bold transition-colors shadow-sm"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FF6B4A] hover:bg-[#FF5530] text-main text-xs font-bold transition-colors shadow-sm"
             >
               <UserPlus size={13} />
               <span>Invite Client</span>
             </button>
             <button
               onClick={() => navigate('/projects')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] text-xs transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs transition-colors"
             >
               <ArrowLeft size={13} />
               <span>Projects</span>
@@ -315,9 +315,9 @@ export default function ProjectDetails() {
       <MetricStrip metrics={metrics} />
 
       {/* ── Internal Provider & Client Reporting Banner ── */}
-      <div className="p-4 rounded-xl bg-[#0C0D12] border border-white/[0.06] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="p-4 rounded-xl bg-card-bg border border-divider flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-white/[0.04] border border-white/[0.08] flex items-center justify-center text-zinc-300">
+          <div className="w-10 h-10 rounded-lg bg-white/[0.04] border border-divider flex items-center justify-center text-muted">
             {project.organization?.name ? (
               <Building size={18} className="text-blue-400" />
             ) : (
@@ -325,17 +325,17 @@ export default function ProjectDetails() {
             )}
           </div>
           <div>
-            <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-wider block">
+            <span className="text-[10px] font-mono text-muted uppercase tracking-wider block">
               {project.organization?.name ? 'ORGANIZATION REPORTING TO CLIENT' : 'INDEPENDENT FREELANCER REPORTING TO CLIENT'}
             </span>
-            <span className="text-sm font-bold text-white mt-0.5 block">
+            <span className="text-sm font-bold text-main mt-0.5 block">
               {project.organization?.name || project.owner?.full_name || 'Project Lead'}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-mono px-2.5 py-1 rounded bg-white/[0.03] text-zinc-400 border border-white/[0.06]">
+          <span className="text-[11px] font-mono px-2.5 py-1 rounded bg-white/[0.03] text-muted border border-divider">
             Mode: <strong className="text-zinc-200">{project.organization?.name ? 'Organization' : 'Freelancer'}</strong>
           </span>
           <button
@@ -348,47 +348,47 @@ export default function ProjectDetails() {
       </div>
 
       {/* ── Interactive Causality Quick Triggers ── */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-[#0C0D12] p-3 rounded-lg border border-white/[0.06]">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-card-bg p-3 rounded-lg border border-divider">
         <button
           onClick={() => { setWhyInitialType('progress'); setIsWhyOpen(true); }}
-          className="flex items-center justify-between p-2.5 rounded bg-[#10121A] hover:bg-[#151822] border border-white/[0.04] hover:border-[#FF6B4A]/40 transition-all text-left group"
+          className="flex items-center justify-between p-2.5 rounded bg-hover hover:bg-hover border border-divider hover:border-[#FF6B4A]/40 transition-all text-left group"
         >
           <div>
-            <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider block">PROGRESS: {progress}%</span>
-            <span className="text-xs font-bold text-white group-hover:text-[#FF6B4A] transition-colors">Why {progress}%?</span>
+            <span className="text-[9px] font-mono text-muted uppercase tracking-wider block">PROGRESS: {progress}%</span>
+            <span className="text-xs font-bold text-main group-hover:text-[#FF6B4A] transition-colors">Why {progress}%?</span>
           </div>
           <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#FF6B4A]/10 text-[#FF6B4A]">WHY?</span>
         </button>
 
         <button
           onClick={() => { setWhyInitialType('delivery'); setIsWhyOpen(true); }}
-          className="flex items-center justify-between p-2.5 rounded bg-[#10121A] hover:bg-[#151822] border border-white/[0.04] hover:border-[#FF6B4A]/40 transition-all text-left group"
+          className="flex items-center justify-between p-2.5 rounded bg-hover hover:bg-hover border border-divider hover:border-[#FF6B4A]/40 transition-all text-left group"
         >
           <div>
-            <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider block">DELIVERY: {project.due_date ? new Date(project.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Open'}</span>
-            <span className="text-xs font-bold text-white group-hover:text-[#FF6B4A] transition-colors">Why Delivery Date?</span>
+            <span className="text-[9px] font-mono text-muted uppercase tracking-wider block">DELIVERY: {project.due_date ? new Date(project.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'Open'}</span>
+            <span className="text-xs font-bold text-main group-hover:text-[#FF6B4A] transition-colors">Why Delivery Date?</span>
           </div>
           <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#FF6B4A]/10 text-[#FF6B4A]">WHY?</span>
         </button>
 
         <button
           onClick={() => { setWhyInitialType('cost'); setIsWhyOpen(true); }}
-          className="flex items-center justify-between p-2.5 rounded bg-[#10121A] hover:bg-[#151822] border border-white/[0.04] hover:border-[#FF6B4A]/40 transition-all text-left group"
+          className="flex items-center justify-between p-2.5 rounded bg-hover hover:bg-hover border border-divider hover:border-[#FF6B4A]/40 transition-all text-left group"
         >
           <div>
-            <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider block">PROJECT VALUE</span>
-            <span className="text-xs font-bold text-white group-hover:text-[#FF6B4A] transition-colors">Why Project Cost?</span>
+            <span className="text-[9px] font-mono text-muted uppercase tracking-wider block">PROJECT VALUE</span>
+            <span className="text-xs font-bold text-main group-hover:text-[#FF6B4A] transition-colors">Why Project Cost?</span>
           </div>
           <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#FF6B4A]/10 text-[#FF6B4A]">WHY?</span>
         </button>
 
         <button
           onClick={() => { setWhyInitialType('scope'); setIsWhyOpen(true); }}
-          className="flex items-center justify-between p-2.5 rounded bg-[#10121A] hover:bg-[#151822] border border-white/[0.04] hover:border-[#FF6B4A]/40 transition-all text-left group"
+          className="flex items-center justify-between p-2.5 rounded bg-hover hover:bg-hover border border-divider hover:border-[#FF6B4A]/40 transition-all text-left group"
         >
           <div>
-            <span className="text-[9px] font-mono text-zinc-500 uppercase tracking-wider block">SCOPE: {tasks.length} DELIVERABLES</span>
-            <span className="text-xs font-bold text-white group-hover:text-[#FF6B4A] transition-colors">Why Scope Count?</span>
+            <span className="text-[9px] font-mono text-muted uppercase tracking-wider block">SCOPE: {tasks.length} DELIVERABLES</span>
+            <span className="text-xs font-bold text-main group-hover:text-[#FF6B4A] transition-colors">Why Scope Count?</span>
           </div>
           <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-[#FF6B4A]/10 text-[#FF6B4A]">WHY?</span>
         </button>
@@ -399,11 +399,11 @@ export default function ProjectDetails() {
         
         {/* Left Column: Tasks Queue */}
         <div className="xl:col-span-8 space-y-6">
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4">
-            <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/[0.05]">
+          <div className="bg-card-bg border border-divider rounded-lg p-4">
+            <div className="flex items-center justify-between pb-3 mb-3 border-b border-divider">
               <div className="flex items-center gap-2">
                 <CheckSquare size={14} className="text-[#FF6B4A]" />
-                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Project Deliverables ({tasks.length})</h2>
+                <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-main">Project Deliverables ({tasks.length})</h2>
               </div>
             </div>
 
@@ -414,12 +414,12 @@ export default function ProjectDetails() {
                 placeholder="Assign quick deliverable to this workstream..."
                 value={taskTitle}
                 onChange={e => setTaskTitle(e.target.value)}
-                className="flex-1 bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                className="flex-1 bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
               />
               <button
                 type="submit"
                 disabled={addingTask || !taskTitle.trim()}
-                className="px-3 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-white font-semibold text-xs rounded transition-colors shadow-sm"
+                className="px-3 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors shadow-sm"
               >
                 {addingTask ? 'Adding...' : 'Add'}
               </button>
@@ -427,7 +427,7 @@ export default function ProjectDetails() {
 
             {/* Deliverables List */}
             {tasks.length === 0 ? (
-              <p className="text-center py-6 text-xs text-zinc-500 font-mono">No tasks recorded for this project.</p>
+              <p className="text-center py-6 text-xs text-muted font-mono">No tasks recorded for this project.</p>
             ) : (
               <div className="divide-y divide-white/[0.03]">
                 {tasks.map(t => (
@@ -438,12 +438,12 @@ export default function ProjectDetails() {
                         className={`w-4 h-4 rounded-[3px] border flex items-center justify-center transition-colors ${
                           t.status === 'done'
                             ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400'
-                            : 'border-white/20 hover:border-[#FF6B4A]'
+                            : 'border-divider hover:border-[#FF6B4A]'
                         }`}
                       >
                         {t.status === 'done' && <Check size={11} />}
                       </button>
-                      <span className={`text-xs truncate ${t.status === 'done' ? 'line-through text-zinc-500' : 'text-zinc-300'}`}>
+                      <span className={`text-xs truncate ${t.status === 'done' ? 'line-through text-muted' : 'text-muted'}`}>
                         {t.title}
                       </span>
                     </div>
@@ -460,9 +460,9 @@ export default function ProjectDetails() {
 
         {/* Right Column: Metadata & Workstream Info */}
         <div className="xl:col-span-4 space-y-6">
-          <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4 space-y-4">
-            <div className="flex items-center justify-between border-b border-white/[0.05] pb-2">
-              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-white">
+          <div className="bg-card-bg border border-divider rounded-lg p-4 space-y-4">
+            <div className="flex items-center justify-between border-b border-divider pb-2">
+              <h3 className="text-xs font-mono font-bold uppercase tracking-wider text-main">
                 {isEditing ? 'Edit Project Settings' : 'Workstream Scope'}
               </h3>
               <div className="flex items-center gap-2">
@@ -482,40 +482,40 @@ export default function ProjectDetails() {
             {isEditing ? (
               <div className="space-y-3 font-sans">
                 <div>
-                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                     Project Title
                   </label>
                   <input
                     type="text"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full bg-[#07080B] border border-white/[0.08] focus:border-[#FF6B4A] rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none"
+                    className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A] rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none"
                     placeholder="Project title..."
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                     Scope & Objectives Description
                   </label>
                   <textarea
                     rows={4}
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
-                    className="w-full bg-[#07080B] border border-white/[0.08] focus:border-[#FF6B4A] rounded px-3 py-2 text-xs text-white placeholder-zinc-500 focus:outline-none resize-none"
+                    className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A] rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none resize-none"
                     placeholder="Outline key deliverables, scope, and objectives..."
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                       Status
                     </label>
                     <select
                       value={editStatus}
                       onChange={(e) => setEditStatus(e.target.value)}
-                      className="w-full bg-[#07080B] border border-white/[0.08] focus:border-[#FF6B4A] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                      className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A] rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                     >
                       <option value="active">Active</option>
                       <option value="review">In Review</option>
@@ -525,23 +525,23 @@ export default function ProjectDetails() {
                   </div>
 
                   <div>
-                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                    <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                       Target Deadline
                     </label>
                     <input
                       type="date"
                       value={editDueDate}
                       onChange={(e) => setEditDueDate(e.target.value)}
-                      className="w-full bg-[#07080B] border border-white/[0.08] focus:border-[#FF6B4A] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                      className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A] rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                     />
                   </div>
                 </div>
 
-                <div className="flex gap-2 pt-2 border-t border-white/[0.05]">
+                <div className="flex gap-2 pt-2 border-t border-divider">
                   <button
                     onClick={handleSaveProjectEdit}
                     disabled={savingEdit || !editTitle.trim()}
-                    className="flex-1 px-3 py-2 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-50 text-white font-semibold text-xs rounded transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                    className="flex-1 px-3 py-2 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-50 text-main font-semibold text-xs rounded transition-colors flex items-center justify-center gap-1.5 shadow-sm"
                   >
                     <Save size={13} />
                     <span>{savingEdit ? 'Saving...' : 'Save Changes'}</span>
@@ -549,7 +549,7 @@ export default function ProjectDetails() {
                   <button
                     onClick={() => setIsEditing(false)}
                     disabled={savingEdit}
-                    className="px-3 py-2 bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] text-xs rounded transition-colors"
+                    className="px-3 py-2 bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs rounded transition-colors"
                   >
                     Cancel
                   </button>
@@ -558,24 +558,24 @@ export default function ProjectDetails() {
             ) : (
               <>
                 <div>
-                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 block mb-1">Description</span>
-                  <p className="text-xs text-zinc-300 leading-relaxed bg-[#07080B] p-2.5 rounded border border-white/[0.04]">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">Description</span>
+                  <p className="text-xs text-muted leading-relaxed bg-[#07080B] p-2.5 rounded border border-divider">
                     {project.description || 'No detailed scope description provided.'}
                   </p>
                 </div>
 
                 <div className="space-y-2 font-mono text-[11px]">
-                  <div className="flex justify-between py-1 border-b border-white/[0.03]">
-                    <span className="text-zinc-500">INITIATIVE ID</span>
-                    <span className="text-zinc-300">{project.id.slice(0, 8)}...</span>
+                  <div className="flex justify-between py-1 border-b border-divider">
+                    <span className="text-muted">INITIATIVE ID</span>
+                    <span className="text-muted">{project.id.slice(0, 8)}...</span>
                   </div>
-                  <div className="flex justify-between py-1 border-b border-white/[0.03]">
-                    <span className="text-zinc-500">CREATION DATE</span>
-                    <span className="text-zinc-300">{new Date(project.created_at).toLocaleDateString()}</span>
+                  <div className="flex justify-between py-1 border-b border-divider">
+                    <span className="text-muted">CREATION DATE</span>
+                    <span className="text-muted">{new Date(project.created_at).toLocaleDateString()}</span>
                   </div>
                   <div className="flex justify-between py-1">
-                    <span className="text-zinc-500">ASSIGNED MEMBERS</span>
-                    <span className="text-zinc-300">{project.project_members?.length || 0} Operators</span>
+                    <span className="text-muted">ASSIGNED MEMBERS</span>
+                    <span className="text-muted">{project.project_members?.length || 0} Operators</span>
                   </div>
                 </div>
               </>

@@ -22,6 +22,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useWorkspace } from '../hooks/useWorkspace';
+import { useTheme } from '../contexts/ThemeContext';
 import { toast } from '../components/ui/Toast';
 import { SUPPORTED_CURRENCIES } from '../lib/currency';
 
@@ -37,7 +38,7 @@ export default function Settings() {
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(false);
 
   // General & Preferences
-  const [darkMode, setDarkMode] = useState(true);
+  const { theme, setTheme } = useTheme();
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
 
   // Organization settings
@@ -97,7 +98,7 @@ export default function Settings() {
       if (uData) {
         if (uData.preferences) {
           const p = uData.preferences;
-          setDarkMode(p.theme !== 'light');
+          setTheme(p.theme === 'light' ? 'light' : 'dark');
           setHapticsEnabled(p.hapticFeedback ?? true);
           setMeetingInvites(p.meetingInvites ?? true);
           setMeetingReminders(p.meetingReminders ?? true);
@@ -412,21 +413,21 @@ export default function Settings() {
   };
 
   return (
-    <div className="flex-1 w-full max-w-4xl mx-auto space-y-6 pb-16 font-sans select-none text-zinc-300">
+    <div className="flex-1 w-full max-w-4xl mx-auto space-y-6 pb-16 font-sans select-none text-muted">
       
       {/* ── Top Header Navigation ── */}
-      <div className="flex items-center justify-between pb-2 border-b border-white/[0.06]">
+      <div className="flex items-center justify-between pb-2 border-b border-divider">
         <div className="flex items-center gap-3">
           {currentView !== 'main' && (
             <button 
               onClick={() => setCurrentView('main')}
-              className="w-10 h-10 rounded-full bg-[#12141F] border border-white/[0.08] hover:bg-[#181B28] flex items-center justify-center text-white transition-colors"
+              className="w-10 h-10 rounded-full bg-hover border border-divider hover:bg-hover flex items-center justify-center text-main transition-colors"
             >
               <ArrowLeft size={18} />
             </button>
           )}
           <div>
-            <h1 className="text-2xl font-bold text-white tracking-tight">
+            <h1 className="text-2xl font-bold text-main tracking-tight">
               {currentView === 'main' && 'App Settings'}
               {currentView === 'privacy' && 'Privacy Controls'}
               {currentView === 'notifications' && 'Notification Preferences'}
@@ -434,7 +435,7 @@ export default function Settings() {
               {currentView === 'media' && 'Audio & Video Routing'}
               {currentView === 'security' && 'Change Password & Security'}
             </h1>
-            <p className="text-xs text-zinc-400 mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               {currentView === 'main' && 'Configure theme display, notification channels, security policies, and organization billing.'}
               {currentView === 'privacy' && 'Manage real-time status visibility, read receipts, blocked members, and muted channels.'}
               {currentView === 'notifications' && 'Customize alert thresholds, meeting reminders, role updates, and weekly digest.'}
@@ -448,7 +449,7 @@ export default function Settings() {
         {currentView === 'main' && (
           <button
             onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] text-xs font-semibold transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs font-semibold transition-colors"
           >
             <ArrowLeft size={14} />
             <span>Dashboard</span>
@@ -464,28 +465,28 @@ export default function Settings() {
 
           {/* 1. Display */}
           <div className="space-y-2.5">
-            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">Display</span>
-            <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] overflow-hidden">
-              <div className="flex items-center justify-between p-4.5 border-b border-white/[0.04]">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Display</span>
+            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
+              <div className="flex items-center justify-between p-4.5 border-b border-divider">
                 <div className="flex items-center gap-3.5">
                   <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
                     <Moon size={18} />
                   </div>
                   <div>
-                    <div className="text-base font-semibold text-white">Dark Mode</div>
-                    <div className="text-xs text-zinc-400">Use dark theme across the app</div>
+                    <div className="text-base font-semibold text-main">Dark Mode</div>
+                    <div className="text-xs text-muted">Use dark theme across the app</div>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={() => {
-                    const next = !darkMode;
-                    setDarkMode(next);
-                    handleUpdatePreference({ theme: next ? 'dark' : 'light' });
+                    const next = theme === 'dark' ? 'light' : 'dark';
+                    setTheme(next);
+                    handleUpdatePreference({ theme: next });
                   }}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${darkMode ? 'bg-[#FF6B4A]' : 'bg-white/10'}`}
+                  className={`w-11 h-6 rounded-full transition-colors relative ${theme === 'dark' ? 'bg-[#FF6B4A]' : 'bg-black/20'}`}
                 >
-                  <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${darkMode ? 'right-1' : 'left-1'}`} />
+                  <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${theme === 'dark' ? 'right-1' : 'left-1 shadow-sm'}`} />
                 </button>
               </div>
             </div>
@@ -493,18 +494,18 @@ export default function Settings() {
 
           {/* 2. Preferences */}
           <div className="space-y-2.5">
-            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">Preferences</span>
-            <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] overflow-hidden">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Preferences</span>
+            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
               
               {/* Haptic Feedback */}
-              <div className="flex items-center justify-between p-4.5 border-b border-white/[0.04]">
+              <div className="flex items-center justify-between p-4.5 border-b border-divider">
                 <div className="flex items-center gap-3.5">
                   <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
                     <Smartphone size={18} />
                   </div>
                   <div>
-                    <div className="text-base font-semibold text-white">Haptic & Audio Feedback</div>
-                    <div className="text-xs text-zinc-400">Feedback sound on interaction toggles and room alerts</div>
+                    <div className="text-base font-semibold text-main">Haptic & Audio Feedback</div>
+                    <div className="text-xs text-muted">Feedback sound on interaction toggles and room alerts</div>
                   </div>
                 </div>
                 <button
@@ -523,18 +524,18 @@ export default function Settings() {
               {/* Notification Preferences Row */}
               <button 
                 onClick={() => setCurrentView('notifications')}
-                className="w-full flex items-center justify-between p-4.5 hover:bg-white/[0.02] transition-colors text-left border-b border-white/[0.04]"
+                className="w-full flex items-center justify-between p-4.5 hover:bg-white/[0.02] transition-colors text-left border-b border-divider"
               >
                 <div className="flex items-center gap-3.5">
                   <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
                     <Bell size={18} />
                   </div>
                   <div>
-                    <div className="text-base font-semibold text-white">Notification Preferences</div>
-                    <div className="text-xs text-zinc-400">Push alerts, 15m meeting reminders & email digests</div>
+                    <div className="text-base font-semibold text-main">Notification Preferences</div>
+                    <div className="text-xs text-muted">Push alerts, 15m meeting reminders & email digests</div>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-zinc-500" />
+                <ChevronRight size={18} className="text-muted" />
               </button>
 
               {/* Hardware / Media Routing Row */}
@@ -547,11 +548,11 @@ export default function Settings() {
                     <Video size={18} />
                   </div>
                   <div>
-                    <div className="text-base font-semibold text-white">Audio & Video Routing</div>
-                    <div className="text-xs text-zinc-400">Default microphone, camera capture & WebRTC E2EE</div>
+                    <div className="text-base font-semibold text-main">Audio & Video Routing</div>
+                    <div className="text-xs text-muted">Default microphone, camera capture & WebRTC E2EE</div>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-zinc-500" />
+                <ChevronRight size={18} className="text-muted" />
               </button>
 
             </div>
@@ -560,8 +561,8 @@ export default function Settings() {
           {/* 3. Freelancer Workspace Portal (for Freelancers) */}
           {(role === 'freelancer' || isFreelancerRole) && (
             <div className="space-y-2.5">
-              <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">Freelancer Workspace</span>
-              <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] overflow-hidden">
+              <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Freelancer Workspace</span>
+              <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
                 <button 
                   onClick={() => setCurrentView('freelancer')}
                   className="w-full flex items-center justify-between p-4.5 hover:bg-white/[0.02] transition-colors text-left"
@@ -571,11 +572,11 @@ export default function Settings() {
                       <Briefcase size={18} />
                     </div>
                     <div>
-                      <div className="text-base font-semibold text-white">Freelancer Engagement & Rates</div>
-                      <div className="text-xs text-zinc-400">Contract scopes, independent invoicing & deliverables</div>
+                      <div className="text-base font-semibold text-main">Freelancer Engagement & Rates</div>
+                      <div className="text-xs text-muted">Contract scopes, independent invoicing & deliverables</div>
                     </div>
                   </div>
-                  <ChevronRight size={18} className="text-zinc-500" />
+                  <ChevronRight size={18} className="text-muted" />
                 </button>
               </div>
             </div>
@@ -587,12 +588,12 @@ export default function Settings() {
               {/* Organization Currency */}
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between ml-1">
-                  <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider">Organization Currency</span>
+                  <span className="text-xs font-bold text-muted uppercase tracking-wider">Organization Currency</span>
                   <span className="text-xs font-mono font-medium text-[#FF6B4A]">
                     Active: {SUPPORTED_CURRENCIES.find(c => c.code === defaultCurrency)?.name || defaultCurrency}
                   </span>
                 </div>
-                <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] p-4">
+                <div className="bg-card-bg rounded-2xl border border-divider p-4">
                   <div className="flex flex-wrap gap-2.5">
                     {SUPPORTED_CURRENCIES.map((curr) => {
                       const isSelected = defaultCurrency === curr.code;
@@ -604,17 +605,17 @@ export default function Settings() {
                           onClick={() => handleUpdateCurrency(curr.code)}
                           className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 ${
                             isSelected 
-                              ? 'bg-[#FF6B4A] border-[#FF6B4A] text-white shadow-lg shadow-[#FF6B4A]/20 scale-[1.02]' 
-                              : 'bg-[#07080B] border-white/[0.06] text-zinc-400 hover:text-white hover:border-white/20 hover:bg-[#12141F]'
+                              ? 'bg-[#FF6B4A] border-[#FF6B4A] text-main shadow-lg shadow-[#FF6B4A]/20 scale-[1.02]' 
+                              : 'bg-[#07080B] border-divider text-muted hover:text-main hover:border-divider hover:bg-hover'
                           }`}
                         >
                           <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${
-                            isSelected ? 'bg-white/20 text-white' : 'bg-white/[0.04] text-zinc-300'
+                            isSelected ? 'bg-white/20 text-main' : 'bg-white/[0.04] text-muted'
                           }`}>
                             {curr.symbol}
                           </span>
                           <span>{curr.name}</span>
-                          {isSelected && <Check size={14} className="ml-1 text-white" />}
+                          {isSelected && <Check size={14} className="ml-1 text-main" />}
                         </button>
                       );
                     })}
@@ -624,8 +625,8 @@ export default function Settings() {
 
               {/* Company Profile Action */}
               <div className="space-y-2.5">
-                <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">Organization Settings</span>
-                <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] overflow-hidden">
+                <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Organization Settings</span>
+                <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
                   <button 
                     onClick={() => setIsCompanyModalVisible(true)}
                     className="w-full flex items-center justify-between p-4.5 hover:bg-white/[0.02] transition-colors text-left"
@@ -635,11 +636,11 @@ export default function Settings() {
                         <Building2 size={18} />
                       </div>
                       <div>
-                        <div className="text-base font-semibold text-white">Company Profile</div>
-                        <div className="text-xs text-zinc-400">Billed-from details, tax GSTIN & registered office</div>
+                        <div className="text-base font-semibold text-main">Company Profile</div>
+                        <div className="text-xs text-muted">Billed-from details, tax GSTIN & registered office</div>
                       </div>
                     </div>
-                    <ChevronRight size={18} className="text-zinc-500" />
+                    <ChevronRight size={18} className="text-muted" />
                   </button>
                 </div>
               </div>
@@ -648,24 +649,24 @@ export default function Settings() {
 
           {/* 5. Security & Privacy */}
           <div className="space-y-2.5">
-            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">Security & Privacy</span>
-            <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] overflow-hidden">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Security & Privacy</span>
+            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
               
               {/* Privacy Controls Row */}
               <button 
                 onClick={() => setCurrentView('privacy')}
-                className="w-full flex items-center justify-between p-4.5 hover:bg-white/[0.02] transition-colors text-left border-b border-white/[0.04]"
+                className="w-full flex items-center justify-between p-4.5 hover:bg-white/[0.02] transition-colors text-left border-b border-divider"
               >
                 <div className="flex items-center gap-3.5">
                   <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
                     <Shield size={18} />
                   </div>
                   <div>
-                    <div className="text-base font-semibold text-white">Privacy Controls</div>
-                    <div className="text-xs text-zinc-400">Online visibility, read receipts, blocked users & mute list</div>
+                    <div className="text-base font-semibold text-main">Privacy Controls</div>
+                    <div className="text-xs text-muted">Online visibility, read receipts, blocked users & mute list</div>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-zinc-500" />
+                <ChevronRight size={18} className="text-muted" />
               </button>
 
               {/* Change Password Row */}
@@ -678,11 +679,11 @@ export default function Settings() {
                     <Lock size={18} />
                   </div>
                   <div>
-                    <div className="text-base font-semibold text-white">Change Password</div>
-                    <div className="text-xs text-zinc-400">Update master authentication credentials</div>
+                    <div className="text-base font-semibold text-main">Change Password</div>
+                    <div className="text-xs text-muted">Update master authentication credentials</div>
                   </div>
                 </div>
-                <ChevronRight size={18} className="text-zinc-500" />
+                <ChevronRight size={18} className="text-muted" />
               </button>
 
             </div>
@@ -690,19 +691,19 @@ export default function Settings() {
 
           {/* 6. About */}
           <div className="space-y-2.5">
-            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">About</span>
-            <div className="p-5 rounded-2xl border border-white/[0.06] bg-[#0C0D12] space-y-3">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">About</span>
+            <div className="p-5 rounded-2xl border border-divider bg-card-bg space-y-3">
               <div className="flex justify-between items-center text-sm">
-                <span className="text-zinc-400">App Version</span>
-                <span className="font-semibold text-white font-mono">1.0.0 (Production)</span>
+                <span className="text-muted">App Version</span>
+                <span className="font-semibold text-main font-mono">1.0.0 (Production)</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-zinc-400">Supabase Environment</span>
+                <span className="text-muted">Supabase Environment</span>
                 <span className="font-semibold text-emerald-400 font-mono">Connected</span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-zinc-400">Signed In As</span>
-                <span className="font-semibold text-white font-mono">{user?.email}</span>
+                <span className="text-muted">Signed In As</span>
+                <span className="font-semibold text-main font-mono">{user?.email}</span>
               </div>
             </div>
           </div>
@@ -718,12 +719,12 @@ export default function Settings() {
 
           {/* Status Visibility */}
           <div className="space-y-2.5">
-            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">Status Visibility</span>
-            <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] overflow-hidden">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Status Visibility</span>
+            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
               
               {/* Show Online */}
-              <div className="p-4.5 border-b border-white/[0.04]">
-                <div className="text-base font-semibold text-white">Who can see my online status</div>
+              <div className="p-4.5 border-b border-divider">
+                <div className="text-base font-semibold text-main">Who can see my online status</div>
                 <div className="grid grid-cols-3 gap-2.5 mt-3">
                   {(['everyone', 'contacts', 'nobody'] as const).map((opt) => (
                     <button
@@ -735,8 +736,8 @@ export default function Settings() {
                       }}
                       className={`py-2.5 px-3 rounded-xl text-xs font-bold capitalize border transition-all ${
                         showOnline === opt 
-                          ? 'bg-[#FF6B4A] border-[#FF6B4A] text-white shadow-sm' 
-                          : 'bg-[#07080B] border-white/[0.06] text-zinc-400 hover:text-white'
+                          ? 'bg-[#FF6B4A] border-[#FF6B4A] text-main shadow-sm' 
+                          : 'bg-[#07080B] border-divider text-muted hover:text-main'
                       }`}
                     >
                       {opt}
@@ -747,7 +748,7 @@ export default function Settings() {
 
               {/* Show Last Seen */}
               <div className="p-4.5">
-                <div className="text-base font-semibold text-white">Who can see my last seen status</div>
+                <div className="text-base font-semibold text-main">Who can see my last seen status</div>
                 <div className="grid grid-cols-3 gap-2.5 mt-3">
                   {(['everyone', 'contacts', 'nobody'] as const).map((opt) => (
                     <button
@@ -759,8 +760,8 @@ export default function Settings() {
                       }}
                       className={`py-2.5 px-3 rounded-xl text-xs font-bold capitalize border transition-all ${
                         showLastSeen === opt 
-                          ? 'bg-[#FF6B4A] border-[#FF6B4A] text-white shadow-sm' 
-                          : 'bg-[#07080B] border-white/[0.06] text-zinc-400 hover:text-white'
+                          ? 'bg-[#FF6B4A] border-[#FF6B4A] text-main shadow-sm' 
+                          : 'bg-[#07080B] border-divider text-muted hover:text-main'
                       }`}
                     >
                       {opt}
@@ -774,12 +775,12 @@ export default function Settings() {
 
           {/* Read Receipts */}
           <div className="space-y-2.5">
-            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">Messaging</span>
-            <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] overflow-hidden">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Messaging</span>
+            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
               <div className="flex items-center justify-between p-4.5">
                 <div className="mr-4">
-                  <div className="text-base font-semibold text-white">Read Receipts</div>
-                  <div className="text-xs text-zinc-400">If turned off, you won't send or receive read receipts.</div>
+                  <div className="text-base font-semibold text-main">Read Receipts</div>
+                  <div className="text-xs text-muted">If turned off, you won't send or receive read receipts.</div>
                 </div>
                 <button
                   type="button"
@@ -798,18 +799,18 @@ export default function Settings() {
 
           {/* Blocked Users */}
           <div className="space-y-2.5">
-            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">Blocked Users</span>
-            <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] overflow-hidden">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Blocked Users</span>
+            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
               {blockedUsers.length === 0 ? (
-                <div className="p-5 text-center text-sm text-zinc-500">
+                <div className="p-5 text-center text-sm text-muted">
                   No blocked users
                 </div>
               ) : (
                 blockedUsers.map((item) => (
-                  <div key={item.blocked_id} className="flex items-center justify-between p-4 border-b border-white/[0.04]">
+                  <div key={item.blocked_id} className="flex items-center justify-between p-4 border-b border-divider">
                     <div>
-                      <div className="text-base font-semibold text-white">{item.blocked?.full_name || 'User'}</div>
-                      <div className="text-xs text-zinc-400">{item.blocked?.email || ''}</div>
+                      <div className="text-base font-semibold text-main">{item.blocked?.full_name || 'User'}</div>
+                      <div className="text-xs text-muted">{item.blocked?.email || ''}</div>
                     </div>
                     <button
                       onClick={() => handleUnblock(item.blocked_id)}
@@ -825,18 +826,18 @@ export default function Settings() {
 
           {/* Muted Conversations */}
           <div className="space-y-2.5">
-            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">Muted Conversations</span>
-            <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] overflow-hidden">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Muted Conversations</span>
+            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
               {mutedChannels.length === 0 ? (
-                <div className="p-5 text-center text-sm text-zinc-500">
+                <div className="p-5 text-center text-sm text-muted">
                   No muted conversations
                 </div>
               ) : (
                 mutedChannels.map((item) => (
-                  <div key={item.channel_id} className="flex items-center justify-between p-4 border-b border-white/[0.04]">
+                  <div key={item.channel_id} className="flex items-center justify-between p-4 border-b border-divider">
                     <div>
-                      <div className="text-base font-semibold text-white">{item.channel?.name || 'Muted Channel'}</div>
-                      <div className="text-xs text-zinc-400 capitalize">{item.channel?.type || ''}</div>
+                      <div className="text-base font-semibold text-main">{item.channel?.name || 'Muted Channel'}</div>
+                      <div className="text-xs text-muted capitalize">{item.channel?.type || ''}</div>
                     </div>
                     <button
                       onClick={() => handleUnmute(item.channel_id)}
@@ -861,17 +862,17 @@ export default function Settings() {
 
           {/* Push Notifications Section */}
           <div className="space-y-2.5">
-            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">Push Notifications</span>
-            <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] overflow-hidden">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Push Notifications</span>
+            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
               
-              <div className="flex items-center justify-between p-4.5 border-b border-white/[0.04]">
+              <div className="flex items-center justify-between p-4.5 border-b border-divider">
                 <div className="flex items-center gap-3.5">
                   <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
                     <Calendar size={18} />
                   </div>
                   <div>
-                    <div className="text-base font-semibold text-white">Meeting Invitations</div>
-                    <div className="text-xs text-zinc-400">Notify me of new meeting invites</div>
+                    <div className="text-base font-semibold text-main">Meeting Invitations</div>
+                    <div className="text-xs text-muted">Notify me of new meeting invites</div>
                   </div>
                 </div>
                 <button
@@ -883,14 +884,14 @@ export default function Settings() {
                 </button>
               </div>
 
-              <div className="flex items-center justify-between p-4.5 border-b border-white/[0.04]">
+              <div className="flex items-center justify-between p-4.5 border-b border-divider">
                 <div className="flex items-center gap-3.5">
                   <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
                     <AlarmClock size={18} />
                   </div>
                   <div>
-                    <div className="text-base font-semibold text-white">Meeting Reminders</div>
-                    <div className="text-xs text-zinc-400">Send notifications 15m before meetings</div>
+                    <div className="text-base font-semibold text-main">Meeting Reminders</div>
+                    <div className="text-xs text-muted">Send notifications 15m before meetings</div>
                   </div>
                 </div>
                 <button
@@ -902,14 +903,14 @@ export default function Settings() {
                 </button>
               </div>
 
-              <div className="flex items-center justify-between p-4.5 border-b border-white/[0.04]">
+              <div className="flex items-center justify-between p-4.5 border-b border-divider">
                 <div className="flex items-center gap-3.5">
                   <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
                     <ShieldAlert size={18} />
                   </div>
                   <div>
-                    <div className="text-base font-semibold text-white">Role Updates</div>
-                    <div className="text-xs text-zinc-400">Alert me when my role is updated</div>
+                    <div className="text-base font-semibold text-main">Role Updates</div>
+                    <div className="text-xs text-muted">Alert me when my role is updated</div>
                   </div>
                 </div>
                 <button
@@ -927,8 +928,8 @@ export default function Settings() {
                     <AlertCircle size={18} />
                   </div>
                   <div>
-                    <div className="text-base font-semibold text-white">System Alerts</div>
-                    <div className="text-xs text-zinc-400">Notify about downtime & server maintenance</div>
+                    <div className="text-base font-semibold text-main">System Alerts</div>
+                    <div className="text-xs text-muted">Notify about downtime & server maintenance</div>
                   </div>
                 </div>
                 <button
@@ -945,16 +946,16 @@ export default function Settings() {
 
           {/* Email Digest Section */}
           <div className="space-y-2.5">
-            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">Email Preferences</span>
-            <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] overflow-hidden">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Email Preferences</span>
+            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
               <div className="flex items-center justify-between p-4.5">
                 <div className="flex items-center gap-3.5">
                   <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
                     <Mail size={18} />
                   </div>
                   <div>
-                    <div className="text-base font-semibold text-white">Weekly Digest</div>
-                    <div className="text-xs text-zinc-400">Get weekly summary of tasks & meetings</div>
+                    <div className="text-base font-semibold text-main">Weekly Digest</div>
+                    <div className="text-xs text-muted">Get weekly summary of tasks & meetings</div>
                   </div>
                 </div>
                 <button
@@ -973,7 +974,7 @@ export default function Settings() {
             <button
               type="button"
               onClick={handleSaveNotificationPreferences}
-              className="w-full py-3.5 rounded-2xl bg-[#FF6B4A] hover:bg-[#FF552B] text-white font-bold text-base transition-colors shadow-sm"
+              className="w-full py-3.5 rounded-2xl bg-[#FF6B4A] hover:bg-[#FF552B] text-main font-bold text-base transition-colors shadow-sm"
             >
               Save Preferences
             </button>
@@ -989,21 +990,21 @@ export default function Settings() {
         <div className="space-y-6">
           
           <div className="space-y-2.5">
-            <span className="text-xs font-bold text-zinc-500 uppercase tracking-wider block ml-1">Engagement Model</span>
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Engagement Model</span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div 
                 onClick={() => setFreelancerWorkType('independent')}
                 className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                   freelancerWorkType === 'independent'
                     ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]'
-                    : 'bg-[#0C0D12] border-white/[0.06] hover:border-white/[0.1]'
+                    : 'bg-card-bg border-divider hover:border-white/[0.1]'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-base font-bold text-white">Independent Contractor</span>
+                  <span className="text-base font-bold text-main">Independent Contractor</span>
                   {freelancerWorkType === 'independent' && <Check size={16} className="text-[#FF6B4A]" />}
                 </div>
-                <p className="text-xs text-zinc-400 leading-relaxed">Direct client contracts, personal invoicing, and independent project management.</p>
+                <p className="text-xs text-muted leading-relaxed">Direct client contracts, personal invoicing, and independent project management.</p>
               </div>
 
               <div 
@@ -1011,30 +1012,30 @@ export default function Settings() {
                 className={`p-4 rounded-2xl border cursor-pointer transition-all ${
                   freelancerWorkType === 'organization'
                     ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]'
-                    : 'bg-[#0C0D12] border-white/[0.06] hover:border-white/[0.1]'
+                    : 'bg-card-bg border-divider hover:border-white/[0.1]'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-base font-bold text-white">Agency / Org Assigned</span>
+                  <span className="text-base font-bold text-main">Agency / Org Assigned</span>
                   {freelancerWorkType === 'organization' && <Check size={16} className="text-[#FF6B4A]" />}
                 </div>
-                <p className="text-xs text-zinc-400 leading-relaxed">Assigned into agency workspaces with strict deliverable-based permissions.</p>
+                <p className="text-xs text-muted leading-relaxed">Assigned into agency workspaces with strict deliverable-based permissions.</p>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-3 gap-3.5">
-            <div className="p-4 bg-[#0C0D12] border border-white/[0.06] rounded-2xl">
-              <div className="text-xs font-mono uppercase text-zinc-500 font-bold">Active Projects</div>
-              <div className="text-2xl font-bold text-white mt-1.5">{freelancerStats.activeProjects}</div>
+            <div className="p-4 bg-card-bg border border-divider rounded-2xl">
+              <div className="text-xs font-mono uppercase text-muted font-bold">Active Projects</div>
+              <div className="text-2xl font-bold text-main mt-1.5">{freelancerStats.activeProjects}</div>
             </div>
-            <div className="p-4 bg-[#0C0D12] border border-white/[0.06] rounded-2xl">
-              <div className="text-xs font-mono uppercase text-zinc-500 font-bold">Open Tasks</div>
-              <div className="text-2xl font-bold text-white mt-1.5">{freelancerStats.openTasks}</div>
+            <div className="p-4 bg-card-bg border border-divider rounded-2xl">
+              <div className="text-xs font-mono uppercase text-muted font-bold">Open Tasks</div>
+              <div className="text-2xl font-bold text-main mt-1.5">{freelancerStats.openTasks}</div>
             </div>
-            <div className="p-4 bg-[#0C0D12] border border-white/[0.06] rounded-2xl">
-              <div className="text-xs font-mono uppercase text-zinc-500 font-bold">Invoices</div>
-              <div className="text-2xl font-bold text-white mt-1.5">{freelancerStats.invoicesCount}</div>
+            <div className="p-4 bg-card-bg border border-divider rounded-2xl">
+              <div className="text-xs font-mono uppercase text-muted font-bold">Invoices</div>
+              <div className="text-2xl font-bold text-main mt-1.5">{freelancerStats.invoicesCount}</div>
             </div>
           </div>
 
@@ -1044,7 +1045,7 @@ export default function Settings() {
               toast.success('Freelancer preferences saved');
               setCurrentView('main');
             }}
-            className="w-full py-3.5 rounded-2xl bg-[#FF6B4A] hover:bg-[#FF552B] text-white font-bold text-base transition-colors shadow-sm"
+            className="w-full py-3.5 rounded-2xl bg-[#FF6B4A] hover:bg-[#FF552B] text-main font-bold text-base transition-colors shadow-sm"
           >
             Save Scope Settings
           </button>
@@ -1057,15 +1058,15 @@ export default function Settings() {
       {/* ────────────────────────────────────────────────────────── */}
       {currentView === 'media' && (
         <div className="space-y-6">
-          <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] p-5 space-y-4">
+          <div className="bg-card-bg rounded-2xl border border-divider p-5 space-y-4">
             <div>
-              <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5">
                 Microphone Input Device
               </label>
               <select 
                 value={audioInput} 
                 onChange={(e) => setAudioInput(e.target.value)}
-                className="w-full bg-[#07080B] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none"
+                className="w-full bg-[#07080B] border border-divider rounded-xl px-3.5 py-2.5 text-sm text-main focus:outline-none"
               >
                 <option>Default System Microphone</option>
                 <option>Studio USB Condenser</option>
@@ -1074,23 +1075,23 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
+              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5">
                 Camera Capture Device
               </label>
               <select 
                 value={videoInput} 
                 onChange={(e) => setVideoInput(e.target.value)}
-                className="w-full bg-[#07080B] border border-white/[0.08] rounded-xl px-3.5 py-2.5 text-sm text-white focus:outline-none"
+                className="w-full bg-[#07080B] border border-divider rounded-xl px-3.5 py-2.5 text-sm text-main focus:outline-none"
               >
                 <option>Integrated HD Webcam (1080p)</option>
                 <option>External 4K Capture Device</option>
               </select>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-[#07080B] border border-white/[0.04] rounded-xl">
+            <div className="flex items-center justify-between p-4 bg-[#07080B] border border-divider rounded-xl">
               <div>
-                <div className="font-semibold text-sm text-white">End-to-End Encryption (E2EE)</div>
-                <div className="text-xs text-zinc-500">LiveKit SFU and private chat mesh crypto.</div>
+                <div className="font-semibold text-sm text-main">End-to-End Encryption (E2EE)</div>
+                <div className="text-xs text-muted">LiveKit SFU and private chat mesh crypto.</div>
               </div>
               <button
                 type="button"
@@ -1109,10 +1110,10 @@ export default function Settings() {
       {/* ────────────────────────────────────────────────────────── */}
       {currentView === 'security' && (
         <div className="space-y-6">
-          <div className="bg-[#0C0D12] rounded-2xl border border-white/[0.06] p-6">
+          <div className="bg-card-bg rounded-2xl border border-divider p-6">
             <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
               <div>
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5">
                   New Password
                 </label>
                 <input 
@@ -1120,12 +1121,12 @@ export default function Settings() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full bg-[#07080B] border border-white/[0.08] focus:border-[#FF6B4A]/50 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded-xl px-3.5 py-2.5 text-sm text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1.5">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5">
                   Confirm New Password
                 </label>
                 <input 
@@ -1133,14 +1134,14 @@ export default function Settings() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full bg-[#07080B] border border-white/[0.08] focus:border-[#FF6B4A]/50 rounded-xl px-3.5 py-2.5 text-sm text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded-xl px-3.5 py-2.5 text-sm text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
               <button 
                 type="submit"
                 disabled={passwordUpdating}
-                className="w-full py-3 rounded-xl bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-50 text-white font-bold text-sm transition-colors shadow-sm"
+                className="w-full py-3 rounded-xl bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-50 text-main font-bold text-sm transition-colors shadow-sm"
               >
                 {passwordUpdating ? 'Updating Password...' : 'Save New Password'}
               </button>
@@ -1154,25 +1155,25 @@ export default function Settings() {
       {/* ────────────────────────────────────────────────────────── */}
       {isCompanyModalVisible && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-[#0C0D12] border border-white/[0.08] rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5">
+          <div className="w-full max-w-lg bg-card-bg border border-divider rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5">
             
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-              <h2 className="text-lg font-bold text-white">Edit Company Profile</h2>
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
+              <h2 className="text-lg font-bold text-main">Edit Company Profile</h2>
               <button 
                 onClick={() => setIsCompanyModalVisible(false)}
-                className="w-8 h-8 rounded-full bg-[#12141F] hover:bg-[#181B28] flex items-center justify-center text-zinc-400 hover:text-white transition-colors"
+                className="w-8 h-8 rounded-full bg-hover hover:bg-hover flex items-center justify-center text-muted hover:text-main transition-colors"
               >
                 <X size={18} />
               </button>
             </div>
 
-            <p className="text-xs text-zinc-400 leading-relaxed">
+            <p className="text-xs text-muted leading-relaxed">
               Update details for Billed From configurations. These will be automatically populated on all future invoices.
             </p>
 
             <div className="space-y-4">
               <div>
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1.5 ml-1">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5 ml-1">
                   Company Name *
                 </label>
                 <input
@@ -1180,12 +1181,12 @@ export default function Settings() {
                   placeholder="Acme Corporation"
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-white/[0.08] bg-[#07080B] text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors"
+                  className="w-full px-4 py-3 rounded-2xl border border-divider bg-[#07080B] text-sm text-main placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1.5 ml-1">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5 ml-1">
                   Company Address *
                 </label>
                 <textarea
@@ -1193,12 +1194,12 @@ export default function Settings() {
                   placeholder="Mumbai, Maharashtra, India"
                   value={orgAddress}
                   onChange={(e) => setOrgAddress(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-white/[0.08] bg-[#07080B] text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors resize-none"
+                  className="w-full px-4 py-3 rounded-2xl border border-divider bg-[#07080B] text-sm text-main placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors resize-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider block mb-1.5 ml-1">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5 ml-1">
                   GSTIN Tax Details
                 </label>
                 <input
@@ -1206,14 +1207,14 @@ export default function Settings() {
                   placeholder="27CFFLOW1234A1Z9"
                   value={orgGst}
                   onChange={(e) => setOrgGst(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-white/[0.08] bg-[#07080B] text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors"
+                  className="w-full px-4 py-3 rounded-2xl border border-divider bg-[#07080B] text-sm text-main placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors"
                 />
               </div>
             </div>
 
             <button
               onClick={handleSaveOrgDetails}
-              className="w-full p-4 rounded-2xl bg-[#FF6B4A] hover:bg-[#FF552B] text-white font-bold text-base transition-colors shadow-sm mt-2"
+              className="w-full p-4 rounded-2xl bg-[#FF6B4A] hover:bg-[#FF552B] text-main font-bold text-base transition-colors shadow-sm mt-2"
             >
               Save Details
             </button>

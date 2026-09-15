@@ -10,11 +10,11 @@ export const SidebarProfile = () => {
   return (
     <div className="p-3 border-t border-white/5 bg-[#1D1D29]/30 flex flex-col gap-3">
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B4A] to-[#FFA86B] flex items-center justify-center font-bold text-white shadow-inner">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B4A] to-[#FFA86B] flex items-center justify-center font-bold text-main shadow-inner">
           {(fullName || session?.user?.email || 'U').charAt(0).toUpperCase()}
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-white truncate">{fullName || session?.user?.email || 'Active User'}</p>
+          <p className="text-sm font-bold text-main truncate">{fullName || session?.user?.email || 'Active User'}</p>
           <p className="text-[10px] text-gray-500 truncate capitalize">{role || 'Participant Role'}</p>
         </div>
       </div>

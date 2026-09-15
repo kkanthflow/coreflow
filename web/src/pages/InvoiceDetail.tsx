@@ -176,8 +176,8 @@ export default function InvoiceDetail() {
   if (!invoice) {
     return (
       <div className="text-center py-20 font-sans select-none">
-        <p className="text-zinc-500 text-xs">Invoice record not found.</p>
-        <button onClick={() => navigate('/invoices')} className="mt-4 px-3.5 py-1.5 bg-[#FF6B4A] text-white rounded text-xs font-semibold">
+        <p className="text-muted text-xs">Invoice record not found.</p>
+        <button onClick={() => navigate('/invoices')} className="mt-4 px-3.5 py-1.5 bg-[#FF6B4A] text-main rounded text-xs font-semibold">
           Return to Invoices
         </button>
       </div>
@@ -196,7 +196,7 @@ export default function InvoiceDetail() {
   ];
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       
       {/* ── Page Header Standard ── */}
       <PageHeader
@@ -210,14 +210,14 @@ export default function InvoiceDetail() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/invoices')}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] text-xs transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs transition-colors"
             >
               <ArrowLeft size={13} />
               <span>Invoices</span>
             </button>
             <button
               onClick={handleDownloadPDF}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#151822] hover:bg-[#1C2030] text-zinc-200 border border-white/[0.06] text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-[#1C2030] text-zinc-200 border border-divider text-xs font-medium transition-colors"
             >
               <Download size={13} />
               <span>PDF Export</span>
@@ -225,7 +225,7 @@ export default function InvoiceDetail() {
             {canRecord && !isPaid && (
               <button
                 onClick={() => setIsPayModalOpen(true)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold transition-colors shadow-sm"
               >
                 <DollarSign size={13} />
                 <span>Record Payment</span>
@@ -249,7 +249,7 @@ export default function InvoiceDetail() {
       <MetricStrip metrics={metrics} />
 
       {/* ── Signature Animation: Invoice Flow Line Workflow ── */}
-      <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div className="bg-card-bg border border-divider rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="w-full max-w-xl">
           <FlowStepper
             steps={[
@@ -261,26 +261,26 @@ export default function InvoiceDetail() {
           />
         </div>
         <div className="shrink-0 flex items-center gap-2">
-          <span className="text-[10px] font-mono text-zinc-500">Status:</span>
+          <span className="text-[10px] font-mono text-muted">Status:</span>
           <StatusSignal status={invoice.status} />
         </div>
       </div>
 
       {/* ── Printable / Visual Invoice Document Surface ── */}
-      <div className="max-w-4xl bg-[#0C0D12] border border-white/[0.06] rounded-lg p-6 sm:p-8 space-y-6 text-xs" ref={invoiceRef}>
+      <div className="max-w-4xl bg-card-bg border border-divider rounded-lg p-6 sm:p-8 space-y-6 text-xs" ref={invoiceRef}>
         
         {/* Top Invoice Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-white/[0.06]">
+        <div className="flex flex-col sm:flex-row justify-between items-start gap-4 pb-6 border-b border-divider">
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="w-2 h-2 rounded-[2px] bg-[#FF6B4A]" />
-              <span className="font-bold text-white text-sm">AUVRYN Operations</span>
+              <span className="font-bold text-main text-sm">AUVRYN Operations</span>
             </div>
-            <p className="text-zinc-500 font-mono text-[11px]">Enterprise Operating System</p>
+            <p className="text-muted font-mono text-[11px]">Enterprise Operating System</p>
           </div>
 
           <div className="text-right sm:text-right">
-            <span className="font-mono text-base font-bold text-white block">{invoice.invoice_number}</span>
+            <span className="font-mono text-base font-bold text-main block">{invoice.invoice_number}</span>
             <div className="mt-1">
               <StatusSignal status={invoice.status} />
             </div>
@@ -288,27 +288,27 @@ export default function InvoiceDetail() {
         </div>
 
         {/* Client & Billing Info */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-[#07080B] p-4 rounded border border-white/[0.04]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-[#07080B] p-4 rounded border border-divider">
           <div>
-            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-500 block mb-1">Billed Client</span>
-            <span className="text-white font-bold text-sm block">{invoice.clients?.company_name || invoice.clients?.name}</span>
+            <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">Billed Client</span>
+            <span className="text-main font-bold text-sm block">{invoice.clients?.company_name || invoice.clients?.name}</span>
             {invoice.clients?.company_name && invoice.clients?.name && (
-              <span className="text-zinc-400 text-xs block">{invoice.clients.name}</span>
+              <span className="text-muted text-xs block">{invoice.clients.name}</span>
             )}
-            {invoice.clients?.email && <span className="text-zinc-500 text-[11px] block">{invoice.clients.email}</span>}
-            {invoice.clients?.gst_number && <span className="text-zinc-500 font-mono text-[10px] block">GST: {invoice.clients.gst_number}</span>}
+            {invoice.clients?.email && <span className="text-muted text-[11px] block">{invoice.clients.email}</span>}
+            {invoice.clients?.gst_number && <span className="text-muted font-mono text-[10px] block">GST: {invoice.clients.gst_number}</span>}
           </div>
 
           <div className="sm:text-right space-y-1 font-mono text-[11px]">
-            <div><span className="text-zinc-500">Issue Date: </span><span className="text-white">{new Date(invoice.issue_date).toLocaleDateString()}</span></div>
-            <div><span className="text-zinc-500">Due Date: </span><span className="text-white">{new Date(invoice.due_date).toLocaleDateString()}</span></div>
-            <div><span className="text-zinc-500">Currency: </span><span className="text-white">{invoice.currency}</span></div>
+            <div><span className="text-muted">Issue Date: </span><span className="text-main">{new Date(invoice.issue_date).toLocaleDateString()}</span></div>
+            <div><span className="text-muted">Due Date: </span><span className="text-main">{new Date(invoice.due_date).toLocaleDateString()}</span></div>
+            <div><span className="text-muted">Currency: </span><span className="text-main">{invoice.currency}</span></div>
           </div>
         </div>
 
         {/* Items Table */}
-        <div className="border border-white/[0.04] rounded overflow-hidden">
-          <div className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-white/[0.04] text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider bg-[#07080B]">
+        <div className="border border-divider rounded overflow-hidden">
+          <div className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-[#07080B]">
             <div className="col-span-6">Description</div>
             <div className="col-span-2 text-right">Qty</div>
             <div className="col-span-2 text-right">Rate</div>
@@ -319,9 +319,9 @@ export default function InvoiceDetail() {
             {(invoice.invoice_items || []).map((it: any) => (
               <div key={it.id} className="grid grid-cols-12 gap-2 px-4 py-2.5 items-center font-mono tabular-nums text-xs">
                 <div className="col-span-6 font-sans text-zinc-200 font-medium">{it.description}</div>
-                <div className="col-span-2 text-right text-zinc-400">{it.quantity}</div>
-                <div className="col-span-2 text-right text-zinc-400">{fmt(it.rate, invoice.currency)}</div>
-                <div className="col-span-2 text-right text-white font-semibold">{fmt(it.amount || (it.quantity * it.rate), invoice.currency)}</div>
+                <div className="col-span-2 text-right text-muted">{it.quantity}</div>
+                <div className="col-span-2 text-right text-muted">{fmt(it.rate, invoice.currency)}</div>
+                <div className="col-span-2 text-right text-main font-semibold">{fmt(it.amount || (it.quantity * it.rate), invoice.currency)}</div>
               </div>
             ))}
           </div>
@@ -329,24 +329,24 @@ export default function InvoiceDetail() {
 
         {/* Totals Section */}
         <div className="flex justify-end pt-2">
-          <div className="w-64 space-y-1.5 font-mono text-xs tabular-nums bg-[#07080B] p-3.5 rounded border border-white/[0.04]">
-            <div className="flex justify-between text-zinc-400">
+          <div className="w-64 space-y-1.5 font-mono text-xs tabular-nums bg-[#07080B] p-3.5 rounded border border-divider">
+            <div className="flex justify-between text-muted">
               <span>Subtotal:</span>
-              <span className="text-white">{fmt(invoice.subtotal, invoice.currency)}</span>
+              <span className="text-main">{fmt(invoice.subtotal, invoice.currency)}</span>
             </div>
-            <div className="flex justify-between text-zinc-400">
+            <div className="flex justify-between text-muted">
               <span>Tax:</span>
-              <span className="text-white">{fmt(invoice.tax_amount || 0, invoice.currency)}</span>
+              <span className="text-main">{fmt(invoice.tax_amount || 0, invoice.currency)}</span>
             </div>
-            <div className="flex justify-between pt-2 border-t border-white/[0.04] text-xs font-bold text-white">
+            <div className="flex justify-between pt-2 border-t border-divider text-xs font-bold text-main">
               <span>Total:</span>
-              <span className="text-white">{fmt(invoice.total_amount, invoice.currency)}</span>
+              <span className="text-main">{fmt(invoice.total_amount, invoice.currency)}</span>
             </div>
             <div className="flex justify-between text-xs font-bold text-emerald-400">
               <span>Paid to Date:</span>
               <span>{fmt(invoice.paid_amount || 0, invoice.currency)}</span>
             </div>
-            <div className="flex justify-between pt-1 border-t border-white/[0.04] text-xs font-bold text-[#FF6B4A]">
+            <div className="flex justify-between pt-1 border-t border-divider text-xs font-bold text-[#FF6B4A]">
               <span>Balance Due:</span>
               <span>{fmt(invoice.balance_due, invoice.currency)}</span>
             </div>
@@ -358,20 +358,20 @@ export default function InvoiceDetail() {
       {/* Payment Modal */}
       {isPayModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#0C0D12] border border-white/[0.08] rounded-xl p-5 sm:p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+          <div className="w-full max-w-md bg-card-bg border border-divider rounded-xl p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
+              <h2 className="text-sm font-bold text-main uppercase tracking-wider font-mono flex items-center gap-2">
                 <DollarSign size={15} className="text-[#FF6B4A]" />
                 <span>Record Client Payment</span>
               </h2>
-              <button onClick={() => setIsPayModalOpen(false)} className="text-zinc-500 hover:text-white">
+              <button onClick={() => setIsPayModalOpen(false)} className="text-muted hover:text-main">
                 <X size={15} />
               </button>
             </div>
 
             <form onSubmit={handleRecordPayment} className="space-y-3">
               <div>
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   Settlement Amount ({invoice.currency}) <span className="text-[#FF6B4A]">*</span>
                 </label>
                 <input
@@ -380,18 +380,18 @@ export default function InvoiceDetail() {
                   required
                   value={payAmount}
                   onChange={e => setPayAmount(e.target.value)}
-                  className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-white font-mono focus:outline-none"
+                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main font-mono focus:outline-none"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   Payment Method
                 </label>
                 <select
                   value={payMethod}
                   onChange={e => setPayMethod(e.target.value)}
-                  className="w-full bg-[#07080B] border border-white/[0.06] rounded px-2.5 py-1.5 text-xs text-white focus:outline-none"
+                  className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                 >
                   <option value="bank_transfer">Bank Wire / Transfer</option>
                   <option value="upi">UPI / Instant Clearing</option>
@@ -403,7 +403,7 @@ export default function InvoiceDetail() {
               </div>
 
               <div>
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   Transaction / Reference ID
                 </label>
                 <input
@@ -411,22 +411,22 @@ export default function InvoiceDetail() {
                   placeholder="e.g. TXN-9982310"
                   value={txRef}
                   onChange={e => setTxRef(e.target.value)}
-                  className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 font-mono focus:outline-none"
+                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 font-mono focus:outline-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.04]">
+              <div className="flex justify-end gap-2 pt-3 border-t border-divider">
                 <button
                   type="button"
                   onClick={() => setIsPayModalOpen(false)}
-                  className="px-3.5 py-1.5 bg-[#10121A] hover:bg-[#151822] text-zinc-300 text-xs rounded border border-white/[0.06] transition-colors"
+                  className="px-3.5 py-1.5 bg-hover hover:bg-hover text-muted text-xs rounded border border-divider transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={recording || !payAmount}
-                  className="px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-white font-semibold text-xs rounded transition-colors shadow-sm"
+                  className="px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors shadow-sm"
                 >
                   {recording ? 'Recording...' : 'Confirm Settlement'}
                 </button>

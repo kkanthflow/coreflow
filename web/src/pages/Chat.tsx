@@ -254,21 +254,21 @@ export default function Chat() {
   );
 
   return (
-    <div className="h-full flex flex-1 -m-4 sm:-m-6 lg:-m-7 bg-[#08090C] text-zinc-300 select-none overflow-hidden">
+    <div className="h-full flex flex-1 -m-4 sm:-m-6 lg:-m-7 bg-card-bg text-muted select-none overflow-hidden">
       
       {/* ── Panel 1: Conversation Navigator (280px - 320px) ── */}
-      <div className="w-80 border-r border-white/[0.05] bg-[#0A0B10] flex flex-col h-full shrink-0">
+      <div className="w-80 border-r border-divider bg-[#0A0B10] flex flex-col h-full shrink-0">
         
         {/* Header */}
-        <div className="h-14 px-4 flex items-center justify-between border-b border-white/[0.05]">
+        <div className="h-14 px-4 flex items-center justify-between border-b border-divider">
           <div className="flex items-center gap-2">
-            <h1 className="text-xs font-mono font-bold uppercase tracking-wider text-white">Chat</h1>
-            <span className="text-[10px] font-mono text-zinc-500">· {channels.length}</span>
+            <h1 className="text-xs font-mono font-bold uppercase tracking-wider text-main">Chat</h1>
+            <span className="text-[10px] font-mono text-muted">· {channels.length}</span>
           </div>
 
           <button
             onClick={() => setIsComposeOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#13151D] hover:bg-[#181B26] border border-white/[0.06] text-zinc-300 hover:text-white text-[11px] font-medium transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#13151D] hover:bg-[#181B26] border border-divider text-muted hover:text-main text-[11px] font-medium transition-colors"
             title="Compose new conversation"
           >
             <Plus size={12} className="text-[#FF6B4A]" />
@@ -277,20 +277,20 @@ export default function Chat() {
         </div>
 
         {/* Search */}
-        <div className="p-3 border-b border-white/[0.05]">
+        <div className="p-3 border-b border-divider">
           <div className="relative">
-            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
             <input
               type="text"
               placeholder="Search conversations..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 bg-[#07080A] border border-white/[0.05] focus:border-[#FF6B4A]/40 rounded-md text-[11px] text-white placeholder-zinc-500 focus:outline-none transition-colors"
+              className="w-full pl-8 pr-7 py-1.5 bg-[#07080A] border border-divider focus:border-[#FF6B4A]/40 rounded-md text-[11px] text-main placeholder-zinc-500 focus:outline-none transition-colors"
             />
             {search && (
               <button
                 onClick={() => setSearch('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white p-0.5"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-main p-0.5"
               >
                 <X size={11} />
               </button>
@@ -327,7 +327,7 @@ export default function Chat() {
                         >
                           {/* Avatar with subtle presence dot */}
                           <div className="relative shrink-0">
-                            <div className="w-7 h-7 rounded-md bg-[#13151D] border border-white/[0.08] flex items-center justify-center text-[10px] font-bold text-white">
+                            <div className="w-7 h-7 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-[10px] font-bold text-main">
                               {(ch.name || 'U').charAt(0).toUpperCase()}
                             </div>
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 absolute -bottom-0.5 -right-0.5 ring-2 ring-[#0A0B10]" />
@@ -335,14 +335,14 @@ export default function Chat() {
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-baseline justify-between mb-0.5">
-                              <span className={`text-[12px] font-medium truncate ${hasUnread ? 'text-white font-semibold' : 'text-zinc-300'}`}>
+                              <span className={`text-[12px] font-medium truncate ${hasUnread ? 'text-main font-semibold' : 'text-muted'}`}>
                                 {ch.name}
                               </span>
                               <span className="text-[9px] font-mono text-zinc-600 shrink-0 ml-1">
                                 {timeAgo(ch.lastMessageTime)}
                               </span>
                             </div>
-                            <div className={`text-[11px] truncate flex items-center gap-1 ${hasUnread ? 'text-zinc-200 font-medium' : 'text-zinc-500'}`}>
+                            <div className={`text-[11px] truncate flex items-center gap-1 ${hasUnread ? 'text-zinc-200 font-medium' : 'text-muted'}`}>
                               {isMeSender && <CheckCheck size={11} className="text-zinc-600 shrink-0" />}
                               <span className="truncate">{ch.lastMessageText}</span>
                             </div>
@@ -350,7 +350,7 @@ export default function Chat() {
 
                           {/* Unread Accent Badge */}
                           {hasUnread && (
-                            <span className="shrink-0 min-w-[16px] h-4 px-1 rounded bg-[#FF6B4A] text-white text-[9px] font-mono font-bold flex items-center justify-center shadow-sm">
+                            <span className="shrink-0 min-w-[16px] h-4 px-1 rounded bg-[#FF6B4A] text-main text-[9px] font-mono font-bold flex items-center justify-center shadow-sm">
                               {ch.unreadCount}
                             </span>
                           )}
@@ -377,26 +377,26 @@ export default function Chat() {
                           to={`/chat/${ch.id}`}
                           className="relative flex items-center gap-2.5 px-2.5 py-2 rounded-md hover:bg-white/[0.03] transition-colors group"
                         >
-                          <div className="w-7 h-7 rounded-md bg-[#13151D] border border-white/[0.08] flex items-center justify-center text-zinc-400 shrink-0">
+                          <div className="w-7 h-7 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-muted shrink-0">
                             <Hash size={13} className="text-[#FF6B4A]" />
                           </div>
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-baseline justify-between mb-0.5">
-                              <span className={`text-[12px] font-medium truncate ${hasUnread ? 'text-white font-semibold' : 'text-zinc-300'}`}>
+                              <span className={`text-[12px] font-medium truncate ${hasUnread ? 'text-main font-semibold' : 'text-muted'}`}>
                                 #{ch.name}
                               </span>
                               <span className="text-[9px] font-mono text-zinc-600 shrink-0 ml-1">
                                 {timeAgo(ch.lastMessageTime)}
                               </span>
                             </div>
-                            <div className="text-[11px] text-zinc-500 truncate">
+                            <div className="text-[11px] text-muted truncate">
                               {ch.lastMessageText}
                             </div>
                           </div>
 
                           {hasUnread && (
-                            <span className="shrink-0 min-w-[16px] h-4 px-1 rounded bg-[#FF6B4A] text-white text-[9px] font-mono font-bold flex items-center justify-center shadow-sm">
+                            <span className="shrink-0 min-w-[16px] h-4 px-1 rounded bg-[#FF6B4A] text-main text-[9px] font-mono font-bold flex items-center justify-center shadow-sm">
                               {ch.unreadCount}
                             </span>
                           )}
@@ -411,7 +411,7 @@ export default function Chat() {
         </div>
 
         {/* Security / Encryption Status Footer */}
-        <div className="p-3 border-t border-white/[0.05] bg-[#07080A] flex items-center justify-between text-[10px] font-mono text-zinc-500">
+        <div className="p-3 border-t border-divider bg-[#07080A] flex items-center justify-between text-[10px] font-mono text-muted">
           <span className="flex items-center gap-1.5">
             <Lock size={11} className="text-emerald-400" />
             <span>P-256 ECDH Encrypted</span>
@@ -424,13 +424,13 @@ export default function Chat() {
       {/* ── Panel 2: Active Conversation Placeholder / Operational Command Zero-State ── */}
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#07080B] relative">
         <div className="max-w-md space-y-4">
-          <div className="w-12 h-12 rounded-lg bg-[#11131B] border border-white/[0.08] flex items-center justify-center mx-auto text-[#FF6B4A] shadow-sm">
+          <div className="w-12 h-12 rounded-lg bg-[#11131B] border border-divider flex items-center justify-center mx-auto text-[#FF6B4A] shadow-sm">
             <Shield size={22} />
           </div>
 
           <div>
-            <h2 className="text-sm font-bold text-white tracking-tight">AUVRYN Secure Messaging</h2>
-            <p className="text-xs text-zinc-500 mt-1">
+            <h2 className="text-sm font-bold text-main tracking-tight">AUVRYN Secure Messaging</h2>
+            <p className="text-xs text-muted mt-1">
               Select an active conversation or initialize a new direct encrypted thread with team members.
             </p>
           </div>
@@ -438,22 +438,22 @@ export default function Chat() {
           <div className="pt-2">
             <button
               onClick={() => setIsComposeOpen(true)}
-              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold transition-colors shadow-sm"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold transition-colors shadow-sm"
             >
               <Plus size={13} />
               <span>New Conversation</span>
             </button>
           </div>
 
-          <div className="pt-8 border-t border-white/[0.05] grid grid-cols-2 gap-4 text-left text-[11px]">
-            <div className="p-3 rounded bg-[#0A0B10] border border-white/[0.04]">
-              <div className="font-mono text-zinc-400 font-bold mb-1 flex items-center gap-1">
+          <div className="pt-8 border-t border-divider grid grid-cols-2 gap-4 text-left text-[11px]">
+            <div className="p-3 rounded bg-[#0A0B10] border border-divider">
+              <div className="font-mono text-muted font-bold mb-1 flex items-center gap-1">
                 <Lock size={11} className="text-[#FF6B4A]" /> Zero Knowledge
               </div>
               <div className="text-zinc-600 text-[10px]">Client-side end-to-end encryption. The host server never holds message plaintext.</div>
             </div>
-            <div className="p-3 rounded bg-[#0A0B10] border border-white/[0.04]">
-              <div className="font-mono text-zinc-400 font-bold mb-1 flex items-center gap-1">
+            <div className="p-3 rounded bg-[#0A0B10] border border-divider">
+              <div className="font-mono text-muted font-bold mb-1 flex items-center gap-1">
                 <Users size={11} className="text-emerald-400" /> Work OS Linked
               </div>
               <div className="text-zinc-600 text-[10px]">Directly connect message context to deliverables, invoices, and meetings.</div>
@@ -465,34 +465,34 @@ export default function Chat() {
       {/* ── Compose / New Conversation Modal Overlay ── */}
       {isComposeOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#0C0D12] border border-white/[0.08] rounded-xl shadow-2xl overflow-hidden font-sans">
-            <div className="px-4 py-3 border-b border-white/[0.06] flex items-center justify-between">
+          <div className="w-full max-w-md bg-card-bg border border-divider rounded-xl shadow-2xl overflow-hidden font-sans">
+            <div className="px-4 py-3 border-b border-divider flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <MessageSquare size={14} className="text-[#FF6B4A]" />
-                <span className="text-xs font-bold text-white uppercase tracking-wider font-mono">New Direct Message</span>
+                <span className="text-xs font-bold text-main uppercase tracking-wider font-mono">New Direct Message</span>
               </div>
-              <button onClick={() => setIsComposeOpen(false)} className="text-zinc-500 hover:text-white p-1">
+              <button onClick={() => setIsComposeOpen(false)} className="text-muted hover:text-main p-1">
                 <X size={14} />
               </button>
             </div>
 
-            <div className="p-3 border-b border-white/[0.05]">
+            <div className="p-3 border-b border-divider">
               <div className="relative">
-                <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+                <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
                 <input
                   type="text"
                   placeholder="Search team members by name or email..."
                   value={composeSearch}
                   onChange={e => setComposeSearch(e.target.value)}
                   autoFocus
-                  className="w-full pl-8 pr-3 py-1.5 bg-[#07080A] border border-white/[0.06] rounded text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]/50"
+                  className="w-full pl-8 pr-3 py-1.5 bg-[#07080A] border border-divider rounded text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]/50"
                 />
               </div>
             </div>
 
             <div className="max-h-72 overflow-y-auto p-2 space-y-1">
               {filteredEmployees.length === 0 ? (
-                <div className="py-8 text-center text-xs text-zinc-500">
+                <div className="py-8 text-center text-xs text-muted">
                   No colleagues match this query.
                 </div>
               ) : (
@@ -504,27 +504,27 @@ export default function Chat() {
                     className="w-full flex items-center justify-between p-2 rounded hover:bg-white/[0.03] transition-colors text-left group"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-md bg-[#13151D] border border-white/[0.08] flex items-center justify-center text-[10px] font-bold text-white">
+                      <div className="w-7 h-7 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-[10px] font-bold text-main">
                         {emp.full_name?.charAt(0).toUpperCase() || 'U'}
                       </div>
                       <div>
-                        <div className="text-xs font-semibold text-white group-hover:text-[#FF6B4A] transition-colors">
+                        <div className="text-xs font-semibold text-main group-hover:text-[#FF6B4A] transition-colors">
                           {emp.full_name}
                         </div>
-                        <div className="text-[10px] font-mono text-zinc-500">
+                        <div className="text-[10px] font-mono text-muted">
                           {emp.role || 'Member'} · {emp.email}
                         </div>
                       </div>
                     </div>
-                    <ChevronRight size={13} className="text-zinc-600 group-hover:text-zinc-300" />
+                    <ChevronRight size={13} className="text-zinc-600 group-hover:text-muted" />
                   </button>
                 ))
               )}
             </div>
 
-            <div className="p-3 border-t border-white/[0.06] bg-[#08090C] text-[10px] font-mono text-zinc-500 flex justify-between">
+            <div className="p-3 border-t border-divider bg-card-bg text-[10px] font-mono text-muted flex justify-between">
               <span>RBAC Scoped</span>
-              <button onClick={() => setIsComposeOpen(false)} className="text-zinc-400 hover:text-white">Cancel</button>
+              <button onClick={() => setIsComposeOpen(false)} className="text-muted hover:text-main">Cancel</button>
             </div>
           </div>
         </div>

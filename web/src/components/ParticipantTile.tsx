@@ -64,7 +64,7 @@ export const ParticipantTile = memo(function ParticipantTile({
   return (
     <div
       className={`relative ${heightClass} rounded-xl overflow-hidden bg-[#1c1c1e] border ${
-        isSpeaking ? 'border-[#FF6B4A] ring-2 ring-[#FF6B4A]/50' : 'border-white/10'
+        isSpeaking ? 'border-[#FF6B4A] ring-2 ring-[#FF6B4A]/50' : 'border-divider'
       } flex-shrink-0 transition-all duration-300 shadow-md group`}
     >
       {/* Video Feed or Avatar */}
@@ -75,8 +75,8 @@ export const ParticipantTile = memo(function ParticipantTile({
         />
       ) : (
         <div className="w-full h-full flex flex-col items-center justify-center bg-[#18181b]">
-          <div className="w-12 h-12 rounded-full bg-[#27272a] flex items-center justify-center border border-white/10 shadow-inner">
-            <span className="text-white font-bold text-lg select-none">
+          <div className="w-12 h-12 rounded-full bg-[#27272a] flex items-center justify-center border border-divider shadow-inner">
+            <span className="text-main font-bold text-lg select-none">
               {(participant.name || participant.identity || '?')[0].toUpperCase()}
             </span>
           </div>
@@ -84,7 +84,7 @@ export const ParticipantTile = memo(function ParticipantTile({
       )}
 
       {/* Mic Status Indicator (Top Right) */}
-      <div className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-white shadow">
+      <div className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 backdrop-blur-md border border-divider text-main shadow">
         {isMicMuted ? (
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <line x1="1" y1="1" x2="23" y2="23" />
@@ -101,7 +101,7 @@ export const ParticipantTile = memo(function ParticipantTile({
       </div>
 
       {/* Participant Name Badge (Bottom Left) */}
-      <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-white text-xs font-medium truncate max-w-[130px] border border-white/10">
+      <div className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md bg-black/60 backdrop-blur-md text-main text-xs font-medium truncate max-w-[130px] border border-divider">
         {participant.name || participant.identity}
         {participant.isLocal && ' (You)'}
       </div>

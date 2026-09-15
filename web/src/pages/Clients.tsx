@@ -209,7 +209,7 @@ export default function Clients() {
   ], [clients, corporateCount]);
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-zinc-300">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       
       {/* ── Page Header Standard ── */}
       <PageHeader
@@ -219,7 +219,7 @@ export default function Clients() {
           <div className="flex items-center gap-2">
             <button
               onClick={fetchClients}
-              className="p-2 rounded bg-[#10121A] hover:bg-[#151822] text-zinc-400 hover:text-white border border-white/[0.06] transition-colors"
+              className="p-2 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider transition-colors"
               title="Sync accounts"
             >
               <RefreshCw size={13} />
@@ -227,7 +227,7 @@ export default function Clients() {
             {canManage && (
               <button
                 onClick={openCreateModal}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold transition-colors shadow-sm"
               >
                 <Plus size={14} />
                 <span>Add Client</span>
@@ -241,18 +241,18 @@ export default function Clients() {
       <MetricStrip metrics={metrics} />
 
       {/* ── Search Bar ── */}
-      <div className="flex items-center justify-between gap-3 bg-[#0C0D12] border border-white/[0.06] rounded-lg p-2.5 max-w-md">
+      <div className="flex items-center justify-between gap-3 bg-card-bg border border-divider rounded-lg p-2.5 max-w-md">
         <div className="relative w-full">
-          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" />
+          <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
             type="text"
             placeholder="Search clients by name, company, or email..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-8 pr-7 py-1.5 bg-[#07080B] border border-white/[0.05] focus:border-[#FF6B4A]/40 rounded text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+            className="w-full pl-8 pr-7 py-1.5 bg-[#07080B] border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
           />
           {search && (
-            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-white">
+            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
               <X size={12} />
             </button>
           )}
@@ -270,8 +270,8 @@ export default function Clients() {
           action={canManage && !search ? { label: "Add First Client", onClick: openCreateModal } : undefined}
         />
       ) : (
-        <div className="bg-[#0C0D12] border border-white/[0.06] rounded-lg overflow-hidden">
-          <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-white/[0.05] text-[10px] font-mono font-bold text-zinc-500 uppercase tracking-wider bg-[#090A0E]">
+        <div className="bg-card-bg border border-divider rounded-lg overflow-hidden">
+          <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-card-bg">
             <div className="col-span-4">Client & Company</div>
             <div className="col-span-3">Contact Email</div>
             <div className="col-span-2">Phone</div>
@@ -290,23 +290,23 @@ export default function Clients() {
                 className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-white/[0.025] transition-colors cursor-pointer items-center text-xs group"
               >
                 <div className="col-span-4 min-w-0 pr-2">
-                  <div className="font-semibold text-white group-hover:text-[#FF6B4A] transition-colors truncate">
+                  <div className="font-semibold text-main group-hover:text-[#FF6B4A] transition-colors truncate">
                     {client.company_name || client.name}
                   </div>
                   {client.company_name && (
-                    <div className="text-[11px] text-zinc-500 truncate mt-0.5">{client.name}</div>
+                    <div className="text-[11px] text-muted truncate mt-0.5">{client.name}</div>
                   )}
                 </div>
 
-                <div className="col-span-3 text-zinc-400 truncate">
+                <div className="col-span-3 text-muted truncate">
                   {client.email || '—'}
                 </div>
 
-                <div className="col-span-2 text-zinc-400 font-mono text-[11px]">
+                <div className="col-span-2 text-muted font-mono text-[11px]">
                   {client.phone || '—'}
                 </div>
 
-                <div className="col-span-2 text-zinc-500 font-mono text-[11px] truncate">
+                <div className="col-span-2 text-muted font-mono text-[11px] truncate">
                   {client.gst_number || '—'}
                 </div>
 
@@ -315,14 +315,14 @@ export default function Clients() {
                     <div className="flex items-center justify-end gap-1 opacity-60 group-hover:opacity-100 transition-opacity">
                       <button
                         onClick={() => openEditModal(client)}
-                        className="p-1 rounded hover:bg-white/[0.05] text-zinc-400 hover:text-white transition-colors"
+                        className="p-1 rounded hover:bg-white/[0.05] text-muted hover:text-main transition-colors"
                         title="Edit"
                       >
                         <Edit2 size={12} />
                       </button>
                       <button
                         onClick={() => setDeleteClientId(client.id)}
-                        className="p-1 rounded hover:bg-red-500/10 text-zinc-400 hover:text-red-400 transition-colors"
+                        className="p-1 rounded hover:bg-red-500/10 text-muted hover:text-red-400 transition-colors"
                         title="Delete"
                       >
                         <Trash2 size={12} />
@@ -349,14 +349,14 @@ export default function Clients() {
                 onClick={() => {
                   navigate(`/projects`);
                 }}
-                className="px-3 py-1.5 bg-[#10121A] hover:bg-[#151822] text-zinc-300 hover:text-white border border-white/[0.06] text-xs font-semibold rounded transition-colors flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs font-semibold rounded transition-colors flex items-center gap-1.5"
               >
                 <ExternalLink size={12} className="text-[#FF6B4A]" />
                 <span>Associated Projects</span>
               </button>
               <button
                 onClick={() => { openEditModal(inspectingClient); setInspectingClient(null); }}
-                className="px-3 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded transition-colors"
+                className="px-3 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold rounded transition-colors"
               >
                 Edit Account Details
               </button>
@@ -364,41 +364,41 @@ export default function Clients() {
           }
         >
           <div className="space-y-4 text-xs">
-            <div className="bg-[#08090C] p-3.5 rounded border border-white/[0.04] space-y-2">
+            <div className="bg-card-bg p-3.5 rounded border border-divider space-y-2">
               <div>
-                <span className="text-[10px] font-mono text-zinc-500 block mb-0.5">Primary Contact</span>
-                <span className="text-white font-medium">{inspectingClient.name}</span>
+                <span className="text-[10px] font-mono text-muted block mb-0.5">Primary Contact</span>
+                <span className="text-main font-medium">{inspectingClient.name}</span>
               </div>
               {inspectingClient.company_name && (
                 <div>
-                  <span className="text-[10px] font-mono text-zinc-500 block mb-0.5">Organization Entity</span>
-                  <span className="text-white font-medium">{inspectingClient.company_name}</span>
+                  <span className="text-[10px] font-mono text-muted block mb-0.5">Organization Entity</span>
+                  <span className="text-main font-medium">{inspectingClient.company_name}</span>
                 </div>
               )}
               {inspectingClient.email && (
                 <div>
-                  <span className="text-[10px] font-mono text-zinc-500 block mb-0.5">Email</span>
-                  <span className="text-zinc-300 font-mono text-[11px]">{inspectingClient.email}</span>
+                  <span className="text-[10px] font-mono text-muted block mb-0.5">Email</span>
+                  <span className="text-muted font-mono text-[11px]">{inspectingClient.email}</span>
                 </div>
               )}
               {inspectingClient.phone && (
                 <div>
-                  <span className="text-[10px] font-mono text-zinc-500 block mb-0.5">Phone</span>
-                  <span className="text-zinc-300 font-mono text-[11px]">{inspectingClient.phone}</span>
+                  <span className="text-[10px] font-mono text-muted block mb-0.5">Phone</span>
+                  <span className="text-muted font-mono text-[11px]">{inspectingClient.phone}</span>
                 </div>
               )}
               {inspectingClient.gst_number && (
                 <div>
-                  <span className="text-[10px] font-mono text-zinc-500 block mb-0.5">Tax / GST Number</span>
-                  <span className="text-zinc-300 font-mono text-[11px]">{inspectingClient.gst_number}</span>
+                  <span className="text-[10px] font-mono text-muted block mb-0.5">Tax / GST Number</span>
+                  <span className="text-muted font-mono text-[11px]">{inspectingClient.gst_number}</span>
                 </div>
               )}
             </div>
 
             {inspectingClient.address && (
               <div>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block mb-1">Billing Address</span>
-                <p className="text-zinc-300 bg-[#08090C] p-3 rounded border border-white/[0.04] leading-relaxed">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-muted block mb-1">Billing Address</span>
+                <p className="text-muted bg-card-bg p-3 rounded border border-divider leading-relaxed">
                   {inspectingClient.address}
                 </p>
               </div>
@@ -406,8 +406,8 @@ export default function Clients() {
 
             {inspectingClient.notes && (
               <div>
-                <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 block mb-1">Account Notes</span>
-                <p className="text-zinc-400 bg-[#08090C] p-3 rounded border border-white/[0.04] leading-relaxed whitespace-pre-wrap">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-muted block mb-1">Account Notes</span>
+                <p className="text-muted bg-card-bg p-3 rounded border border-divider leading-relaxed whitespace-pre-wrap">
                   {inspectingClient.notes}
                 </p>
               </div>
@@ -419,20 +419,20 @@ export default function Clients() {
       {/* ── Modal ── */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-[#0C0D12] border border-white/[0.08] rounded-xl p-5 sm:p-6 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-white/[0.06]">
-              <h2 className="text-sm font-bold text-white uppercase tracking-wider font-mono flex items-center gap-2">
+          <div className="w-full max-w-md bg-card-bg border border-divider rounded-xl p-5 sm:p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-divider">
+              <h2 className="text-sm font-bold text-main uppercase tracking-wider font-mono flex items-center gap-2">
                 <Building size={15} className="text-[#FF6B4A]" />
                 <span>{editingClient ? 'Edit Client' : 'New Client Account'}</span>
               </h2>
-              <button onClick={() => setIsModalOpen(false)} className="text-zinc-500 hover:text-white">
+              <button onClick={() => setIsModalOpen(false)} className="text-muted hover:text-main">
                 <X size={15} />
               </button>
             </div>
 
             <form onSubmit={handleSave} className="space-y-3">
               <div>
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   Primary Contact Name <span className="text-[#FF6B4A]">*</span>
                 </label>
                 <input
@@ -441,12 +441,12 @@ export default function Clients() {
                   placeholder="e.g. John Doe"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   Company / Organization Entity
                 </label>
                 <input
@@ -454,13 +454,13 @@ export default function Clients() {
                   placeholder="e.g. Acme Corp Technologies"
                   value={companyName}
                   onChange={e => setCompanyName(e.target.value)}
-                  className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                     Email Address
                   </label>
                   <input
@@ -468,12 +468,12 @@ export default function Clients() {
                     placeholder="billing@company.com"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                    className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                     Phone
                   </label>
                   <input
@@ -481,13 +481,13 @@ export default function Clients() {
                     placeholder="+1 555-0199"
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
-                    className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                    className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   GST / Tax ID Number
                 </label>
                 <input
@@ -495,12 +495,12 @@ export default function Clients() {
                   placeholder="e.g. 29ABCDE1234F1Z5"
                   value={gstNumber}
                   onChange={e => setGstNumber(e.target.value)}
-                  className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   Billing Address
                 </label>
                 <textarea
@@ -508,22 +508,22 @@ export default function Clients() {
                   placeholder="Street, City, Postal Code..."
                   value={address}
                   onChange={e => setAddress(e.target.value)}
-                  className="w-full bg-[#07080B] border border-white/[0.06] focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-white placeholder-zinc-500 focus:outline-none transition-colors resize-none"
+                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
                 />
               </div>
 
-              <div className="flex justify-end gap-2 pt-3 border-t border-white/[0.04]">
+              <div className="flex justify-end gap-2 pt-3 border-t border-divider">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-3.5 py-1.5 bg-[#10121A] hover:bg-[#151822] text-zinc-300 text-xs rounded border border-white/[0.06] transition-colors"
+                  className="px-3.5 py-1.5 bg-hover hover:bg-hover text-muted text-xs rounded border border-divider transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving || !name.trim()}
-                  className="px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-white font-semibold text-xs rounded transition-colors shadow-sm"
+                  className="px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors shadow-sm"
                 >
                   {saving ? 'Saving...' : editingClient ? 'Update' : 'Save Account'}
                 </button>

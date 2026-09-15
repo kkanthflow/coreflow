@@ -358,18 +358,18 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
   return (
     <div className="h-[100dvh] w-full bg-[#09090b] flex flex-col relative overflow-hidden select-none">
       {/* Top Bar Header */}
-      <div className="h-14 px-3 md:px-6 border-b border-white/10 flex items-center justify-between bg-[#121214] z-30 flex-shrink-0">
+      <div className="h-14 px-3 md:px-6 border-b border-divider flex items-center justify-between bg-[#121214] z-30 flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
             <AuvrynLogo size={14} color="white" />
           </div>
-          <span className="text-white font-bold text-sm md:text-base tracking-wide">AUVRYN Meeting</span>
+          <span className="text-main font-bold text-sm md:text-base tracking-wide">AUVRYN Meeting</span>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             onClick={handleShare}
-            className="flex items-center gap-2 bg-[#27272a] hover:bg-[#3f3f46] text-white px-3 py-1.5 rounded-full text-xs font-semibold transition-all border border-white/10 shadow"
+            className="flex items-center gap-2 bg-[#27272a] hover:bg-[#3f3f46] text-main px-3 py-1.5 rounded-full text-xs font-semibold transition-all border border-divider shadow"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -390,9 +390,9 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
 
         {/* Notes Side Drawer */}
         {activeDrawer === 'notes' && (
-          <div className="w-[360px] h-full bg-[#121214] border-l border-white/10 flex flex-col absolute right-0 top-0 bottom-0 z-40 shadow-2xl animate-in slide-in-from-right duration-200">
-            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#18181b]">
-              <h3 className="text-white font-bold text-base flex items-center gap-2">
+          <div className="w-[360px] h-full bg-[#121214] border-l border-divider flex flex-col absolute right-0 top-0 bottom-0 z-40 shadow-2xl animate-in slide-in-from-right duration-200">
+            <div className="p-4 border-b border-divider flex justify-between items-center bg-[#18181b]">
+              <h3 className="text-main font-bold text-base flex items-center gap-2">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
                   <polyline points="14 2 14 8 20 8"/>
@@ -401,7 +401,7 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
               </h3>
               <button
                 onClick={() => setActiveDrawer(null)}
-                className="text-gray-400 hover:text-white p-1 rounded-lg transition-colors"
+                className="text-muted hover:text-main p-1 rounded-lg transition-colors"
 
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -421,9 +421,9 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
 
         {/* Chat Side Drawer */}
         {activeDrawer === 'chat' && (
-          <div className="w-[360px] h-full bg-[#121214] border-l border-white/10 flex flex-col absolute right-0 top-0 bottom-0 z-40 shadow-2xl animate-in slide-in-from-right duration-200">
-            <div className="p-4 border-b border-white/10 flex justify-between items-center bg-[#18181b]">
-              <h3 className="text-white font-bold text-base flex items-center gap-2">
+          <div className="w-[360px] h-full bg-[#121214] border-l border-divider flex flex-col absolute right-0 top-0 bottom-0 z-40 shadow-2xl animate-in slide-in-from-right duration-200">
+            <div className="p-4 border-b border-divider flex justify-between items-center bg-[#18181b]">
+              <h3 className="text-main font-bold text-base flex items-center gap-2">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                 </svg>
@@ -431,7 +431,7 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
               </h3>
               <button
                 onClick={() => setActiveDrawer(null)}
-                className="text-gray-400 hover:text-white p-1 rounded-lg transition-colors"
+                className="text-muted hover:text-main p-1 rounded-lg transition-colors"
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <line x1="18" y1="6" x2="6" y2="18"/>
@@ -456,7 +456,7 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
             <div className="flex justify-end mb-1">
               <button
                 onClick={handleAdmitAll}
-                className="px-3 py-1 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded shadow-md transition-colors"
+                className="px-3 py-1 bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold rounded shadow-md transition-colors"
               >
                 Admit All ({waitingParticipants.length})
               </button>
@@ -467,28 +467,28 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
             return (
               <div
                 key={p.user_id}
-                className="bg-[#0C0D12]/95 backdrop-blur border border-[#FF6B4A]/30 p-3.5 rounded-lg shadow-2xl animate-in slide-in-from-right flex items-center justify-between gap-3 text-xs"
+                className="bg-card-bg/95 backdrop-blur border border-[#FF6B4A]/30 p-3.5 rounded-lg shadow-2xl animate-in slide-in-from-right flex items-center justify-between gap-3 text-xs"
               >
                 <div className="min-w-0 flex items-center gap-2.5">
                   <div className="w-7 h-7 rounded-md bg-[#FF6B4A]/15 text-[#FF6B4A] font-bold text-xs flex items-center justify-center shrink-0">
                     {name.charAt(0).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-white font-semibold truncate">{name}</p>
-                    <p className="text-zinc-400 text-[10px]">Waiting in lobby...</p>
+                    <p className="text-main font-semibold truncate">{name}</p>
+                    <p className="text-muted text-[10px]">Waiting in lobby...</p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button 
                     onClick={() => handleDeny(p.user_id)}
-                    className="px-2.5 py-1 bg-[#151822] hover:bg-[#1C2030] text-zinc-400 hover:text-white rounded text-[11px] font-medium border border-white/[0.06] transition-colors"
+                    className="px-2.5 py-1 bg-hover hover:bg-[#1C2030] text-muted hover:text-main rounded text-[11px] font-medium border border-divider transition-colors"
                   >
                     Deny
                   </button>
                   <button 
                     onClick={() => handleAdmit(p.user_id)}
-                    className="px-3 py-1 bg-[#FF6B4A] hover:bg-[#FF552B] text-white rounded text-[11px] font-semibold transition-colors shadow-sm"
+                    className="px-3 py-1 bg-[#FF6B4A] hover:bg-[#FF552B] text-main rounded text-[11px] font-semibold transition-colors shadow-sm"
                   >
                     Admit
                   </button>

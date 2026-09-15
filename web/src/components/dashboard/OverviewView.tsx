@@ -47,7 +47,7 @@ export function OverviewView({
         {[
           { label: "Active Live", count: active.length, color: "text-emerald-400", sub: "Rooms active now" },
           { label: "Upcoming", count: upcoming.length, color: "text-[#FF6B4A]", sub: "Scheduled calls" },
-          { label: "Past / Completed", count: past.length, color: "text-gray-400", sub: "Logged sessions" },
+          { label: "Past / Completed", count: past.length, color: "text-muted", sub: "Logged sessions" },
           { label: "Filters Match", count: allFilteredMeetings.length, color: "text-primary", sub: "Currently selected" }
         ].map((stat, idx) => (
           <div key={idx} className="bg-[#111118] border border-white/5 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-[#FF6B4A]/20 transition-all duration-300 backdrop-blur-md">
@@ -68,7 +68,7 @@ export function OverviewView({
         <section className="lg:col-span-2 bg-[#111118] border border-white/5 rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col">
           <div className="absolute inset-0 bg-gradient-to-br from-[#FF6B4A]/5 to-transparent pointer-events-none" />
           <div className="mb-6 relative z-10">
-            <h3 className="font-bold text-white text-base">Activity Overview</h3>
+            <h3 className="font-bold text-main text-base">Activity Overview</h3>
             <p className="text-xs text-gray-500 mt-0.5">Meeting minutes and volume over the last 7 days</p>
           </div>
           <div className="flex-1 w-full min-h-[250px] relative z-10">
@@ -97,7 +97,7 @@ export function OverviewView({
         <section className="lg:col-span-1 bg-[#111118] border border-white/5 rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <div>
-              <h3 className="font-bold text-white text-base">Today</h3>
+              <h3 className="font-bold text-main text-base">Today</h3>
               <p className="text-xs text-gray-500 mt-0.5">Active & upcoming</p>
             </div>
             <span className="text-xs bg-[#FF6B4A]/10 border border-[#FF6B4A]/25 text-[#FF6B4A] font-semibold px-3 py-1 rounded-full uppercase tracking-wider">
@@ -111,7 +111,7 @@ export function OverviewView({
             ) : [...active, ...upcoming].length === 0 ? (
               <div className="py-8 flex flex-col items-center justify-center text-center h-full">
                 <Calendar size={24} className="text-gray-600 mb-2" />
-                <p className="text-sm text-gray-400 font-medium">No meetings today</p>
+                <p className="text-sm text-muted font-medium">No meetings today</p>
               </div>
             ) : (
               [...active, ...upcoming].map((m) => {
@@ -121,17 +121,17 @@ export function OverviewView({
                     isLive ? 'border-[#FF6B4A]/30' : 'border-white/5'
                   }`}>
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold text-muted flex items-center gap-1.5">
                         <Clock size={10} />
                         {new Date(m.start_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                       </span>
                       {isLive && <span className="w-2 h-2 rounded-full bg-[#FF6B4A] animate-ping" />}
                     </div>
-                    <h4 className="text-sm font-bold text-white truncate">{m.title}</h4>
+                    <h4 className="text-sm font-bold text-main truncate">{m.title}</h4>
                     <button
                       onClick={() => onJoin(m.id)}
                       className={`w-full py-2 rounded-xl text-xs font-bold transition-all mt-3 ${
-                        isLive ? 'bg-[#FF6B4A] hover:bg-[#E85A3A] text-white' : 'bg-white/5 hover:bg-white/10 text-white'
+                        isLive ? 'bg-[#FF6B4A] hover:bg-[#E85A3A] text-main' : 'bg-white/5 hover:bg-white/10 text-main'
                       }`}
                     >
                       {isLive ? 'Join Now' : 'Details'}
@@ -149,7 +149,7 @@ export function OverviewView({
         
         {/* QUICK ACTIONS */}
         <section className="lg:col-span-1 bg-[#111118] border border-white/5 rounded-3xl p-6 shadow-xl flex flex-col">
-          <h3 className="font-bold text-white text-base mb-6">Quick Actions</h3>
+          <h3 className="font-bold text-main text-base mb-6">Quick Actions</h3>
           <div className="flex flex-col gap-4 flex-1 justify-center">
             <button
               onClick={handleInstantCall}
@@ -160,7 +160,7 @@ export function OverviewView({
                 <Play size={18} fill="currentColor" />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">{isCreating ? 'Starting...' : 'Instant Call'}</h4>
+                <h4 className="text-sm font-bold text-main">{isCreating ? 'Starting...' : 'Instant Call'}</h4>
                 <p className="text-[10px] text-gray-500 mt-1 leading-normal">Spin up a LiveKit room</p>
               </div>
             </button>
@@ -173,7 +173,7 @@ export function OverviewView({
                 <Plus size={18} />
               </div>
               <div>
-                <h4 className="text-sm font-bold text-white">Join with Code</h4>
+                <h4 className="text-sm font-bold text-main">Join with Code</h4>
                 <p className="text-[10px] text-gray-500 mt-1 leading-normal">Enter meeting credentials</p>
               </div>
             </button>
@@ -183,7 +183,7 @@ export function OverviewView({
         {/* ALL SCHEDULE SLOTS */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <h3 className="font-bold text-white text-base">All Schedule Slots</h3>
+            <h3 className="font-bold text-main text-base">All Schedule Slots</h3>
             <div className="flex items-center gap-2">
               <ListFilter size={14} className="text-gray-500" />
               <div className="flex bg-[#111118] border border-white/5 rounded-xl p-0.5 text-xs">
@@ -192,7 +192,7 @@ export function OverviewView({
                     key={f}
                     onClick={() => setStatusFilter(f)}
                     className={`px-3 py-1.5 rounded-lg font-bold capitalize transition-colors ${
-                      statusFilter === f ? 'bg-[#FF6B4A] text-white' : 'text-gray-400 hover:text-white'
+                      statusFilter === f ? 'bg-[#FF6B4A] text-main' : 'text-muted hover:text-main'
                     }`}
                   >
                     {f}
@@ -205,7 +205,7 @@ export function OverviewView({
           {allFilteredMeetings.length === 0 ? (
             <div className="bg-[#111118] border border-white/5 rounded-3xl p-12 flex flex-col items-center justify-center text-center shadow-lg h-[280px]">
               <Calendar size={32} className="text-gray-600 mb-4" />
-              <p className="text-sm text-gray-400 font-bold">No matching meetings found</p>
+              <p className="text-sm text-muted font-bold">No matching meetings found</p>
             </div>
           ) : (
             <div className="bg-[#111118] border border-white/5 rounded-3xl overflow-hidden shadow-lg h-[280px] flex flex-col">
@@ -217,7 +217,7 @@ export function OverviewView({
                         <Video size={14} />
                       </div>
                       <div>
-                        <h4 className="text-xs font-semibold text-white">{m.title}</h4>
+                        <h4 className="text-xs font-semibold text-main">{m.title}</h4>
                         <span className="text-[10px] text-gray-500 capitalize">{m.status}</span>
                       </div>
                     </div>
@@ -232,7 +232,7 @@ export function OverviewView({
                       )}
                       <button
                         onClick={() => onJoin(m.id)}
-                        className="text-[10px] font-semibold text-white bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
+                        className="text-[10px] font-semibold text-main bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-lg transition-colors"
                       >
                         Details
                       </button>

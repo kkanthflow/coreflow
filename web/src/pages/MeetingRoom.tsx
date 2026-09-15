@@ -169,13 +169,13 @@ export default function MeetingRoom() {
             <line x1="12" y1="17" x2="12" y2="21" />
           </svg>
         </div>
-        <h2 className="text-white text-xl font-bold">Already in meeting in another tab</h2>
-        <p className="text-gray-400 text-sm text-center max-w-md leading-relaxed">
+        <h2 className="text-main text-xl font-bold">Already in meeting in another tab</h2>
+        <p className="text-muted text-sm text-center max-w-md leading-relaxed">
           You are already attending this meeting in another tab or browser window. Meetings can only be active in one tab at a time to prevent audio feedback.
         </p>
         <button
           onClick={claimLock}
-          className="mt-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl transition-all shadow-lg shadow-amber-600/20 text-sm"
+          className="mt-2 px-6 py-3 bg-amber-600 hover:bg-amber-700 text-main font-bold rounded-xl transition-all shadow-lg shadow-amber-600/20 text-sm"
         >
           Use This Tab Instead
         </button>
@@ -194,11 +194,11 @@ export default function MeetingRoom() {
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
         </div>
-        <h2 className="text-white text-xl font-bold">Couldn't join the meeting</h2>
-        <p className="text-gray-400 text-sm text-center max-w-sm">{error}</p>
+        <h2 className="text-main text-xl font-bold">Couldn't join the meeting</h2>
+        <p className="text-muted text-sm text-center max-w-sm">{error}</p>
         <button
           onClick={() => navigate(`/meetings/${id}`, { replace: true })}
-          className="mt-2 px-6 py-3 bg-primary hover:bg-primary text-white font-semibold rounded-xl transition-colors"
+          className="mt-2 px-6 py-3 bg-primary hover:bg-primary text-main font-semibold rounded-xl transition-colors"
         >
           Try Again
         </button>
@@ -216,11 +216,11 @@ export default function MeetingRoom() {
             <polyline points="22 4 12 14.01 9 11.01" />
           </svg>
         </div>
-        <h2 className="text-white text-xl font-bold">You've left the meeting</h2>
-        <p className="text-gray-400 text-sm">The meeting has ended or you disconnected.</p>
+        <h2 className="text-main text-xl font-bold">You've left the meeting</h2>
+        <p className="text-muted text-sm">The meeting has ended or you disconnected.</p>
         <button
           onClick={() => navigate(`/meetings/${id}`, { replace: true })}
-          className="mt-2 px-6 py-3 bg-primary hover:bg-primary text-white font-semibold rounded-xl transition-colors"
+          className="mt-2 px-6 py-3 bg-primary hover:bg-primary text-main font-semibold rounded-xl transition-colors"
         >
           Rejoin Meeting
         </button>
@@ -249,15 +249,15 @@ export default function MeetingRoom() {
         </div>
 
         <div className="text-center max-w-sm relative z-10">
-          <h2 className="text-white text-xl font-bold mb-2">Waiting for the host</h2>
-          <p className="text-gray-400 text-sm leading-relaxed">
+          <h2 className="text-main text-xl font-bold mb-2">Waiting for the host</h2>
+          <p className="text-muted text-sm leading-relaxed">
             The meeting room is locked until the host joins. Once they arrive, you will join the room automatically.
           </p>
         </div>
 
         <button
           onClick={() => navigate('/meetings', { replace: true })}
-          className="mt-2 px-6 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-zinc-300 hover:text-white font-medium rounded-xl transition-all border border-white/5 text-sm"
+          className="mt-2 px-6 py-2.5 bg-zinc-900 hover:bg-zinc-800 text-muted hover:text-main font-medium rounded-xl transition-all border border-white/5 text-sm"
         >
           Return to Dashboard
         </button>
@@ -270,7 +270,7 @@ export default function MeetingRoom() {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-[#09090b]">
         <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
-        <p className="text-gray-400 text-sm">Joining meeting...</p>
+        <p className="text-muted text-sm">Joining meeting...</p>
       </div>
     );
   }
@@ -303,7 +303,7 @@ export default function MeetingRoom() {
       <MeetingLayout meetingId={id!} />
       <RoomAudioRenderer />
       {mediaError && (
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600/90 text-white px-4 py-2 rounded-lg backdrop-blur-md text-sm font-medium z-50 flex items-center gap-2 shadow-xl border border-red-500/50 transition-all animate-in fade-in slide-in-from-top-4">
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-red-600/90 text-main px-4 py-2 rounded-lg backdrop-blur-md text-sm font-medium z-50 flex items-center gap-2 shadow-xl border border-red-500/50 transition-all animate-in fade-in slide-in-from-top-4">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
             <line x1="12" y1="9" x2="12" y2="13" />
