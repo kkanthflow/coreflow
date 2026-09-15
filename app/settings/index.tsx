@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/use-auth';
 
 import * as SecureStore from 'expo-secure-store';
 import * as LocalAuthentication from 'expo-local-authentication';
+import * as IntentLauncher from 'expo-intent-launcher';
 import { Alert, Platform, Modal, TextInput, KeyboardAvoidingView, StyleSheet } from 'react-native';
 import { SUPPORTED_CURRENCIES } from '@/lib/currency';
 import { useEffect } from 'react';
@@ -155,6 +156,20 @@ export default function SettingsScreen() {
     }
   };
 
+  const openDNDSettings = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        await IntentLauncher.startActivityAsync(
+          IntentLauncher.ActivityAction.NOTIFICATION_POLICY_ACCESS_SETTINGS
+        );
+      } catch (e) {
+        Alert.alert('Error', 'Could not open DND settings.');
+      }
+    } else {
+      Alert.alert('Not Supported', 'This feature is only available on Android.');
+    }
+  };
+
   return (
     <ScreenContainer>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -216,7 +231,7 @@ export default function SettingsScreen() {
               />
             </View>
 
-            <View className="flex-row items-center justify-between p-4">
+            <View className="flex-row items-center justify-between p-4 border-b border-border">
               <View className="flex-row items-center flex-1 mr-4">
                 <View className="w-8 h-8 rounded-full items-center justify-center mr-3 bg-primary/10">
                   <Ionicons name="finger-print-outline" size={18} color={colors.primary} />
@@ -233,6 +248,22 @@ export default function SettingsScreen() {
                 thumbColor="#fff"
               />
             </View>
+
+            <Pressable 
+              onPress={openDNDSettings}
+              className="flex-row items-center justify-between p-4"
+            >
+              <View className="flex-row items-center flex-1 mr-4">
+                <View className="w-8 h-8 rounded-full items-center justify-center mr-3 bg-primary/10">
+                  <Ionicons name="notifications-off-outline" size={18} color={colors.primary} />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-base font-semibold text-foreground">Bypass Silent Mode</Text>
+                  <Text className="text-xs text-muted">Allow notifications to ring in DND</Text>
+                </View>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+            </Pressable>
           </View>
         </View>
 

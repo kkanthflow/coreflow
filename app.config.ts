@@ -78,7 +78,8 @@ const config: ExpoConfig = {
       "FOREGROUND_SERVICE_MEDIA_PROJECTION",
       "FOREGROUND_SERVICE_CAMERA",
       "FOREGROUND_SERVICE_MICROPHONE",
-      "MODIFY_AUDIO_SETTINGS"
+      "MODIFY_AUDIO_SETTINGS",
+      "ACCESS_NOTIFICATION_POLICY"
     ],
     intentFilters: [
       {

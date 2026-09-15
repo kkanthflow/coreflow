@@ -758,6 +758,7 @@ export default function RootLayout() {
             vibrationPattern: [0, 250, 250, 250],
             lightColor: '#FF231F7C',
             showBadge: true,
+            bypassDnd: true,
           });
           // Meetings Channel
           await Notifications.setNotificationChannelAsync('meetings', {
@@ -766,12 +767,14 @@ export default function RootLayout() {
             vibrationPattern: [0, 250, 250, 250],
             lightColor: '#FF231F7C',
             showBadge: true,
+            bypassDnd: true,
           });
           // Tasks Channel
           await Notifications.setNotificationChannelAsync('tasks', {
             name: 'Tasks',
             importance: Notifications.AndroidImportance.DEFAULT,
             showBadge: true,
+            bypassDnd: true,
           });
           // Fallback Default Channel
           await Notifications.setNotificationChannelAsync('default', {
