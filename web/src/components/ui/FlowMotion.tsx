@@ -139,10 +139,10 @@ export function FlowStepper({
               <div
                 className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
                   isCurrent
-                    ? 'bg-[#08090D] border-2 border-[#FF6B4A] text-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.35)] scale-105'
+                    ? 'bg-app border-2 border-[#FF6B4A] text-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.35)] scale-105'
                     : isPassed
-                    ? 'bg-[#0E1016] border border-[#FF6B4A]/60 text-main'
-                    : 'bg-[#08090D] border border-white/[0.1] text-zinc-600'
+                    ? 'bg-card-bg border border-[#FF6B4A]/60 text-main'
+                    : 'bg-app border border-white/[0.1] text-zinc-600'
                 }`}
               >
                 <div

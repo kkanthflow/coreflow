@@ -130,7 +130,7 @@ export function StatusSignal({ status, label }: { status: string; label?: string
 export function TrajectoryProgress({ value, color = '#FF6B4A', height = 3 }: { value: number; color?: string; height?: number }) {
   const clamped = Math.max(0, Math.min(100, Math.round(value)));
   return (
-    <div className="w-full bg-[#1c1f2e] rounded-full overflow-visible relative flex items-center" style={{ height: `${height}px` }}>
+    <div className="w-full bg-hover rounded-full overflow-visible relative flex items-center" style={{ height: `${height}px` }}>
       <motion.div
         initial={{ width: 0 }}
         animate={{ width: `${clamped}%` }}
@@ -162,7 +162,7 @@ interface ContextInspectorProps {
 
 export function ContextInspector({ title, subtitle, badge, onClose, children, footer }: ContextInspectorProps) {
   return (
-    <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-[#0C0D13] border-l border-divider shadow-2xl flex flex-col font-sans select-none animate-in slide-in-from-right duration-200">
+    <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-card-bg border-l border-divider shadow-2xl flex flex-col font-sans select-none animate-in slide-in-from-right duration-200">
       {/* Inspector Header */}
       <div className="h-14 px-5 border-b border-divider flex items-center justify-between shrink-0 bg-card-bg">
         <div className="min-w-0 flex-1 pr-3">
@@ -214,7 +214,7 @@ interface EmptyStateProps {
 export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
   return (
     <div className="py-16 px-4 text-center select-none">
-      <div className="w-10 h-10 rounded-lg bg-[#11131B] border border-divider flex items-center justify-center mx-auto text-muted mb-3">
+      <div className="w-10 h-10 rounded-lg bg-card-bg border border-divider flex items-center justify-center mx-auto text-muted mb-3">
         <Icon size={18} className="text-[#FF6B4A]" />
       </div>
       <h3 className="text-sm font-semibold text-main tracking-tight">{title}</h3>

@@ -130,7 +130,7 @@ export default function Calendar() {
         {/* Days cells */}
         <div className="grid grid-cols-7 gap-1.5 pt-2.5 auto-rows-fr">
           {Array.from({ length: firstDay }).map((_, i) => (
-            <div key={`empty-${i}`} className="p-2 rounded bg-[#07080B]/50 border border-transparent min-h-[90px]" />
+            <div key={`empty-${i}`} className="p-2 rounded bg-app/50 border border-transparent min-h-[90px]" />
           ))}
 
           {Array.from({ length: daysInMonth }).map((_, i) => {
@@ -147,7 +147,7 @@ export default function Calendar() {
                 className={`p-2 rounded border transition-all flex flex-col justify-between min-h-[90px] ${
                   isToday
                     ? 'bg-[#FF6B4A]/5 border-[#FF6B4A]/40'
-                    : 'bg-[#07080B] border-divider hover:border-divider'
+                    : 'bg-app border-divider hover:border-divider'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">

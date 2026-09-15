@@ -63,7 +63,7 @@ export const ParticipantTile = memo(function ParticipantTile({
 
   return (
     <div
-      className={`relative ${heightClass} rounded-xl overflow-hidden bg-[#1c1c1e] border ${
+      className={`relative ${heightClass} rounded-xl overflow-hidden bg-hover border ${
         isSpeaking ? 'border-[#FF6B4A] ring-2 ring-[#FF6B4A]/50' : 'border-divider'
       } flex-shrink-0 transition-all duration-300 shadow-md group`}
     >
@@ -74,8 +74,8 @@ export const ParticipantTile = memo(function ParticipantTile({
           className={`w-full h-full object-cover ${participant.isLocal ? 'scale-x-[-1]' : ''}`}
         />
       ) : (
-        <div className="w-full h-full flex flex-col items-center justify-center bg-[#18181b]">
-          <div className="w-12 h-12 rounded-full bg-[#27272a] flex items-center justify-center border border-divider shadow-inner">
+        <div className="w-full h-full flex flex-col items-center justify-center bg-hover">
+          <div className="w-12 h-12 rounded-full bg-hover flex items-center justify-center border border-divider shadow-inner">
             <span className="text-main font-bold text-lg select-none">
               {(participant.name || participant.identity || '?')[0].toUpperCase()}
             </span>

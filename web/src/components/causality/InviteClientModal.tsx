@@ -77,10 +77,10 @@ export default function InviteClientModal({
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="w-full max-w-lg bg-[#0B0C10] border border-divider rounded-xl shadow-2xl overflow-hidden flex flex-col text-main"
+        className="w-full max-w-lg bg-card-bg border border-divider rounded-xl shadow-2xl overflow-hidden flex flex-col text-main"
       >
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-divider bg-[#0E1017] flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-divider bg-card-bg flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A]">
               <UserPlus size={18} />
@@ -110,7 +110,7 @@ export default function InviteClientModal({
                   User credentials have been registered in the database with direct project room access.
                 </p>
               </div>
-              <div className="p-3 bg-[#07080B] rounded-lg border border-divider text-left text-xs font-mono space-y-1.5">
+              <div className="p-3 bg-app rounded-lg border border-divider text-left text-xs font-mono space-y-1.5">
                 <div className="text-muted">Email: <span className="text-main font-bold">{successResult.email}</span></div>
                 <div className="text-muted">Name: <span className="text-main">{successResult.fullName}</span></div>
                 <div className="text-muted">Role: <span className="text-emerald-400 font-bold">CLIENT</span></div>
@@ -148,7 +148,7 @@ export default function InviteClientModal({
                     placeholder="e.g. Sarah Jenkins"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-[#12141C] border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
+                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-hover border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
                   />
                 </div>
               </div>
@@ -166,7 +166,7 @@ export default function InviteClientModal({
                     placeholder="client@company.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-[#12141C] border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
+                    className="w-full pl-9 pr-3 py-2 rounded-lg bg-hover border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
                   />
                 </div>
               </div>
@@ -185,7 +185,7 @@ export default function InviteClientModal({
                     placeholder="Set 6+ character password..."
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-9 pr-9 py-2 rounded-lg bg-[#12141C] border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
+                    className="w-full pl-9 pr-9 py-2 rounded-lg bg-hover border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
                   />
                   <button
                     type="button"
@@ -198,7 +198,7 @@ export default function InviteClientModal({
               </div>
 
               {/* Granular Client Permissions */}
-              <div className="p-3 rounded-lg bg-[#07080B] border border-divider space-y-2">
+              <div className="p-3 rounded-lg bg-app border border-divider space-y-2">
                 <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   Client Permissions Granted
                 </span>
@@ -207,7 +207,7 @@ export default function InviteClientModal({
                     type="checkbox"
                     checked={canApprove}
                     onChange={(e) => setCanApprove(e.target.checked)}
-                    className="rounded border-divider bg-[#12141C] text-[#FF6B4A] focus:ring-0"
+                    className="rounded border-divider bg-hover text-[#FF6B4A] focus:ring-0"
                   />
                   <span>Can Approve Deliverables & Milestones</span>
                 </label>
@@ -216,7 +216,7 @@ export default function InviteClientModal({
                     type="checkbox"
                     checked={canRequestChanges}
                     onChange={(e) => setCanRequestChanges(e.target.checked)}
-                    className="rounded border-divider bg-[#12141C] text-[#FF6B4A] focus:ring-0"
+                    className="rounded border-divider bg-hover text-[#FF6B4A] focus:ring-0"
                   />
                   <span>Can Submit Change Requests (CR)</span>
                 </label>
@@ -225,7 +225,7 @@ export default function InviteClientModal({
                     type="checkbox"
                     checked={canViewFinancials}
                     onChange={(e) => setCanViewFinancials(e.target.checked)}
-                    className="rounded border-divider bg-[#12141C] text-[#FF6B4A] focus:ring-0"
+                    className="rounded border-divider bg-hover text-[#FF6B4A] focus:ring-0"
                   />
                   <span>Can View Project Value & Cost Causality</span>
                 </label>

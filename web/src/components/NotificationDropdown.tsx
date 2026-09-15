@@ -151,14 +151,14 @@ export default function NotificationDropdown() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.96 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="absolute right-0 mt-2 w-80 sm:w-96 bg-[#0E0F16] border border-white/[0.1] rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col"
+            className="absolute right-0 mt-2 w-80 sm:w-96 bg-card-bg border border-white/[0.1] rounded-2xl shadow-2xl overflow-hidden z-50 flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-divider bg-white/[0.02]">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black text-main uppercase tracking-wider">Notifications</span>
                 {unreadCount > 0 && (
-                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#FF6B4A]/20 text-[#FF8E75] border border-[#FF6B4A]/30">
+                  <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-[#FF6B4A]/20 text-muted border border-[#FF6B4A]/30">
                     {unreadCount} new
                   </span>
                 )}

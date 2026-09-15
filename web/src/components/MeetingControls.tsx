@@ -81,13 +81,13 @@ export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onTo
   const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   return (
-    <div className="flex items-center justify-center gap-2 md:gap-3 px-3 md:px-4 py-3 bg-[#121214] border-t border-divider w-full z-40 overflow-x-auto flex-shrink-0">
+    <div className="flex items-center justify-center gap-2 md:gap-3 px-3 md:px-4 py-3 bg-card-bg border-t border-divider w-full z-40 overflow-x-auto flex-shrink-0">
       {/* Microphone Toggle */}
       <button
         onClick={toggleMic}
         className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
           isMicOn
-            ? 'bg-[#27272a] hover:bg-[#3f3f46] text-main'
+            ? 'bg-hover hover:bg-hover text-main'
             : 'bg-red-600 hover:bg-red-700 text-main shadow-lg shadow-red-600/20'
         }`}
         title={isMicOn ? 'Turn off microphone' : 'Turn on microphone'}
@@ -112,7 +112,7 @@ export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onTo
         onClick={toggleCam}
         className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
           isCamOn
-            ? 'bg-[#27272a] hover:bg-[#3f3f46] text-main'
+            ? 'bg-hover hover:bg-hover text-main'
             : 'bg-red-600 hover:bg-red-700 text-main shadow-lg shadow-red-600/20'
         }`}
         title={isCamOn ? 'Turn off camera' : 'Turn on camera'}
@@ -137,7 +137,7 @@ export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onTo
           className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
             isScreenSharing
               ? 'bg-primary hover:bg-primary text-main shadow-lg shadow-blue-600/30'
-              : 'bg-[#27272a] hover:bg-[#3f3f46] text-main'
+              : 'bg-hover hover:bg-hover text-main'
           }`}
           title={isScreenSharing ? 'Stop sharing screen' : 'Share screen'}
         >
@@ -155,7 +155,7 @@ export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onTo
         className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
           activeDrawer === 'chat'
             ? 'bg-emerald-600 text-main'
-            : 'bg-[#27272a] hover:bg-[#3f3f46] text-main'
+            : 'bg-hover hover:bg-hover text-main'
         }`}
         title="Toggle Chat"
       >
@@ -170,7 +170,7 @@ export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onTo
         className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
           activeDrawer === 'notes'
             ? 'bg-primary text-main'
-            : 'bg-[#27272a] hover:bg-[#3f3f46] text-main'
+            : 'bg-hover hover:bg-hover text-main'
         }`}
         title="Toggle Notes"
       >
@@ -188,7 +188,7 @@ export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onTo
         className={`p-3 rounded-full font-semibold text-sm flex items-center justify-center transition-all ${
           isRecording
             ? 'bg-red-600 hover:bg-red-700 text-main shadow-lg shadow-red-600/30 animate-pulse'
-            : 'bg-[#27272a] hover:bg-[#3f3f46] text-main'
+            : 'bg-hover hover:bg-hover text-main'
         }`}
         title={isRecording ? 'Stop Recording' : 'Start Recording'}
       >
@@ -205,7 +205,7 @@ export function MeetingControls({ activeDrawer, isRecording, onToggleNotes, onTo
         <div className="flex items-center gap-2">
           <button
             onClick={onLeave}
-            className="px-4 py-2.5 rounded-full bg-[#27272a] hover:bg-[#3f3f46] text-main text-sm font-bold flex items-center gap-2 transition-all"
+            className="px-4 py-2.5 rounded-full bg-hover hover:bg-hover text-main text-sm font-bold flex items-center gap-2 transition-all"
           >
             Leave
           </button>

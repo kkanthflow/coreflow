@@ -356,9 +356,9 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
   };
 
   return (
-    <div className="h-[100dvh] w-full bg-[#09090b] flex flex-col relative overflow-hidden select-none">
+    <div className="h-[100dvh] w-full bg-app flex flex-col relative overflow-hidden select-none">
       {/* Top Bar Header */}
-      <div className="h-14 px-3 md:px-6 border-b border-divider flex items-center justify-between bg-[#121214] z-30 flex-shrink-0">
+      <div className="h-14 px-3 md:px-6 border-b border-divider flex items-center justify-between bg-card-bg z-30 flex-shrink-0">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
             <AuvrynLogo size={14} color="white" />
@@ -369,7 +369,7 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={handleShare}
-            className="flex items-center gap-2 bg-[#27272a] hover:bg-[#3f3f46] text-main px-3 py-1.5 rounded-full text-xs font-semibold transition-all border border-divider shadow"
+            className="flex items-center gap-2 bg-hover hover:bg-hover text-main px-3 py-1.5 rounded-full text-xs font-semibold transition-all border border-divider shadow"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
@@ -390,8 +390,8 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
 
         {/* Notes Side Drawer */}
         {activeDrawer === 'notes' && (
-          <div className="w-[360px] h-full bg-[#121214] border-l border-divider flex flex-col absolute right-0 top-0 bottom-0 z-40 shadow-2xl animate-in slide-in-from-right duration-200">
-            <div className="p-4 border-b border-divider flex justify-between items-center bg-[#18181b]">
+          <div className="w-[360px] h-full bg-card-bg border-l border-divider flex flex-col absolute right-0 top-0 bottom-0 z-40 shadow-2xl animate-in slide-in-from-right duration-200">
+            <div className="p-4 border-b border-divider flex justify-between items-center bg-hover">
               <h3 className="text-main font-bold text-base flex items-center gap-2">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
@@ -421,8 +421,8 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
 
         {/* Chat Side Drawer */}
         {activeDrawer === 'chat' && (
-          <div className="w-[360px] h-full bg-[#121214] border-l border-divider flex flex-col absolute right-0 top-0 bottom-0 z-40 shadow-2xl animate-in slide-in-from-right duration-200">
-            <div className="p-4 border-b border-divider flex justify-between items-center bg-[#18181b]">
+          <div className="w-[360px] h-full bg-card-bg border-l border-divider flex flex-col absolute right-0 top-0 bottom-0 z-40 shadow-2xl animate-in slide-in-from-right duration-200">
+            <div className="p-4 border-b border-divider flex justify-between items-center bg-hover">
               <h3 className="text-main font-bold text-base flex items-center gap-2">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -482,7 +482,7 @@ export function MeetingLayout({ meetingId }: MeetingLayoutProps) {
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button 
                     onClick={() => handleDeny(p.user_id)}
-                    className="px-2.5 py-1 bg-hover hover:bg-[#1C2030] text-muted hover:text-main rounded text-[11px] font-medium border border-divider transition-colors"
+                    className="px-2.5 py-1 bg-hover hover:bg-hover text-muted hover:text-main rounded text-[11px] font-medium border border-divider transition-colors"
                   >
                     Deny
                   </button>

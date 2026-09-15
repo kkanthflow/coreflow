@@ -233,7 +233,7 @@ export default function PreJoin() {
   };
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-[#07080B] p-4 sm:p-6 lg:p-8">
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-center overflow-hidden bg-app p-4 sm:p-6 lg:p-8">
       {/* Background Mesh Glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-[20%] left-[20%] w-[650px] h-[650px] rounded-full bg-gradient-to-br from-[#FF6B4A]/15 via-[#FF4500]/5 to-transparent blur-[140px] animate-float-slow" />
@@ -241,7 +241,7 @@ export default function PreJoin() {
       </div>
 
       {isMobile && (
-        <div className="fixed top-0 left-0 right-0 p-3.5 bg-[#12141D]/90 border-b border-divider backdrop-blur-xl z-50 flex items-center justify-between shadow-2xl">
+        <div className="fixed top-0 left-0 right-0 p-3.5 bg-hover/90 border-b border-divider backdrop-blur-xl z-50 flex items-center justify-between shadow-2xl">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-tr from-[#FF6B4A] to-[#FF8E75] flex items-center justify-center">
               <Smartphone className="w-4 h-4 text-main" />
@@ -285,7 +285,7 @@ export default function PreJoin() {
         <div className="text-center mb-6">
           {meetingDetails ? (
             <>
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FF6B4A]/10 border border-[#FF6B4A]/20 text-[#FF8E75] text-xs font-bold uppercase tracking-wider mb-3">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FF6B4A]/10 border border-[#FF6B4A]/20 text-muted text-xs font-bold uppercase tracking-wider mb-3">
                 <Shield className="w-3.5 h-3.5" />
                 <span>Enterprise Meeting</span>
               </div>
@@ -295,7 +295,7 @@ export default function PreJoin() {
               )}
               {meetingDetails.start_time && (
                 <div className="inline-flex items-center gap-2 text-xs font-medium text-muted mt-3 px-3 py-1 rounded-lg bg-white/[0.04] border border-divider">
-                  <Calendar className="w-3.5 h-3.5 text-[#FF8E75]" />
+                  <Calendar className="w-3.5 h-3.5 text-muted" />
                   <span>{new Date(meetingDetails.start_time).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
                 </div>
               )}
@@ -313,7 +313,7 @@ export default function PreJoin() {
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="relative aspect-video w-full rounded-2xl overflow-hidden bg-[#0A0B10] border border-divider shadow-inner mb-6 flex items-center justify-center"
+          className="relative aspect-video w-full rounded-2xl overflow-hidden bg-app border border-divider shadow-inner mb-6 flex items-center justify-center"
         >
           {videoEnabled && !cameraError ? (
             <video

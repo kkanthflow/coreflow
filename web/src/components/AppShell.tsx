@@ -33,7 +33,7 @@ export default function AppShell() {
   return (
     <div 
       onPointerMove={handlePointerMove}
-      className="flex h-screen w-full bg-[#08090D] overflow-hidden text-main selection:bg-[#FF6B4A]/30 selection:text-main font-sans antialiased relative"
+      className="flex h-screen w-full bg-app overflow-hidden text-main selection:bg-[#FF6B4A]/30 selection:text-main font-sans antialiased relative"
     >
       {/* Living AUVRYN Atmospheric Background Canvas */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -49,15 +49,15 @@ export default function AppShell() {
           <div className="absolute -top-[10%] left-[25%] w-[650px] h-[650px] rounded-full bg-gradient-to-br from-[#FF6B4A]/[0.10] to-transparent blur-[120px] animate-pulse-glow" />
         )}
         {currentModule === 'meetings' && (
-          <div className="absolute inset-0 bg-radial from-transparent via-[#08090D]/50 to-[#040507]" />
+          <div className="absolute inset-0 bg-radial from-transparent via-app/50 to-app" />
         )}
         <div className="absolute bottom-[10%] right-[10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tl from-blue-600/[0.06] to-transparent blur-[100px]" />
         
         {/* Subtle grid pattern */}
         <div 
-          className="absolute inset-0 opacity-[0.035]"
+          className="absolute inset-0 opacity-100"
           style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, #ffffff 1px, transparent 0)`,
+            backgroundImage: `radial-gradient(circle at 1px 1px, var(--border-app) 1px, transparent 0)`,
             backgroundSize: '24px 24px'
           }}
         />

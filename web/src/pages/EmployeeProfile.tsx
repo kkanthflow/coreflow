@@ -144,7 +144,7 @@ export default function EmployeeProfile() {
         {/* Left Column: Identity & Access */}
         <div className="lg:col-span-4 space-y-6">
           <div className="bg-card-bg border border-divider rounded-lg p-5 text-center flex flex-col items-center">
-            <div className="w-16 h-16 rounded-md bg-[#13151D] border border-divider text-main flex items-center justify-center font-bold text-xl mb-3">
+            <div className="w-16 h-16 rounded-md bg-hover border border-divider text-main flex items-center justify-center font-bold text-xl mb-3">
               {profile.avatar_url ? (
                 <img src={profile.avatar_url} className="w-16 h-16 rounded-md object-cover" />
               ) : (
@@ -184,7 +184,7 @@ export default function EmployeeProfile() {
                 <select
                   value={selectedRole}
                   onChange={e => setSelectedRole(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main capitalize focus:outline-none"
+                  className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main capitalize focus:outline-none"
                 >
                   {ALL_ROLES.map(r => (
                     <option key={r} value={r}>{r.replace('_', ' ')}</option>

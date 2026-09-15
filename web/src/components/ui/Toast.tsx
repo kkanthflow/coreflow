@@ -84,11 +84,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               key={t.id}
               className={`pointer-events-auto rounded-lg p-3.5 shadow-2xl border backdrop-blur-xl transition-all animate-in slide-in-from-bottom-2 duration-200 flex items-start gap-3 ${
                 isSuccess
-                  ? 'bg-[#0A0D0B]/95 border-emerald-500/30 text-emerald-100'
+                  ? 'bg-app/95 border-emerald-500/30 text-emerald-100'
                   : isError
-                  ? 'bg-[#0D0808]/95 border-red-500/30 text-red-100'
+                  ? 'bg-app/95 border-red-500/30 text-red-100'
                   : isWarning
-                  ? 'bg-[#0D0B08]/95 border-amber-500/30 text-amber-100'
+                  ? 'bg-app/95 border-amber-500/30 text-amber-100'
                   : 'bg-card-bg/95 border-divider text-zinc-100'
               }`}
             >

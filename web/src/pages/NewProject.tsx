@@ -106,7 +106,7 @@ export default function NewProject() {
             placeholder="e.g. Next-Gen Mobile App Architecture Overhaul"
             value={title}
             onChange={e => setTitle(e.target.value)}
-            className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+            className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
           />
         </div>
 
@@ -119,7 +119,7 @@ export default function NewProject() {
             placeholder="Technical goals, target deliverables, architecture requirements..."
             value={description}
             onChange={e => setDescription(e.target.value)}
-            className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
+            className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
           />
         </div>
 
@@ -131,7 +131,7 @@ export default function NewProject() {
             <select
               value={priority}
               onChange={e => setPriority(e.target.value as any)}
-              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main focus:outline-none transition-colors"
+              className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main focus:outline-none transition-colors"
             >
               <option value="low">Low Priority</option>
               <option value="medium">Medium Priority</option>
@@ -148,7 +148,7 @@ export default function NewProject() {
               type="date"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
-              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main focus:outline-none transition-colors"
+              className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -161,7 +161,7 @@ export default function NewProject() {
             <select
               value={departmentId}
               onChange={e => setDepartmentId(e.target.value)}
-              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main focus:outline-none transition-colors"
+              className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main focus:outline-none transition-colors"
             >
               <option value="">General / Cross-functional</option>
               {departments.map(d => (

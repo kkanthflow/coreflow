@@ -244,7 +244,7 @@ export default function Landing() {
       <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-5xl px-4 sm:px-6">
         <nav className="bg-card-bg/95 backdrop-blur-xl border border-divider rounded-full px-5 sm:px-7 py-3 flex items-center justify-between shadow-2xl">
           <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-7 h-7 rounded-lg bg-[#141622] border border-[#FF6B4A]/40 flex items-center justify-center text-[#FF6B4A] shadow-[0_0_10px_rgba(255,107,74,0.3)]">
+            <div className="w-7 h-7 rounded-lg bg-hover border border-[#FF6B4A]/40 flex items-center justify-center text-[#FF6B4A] shadow-[0_0_10px_rgba(255,107,74,0.3)]">
               <AuvrynLogo size={15} />
             </div>
             <div className="flex items-baseline gap-1.5">
@@ -337,7 +337,7 @@ export default function Landing() {
               </Link>
               <Link
                 to="/projects"
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-card-bg hover:bg-[#12141C] border border-divider text-muted hover:text-main font-mono text-xs transition-colors flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-card-bg hover:bg-hover border border-divider text-muted hover:text-main font-mono text-xs transition-colors flex items-center justify-center gap-2"
               >
                 <FolderKanban size={14} className="text-[#FF6B4A]" />
                 <span>View Projects</span>
@@ -354,7 +354,7 @@ export default function Landing() {
               </Link>
               <Link
                 to="/login"
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-card-bg hover:bg-[#12141C] border border-divider text-muted hover:text-main font-mono text-xs transition-colors flex items-center justify-center gap-2"
+                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-card-bg hover:bg-hover border border-divider text-muted hover:text-main font-mono text-xs transition-colors flex items-center justify-center gap-2"
               >
                 <Lock size={14} className="text-[#FF6B4A]" />
                 <span>Interactive Demo Console</span>
@@ -382,7 +382,7 @@ export default function Landing() {
 
           <div className="grid grid-cols-12 gap-4 items-start">
             {/* Sidebar Mock */}
-            <div className="hero-ui-sidebar hidden md:flex col-span-3 flex-col space-y-2 p-3 bg-[#08090D] border border-divider rounded-xl text-xs font-mono">
+            <div className="hero-ui-sidebar hidden md:flex col-span-3 flex-col space-y-2 p-3 bg-app border border-divider rounded-xl text-xs font-mono">
               <div className="text-[10px] text-muted font-bold uppercase tracking-wider mb-1">Workspaces</div>
               <div className="px-2.5 py-1.5 rounded bg-[#FF6B4A]/10 text-[#FF6B4A] border border-[#FF6B4A]/20 flex items-center justify-between">
                 <span>Skavelon Global</span>
@@ -406,14 +406,14 @@ export default function Landing() {
             <div className="col-span-12 md:col-span-9 space-y-4">
               
               {/* Workspace Pulse Wave */}
-              <div className="p-3 bg-[#08090D] border border-divider rounded-xl space-y-2">
+              <div className="p-3 bg-app border border-divider rounded-xl space-y-2">
                 <div className="flex justify-between items-center text-[10px] font-mono text-muted">
                   <span className="flex items-center gap-1.5 text-[#FF6B4A] font-bold">
                     <Activity size={12} className="animate-pulse" /> WORKSPACE PULSE WAVE
                   </span>
                   <span className="text-main font-bold">92% · Stable</span>
                 </div>
-                <div className="hero-ui-pulse w-full h-1.5 bg-[#141620] rounded-full overflow-hidden flex">
+                <div className="hero-ui-pulse w-full h-1.5 bg-hover rounded-full overflow-hidden flex">
                   <div className="w-[68%] bg-[#FF6B4A] h-full shadow-[0_0_8px_#FF6B4A]" />
                   <div className="w-[24%] bg-emerald-400 h-full" />
                   <div className="w-[8%] bg-zinc-600 h-full" />
@@ -422,17 +422,17 @@ export default function Landing() {
 
               {/* Modular Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="hero-ui-cards p-3 bg-[#08090D] border border-divider rounded-xl space-y-1">
+                <div className="hero-ui-cards p-3 bg-app border border-divider rounded-xl space-y-1">
                   <div className="text-[10px] font-mono text-muted uppercase">ACTIVE WORKSTREAMS</div>
                   <div className="text-base font-bold text-main">12 Projects</div>
                   <div className="text-[10px] text-emerald-400 font-mono">+3 on track</div>
                 </div>
-                <div className="hero-ui-cards p-3 bg-[#08090D] border border-divider rounded-xl space-y-1">
+                <div className="hero-ui-cards p-3 bg-app border border-divider rounded-xl space-y-1">
                   <div className="text-[10px] font-mono text-muted uppercase">SFU CONFERENCING</div>
                   <div className="text-base font-bold text-main">Sub-second</div>
                   <div className="text-[10px] text-[#FF6B4A] font-mono">E2EE NIST P-256</div>
                 </div>
-                <div className="hero-ui-cards p-3 bg-[#08090D] border border-divider rounded-xl space-y-1">
+                <div className="hero-ui-cards p-3 bg-app border border-divider rounded-xl space-y-1">
                   <div className="text-[10px] font-mono text-muted uppercase">SETTLED INVOICES</div>
                   <div className="text-base font-bold text-main">₹48,300.00</div>
                   <div className="text-[10px] text-emerald-400 font-mono">Active Currency (₹)</div>
@@ -499,7 +499,7 @@ export default function Landing() {
                 <span>Trajectory Velocity</span>
                 <span>{projectProgress === 100 ? 'Released to Production' : 'Active Flow'}</span>
               </div>
-              <div className="w-full h-3 bg-[#151722] rounded-full overflow-visible relative flex items-center">
+              <div className="w-full h-3 bg-hover rounded-full overflow-visible relative flex items-center">
                 <div
                   className="h-full bg-gradient-to-r from-[#FF6B4A] to-[#FF8E75] rounded-full relative transition-all duration-75 shadow-[0_0_12px_rgba(255,107,74,0.7)]"
                   style={{ width: `${projectProgress}%` }}
@@ -514,15 +514,15 @@ export default function Landing() {
             </div>
 
             <div className="grid grid-cols-3 gap-3 pt-4 text-center">
-              <div className="p-3 rounded bg-[#08090D] border border-divider">
+              <div className="p-3 rounded bg-app border border-divider">
                 <div className="text-[10px] font-mono text-muted">TASKS DONE</div>
                 <div className="text-base font-bold text-main mt-1">{Math.round((projectProgress / 100) * 42)} / 42</div>
               </div>
-              <div className="p-3 rounded bg-[#08090D] border border-divider">
+              <div className="p-3 rounded bg-app border border-divider">
                 <div className="text-[10px] font-mono text-muted">VELOCITY</div>
                 <div className="text-base font-bold text-emerald-400 mt-1">4.8x avg</div>
               </div>
-              <div className="p-3 rounded bg-[#08090D] border border-divider">
+              <div className="p-3 rounded bg-app border border-divider">
                 <div className="text-[10px] font-mono text-muted">STATUS</div>
                 <div className="text-base font-bold text-[#FF6B4A] mt-1">{projectProgress > 80 ? 'Finalizing' : 'Executing'}</div>
               </div>
@@ -565,7 +565,7 @@ export default function Landing() {
               </div>
               <div className="space-y-3 flex-1">
                 {taskACol === 'todo' && (
-                  <motion.div layoutId="task-a" className="p-3.5 bg-[#12141E] border border-divider rounded-lg shadow-xl space-y-2">
+                  <motion.div layoutId="task-a" className="p-3.5 bg-hover border border-divider rounded-lg shadow-xl space-y-2">
                     <span className="text-[9px] font-mono font-bold text-[#FF6B4A] uppercase block">#TASK-101</span>
                     <div className="text-xs font-semibold text-main">NIST P-256 Key Exchange</div>
                     <div className="text-[10px] text-muted font-mono">Assigned: Alex Mercer</div>
@@ -582,14 +582,14 @@ export default function Landing() {
               </div>
               <div className="space-y-3 flex-1">
                 {taskACol === 'inprogress' && (
-                  <motion.div layoutId="task-a" className="p-3.5 bg-[#12141E] border border-[#FF6B4A]/50 rounded-lg shadow-xl space-y-2 ring-1 ring-[#FF6B4A]/30">
+                  <motion.div layoutId="task-a" className="p-3.5 bg-hover border border-[#FF6B4A]/50 rounded-lg shadow-xl space-y-2 ring-1 ring-[#FF6B4A]/30">
                     <span className="text-[9px] font-mono font-bold text-[#FF6B4A] uppercase block">#TASK-101</span>
                     <div className="text-xs font-semibold text-main">NIST P-256 Key Exchange</div>
                     <div className="text-[10px] text-muted font-mono">Review in progress...</div>
                   </motion.div>
                 )}
                 {taskBCol === 'inprogress' && (
-                  <motion.div layoutId="task-b" className="p-3.5 bg-[#12141E] border border-divider rounded-lg shadow-xl space-y-2">
+                  <motion.div layoutId="task-b" className="p-3.5 bg-hover border border-divider rounded-lg shadow-xl space-y-2">
                     <span className="text-[9px] font-mono font-bold text-blue-400 uppercase block">#TASK-102</span>
                     <div className="text-xs font-semibold text-main">WebRTC Selective Forwarding</div>
                     <div className="text-[10px] text-muted font-mono">Assigned: Elena Rostova</div>
@@ -699,7 +699,7 @@ export default function Landing() {
                   )}
                 </div>
 
-                <div className="p-3 rounded-xl bg-[#08090D] border border-[#FF6B4A]/30 flex items-center justify-between text-xs">
+                <div className="p-3 rounded-xl bg-app border border-[#FF6B4A]/30 flex items-center justify-between text-xs">
                   <span className="text-muted font-mono">Join Architecture Review</span>
                   <button className="px-3.5 py-1.5 rounded-lg bg-[#FF6B4A] hover:bg-[#FF552B] text-main font-semibold text-[11px] flex items-center gap-1.5 transition-colors">
                     <Video size={13} /> <span>Join Room</span>
@@ -721,12 +721,12 @@ export default function Landing() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 flex-1">
-                  <div className="bg-[#141622] rounded-xl border border-divider p-4 flex flex-col justify-between relative overflow-hidden">
+                  <div className="bg-hover rounded-xl border border-divider p-4 flex flex-col justify-between relative overflow-hidden">
                     <div className="text-[10px] font-mono text-muted">Speaker: Sarah Taylor</div>
                     <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/20 border border-[#FF6B4A] mx-auto my-auto flex items-center justify-center text-[#FF6B4A] font-bold text-xs">ST</div>
                     <div className="text-[10px] font-mono text-emerald-400">🎙️ Active Speaker</div>
                   </div>
-                  <div className="bg-[#141622] rounded-xl border border-divider p-4 flex flex-col justify-between relative overflow-hidden">
+                  <div className="bg-hover rounded-xl border border-divider p-4 flex flex-col justify-between relative overflow-hidden">
                     <div className="text-[10px] font-mono text-muted">Screen Share: Architecture.svg</div>
                     <Monitor size={22} className="mx-auto my-auto text-blue-400" />
                     <div className="text-[10px] font-mono text-muted">1920x1080 · 60fps</div>
@@ -734,8 +734,8 @@ export default function Landing() {
                 </div>
 
                 <div className="flex justify-center gap-2.5 pt-2">
-                  <button className="p-2 rounded-lg bg-[#1A1D28] text-main hover:bg-[#202434] transition-colors"><Mic size={14} /></button>
-                  <button className="p-2 rounded-lg bg-[#1A1D28] text-main hover:bg-[#202434] transition-colors"><Video size={14} /></button>
+                  <button className="p-2 rounded-lg bg-hover text-main hover:bg-hover transition-colors"><Mic size={14} /></button>
+                  <button className="p-2 rounded-lg bg-hover text-main hover:bg-hover transition-colors"><Video size={14} /></button>
                   <button className="px-4 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-main text-xs font-semibold transition-colors">Leave Call</button>
                 </div>
               </motion.div>
@@ -851,7 +851,7 @@ export default function Landing() {
                   onMouseEnter={() => setAnalyticsHoverIndex(idx)}
                   className="flex-1 flex flex-col items-center gap-2 group cursor-pointer"
                 >
-                  <div className="w-full bg-[#151824] group-hover:bg-[#FF6B4A]/30 rounded-t-lg transition-all relative flex flex-col justify-end" style={{ height: pt.h }}>
+                  <div className="w-full bg-hover group-hover:bg-[#FF6B4A]/30 rounded-t-lg transition-all relative flex flex-col justify-end" style={{ height: pt.h }}>
                     <div
                       className={`w-full rounded-t-lg transition-all ${
                         analyticsHoverIndex === idx ? 'bg-[#FF6B4A] shadow-[0_0_12px_#FF6B4A]' : 'bg-[#FF6B4A]/60'
@@ -876,7 +876,7 @@ export default function Landing() {
         ref={finalRevealRef}
         className="relative z-10 min-h-screen flex flex-col items-center justify-center text-center px-4 sm:px-6 py-24 border-t border-divider"
       >
-        <div className="w-12 h-12 rounded-2xl bg-[#141622] border border-[#FF6B4A]/40 flex items-center justify-center text-[#FF6B4A] shadow-[0_0_24px_rgba(255,107,74,0.4)] mb-6">
+        <div className="w-12 h-12 rounded-2xl bg-hover border border-[#FF6B4A]/40 flex items-center justify-center text-[#FF6B4A] shadow-[0_0_24px_rgba(255,107,74,0.4)] mb-6">
           <AuvrynLogo size={24} />
         </div>
 
@@ -909,7 +909,7 @@ export default function Landing() {
               </Link>
               <Link
                 to="/projects"
-                className="px-8 py-3.5 rounded-xl bg-card-bg hover:bg-[#12141C] border border-divider text-muted hover:text-main font-mono text-xs transition-colors"
+                className="px-8 py-3.5 rounded-xl bg-card-bg hover:bg-hover border border-divider text-muted hover:text-main font-mono text-xs transition-colors"
               >
                 Explore Projects
               </Link>
@@ -925,7 +925,7 @@ export default function Landing() {
               </Link>
               <Link
                 to="/login"
-                className="px-8 py-3.5 rounded-xl bg-card-bg hover:bg-[#12141C] border border-divider text-muted hover:text-main font-mono text-xs transition-colors"
+                className="px-8 py-3.5 rounded-xl bg-card-bg hover:bg-hover border border-divider text-muted hover:text-main font-mono text-xs transition-colors"
               >
                 Access Existing Account
               </Link>

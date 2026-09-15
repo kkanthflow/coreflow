@@ -121,7 +121,7 @@ export function CalendarView({ meetings, onJoin }: CalendarViewProps) {
   };
 
   return (
-    <div className="bg-[#111118] border border-white/5 rounded-3xl p-6 shadow-xl w-full h-[800px] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
+    <div className="bg-card-bg border border-white/5 rounded-3xl p-6 shadow-xl w-full h-[800px] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-500 relative overflow-hidden">
       <div className="mb-4 flex items-center justify-between z-10">
         <div>
           <h3 className="font-bold text-main text-base">Workspace Calendar</h3>

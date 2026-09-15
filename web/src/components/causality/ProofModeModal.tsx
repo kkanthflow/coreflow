@@ -49,10 +49,10 @@ export default function ProofModeModal({
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="w-full max-w-3xl bg-[#0B0C10] border border-divider rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-main"
+        className="w-full max-w-3xl bg-card-bg border border-divider rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-main"
       >
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-divider bg-[#0E1017] flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-divider bg-card-bg flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
               <ShieldCheck size={18} />
@@ -151,7 +151,7 @@ export default function ProofModeModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-divider bg-[#0E1017] flex justify-end">
+        <div className="p-4 border-t border-divider bg-card-bg flex justify-end">
           <button
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] text-muted hover:text-main text-xs font-semibold transition-colors"

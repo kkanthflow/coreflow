@@ -62,7 +62,7 @@ export function CaptchaSlider({ onVerify }: CaptchaSliderProps) {
   }, [isDragging, isVerified, onVerify]);
 
   return (
-    <div className="p-4 rounded-3xl bg-[#131C33] border border-divider mb-5">
+    <div className="p-4 rounded-3xl bg-hover border border-divider mb-5">
       <h3 className="text-base font-bold mb-1 text-center text-main">Security Verification</h3>
       <p className="text-xs mb-4 text-center text-main/60">
         Drag the slider to the right to complete verification

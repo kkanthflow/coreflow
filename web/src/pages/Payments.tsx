@@ -119,7 +119,7 @@ export default function Payments() {
             placeholder="Search invoice number, client, or reference ID..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-8 pr-7 py-1.5 bg-[#07080B] border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+            className="w-full pl-8 pr-7 py-1.5 bg-app border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">

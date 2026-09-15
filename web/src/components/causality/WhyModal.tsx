@@ -83,10 +83,10 @@ export default function WhyModal({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 10 }}
         transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-2xl bg-[#0B0C10] border border-divider rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-main select-none"
+        className="w-full max-w-2xl bg-card-bg border border-divider rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] text-main select-none"
       >
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-divider bg-[#0E1017] flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-divider bg-card-bg flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A] font-bold text-xs tracking-wider">
               WHY?
@@ -110,7 +110,7 @@ export default function WhyModal({
         </div>
 
         {/* Tab Selection */}
-        <div className="flex border-b border-divider bg-[#08090D] px-4 pt-2 gap-2">
+        <div className="flex border-b border-divider bg-app px-4 pt-2 gap-2">
           <button
             onClick={() => setActiveTab('delivery')}
             className={`flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-t-lg transition-colors border-b-2 ${
@@ -183,7 +183,7 @@ export default function WhyModal({
                   exit={{ opacity: 0, y: -6 }}
                   className="space-y-4"
                 >
-                  <div className="flex items-center justify-between bg-[#12141C] p-3.5 rounded-lg border border-divider">
+                  <div className="flex items-center justify-between bg-hover p-3.5 rounded-lg border border-divider">
                     <div>
                       <span className="text-[10px] font-mono text-muted uppercase tracking-wider block">Target Delivery</span>
                       <span className="text-lg font-bold text-main tracking-tight">
@@ -201,7 +201,7 @@ export default function WhyModal({
                   <div className="relative pl-6 space-y-4 before:absolute before:left-2.5 before:top-3 before:bottom-3 before:w-0.5 before:bg-gradient-to-b before:from-zinc-700 before:via-[#FF6B4A] before:to-emerald-500">
                     {/* Baseline Step */}
                     <div className="relative flex items-start gap-3">
-                      <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#12141C] border-2 border-zinc-500 flex items-center justify-center text-[10px] font-mono">
+                      <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-hover border-2 border-zinc-500 flex items-center justify-center text-[10px] font-mono">
                         0
                       </div>
                       <div className="flex-1 bg-hover border border-divider p-3 rounded-lg">
@@ -219,7 +219,7 @@ export default function WhyModal({
                     {data?.adjustments && data.adjustments.length > 0 ? (
                       data.adjustments.map((adj: any, idx: number) => (
                         <div key={adj.id} className="relative flex items-start gap-3">
-                          <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#12141C] border-2 border-[#FF6B4A] flex items-center justify-center text-[10px] font-mono text-[#FF6B4A]">
+                          <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-hover border-2 border-[#FF6B4A] flex items-center justify-center text-[10px] font-mono text-[#FF6B4A]">
                             {idx + 1}
                           </div>
                           <div className="flex-1 bg-hover border border-[#FF6B4A]/20 p-3 rounded-lg hover:border-[#FF6B4A]/40 transition-colors">
@@ -246,7 +246,7 @@ export default function WhyModal({
 
                     {/* Current Committed Step */}
                     <div className="relative flex items-start gap-3">
-                      <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-[#12141C] border-2 border-emerald-500 flex items-center justify-center text-[10px] text-emerald-400">
+                      <div className="absolute -left-6 top-1 w-5 h-5 rounded-full bg-hover border-2 border-emerald-500 flex items-center justify-center text-[10px] text-emerald-400">
                         ✓
                       </div>
                       <div className="flex-1 bg-emerald-950/20 border border-emerald-500/20 p-3 rounded-lg">
@@ -271,7 +271,7 @@ export default function WhyModal({
                   exit={{ opacity: 0, y: -6 }}
                   className="space-y-4"
                 >
-                  <div className="flex items-center justify-between bg-[#12141C] p-3.5 rounded-lg border border-divider">
+                  <div className="flex items-center justify-between bg-hover p-3.5 rounded-lg border border-divider">
                     <div>
                       <span className="text-[10px] font-mono text-muted uppercase tracking-wider block">Current Project Value</span>
                       <span className="text-xl font-bold text-main tracking-tight font-mono">
@@ -339,7 +339,7 @@ export default function WhyModal({
                   exit={{ opacity: 0, y: -6 }}
                   className="space-y-4"
                 >
-                  <div className="flex items-center justify-between bg-[#12141C] p-3.5 rounded-lg border border-divider">
+                  <div className="flex items-center justify-between bg-hover p-3.5 rounded-lg border border-divider">
                     <div>
                       <span className="text-[10px] font-mono text-muted uppercase tracking-wider block">Deterministic Weighted Progress</span>
                       <span className="text-2xl font-bold text-[#FF6B4A] tracking-tight font-mono">
@@ -411,7 +411,7 @@ export default function WhyModal({
                   exit={{ opacity: 0, y: -6 }}
                   className="space-y-4"
                 >
-                  <div className="flex items-center justify-between bg-[#12141C] p-3.5 rounded-lg border border-divider">
+                  <div className="flex items-center justify-between bg-hover p-3.5 rounded-lg border border-divider">
                     <div>
                       <span className="text-[10px] font-mono text-muted uppercase tracking-wider block">Scope Evolution</span>
                       <span className="text-lg font-bold text-main tracking-tight">
@@ -454,7 +454,7 @@ export default function WhyModal({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-divider bg-[#0E1017] flex items-center justify-between">
+        <div className="p-4 border-t border-divider bg-card-bg flex items-center justify-between">
           <div className="flex items-center gap-2">
             {onOpenDNA && (
               <button

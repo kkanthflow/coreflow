@@ -60,10 +60,10 @@ export default function ChangeRequestModal({
         initial={{ opacity: 0, scale: 0.96 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.96 }}
-        className="w-full max-w-xl bg-[#0B0C10] border border-divider rounded-xl shadow-2xl overflow-hidden flex flex-col text-main"
+        className="w-full max-w-xl bg-card-bg border border-divider rounded-xl shadow-2xl overflow-hidden flex flex-col text-main"
       >
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-divider bg-[#0E1017] flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-divider bg-card-bg flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A]">
               <GitBranch size={18} />
@@ -97,7 +97,7 @@ export default function ChangeRequestModal({
               placeholder="e.g. Add Google Authentication Flow"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-[#12141C] border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
+              className="w-full px-3 py-2 rounded-lg bg-hover border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
             />
           </div>
 
@@ -108,7 +108,7 @@ export default function ChangeRequestModal({
               placeholder="Explain why this change is requested..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg bg-[#12141C] border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
+              className="w-full px-3 py-2 rounded-lg bg-hover border border-divider text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]"
             />
           </div>
 
@@ -120,7 +120,7 @@ export default function ChangeRequestModal({
                 type="number"
                 value={costImpact}
                 onChange={(e) => setCostImpact(Number(e.target.value))}
-                className="w-full px-3 py-1.5 rounded bg-[#12141C] border border-divider text-xs font-mono text-main focus:outline-none focus:border-[#FF6B4A]"
+                className="w-full px-3 py-1.5 rounded bg-hover border border-divider text-xs font-mono text-main focus:outline-none focus:border-[#FF6B4A]"
               />
             </div>
             <div>
@@ -129,7 +129,7 @@ export default function ChangeRequestModal({
                 type="number"
                 value={scheduleImpactDays}
                 onChange={(e) => setScheduleImpactDays(Number(e.target.value))}
-                className="w-full px-3 py-1.5 rounded bg-[#12141C] border border-divider text-xs font-mono text-main focus:outline-none focus:border-[#FF6B4A]"
+                className="w-full px-3 py-1.5 rounded bg-hover border border-divider text-xs font-mono text-main focus:outline-none focus:border-[#FF6B4A]"
               />
             </div>
             <div>
@@ -138,13 +138,13 @@ export default function ChangeRequestModal({
                 type="number"
                 value={scopeImpactCount}
                 onChange={(e) => setScopeImpactCount(Number(e.target.value))}
-                className="w-full px-3 py-1.5 rounded bg-[#12141C] border border-divider text-xs font-mono text-main focus:outline-none focus:border-[#FF6B4A]"
+                className="w-full px-3 py-1.5 rounded bg-hover border border-divider text-xs font-mono text-main focus:outline-none focus:border-[#FF6B4A]"
               />
             </div>
           </div>
 
           {/* Project Branch Preview */}
-          <div className="p-3.5 bg-[#12141C] border border-divider rounded-lg mt-2 space-y-2">
+          <div className="p-3.5 bg-hover border border-divider rounded-lg mt-2 space-y-2">
             <span className="text-[10px] font-mono text-muted uppercase tracking-wider block flex items-center gap-1">
               <GitBranch size={12} className="text-[#FF6B4A]" />
               Deterministic Project Branching Preview

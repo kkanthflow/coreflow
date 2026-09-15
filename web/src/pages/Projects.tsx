@@ -149,7 +149,7 @@ export default function Projects() {
               placeholder="Search initiatives, scopes, or owners..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 bg-[#07080B] border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+              className="w-full pl-8 pr-7 py-1.5 bg-app border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
@@ -161,7 +161,7 @@ export default function Projects() {
 
         <div className="flex items-center gap-2">
           {/* Status Filter Tabs */}
-          <div className="flex bg-[#07080B] border border-divider rounded p-0.5">
+          <div className="flex bg-app border border-divider rounded p-0.5">
             {STATUS_FILTERS.map(f => (
               <button
                 key={f.key}
@@ -178,7 +178,7 @@ export default function Projects() {
           </div>
 
           {/* View Mode Toggle */}
-          <div className="flex bg-[#07080B] border border-divider rounded p-0.5">
+          <div className="flex bg-app border border-divider rounded p-0.5">
             <button
               onClick={() => setViewMode('table')}
               className={`p-1 rounded text-xs transition-colors ${

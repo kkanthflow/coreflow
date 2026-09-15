@@ -93,7 +93,7 @@ export function DiagnosticsOverlay() {
           WebRTC Stats
         </button>
       ) : (
-        <div className="bg-[#121214]/95 backdrop-blur-xl border border-white/15 text-main p-4 rounded-2xl w-80 shadow-2xl font-mono text-xs animate-in fade-in zoom-in duration-200">
+        <div className="bg-card-bg/95 backdrop-blur-xl border border-white/15 text-main p-4 rounded-2xl w-80 shadow-2xl font-mono text-xs animate-in fade-in zoom-in duration-200">
           <div className="flex items-center justify-between border-b border-divider pb-2 mb-3">
             <span className="font-bold text-primary flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />

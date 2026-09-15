@@ -217,7 +217,7 @@ export default function InvoiceDetail() {
             </button>
             <button
               onClick={handleDownloadPDF}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-[#1C2030] text-zinc-200 border border-divider text-xs font-medium transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-zinc-200 border border-divider text-xs font-medium transition-colors"
             >
               <Download size={13} />
               <span>PDF Export</span>
@@ -288,7 +288,7 @@ export default function InvoiceDetail() {
         </div>
 
         {/* Client & Billing Info */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-[#07080B] p-4 rounded border border-divider">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-app p-4 rounded border border-divider">
           <div>
             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">Billed Client</span>
             <span className="text-main font-bold text-sm block">{invoice.clients?.company_name || invoice.clients?.name}</span>
@@ -308,7 +308,7 @@ export default function InvoiceDetail() {
 
         {/* Items Table */}
         <div className="border border-divider rounded overflow-hidden">
-          <div className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-[#07080B]">
+          <div className="grid grid-cols-12 gap-2 px-4 py-2 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-app">
             <div className="col-span-6">Description</div>
             <div className="col-span-2 text-right">Qty</div>
             <div className="col-span-2 text-right">Rate</div>
@@ -329,7 +329,7 @@ export default function InvoiceDetail() {
 
         {/* Totals Section */}
         <div className="flex justify-end pt-2">
-          <div className="w-64 space-y-1.5 font-mono text-xs tabular-nums bg-[#07080B] p-3.5 rounded border border-divider">
+          <div className="w-64 space-y-1.5 font-mono text-xs tabular-nums bg-app p-3.5 rounded border border-divider">
             <div className="flex justify-between text-muted">
               <span>Subtotal:</span>
               <span className="text-main">{fmt(invoice.subtotal, invoice.currency)}</span>
@@ -380,7 +380,7 @@ export default function InvoiceDetail() {
                   required
                   value={payAmount}
                   onChange={e => setPayAmount(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main font-mono focus:outline-none"
+                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main font-mono focus:outline-none"
                 />
               </div>
 
@@ -391,7 +391,7 @@ export default function InvoiceDetail() {
                 <select
                   value={payMethod}
                   onChange={e => setPayMethod(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+                  className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                 >
                   <option value="bank_transfer">Bank Wire / Transfer</option>
                   <option value="upi">UPI / Instant Clearing</option>
@@ -411,7 +411,7 @@ export default function InvoiceDetail() {
                   placeholder="e.g. TXN-9982310"
                   value={txRef}
                   onChange={e => setTxRef(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 font-mono focus:outline-none"
+                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 font-mono focus:outline-none"
                 />
               </div>
 

@@ -212,7 +212,7 @@ export default function Login() {
             {/* Top Brand Marker */}
             <div className="flex items-center justify-between pb-3 border-b border-divider">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-lg bg-[#141622] border border-[#FF6B4A]/40 flex items-center justify-center text-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.25)]">
+                <div className="w-8 h-8 rounded-lg bg-hover border border-[#FF6B4A]/40 flex items-center justify-center text-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.25)]">
                   <AuvrynLogo size={16} />
                 </div>
                 <div>
@@ -272,7 +272,7 @@ export default function Login() {
                     onFocus={() => setActiveField('email')}
                     onBlur={() => setActiveField('none')}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={`w-full bg-[#07080B] border rounded-lg px-3.5 py-2.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-all ${
+                    className={`w-full bg-app border rounded-lg px-3.5 py-2.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-all ${
                       activeField === 'email'
                         ? 'border-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.2)] ring-1 ring-[#FF6B4A]/30'
                         : 'border-divider hover:border-white/[0.14]'
@@ -303,7 +303,7 @@ export default function Login() {
                     onFocus={() => setActiveField('password')}
                     onBlur={() => setActiveField('none')}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`w-full bg-[#07080B] border rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-all ${
+                    className={`w-full bg-app border rounded-lg pl-3.5 pr-10 py-2.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-all ${
                       activeField === 'password'
                         ? 'border-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.2)] ring-1 ring-[#FF6B4A]/30'
                         : 'border-divider hover:border-white/[0.14]'

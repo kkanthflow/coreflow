@@ -606,7 +606,7 @@ export default function Settings() {
                           className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 ${
                             isSelected 
                               ? 'bg-[#FF6B4A] border-[#FF6B4A] text-main shadow-lg shadow-[#FF6B4A]/20 scale-[1.02]' 
-                              : 'bg-[#07080B] border-divider text-muted hover:text-main hover:border-divider hover:bg-hover'
+                              : 'bg-app border-divider text-muted hover:text-main hover:border-divider hover:bg-hover'
                           }`}
                         >
                           <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${
@@ -737,7 +737,7 @@ export default function Settings() {
                       className={`py-2.5 px-3 rounded-xl text-xs font-bold capitalize border transition-all ${
                         showOnline === opt 
                           ? 'bg-[#FF6B4A] border-[#FF6B4A] text-main shadow-sm' 
-                          : 'bg-[#07080B] border-divider text-muted hover:text-main'
+                          : 'bg-app border-divider text-muted hover:text-main'
                       }`}
                     >
                       {opt}
@@ -761,7 +761,7 @@ export default function Settings() {
                       className={`py-2.5 px-3 rounded-xl text-xs font-bold capitalize border transition-all ${
                         showLastSeen === opt 
                           ? 'bg-[#FF6B4A] border-[#FF6B4A] text-main shadow-sm' 
-                          : 'bg-[#07080B] border-divider text-muted hover:text-main'
+                          : 'bg-app border-divider text-muted hover:text-main'
                       }`}
                     >
                       {opt}
@@ -1066,7 +1066,7 @@ export default function Settings() {
               <select 
                 value={audioInput} 
                 onChange={(e) => setAudioInput(e.target.value)}
-                className="w-full bg-[#07080B] border border-divider rounded-xl px-3.5 py-2.5 text-sm text-main focus:outline-none"
+                className="w-full bg-app border border-divider rounded-xl px-3.5 py-2.5 text-sm text-main focus:outline-none"
               >
                 <option>Default System Microphone</option>
                 <option>Studio USB Condenser</option>
@@ -1081,14 +1081,14 @@ export default function Settings() {
               <select 
                 value={videoInput} 
                 onChange={(e) => setVideoInput(e.target.value)}
-                className="w-full bg-[#07080B] border border-divider rounded-xl px-3.5 py-2.5 text-sm text-main focus:outline-none"
+                className="w-full bg-app border border-divider rounded-xl px-3.5 py-2.5 text-sm text-main focus:outline-none"
               >
                 <option>Integrated HD Webcam (1080p)</option>
                 <option>External 4K Capture Device</option>
               </select>
             </div>
 
-            <div className="flex items-center justify-between p-4 bg-[#07080B] border border-divider rounded-xl">
+            <div className="flex items-center justify-between p-4 bg-app border border-divider rounded-xl">
               <div>
                 <div className="font-semibold text-sm text-main">End-to-End Encryption (E2EE)</div>
                 <div className="text-xs text-muted">LiveKit SFU and private chat mesh crypto.</div>
@@ -1121,7 +1121,7 @@ export default function Settings() {
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded-xl px-3.5 py-2.5 text-sm text-main placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded-xl px-3.5 py-2.5 text-sm text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
@@ -1134,7 +1134,7 @@ export default function Settings() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded-xl px-3.5 py-2.5 text-sm text-main placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded-xl px-3.5 py-2.5 text-sm text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
@@ -1181,7 +1181,7 @@ export default function Settings() {
                   placeholder="Acme Corporation"
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-divider bg-[#07080B] text-sm text-main placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors"
+                  className="w-full px-4 py-3 rounded-2xl border border-divider bg-app text-sm text-main placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors"
                 />
               </div>
 
@@ -1194,7 +1194,7 @@ export default function Settings() {
                   placeholder="Mumbai, Maharashtra, India"
                   value={orgAddress}
                   onChange={(e) => setOrgAddress(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-divider bg-[#07080B] text-sm text-main placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors resize-none"
+                  className="w-full px-4 py-3 rounded-2xl border border-divider bg-app text-sm text-main placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors resize-none"
                 />
               </div>
 
@@ -1207,7 +1207,7 @@ export default function Settings() {
                   placeholder="27CFFLOW1234A1Z9"
                   value={orgGst}
                   onChange={(e) => setOrgGst(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-divider bg-[#07080B] text-sm text-main placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors"
+                  className="w-full px-4 py-3 rounded-2xl border border-divider bg-app text-sm text-main placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors"
                 />
               </div>
             </div>

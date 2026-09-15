@@ -84,7 +84,7 @@ export default function Sidebar() {
         {collapsed ? (
           <button 
             onClick={() => setCollapsed(false)}
-            className="w-7 h-7 rounded-md bg-[#111218] border border-divider flex items-center justify-center text-main mx-auto hover:border-[#FF6B4A]/40 transition-colors"
+            className="w-7 h-7 rounded-md bg-card-bg border border-divider flex items-center justify-center text-main mx-auto hover:border-[#FF6B4A]/40 transition-colors"
             title="Expand Navigation"
           >
             <AuvrynLogo size={14} />
@@ -92,7 +92,7 @@ export default function Sidebar() {
         ) : (
           <div className="flex items-center justify-between w-full">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-5 h-5 rounded-md bg-[#141620] border border-divider flex items-center justify-center shrink-0">
+              <div className="w-5 h-5 rounded-md bg-hover border border-divider flex items-center justify-center shrink-0">
                 <AuvrynLogo size={12} />
               </div>
               <div className="min-w-0">

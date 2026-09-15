@@ -179,7 +179,7 @@ export default function NewInvoice() {
               required
               value={clientId}
               onChange={e => setClientId(e.target.value)}
-              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+              className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
             >
               {clients.map(c => (
                 <option key={c.id} value={c.id}>{c.company_name || c.name}</option>
@@ -196,7 +196,7 @@ export default function NewInvoice() {
               required
               value={invoiceNumber}
               onChange={e => setInvoiceNumber(e.target.value)}
-              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-2.5 py-1.5 text-xs text-main font-mono focus:outline-none"
+              className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-2.5 py-1.5 text-xs text-main font-mono focus:outline-none"
             />
           </div>
 
@@ -209,7 +209,7 @@ export default function NewInvoice() {
               required
               value={issueDate}
               onChange={e => setIssueDate(e.target.value)}
-              className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+              className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
             />
           </div>
 
@@ -222,7 +222,7 @@ export default function NewInvoice() {
               required
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
-              className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+              className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
             />
           </div>
         </div>
@@ -243,7 +243,7 @@ export default function NewInvoice() {
 
           <div className="space-y-2">
             {items.map((it) => (
-              <div key={it.id} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-[#07080B] p-2.5 rounded border border-divider">
+              <div key={it.id} className="flex flex-col sm:flex-row gap-2 items-start sm:items-center bg-app p-2.5 rounded border border-divider">
                 <div className="flex-1 w-full">
                   <input
                     type="text"
@@ -311,7 +311,7 @@ export default function NewInvoice() {
             <select
               value={currency}
               onChange={e => setCurrency(e.target.value)}
-              className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+              className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
             >
               <option value="USD">USD ($)</option>
               <option value="INR">INR (₹)</option>
@@ -322,7 +322,7 @@ export default function NewInvoice() {
             </select>
           </div>
 
-          <div className="w-full sm:max-w-xs space-y-1.5 text-xs bg-[#07080B] p-3.5 rounded border border-divider font-mono tabular-nums">
+          <div className="w-full sm:max-w-xs space-y-1.5 text-xs bg-app p-3.5 rounded border border-divider font-mono tabular-nums">
             <div className="flex justify-between text-muted">
               <span>Subtotal:</span>
               <span className="text-main font-medium">{currency} {subtotal.toFixed(2)}</span>

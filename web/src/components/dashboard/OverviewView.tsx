@@ -50,7 +50,7 @@ export function OverviewView({
           { label: "Past / Completed", count: past.length, color: "text-muted", sub: "Logged sessions" },
           { label: "Filters Match", count: allFilteredMeetings.length, color: "text-primary", sub: "Currently selected" }
         ].map((stat, idx) => (
-          <div key={idx} className="bg-[#111118] border border-white/5 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-[#FF6B4A]/20 transition-all duration-300 backdrop-blur-md">
+          <div key={idx} className="bg-card-bg border border-white/5 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-[#FF6B4A]/20 transition-all duration-300 backdrop-blur-md">
             <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent pointer-events-none" />
             <span className="text-xs font-semibold text-gray-500 tracking-wider uppercase block">{stat.label}</span>
             <span className={`text-3xl font-extrabold block mt-2 tracking-tight ${stat.color} transition-all duration-500 group-hover:scale-105`}>
@@ -65,7 +65,7 @@ export function OverviewView({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6">
         
         {/* Activity Chart */}
-        <section className="lg:col-span-2 bg-[#111118] border border-white/5 rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col">
+        <section className="lg:col-span-2 bg-card-bg border border-white/5 rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col">
           <div className="absolute inset-0 bg-gradient-to-br from-[#FF6B4A]/5 to-transparent pointer-events-none" />
           <div className="mb-6 relative z-10">
             <h3 className="font-bold text-main text-base">Activity Overview</h3>
@@ -94,7 +94,7 @@ export function OverviewView({
         </section>
 
         {/* Timeline / Today */}
-        <section className="lg:col-span-1 bg-[#111118] border border-white/5 rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col">
+        <section className="lg:col-span-1 bg-card-bg border border-white/5 rounded-3xl p-6 shadow-xl relative overflow-hidden flex flex-col">
           <div className="flex justify-between items-center mb-6">
             <div>
               <h3 className="font-bold text-main text-base">Today</h3>
@@ -107,7 +107,7 @@ export function OverviewView({
 
           <div className="flex-1 overflow-y-auto pr-2 space-y-3 scrollbar-thin scrollbar-thumb-white/10">
             {loading ? (
-              [1, 2, 3].map(i => <div key={i} className="w-full h-24 bg-[#1D1D29] border border-white/5 rounded-2xl animate-pulse" />)
+              [1, 2, 3].map(i => <div key={i} className="w-full h-24 bg-hover border border-white/5 rounded-2xl animate-pulse" />)
             ) : [...active, ...upcoming].length === 0 ? (
               <div className="py-8 flex flex-col items-center justify-center text-center h-full">
                 <Calendar size={24} className="text-gray-600 mb-2" />
@@ -117,7 +117,7 @@ export function OverviewView({
               [...active, ...upcoming].map((m) => {
                 const isLive = m.status === 'active' || m.status === 'joined';
                 return (
-                  <div key={m.id} className={`w-full bg-[#1D1D29] border rounded-2xl p-4 shadow-inner relative transition-all hover:scale-[1.02] ${
+                  <div key={m.id} className={`w-full bg-hover border rounded-2xl p-4 shadow-inner relative transition-all hover:scale-[1.02] ${
                     isLive ? 'border-[#FF6B4A]/30' : 'border-white/5'
                   }`}>
                     <div className="flex items-center justify-between mb-2">
@@ -148,13 +148,13 @@ export function OverviewView({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-6">
         
         {/* QUICK ACTIONS */}
-        <section className="lg:col-span-1 bg-[#111118] border border-white/5 rounded-3xl p-6 shadow-xl flex flex-col">
+        <section className="lg:col-span-1 bg-card-bg border border-white/5 rounded-3xl p-6 shadow-xl flex flex-col">
           <h3 className="font-bold text-main text-base mb-6">Quick Actions</h3>
           <div className="flex flex-col gap-4 flex-1 justify-center">
             <button
               onClick={handleInstantCall}
               disabled={isCreating}
-              className="bg-[#1D1D29] border border-white/5 hover:border-[#FF6B4A]/25 rounded-2xl p-5 flex flex-col gap-4 text-left disabled:opacity-50 transition-colors"
+              className="bg-hover border border-white/5 hover:border-[#FF6B4A]/25 rounded-2xl p-5 flex flex-col gap-4 text-left disabled:opacity-50 transition-colors"
             >
               <div className="w-10 h-10 rounded-xl bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
                 <Play size={18} fill="currentColor" />
@@ -167,7 +167,7 @@ export function OverviewView({
 
             <button
               onClick={() => onJoin('pre-join')}
-              className="bg-[#1D1D29] border border-white/5 hover:border-emerald-500/25 rounded-2xl p-5 flex flex-col gap-4 text-left transition-colors"
+              className="bg-hover border border-white/5 hover:border-emerald-500/25 rounded-2xl p-5 flex flex-col gap-4 text-left transition-colors"
             >
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400">
                 <Plus size={18} />
@@ -186,7 +186,7 @@ export function OverviewView({
             <h3 className="font-bold text-main text-base">All Schedule Slots</h3>
             <div className="flex items-center gap-2">
               <ListFilter size={14} className="text-gray-500" />
-              <div className="flex bg-[#111118] border border-white/5 rounded-xl p-0.5 text-xs">
+              <div className="flex bg-card-bg border border-white/5 rounded-xl p-0.5 text-xs">
                 {['all', 'scheduled', 'live', 'completed'].map(f => (
                   <button
                     key={f}
@@ -203,17 +203,17 @@ export function OverviewView({
           </div>
 
           {allFilteredMeetings.length === 0 ? (
-            <div className="bg-[#111118] border border-white/5 rounded-3xl p-12 flex flex-col items-center justify-center text-center shadow-lg h-[280px]">
+            <div className="bg-card-bg border border-white/5 rounded-3xl p-12 flex flex-col items-center justify-center text-center shadow-lg h-[280px]">
               <Calendar size={32} className="text-gray-600 mb-4" />
               <p className="text-sm text-muted font-bold">No matching meetings found</p>
             </div>
           ) : (
-            <div className="bg-[#111118] border border-white/5 rounded-3xl overflow-hidden shadow-lg h-[280px] flex flex-col">
+            <div className="bg-card-bg border border-white/5 rounded-3xl overflow-hidden shadow-lg h-[280px] flex flex-col">
               <div className="divide-y divide-white/5 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10">
                 {allFilteredMeetings.map((m) => (
                   <div key={m.id} className="p-4 hover:bg-white/[0.02] transition-colors flex items-center justify-between gap-4 group">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#1e1e20] flex items-center justify-center text-gray-500">
+                      <div className="w-8 h-8 rounded-full bg-hover flex items-center justify-center text-gray-500">
                         <Video size={14} />
                       </div>
                       <div>

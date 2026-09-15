@@ -256,7 +256,7 @@ export default function Meetings() {
                       className={`px-3 py-1.5 rounded text-xs font-semibold transition-colors shrink-0 flex items-center gap-1.5 ${
                         isLive
                           ? 'bg-emerald-600 hover:bg-emerald-500 text-main'
-                          : 'bg-hover hover:bg-[#1C2030] text-zinc-200 border border-divider'
+                          : 'bg-hover hover:bg-hover text-zinc-200 border border-divider'
                       }`}
                     >
                       <span>{isLive ? 'Join Live' : 'Open'}</span>

@@ -184,7 +184,7 @@ export default function Employees() {
   if (!canView) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-center py-20 bg-card-bg text-muted">
-        <div className="w-12 h-12 rounded-lg bg-[#11131B] border border-divider flex items-center justify-center text-[#FF6B4A] mb-3">
+        <div className="w-12 h-12 rounded-lg bg-card-bg border border-divider flex items-center justify-center text-[#FF6B4A] mb-3">
           <Shield size={22} />
         </div>
         <h2 className="text-sm font-bold text-main mb-1">Access Restricted</h2>
@@ -257,7 +257,7 @@ export default function Employees() {
               placeholder="Search people by name, email, role, department..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 bg-[#07080A] border border-divider focus:border-[#FF6B4A]/50 rounded-md text-[11px] text-main placeholder-zinc-500 focus:outline-none transition-colors"
+              className="w-full pl-8 pr-7 py-1.5 bg-app border border-divider focus:border-[#FF6B4A]/50 rounded-md text-[11px] text-main placeholder-zinc-500 focus:outline-none transition-colors"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted hover:text-main p-0.5">
@@ -270,16 +270,16 @@ export default function Employees() {
           <div className="flex items-center gap-2 flex-wrap">
 
             {/* Role Filter */}
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-[#0A0B10] border border-divider rounded text-[11px]">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-app border border-divider rounded text-[11px]">
               <span className="text-muted font-mono text-[10px]">ROLE:</span>
               <select
                 value={roleFilter}
                 onChange={e => setRoleFilter(e.target.value)}
                 className="bg-transparent text-main focus:outline-none cursor-pointer text-xs"
               >
-                <option value="ALL" className="bg-[#0A0B10] text-main">All Roles</option>
+                <option value="ALL" className="bg-app text-main">All Roles</option>
                 {availableRoles.map(r => (
-                  <option key={r} value={r} className="bg-[#0A0B10] text-main capitalize">
+                  <option key={r} value={r} className="bg-app text-main capitalize">
                     {r.replace(/_/g, ' ')}
                   </option>
                 ))}
@@ -287,18 +287,18 @@ export default function Employees() {
             </div>
 
             {/* Department Filter */}
-            <div className="flex items-center gap-1.5 px-2 py-1 bg-[#0A0B10] border border-divider rounded text-[11px]">
+            <div className="flex items-center gap-1.5 px-2 py-1 bg-app border border-divider rounded text-[11px]">
               <span className="text-muted font-mono text-[10px]">DEPT:</span>
               <select
                 value={deptFilter}
                 onChange={e => setDeptFilter(e.target.value)}
                 className="bg-transparent text-main focus:outline-none cursor-pointer text-xs"
               >
-                <option value="ALL" className="bg-[#0A0B10] text-main">All Departments</option>
+                <option value="ALL" className="bg-app text-main">All Departments</option>
                 {departments.map(d => (
-                  <option key={d.id} value={d.name} className="bg-[#0A0B10] text-main">{d.name}</option>
+                  <option key={d.id} value={d.name} className="bg-app text-main">{d.name}</option>
                 ))}
-                <option value="Unassigned" className="bg-[#0A0B10] text-muted">Unassigned</option>
+                <option value="Unassigned" className="bg-app text-muted">Unassigned</option>
               </select>
             </div>
 
@@ -315,10 +315,10 @@ export default function Employees() {
         </div>
 
         {/* ── 4. Structured Team Directory Table ── */}
-        <div className="bg-[#0A0B10] border border-divider rounded-lg overflow-hidden flex flex-col flex-1">
+        <div className="bg-app border border-divider rounded-lg overflow-hidden flex flex-col flex-1">
 
           {/* Table Header */}
-          <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-divider bg-[#07080A] text-[9px] font-mono font-bold uppercase tracking-wider text-muted sticky top-0 z-10">
+          <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-divider bg-app text-[9px] font-mono font-bold uppercase tracking-wider text-muted sticky top-0 z-10">
             <div className="col-span-4 sm:col-span-4">Person</div>
             <div className="col-span-3 sm:col-span-3">Department</div>
             <div className="col-span-3 sm:col-span-2">Role</div>
@@ -362,7 +362,7 @@ export default function Employees() {
                   >
                     {/* Person Column */}
                     <div className="col-span-4 sm:col-span-4 flex items-center gap-3 min-w-0">
-                      <motion.div layoutId={`avatar-${m.id}`} className="w-7 h-7 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-[10px] font-bold text-main shrink-0">
+                      <motion.div layoutId={`avatar-${m.id}`} className="w-7 h-7 rounded-md bg-hover border border-divider flex items-center justify-center text-[10px] font-bold text-main shrink-0">
                         {m.avatar_url ? (
                           <img src={m.avatar_url} alt={initials} className="w-7 h-7 rounded-md object-cover" />
                         ) : (
@@ -420,7 +420,7 @@ export default function Employees() {
 
       {/* ── 5. Employee Context Inspector (380px - 420px Slide-in) ── */}
       {selectedMember && (
-        <div className="w-96 border-l border-divider bg-[#0A0B10] flex flex-col h-full shrink-0 overflow-y-auto font-sans">
+        <div className="w-96 border-l border-divider bg-app flex flex-col h-full shrink-0 overflow-y-auto font-sans">
 
           {/* Header */}
           <div className="h-14 px-4 flex items-center justify-between border-b border-divider">
@@ -434,7 +434,7 @@ export default function Employees() {
 
             {/* Identity Card */}
             <div className="text-center pb-4 border-b border-divider">
-              <div className="w-14 h-14 rounded-lg bg-[#13151D] border border-divider flex items-center justify-center text-sm font-bold text-main mx-auto mb-2 relative">
+              <div className="w-14 h-14 rounded-lg bg-hover border border-divider flex items-center justify-center text-sm font-bold text-main mx-auto mb-2 relative">
                 {(selectedMember.full_name || 'U').charAt(0).toUpperCase()}
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 absolute -bottom-0.5 -right-0.5 ring-2 ring-[#0A0B10]" />
               </div>
@@ -449,14 +449,14 @@ export default function Employees() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => navigate('/chat')}
-                className="flex items-center justify-center gap-1.5 py-1.5 bg-[#13151D] hover:bg-[#181B26] border border-divider text-main text-[11px] font-semibold rounded transition-colors"
+                className="flex items-center justify-center gap-1.5 py-1.5 bg-hover hover:bg-hover border border-divider text-main text-[11px] font-semibold rounded transition-colors"
               >
                 <MessageSquare size={12} className="text-[#FF6B4A]" />
                 <span>Message</span>
               </button>
               <button
                 onClick={() => navigate('/meetings/new')}
-                className="flex items-center justify-center gap-1.5 py-1.5 bg-[#13151D] hover:bg-[#181B26] border border-divider text-main text-[11px] font-semibold rounded transition-colors"
+                className="flex items-center justify-center gap-1.5 py-1.5 bg-hover hover:bg-hover border border-divider text-main text-[11px] font-semibold rounded transition-colors"
               >
                 <Video size={12} className="text-[#FF6B4A]" />
                 <span>Schedule</span>
@@ -470,7 +470,7 @@ export default function Employees() {
                 <span>Operational Workload</span>
               </div>
 
-              <div className="p-3 rounded bg-[#07080A] border border-divider divide-y divide-white/[0.04] text-[11px]">
+              <div className="p-3 rounded bg-app border border-divider divide-y divide-white/[0.04] text-[11px]">
                 <div className="py-1.5 flex justify-between text-muted">
                   <span>Assigned Deliverables</span>
                   <span className="font-mono text-main">{selectedMember.activeTasksCount}</span>
@@ -495,7 +495,7 @@ export default function Employees() {
 
                 <div className="space-y-1.5">
                   {memberWorkContext.tasks.map(t => (
-                    <div key={t.id} className="p-2 rounded bg-[#07080A] border border-divider text-[11px]">
+                    <div key={t.id} className="p-2 rounded bg-app border border-divider text-[11px]">
                       <div className="text-zinc-200 font-medium truncate">{t.title}</div>
                       <div className="text-[9px] font-mono text-muted flex justify-between mt-0.5">
                         <span>{t.projects?.title || 'Core Project'}</span>

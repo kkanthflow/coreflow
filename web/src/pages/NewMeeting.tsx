@@ -214,7 +214,7 @@ export default function NewMeeting() {
               placeholder="e.g. Sprint Architecture & Delivery Review"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+              className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
             />
           </div>
 
@@ -227,7 +227,7 @@ export default function NewMeeting() {
               placeholder="Topics, agenda items, reference links..."
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
+              className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3.5 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
             />
           </div>
 
@@ -241,7 +241,7 @@ export default function NewMeeting() {
                 required
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="w-full bg-[#07080B] border border-divider rounded px-3 py-1.5 text-xs text-main focus:outline-none"
+                className="w-full bg-app border border-divider rounded px-3 py-1.5 text-xs text-main focus:outline-none"
               />
             </div>
 
@@ -254,7 +254,7 @@ export default function NewMeeting() {
                 required
                 value={time}
                 onChange={e => setTime(e.target.value)}
-                className="w-full bg-[#07080B] border border-divider rounded px-3 py-1.5 text-xs text-main focus:outline-none"
+                className="w-full bg-app border border-divider rounded px-3 py-1.5 text-xs text-main focus:outline-none"
               />
             </div>
 
@@ -265,7 +265,7 @@ export default function NewMeeting() {
               <select
                 value={duration}
                 onChange={e => setDuration(e.target.value)}
-                className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+                className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
               >
                 <option value="15">15 mins</option>
                 <option value="30">30 mins</option>
@@ -287,7 +287,7 @@ export default function NewMeeting() {
               <span className="text-[9px] font-mono text-muted uppercase tracking-wider block mb-1">
                 Organizer & Host
               </span>
-              <div className="p-2.5 rounded bg-[#07080B] border border-[#FF6B4A]/30 flex items-center justify-between text-xs">
+              <div className="p-2.5 rounded bg-app border border-[#FF6B4A]/30 flex items-center justify-between text-xs">
                 <div className="flex items-center gap-2.5 min-w-0">
                   <div className="w-6 h-6 rounded-md bg-[#FF6B4A]/15 text-[#FF6B4A] font-bold text-xs flex items-center justify-center shrink-0">
                     {hostDisplayName.charAt(0).toUpperCase()}
@@ -333,7 +333,7 @@ export default function NewMeeting() {
                         className={`p-2 rounded border flex items-center justify-between text-xs cursor-pointer transition-colors ${
                           isSelected
                             ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]/30 text-main font-semibold'
-                            : 'bg-[#07080B] border-divider text-muted hover:text-main'
+                            : 'bg-app border-divider text-muted hover:text-main'
                         }`}
                       >
                         <span className="truncate">{m.full_name || m.email}</span>

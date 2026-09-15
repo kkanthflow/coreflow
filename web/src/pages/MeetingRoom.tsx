@@ -161,7 +161,7 @@ export default function MeetingRoom() {
   // ── Duplicate Tab State (Single-tab meeting enforcement) ─────────────────────
   if (isDuplicate) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 bg-[#09090b]">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 bg-app">
         <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center mb-2">
           <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="2" y="3" width="20" height="14" rx="2" />
@@ -186,7 +186,7 @@ export default function MeetingRoom() {
   // ── Error State ──────────────────────────────────────────────────────────────
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 bg-[#09090b]">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 bg-app">
         <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center mb-2">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10" />
@@ -209,7 +209,7 @@ export default function MeetingRoom() {
   // ── Disconnected State (after leaving meeting) ───────────────────────────────
   if (disconnected) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 bg-[#09090b]">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 bg-app">
         <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-2">
           <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -231,7 +231,7 @@ export default function MeetingRoom() {
   // ── Waiting Room State (Google Meet style) ──────────────────────────────────
   if (isWaiting) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-8 bg-[#09090b] relative overflow-hidden">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-6 p-8 bg-app relative overflow-hidden">
         {/* Subtle background glow */}
         <div className="absolute w-[300px] h-[300px] rounded-full bg-primary/10 blur-[120px] pointer-events-none" />
         
@@ -268,7 +268,7 @@ export default function MeetingRoom() {
   // ── Loading State ─────────────────────────────────────────────────────────────
   if (!token || !serverUrl) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-[#09090b]">
+      <div className="flex flex-col items-center justify-center min-h-screen gap-4 bg-app">
         <div className="animate-spin rounded-full h-10 w-10 border-2 border-primary border-t-transparent" />
         <p className="text-muted text-sm">Joining meeting...</p>
       </div>
@@ -297,7 +297,7 @@ export default function MeetingRoom() {
         }
         setError(err?.message || 'Connection failed. Please try again.');
       }}
-      className="h-screen w-full bg-[#09090b]"
+      className="h-screen w-full bg-app"
       data-lk-theme="default"
     >
       <MeetingLayout meetingId={id!} />

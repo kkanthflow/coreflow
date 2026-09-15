@@ -69,7 +69,7 @@ export default function Topbar({ onOpenCommandPalette }: TopbarProps) {
 
         {/* User Pill */}
         <div className="flex items-center gap-2 pl-0.5">
-          <div className="w-6 h-6 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-[10px] font-bold text-main">
+          <div className="w-6 h-6 rounded-md bg-hover border border-divider flex items-center justify-center text-[10px] font-bold text-main">
             {(fullName || user?.email || 'U').charAt(0).toUpperCase()}
           </div>
 

@@ -414,7 +414,7 @@ export default function ProjectDetails() {
                 placeholder="Assign quick deliverable to this workstream..."
                 value={taskTitle}
                 onChange={e => setTaskTitle(e.target.value)}
-                className="flex-1 bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+                className="flex-1 bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
               />
               <button
                 type="submit"
@@ -489,7 +489,7 @@ export default function ProjectDetails() {
                     type="text"
                     value={editTitle}
                     onChange={(e) => setEditTitle(e.target.value)}
-                    className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A] rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none"
+                    className="w-full bg-app border border-divider focus:border-[#FF6B4A] rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none"
                     placeholder="Project title..."
                   />
                 </div>
@@ -502,7 +502,7 @@ export default function ProjectDetails() {
                     rows={4}
                     value={editDescription}
                     onChange={(e) => setEditDescription(e.target.value)}
-                    className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A] rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none resize-none"
+                    className="w-full bg-app border border-divider focus:border-[#FF6B4A] rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none resize-none"
                     placeholder="Outline key deliverables, scope, and objectives..."
                   />
                 </div>
@@ -515,7 +515,7 @@ export default function ProjectDetails() {
                     <select
                       value={editStatus}
                       onChange={(e) => setEditStatus(e.target.value)}
-                      className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A] rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+                      className="w-full bg-app border border-divider focus:border-[#FF6B4A] rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                     >
                       <option value="active">Active</option>
                       <option value="review">In Review</option>
@@ -532,7 +532,7 @@ export default function ProjectDetails() {
                       type="date"
                       value={editDueDate}
                       onChange={(e) => setEditDueDate(e.target.value)}
-                      className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A] rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+                      className="w-full bg-app border border-divider focus:border-[#FF6B4A] rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                     />
                   </div>
                 </div>
@@ -559,7 +559,7 @@ export default function ProjectDetails() {
               <>
                 <div>
                   <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">Description</span>
-                  <p className="text-xs text-muted leading-relaxed bg-[#07080B] p-2.5 rounded border border-divider">
+                  <p className="text-xs text-muted leading-relaxed bg-app p-2.5 rounded border border-divider">
                     {project.description || 'No detailed scope description provided.'}
                   </p>
                 </div>

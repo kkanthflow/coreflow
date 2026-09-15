@@ -25,7 +25,7 @@ export default function ConfirmModal({
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-150">
-      <div className="w-full max-w-md bg-[#111118] border border-divider rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 text-main">
+      <div className="w-full max-w-md bg-card-bg border border-divider rounded-3xl p-6 shadow-2xl animate-in zoom-in-95 duration-150 text-main">
         <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex items-center gap-3">
             <div className={`w-10 h-10 rounded-2xl flex items-center justify-center flex-shrink-0 ${
@@ -46,7 +46,7 @@ export default function ConfirmModal({
           </button>
         </div>
 
-        <p className="text-sm text-gray-300 leading-relaxed mb-6 bg-[#181824] p-4 rounded-2xl border border-white/5">
+        <p className="text-sm text-gray-300 leading-relaxed mb-6 bg-hover p-4 rounded-2xl border border-white/5">
           {message}
         </p>
 

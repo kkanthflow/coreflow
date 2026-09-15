@@ -189,7 +189,7 @@ export function MeetingsView() {
     <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Left Column: Meeting Details Form */}
       <div className="lg:col-span-2 space-y-6">
-        <div className="bg-[#111118] border border-white/5 rounded-3xl p-6 lg:p-8 shadow-xl">
+        <div className="bg-card-bg border border-white/5 rounded-3xl p-6 lg:p-8 shadow-xl">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-12 h-12 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center">
               <Calendar className="text-primary" size={24} />
@@ -222,7 +222,7 @@ export function MeetingsView() {
                 value={title}
                 onChange={e => setTitle(e.target.value)}
                 placeholder="e.g. Q3 Roadmap Planning"
-                className="w-full bg-[#0B0B0D] border border-divider rounded-xl px-4 py-3 text-main placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors"
+                className="w-full bg-app border border-divider rounded-xl px-4 py-3 text-main placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors"
               />
             </div>
 
@@ -233,7 +233,7 @@ export function MeetingsView() {
                 onChange={e => setDescription(e.target.value)}
                 placeholder="Brief agenda or context for attendees..."
                 rows={3}
-                className="w-full bg-[#0B0B0D] border border-divider rounded-xl px-4 py-3 text-main placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors resize-none"
+                className="w-full bg-app border border-divider rounded-xl px-4 py-3 text-main placeholder-gray-500 focus:outline-none focus:border-primary/50 transition-colors resize-none"
               />
             </div>
 
@@ -247,7 +247,7 @@ export function MeetingsView() {
                     required
                     value={date}
                     onChange={e => setDate(e.target.value)}
-                    className="w-full bg-[#0B0B0D] border border-divider rounded-xl pl-10 pr-4 py-3 text-main focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
+                    className="w-full bg-app border border-divider rounded-xl pl-10 pr-4 py-3 text-main focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
                   />
                 </div>
               </div>
@@ -261,7 +261,7 @@ export function MeetingsView() {
                     required
                     value={time}
                     onChange={e => setTime(e.target.value)}
-                    className="w-full bg-[#0B0B0D] border border-divider rounded-xl pl-10 pr-4 py-3 text-main focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
+                    className="w-full bg-app border border-divider rounded-xl pl-10 pr-4 py-3 text-main focus:outline-none focus:border-primary/50 transition-colors [color-scheme:dark]"
                   />
                 </div>
               </div>
@@ -272,7 +272,7 @@ export function MeetingsView() {
               <select
                 value={duration}
                 onChange={e => setDuration(e.target.value)}
-                className="w-full bg-[#0B0B0D] border border-divider rounded-xl px-4 py-3 text-main focus:outline-none focus:border-primary/50 transition-colors"
+                className="w-full bg-app border border-divider rounded-xl px-4 py-3 text-main focus:outline-none focus:border-primary/50 transition-colors"
               >
                 <option value="15">15 Minutes</option>
                 <option value="30">30 Minutes</option>
@@ -288,7 +288,7 @@ export function MeetingsView() {
 
       {/* Right Column: Attendee Selector */}
       <div className="space-y-6">
-        <div className="bg-[#111118] border border-white/5 rounded-3xl p-6 lg:p-8 shadow-xl flex flex-col h-full min-h-[500px]">
+        <div className="bg-card-bg border border-white/5 rounded-3xl p-6 lg:p-8 shadow-xl flex flex-col h-full min-h-[500px]">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center">
               <Users className="text-purple-500" size={20} />
@@ -306,7 +306,7 @@ export function MeetingsView() {
               placeholder="Search users..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full bg-[#0B0B0D] border border-divider rounded-xl pl-10 pr-4 py-2.5 text-sm text-main placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
+              className="w-full bg-app border border-divider rounded-xl pl-10 pr-4 py-2.5 text-sm text-main placeholder-gray-500 focus:outline-none focus:border-purple-500/50 transition-colors"
             />
           </div>
 
@@ -362,7 +362,7 @@ export function MeetingsView() {
               form="schedule-form"
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary disabled:bg-[#2c2c2e] disabled:text-gray-500 disabled:cursor-not-allowed text-main font-bold rounded-xl px-4 py-4 transition-all shadow-lg"
+              className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary disabled:bg-hover disabled:text-gray-500 disabled:cursor-not-allowed text-main font-bold rounded-xl px-4 py-4 transition-all shadow-lg"
             >
               {loading ? (
                 <span>Scheduling...</span>

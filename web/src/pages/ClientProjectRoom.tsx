@@ -256,7 +256,7 @@ export default function ClientProjectRoom() {
       {activeTab === 'overview' && (
         <div className="space-y-6">
           {/* Responsibility Clock Banner */}
-          <div className="p-4 rounded-xl bg-gradient-to-r from-[#12141F] to-[#0A0B10] border border-divider flex items-center justify-between">
+          <div className="p-4 rounded-xl bg-gradient-to-r from-[#12141F] to-app border border-divider flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A]">
                 <Clock size={20} />
@@ -395,7 +395,7 @@ export default function ClientProjectRoom() {
               project.project_milestones.map((m: any, idx: number) => (
                 <div key={m.id} className="relative flex items-start gap-4">
                   <div className={`absolute -left-6 top-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                    m.completed ? 'bg-emerald-500 text-black' : 'bg-[#181A24] border-2 border-zinc-500 text-muted'
+                    m.completed ? 'bg-emerald-500 text-black' : 'bg-hover border-2 border-zinc-500 text-muted'
                   }`}>
                     {m.completed ? '✓' : idx + 1}
                   </div>
@@ -458,7 +458,7 @@ export default function ClientProjectRoom() {
 
                   <p className="text-xs text-muted">{cr.description || 'No additional rationale.'}</p>
 
-                  <div className="grid grid-cols-3 gap-2 bg-[#12141C] p-3 rounded-lg text-xs font-mono">
+                  <div className="grid grid-cols-3 gap-2 bg-hover p-3 rounded-lg text-xs font-mono">
                     <div>
                       <span className="text-[10px] text-muted block">Cost Impact</span>
                       <span className="text-main font-bold">{cr.cost_impact >= 0 ? '+' : ''}₹{cr.cost_impact}</span>

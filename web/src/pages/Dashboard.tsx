@@ -385,7 +385,7 @@ export default function Dashboard() {
           </div>
 
           {/* Precision Trajectory Line with Pulse Wave Travelling Node */}
-          <div className="w-full h-1.5 bg-[#171922] rounded-full overflow-visible flex relative items-center">
+          <div className="w-full h-1.5 bg-hover rounded-full overflow-visible flex relative items-center">
             <motion.div
               initial={{ width: '0%' }}
               animate={{ width: pulseActivated ? '68%' : '0%' }}
@@ -477,7 +477,7 @@ export default function Dashboard() {
                       </div>
 
                       {/* Continuous FlowLine Trajectory with Node */}
-                      <div className="w-full bg-[#151722] h-1.5 rounded-full overflow-visible relative flex items-center">
+                      <div className="w-full bg-hover h-1.5 rounded-full overflow-visible relative flex items-center">
                         <motion.div
                           initial={{ width: 0 }}
                           animate={{ width: `${p.progress}%` }}
@@ -647,7 +647,7 @@ export default function Dashboard() {
                         <span className="text-xs text-zinc-200 truncate">{member.name}</span>
                         <span className="text-[10px] font-mono text-muted">{member.activeTasks} tasks</span>
                       </div>
-                      <div className="w-full h-1 bg-[#171922] rounded-full overflow-hidden">
+                      <div className="w-full h-1 bg-hover rounded-full overflow-hidden">
                         <div
                           className="h-full bg-zinc-400"
                           style={{ width: `${Math.min(member.activeTasks * 25, 100)}%` }}

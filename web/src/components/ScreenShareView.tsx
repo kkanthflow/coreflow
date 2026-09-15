@@ -87,7 +87,7 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
   // ── 1. Local Presenter View (Google Meet style — No Infinite Mirror) ────────
   if (isLocalPresenter) {
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center bg-[#121214] border border-divider rounded-2xl p-8 relative overflow-hidden shadow-2xl">
+      <div className="w-full h-full flex flex-col items-center justify-center bg-card-bg border border-divider rounded-2xl p-8 relative overflow-hidden shadow-2xl">
         {/* Subtle background blur effect */}
         <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-transparent pointer-events-none" />
 
@@ -107,7 +107,7 @@ export function ScreenShareView({ presenter, publication }: ScreenShareViewProps
           </p>
 
           {/* Details & Timer Pill */}
-          <div className="flex items-center gap-3 bg-[#1c1c1e] border border-divider rounded-full px-4 py-2 mb-8 shadow-inner">
+          <div className="flex items-center gap-3 bg-hover border border-divider rounded-full px-4 py-2 mb-8 shadow-inner">
             <span className="flex items-center gap-1.5 text-xs text-gray-300 font-medium">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               1080p 30 FPS

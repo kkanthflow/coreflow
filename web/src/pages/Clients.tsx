@@ -249,7 +249,7 @@ export default function Clients() {
             placeholder="Search clients by name, company, or email..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-8 pr-7 py-1.5 bg-[#07080B] border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+            className="w-full pl-8 pr-7 py-1.5 bg-app border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
@@ -441,7 +441,7 @@ export default function Clients() {
                   placeholder="e.g. John Doe"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
@@ -454,7 +454,7 @@ export default function Clients() {
                   placeholder="e.g. Acme Corp Technologies"
                   value={companyName}
                   onChange={e => setCompanyName(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
@@ -468,7 +468,7 @@ export default function Clients() {
                     placeholder="billing@company.com"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
-                    className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+                    className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                   />
                 </div>
 
@@ -481,7 +481,7 @@ export default function Clients() {
                     placeholder="+1 555-0199"
                     value={phone}
                     onChange={e => setPhone(e.target.value)}
-                    className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+                    className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                   />
                 </div>
               </div>
@@ -495,7 +495,7 @@ export default function Clients() {
                   placeholder="e.g. 29ABCDE1234F1Z5"
                   value={gstNumber}
                   onChange={e => setGstNumber(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
@@ -508,7 +508,7 @@ export default function Clients() {
                   placeholder="Street, City, Postal Code..."
                   value={address}
                   onChange={e => setAddress(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
+                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
                 />
               </div>
 

@@ -257,7 +257,7 @@ export default function Chat() {
     <div className="h-full flex flex-1 -m-4 sm:-m-6 lg:-m-7 bg-card-bg text-muted select-none overflow-hidden">
       
       {/* ── Panel 1: Conversation Navigator (280px - 320px) ── */}
-      <div className="w-80 border-r border-divider bg-[#0A0B10] flex flex-col h-full shrink-0">
+      <div className="w-80 border-r border-divider bg-app flex flex-col h-full shrink-0">
         
         {/* Header */}
         <div className="h-14 px-4 flex items-center justify-between border-b border-divider">
@@ -268,7 +268,7 @@ export default function Chat() {
 
           <button
             onClick={() => setIsComposeOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#13151D] hover:bg-[#181B26] border border-divider text-muted hover:text-main text-[11px] font-medium transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-hover hover:bg-hover border border-divider text-muted hover:text-main text-[11px] font-medium transition-colors"
             title="Compose new conversation"
           >
             <Plus size={12} className="text-[#FF6B4A]" />
@@ -285,7 +285,7 @@ export default function Chat() {
               placeholder="Search conversations..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 bg-[#07080A] border border-divider focus:border-[#FF6B4A]/40 rounded-md text-[11px] text-main placeholder-zinc-500 focus:outline-none transition-colors"
+              className="w-full pl-8 pr-7 py-1.5 bg-app border border-divider focus:border-[#FF6B4A]/40 rounded-md text-[11px] text-main placeholder-zinc-500 focus:outline-none transition-colors"
             />
             {search && (
               <button
@@ -327,7 +327,7 @@ export default function Chat() {
                         >
                           {/* Avatar with subtle presence dot */}
                           <div className="relative shrink-0">
-                            <div className="w-7 h-7 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-[10px] font-bold text-main">
+                            <div className="w-7 h-7 rounded-md bg-hover border border-divider flex items-center justify-center text-[10px] font-bold text-main">
                               {(ch.name || 'U').charAt(0).toUpperCase()}
                             </div>
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 absolute -bottom-0.5 -right-0.5 ring-2 ring-[#0A0B10]" />
@@ -377,7 +377,7 @@ export default function Chat() {
                           to={`/chat/${ch.id}`}
                           className="relative flex items-center gap-2.5 px-2.5 py-2 rounded-md hover:bg-white/[0.03] transition-colors group"
                         >
-                          <div className="w-7 h-7 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-muted shrink-0">
+                          <div className="w-7 h-7 rounded-md bg-hover border border-divider flex items-center justify-center text-muted shrink-0">
                             <Hash size={13} className="text-[#FF6B4A]" />
                           </div>
 
@@ -411,7 +411,7 @@ export default function Chat() {
         </div>
 
         {/* Security / Encryption Status Footer */}
-        <div className="p-3 border-t border-divider bg-[#07080A] flex items-center justify-between text-[10px] font-mono text-muted">
+        <div className="p-3 border-t border-divider bg-app flex items-center justify-between text-[10px] font-mono text-muted">
           <span className="flex items-center gap-1.5">
             <Lock size={11} className="text-emerald-400" />
             <span>P-256 ECDH Encrypted</span>
@@ -422,9 +422,9 @@ export default function Chat() {
       </div>
 
       {/* ── Panel 2: Active Conversation Placeholder / Operational Command Zero-State ── */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-[#07080B] relative">
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center bg-app relative">
         <div className="max-w-md space-y-4">
-          <div className="w-12 h-12 rounded-lg bg-[#11131B] border border-divider flex items-center justify-center mx-auto text-[#FF6B4A] shadow-sm">
+          <div className="w-12 h-12 rounded-lg bg-card-bg border border-divider flex items-center justify-center mx-auto text-[#FF6B4A] shadow-sm">
             <Shield size={22} />
           </div>
 
@@ -446,13 +446,13 @@ export default function Chat() {
           </div>
 
           <div className="pt-8 border-t border-divider grid grid-cols-2 gap-4 text-left text-[11px]">
-            <div className="p-3 rounded bg-[#0A0B10] border border-divider">
+            <div className="p-3 rounded bg-app border border-divider">
               <div className="font-mono text-muted font-bold mb-1 flex items-center gap-1">
                 <Lock size={11} className="text-[#FF6B4A]" /> Zero Knowledge
               </div>
               <div className="text-zinc-600 text-[10px]">Client-side end-to-end encryption. The host server never holds message plaintext.</div>
             </div>
-            <div className="p-3 rounded bg-[#0A0B10] border border-divider">
+            <div className="p-3 rounded bg-app border border-divider">
               <div className="font-mono text-muted font-bold mb-1 flex items-center gap-1">
                 <Users size={11} className="text-emerald-400" /> Work OS Linked
               </div>
@@ -485,7 +485,7 @@ export default function Chat() {
                   value={composeSearch}
                   onChange={e => setComposeSearch(e.target.value)}
                   autoFocus
-                  className="w-full pl-8 pr-3 py-1.5 bg-[#07080A] border border-divider rounded text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]/50"
+                  className="w-full pl-8 pr-3 py-1.5 bg-app border border-divider rounded text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]/50"
                 />
               </div>
             </div>
@@ -504,7 +504,7 @@ export default function Chat() {
                     className="w-full flex items-center justify-between p-2 rounded hover:bg-white/[0.03] transition-colors text-left group"
                   >
                     <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-[10px] font-bold text-main">
+                      <div className="w-7 h-7 rounded-md bg-hover border border-divider flex items-center justify-center text-[10px] font-bold text-main">
                         {emp.full_name?.charAt(0).toUpperCase() || 'U'}
                       </div>
                       <div>

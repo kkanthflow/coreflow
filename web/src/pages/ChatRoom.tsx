@@ -74,7 +74,7 @@ function Bubble({
     <div className={`flex gap-2.5 group ${isMe ? 'flex-row-reverse' : 'flex-row'} items-end my-1`}>
       {/* Compact Avatar for other party */}
       {!isMe && (
-        <div className="w-7 h-7 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-[10px] font-bold text-main shrink-0 mb-1">
+        <div className="w-7 h-7 rounded-md bg-hover border border-divider flex items-center justify-center text-[10px] font-bold text-main shrink-0 mb-1">
           {msg.sender?.avatar_url
             ? <img src={msg.sender.avatar_url} className="w-7 h-7 rounded-md object-cover" alt={initials} />
             : initials}
@@ -101,8 +101,8 @@ function Bubble({
         <div
           className={`relative px-3.5 py-2 rounded-lg text-[13px] leading-relaxed transition-all ${
             isMe
-              ? 'bg-[#151722] text-zinc-100 border border-[#FF6B4A]/30 rounded-br-none shadow-sm'
-              : 'bg-[#0E1016] text-zinc-200 border border-divider rounded-bl-none'
+              ? 'bg-hover text-zinc-100 border border-[#FF6B4A]/30 rounded-br-none shadow-sm'
+              : 'bg-card-bg text-zinc-200 border border-divider rounded-bl-none'
           } ${msg.isOptimistic ? 'opacity-60' : ''}`}
         >
           {msg.content && <p>{msg.content}</p>}
@@ -673,7 +673,7 @@ export default function ChatRoom() {
     <div className="h-full flex flex-1 -m-4 sm:-m-6 lg:-m-7 bg-card-bg text-muted select-none overflow-hidden font-sans">
       
       {/* ── Panel 1: Conversation Navigator (280px - 320px) ── */}
-      <div className="w-80 border-r border-divider bg-[#0A0B10] flex flex-col h-full shrink-0 hidden md:flex">
+      <div className="w-80 border-r border-divider bg-app flex flex-col h-full shrink-0 hidden md:flex">
         
         {/* Navigator Header */}
         <div className="h-14 px-4 flex items-center justify-between border-b border-divider">
@@ -684,7 +684,7 @@ export default function ChatRoom() {
 
           <button
             onClick={() => navigate('/chat')}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#13151D] hover:bg-[#181B26] border border-divider text-muted hover:text-main text-[11px] font-medium transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-hover hover:bg-hover border border-divider text-muted hover:text-main text-[11px] font-medium transition-colors"
             title="Compose new conversation"
           >
             <Plus size={12} className="text-[#FF6B4A]" />
@@ -701,7 +701,7 @@ export default function ChatRoom() {
               placeholder="Search conversations..."
               value={searchNav}
               onChange={e => setSearchNav(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 bg-[#07080A] border border-divider focus:border-[#FF6B4A]/40 rounded-md text-[11px] text-main placeholder-zinc-500 focus:outline-none transition-colors"
+              className="w-full pl-8 pr-7 py-1.5 bg-app border border-divider focus:border-[#FF6B4A]/40 rounded-md text-[11px] text-main placeholder-zinc-500 focus:outline-none transition-colors"
             />
           </div>
         </div>
@@ -730,7 +730,7 @@ export default function ChatRoom() {
 
                   {/* Avatar / Hash */}
                   <div className="relative shrink-0">
-                    <div className="w-7 h-7 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-[10px] font-bold text-main">
+                    <div className="w-7 h-7 rounded-md bg-hover border border-divider flex items-center justify-center text-[10px] font-bold text-main">
                       {ch.type === 'direct'
                         ? (ch.name || 'U').charAt(0).toUpperCase()
                         : <Hash size={13} className="text-[#FF6B4A]" />
@@ -767,7 +767,7 @@ export default function ChatRoom() {
         </div>
 
         {/* Security / Encryption Status Footer */}
-        <div className="p-3 border-t border-divider bg-[#07080A] flex items-center justify-between text-[10px] font-mono text-muted">
+        <div className="p-3 border-t border-divider bg-app flex items-center justify-between text-[10px] font-mono text-muted">
           <span className="flex items-center gap-1.5">
             <Lock size={11} className="text-emerald-400" />
             <span>P-256 ECDH Encrypted</span>
@@ -778,12 +778,12 @@ export default function ChatRoom() {
       </div>
 
       {/* ── Panel 2: Active Conversation Main Workspace ── */}
-      <div className="flex-1 flex flex-col h-full bg-[#07080B] overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col h-full bg-app overflow-hidden min-w-0">
         
         {/* Active Conversation Topbar */}
-        <div className="h-14 px-4 sm:px-6 border-b border-divider bg-[#0A0B10] flex items-center justify-between shrink-0">
+        <div className="h-14 px-4 sm:px-6 border-b border-divider bg-app flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-md bg-[#13151D] border border-divider flex items-center justify-center text-xs font-bold text-main relative shrink-0">
+            <div className="w-8 h-8 rounded-md bg-hover border border-divider flex items-center justify-center text-xs font-bold text-main relative shrink-0">
               {isDirect ? (
                 displayName.charAt(0).toUpperCase()
               ) : (
@@ -820,7 +820,7 @@ export default function ChatRoom() {
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => navigate('/meetings/new')}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#13151D] hover:bg-[#181B26] border border-divider text-muted hover:text-main text-[11px] font-medium transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-hover hover:bg-hover border border-divider text-muted hover:text-main text-[11px] font-medium transition-colors"
               title="Start or schedule LiveKit meeting"
             >
               <Video size={12} className="text-[#FF6B4A]" />
@@ -832,7 +832,7 @@ export default function ChatRoom() {
               className={`p-1.5 rounded border transition-colors ${
                 showInspector
                   ? 'bg-white/[0.06] border-white/[0.1] text-main'
-                  : 'bg-[#13151D] border-divider text-muted hover:text-main'
+                  : 'bg-hover border-divider text-muted hover:text-main'
               }`}
               title="Toggle Details Inspector"
             >
@@ -854,7 +854,7 @@ export default function ChatRoom() {
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full text-center py-16">
-              <div className="w-10 h-10 rounded-lg bg-[#11131B] border border-divider flex items-center justify-center text-[#FF6B4A] mb-3">
+              <div className="w-10 h-10 rounded-lg bg-card-bg border border-divider flex items-center justify-center text-[#FF6B4A] mb-3">
                 <Lock size={18} />
               </div>
               <p className="text-main text-xs font-bold">
@@ -905,7 +905,7 @@ export default function ChatRoom() {
 
         {/* Reply Preview Banner */}
         {replyTo && (
-          <div className="px-4 py-2 border-t border-divider bg-[#0A0B10] flex items-center justify-between text-xs shrink-0">
+          <div className="px-4 py-2 border-t border-divider bg-app flex items-center justify-between text-xs shrink-0">
             <div className="flex items-center gap-2 text-muted">
               <CornerUpLeft size={13} className="text-[#FF6B4A]" />
               <span>Replying to <strong className="text-main">{replyTo.sender?.full_name}</strong></span>
@@ -919,7 +919,7 @@ export default function ChatRoom() {
 
         {/* File Attachment Preview Banner */}
         {fileAttachment && (
-          <div className="px-4 py-2 border-t border-divider bg-[#0E1017] flex items-center justify-between text-xs shrink-0">
+          <div className="px-4 py-2 border-t border-divider bg-card-bg flex items-center justify-between text-xs shrink-0">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-6 h-6 rounded bg-[#FF6B4A]/10 border border-[#FF6B4A]/20 flex items-center justify-center text-[#FF6B4A]">
                 <Paperclip size={12} />
@@ -936,8 +936,8 @@ export default function ChatRoom() {
         )}
 
         {/* Command Message Composer */}
-        <div className="p-3 sm:p-4 border-t border-divider bg-[#0A0B10] shrink-0">
-          <div className="flex items-end gap-2 bg-[#07080A] border border-divider focus-within:border-[#FF6B4A]/50 rounded-lg p-2 transition-colors">
+        <div className="p-3 sm:p-4 border-t border-divider bg-app shrink-0">
+          <div className="flex items-end gap-2 bg-app border border-divider focus-within:border-[#FF6B4A]/50 rounded-lg p-2 transition-colors">
             
             {/* Hidden File Input */}
             <input
@@ -996,7 +996,7 @@ export default function ChatRoom() {
 
       {/* ── Panel 3: Context Inspector (300px - 360px) ── */}
       {showInspector && (
-        <div className="w-80 border-l border-divider bg-[#0A0B10] flex flex-col h-full shrink-0 overflow-y-auto hidden lg:flex font-sans">
+        <div className="w-80 border-l border-divider bg-app flex flex-col h-full shrink-0 overflow-y-auto hidden lg:flex font-sans">
           
           {/* Inspector Header */}
           <div className="h-14 px-4 flex items-center justify-between border-b border-divider">
@@ -1010,7 +1010,7 @@ export default function ChatRoom() {
             
             {/* Identity Profile Card */}
             <div className="text-center pb-4 border-b border-divider">
-              <div className="w-12 h-12 rounded-lg bg-[#13151D] border border-divider flex items-center justify-center text-sm font-bold text-main mx-auto mb-2 relative">
+              <div className="w-12 h-12 rounded-lg bg-hover border border-divider flex items-center justify-center text-sm font-bold text-main mx-auto mb-2 relative">
                 {isDirect ? displayName.charAt(0).toUpperCase() : <Hash size={20} className="text-[#FF6B4A]" />}
                 {isDirect && (
                   <span className={`w-2.5 h-2.5 rounded-full absolute -bottom-0.5 -right-0.5 ring-2 ring-[#0A0B10] ${
@@ -1025,7 +1025,7 @@ export default function ChatRoom() {
             </div>
 
             {/* Security Telemetry */}
-            <div className="p-3 rounded bg-[#07080A] border border-divider space-y-2">
+            <div className="p-3 rounded bg-app border border-divider space-y-2">
               <div className="text-[9px] font-mono font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
                 <Lock size={11} className="text-emerald-400" />
                 <span>Security Telemetry</span>
@@ -1049,7 +1049,7 @@ export default function ChatRoom() {
                   <Link
                     key={p.id}
                     to={`/projects/${p.id}`}
-                    className="p-2.5 rounded bg-[#07080A] border border-divider hover:border-white/[0.1] block transition-colors group"
+                    className="p-2.5 rounded bg-app border border-divider hover:border-white/[0.1] block transition-colors group"
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className="text-xs font-semibold text-main group-hover:text-[#FF6B4A] transition-colors truncate">

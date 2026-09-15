@@ -62,7 +62,7 @@ export function RecordingsView() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] text-main">
+    <div className="flex-1 flex flex-col h-full bg-app text-main">
       <div className="p-8 pb-4">
         <h1 className="text-3xl font-bold mb-2">Recordings</h1>
         <p className="text-muted">View and manage all your saved meeting recordings.</p>
@@ -84,7 +84,7 @@ export function RecordingsView() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {recordings.map((recording) => (
-              <div key={recording.id} className="bg-[#1A1A1D] rounded-2xl overflow-hidden border border-white/5 flex flex-col group">
+              <div key={recording.id} className="bg-hover rounded-2xl overflow-hidden border border-white/5 flex flex-col group">
                 <div className="aspect-video bg-black/50 relative flex items-center justify-center group-hover:bg-black/40 transition-colors">
                   {recording.recording_status === 'completed' ? (
                     <button 

@@ -396,7 +396,7 @@ export default function Register() {
                     onChange={(e) => setFullName(e.target.value)}
                     placeholder="John Doe"
                     disabled={loading}
-                    className={`w-full bg-[#07080B] border ${errors.fullName ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
+                    className={`w-full bg-app border ${errors.fullName ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
                   />
                   {errors.fullName && <div className="text-[10px] text-red-400 mt-1">{errors.fullName}</div>}
                 </div>
@@ -411,7 +411,7 @@ export default function Register() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="name@company.com"
                     disabled={loading}
-                    className={`w-full bg-[#07080B] border ${errors.email ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
+                    className={`w-full bg-app border ${errors.email ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
                   />
                   {errors.email && <div className="text-[10px] text-red-400 mt-1">{errors.email}</div>}
                 </div>
@@ -435,7 +435,7 @@ export default function Register() {
                       className={`p-3 rounded-lg border text-left transition-all ${
                         accountType === item.id 
                           ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-main' 
-                          : 'bg-[#07080B] border-divider text-muted hover:border-white/[0.1]'
+                          : 'bg-app border-divider text-muted hover:border-white/[0.1]'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-1">
@@ -450,7 +450,7 @@ export default function Register() {
 
               {/* Freelancer Scope (if Freelancer chosen) */}
               {accountType === 'freelancer' && (
-                <div className="space-y-2 p-3.5 bg-[#07080B] border border-divider rounded-lg">
+                <div className="space-y-2 p-3.5 bg-app border border-divider rounded-lg">
                   <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted">
                     Freelancer Engagement Model
                   </label>
@@ -495,7 +495,7 @@ export default function Register() {
                     onChange={(e) => setOrganization(e.target.value)}
                     placeholder="Acme Corp"
                     disabled={loading}
-                    className={`w-full bg-[#07080B] border ${errors.organization ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
+                    className={`w-full bg-app border ${errors.organization ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
                   />
                   {errors.organization && <div className="text-[10px] text-red-400 mt-1">{errors.organization}</div>}
                 </div>
@@ -510,7 +510,7 @@ export default function Register() {
                   <select
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
-                    className="w-full bg-[#07080B] border border-divider rounded px-3 py-2 text-xs text-main focus:outline-none"
+                    className="w-full bg-app border border-divider rounded px-3 py-2 text-xs text-main focus:outline-none"
                   >
                     <option value="administrator">Administrator — Org-wide management</option>
                     <option value="director">Director — Senior leadership</option>
@@ -553,7 +553,7 @@ export default function Register() {
                             className={`p-2 rounded border text-left flex items-center justify-between transition-all ${
                               isSelected
                                 ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-main'
-                                : 'bg-[#07080B] border-divider text-muted hover:border-white/[0.1]'
+                                : 'bg-app border-divider text-muted hover:border-white/[0.1]'
                             }`}
                           >
                             <span className="text-xs font-semibold">{curr.name}</span>
@@ -579,7 +579,7 @@ export default function Register() {
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••••••"
                       disabled={loading}
-                      className={`w-full bg-[#07080B] border ${errors.password ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded pl-3 pr-9 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
+                      className={`w-full bg-app border ${errors.password ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded pl-3 pr-9 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
                     />
                     <button
                       type="button"
@@ -603,7 +603,7 @@ export default function Register() {
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       placeholder="••••••••••••"
                       disabled={loading}
-                      className={`w-full bg-[#07080B] border ${errors.confirmPassword ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded pl-3 pr-9 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
+                      className={`w-full bg-app border ${errors.confirmPassword ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded pl-3 pr-9 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
                     />
                     <button
                       type="button"
@@ -624,7 +624,7 @@ export default function Register() {
                     type="checkbox"
                     checked={agreed}
                     onChange={(e) => setAgreed(e.target.checked)}
-                    className="mt-0.5 rounded border-white/[0.1] bg-[#07080B] text-[#FF6B4A] focus:ring-0 focus:outline-none"
+                    className="mt-0.5 rounded border-white/[0.1] bg-app text-[#FF6B4A] focus:ring-0 focus:outline-none"
                   />
                   <span className="text-[11px] text-muted leading-relaxed">
                     I acknowledge and agree to the{' '}

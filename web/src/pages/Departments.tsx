@@ -211,7 +211,7 @@ export default function Departments() {
             placeholder="Search departments or domains..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-8 pr-7 py-1.5 bg-[#07080B] border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+            className="w-full pl-8 pr-7 py-1.5 bg-app border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
@@ -321,7 +321,7 @@ export default function Departments() {
                   placeholder="e.g. Product Architecture"
                   value={name}
                   onChange={e => setName(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
@@ -334,7 +334,7 @@ export default function Departments() {
                   placeholder="Responsibilities, domain ownership..."
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
+                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
                 />
               </div>
 
@@ -345,7 +345,7 @@ export default function Departments() {
                 <select
                   value={headUserId}
                   onChange={e => setHeadUserId(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+                  className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                 >
                   <option value="">None / Unassigned</option>
                   {members.map(m => (

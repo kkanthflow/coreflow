@@ -316,7 +316,7 @@ export default function Tasks() {
               placeholder="Search deliverables, scopes, or assignees..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 bg-[#07080B] border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+              className="w-full pl-8 pr-7 py-1.5 bg-app border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
             />
             {search && (
               <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
@@ -331,7 +331,7 @@ export default function Tasks() {
           <select
             value={projectFilter}
             onChange={e => setProjectFilter(e.target.value)}
-            className="bg-[#07080B] border border-divider text-[11px] font-medium text-muted rounded px-2.5 py-1.5 focus:outline-none"
+            className="bg-app border border-divider text-[11px] font-medium text-muted rounded px-2.5 py-1.5 focus:outline-none"
           >
             <option value="all">All Projects</option>
             {projects.map(p => (
@@ -343,7 +343,7 @@ export default function Tasks() {
           <select
             value={priorityFilter}
             onChange={e => setPriorityFilter(e.target.value)}
-            className="bg-[#07080B] border border-divider text-[11px] font-medium text-muted rounded px-2.5 py-1.5 focus:outline-none"
+            className="bg-app border border-divider text-[11px] font-medium text-muted rounded px-2.5 py-1.5 focus:outline-none"
           >
             <option value="all">All Priorities</option>
             <option value="low">Low</option>
@@ -353,7 +353,7 @@ export default function Tasks() {
           </select>
 
           {/* View Switcher */}
-          <div className="flex bg-[#07080B] border border-divider rounded p-0.5">
+          <div className="flex bg-app border border-divider rounded p-0.5">
             <button
               onClick={() => setViewMode('board')}
               className={`p-1 rounded text-xs transition-colors ${
@@ -653,7 +653,7 @@ export default function Tasks() {
                   placeholder="e.g. Implement LiveKit SFU node optimization"
                   value={newTitle}
                   onChange={e => setNewTitle(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
@@ -666,7 +666,7 @@ export default function Tasks() {
                   placeholder="Task details, criteria, architecture notes..."
                   value={newDesc}
                   onChange={e => setNewDesc(e.target.value)}
-                  className="w-full bg-[#07080B] border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
+                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors resize-none"
                 />
               </div>
 
@@ -678,7 +678,7 @@ export default function Tasks() {
                   <select
                     value={newProject}
                     onChange={e => setNewProject(e.target.value)}
-                    className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+                    className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                   >
                     <option value="">General Workspace</option>
                     {projects.map(p => (
@@ -694,7 +694,7 @@ export default function Tasks() {
                   <select
                     value={newPriority}
                     onChange={e => setNewPriority(e.target.value as any)}
-                    className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+                    className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -712,7 +712,7 @@ export default function Tasks() {
                   <select
                     value={newAssignee}
                     onChange={e => setNewAssignee(e.target.value)}
-                    className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+                    className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                   >
                     <option value="">Unassigned</option>
                     {members.map(m => (
@@ -729,7 +729,7 @@ export default function Tasks() {
                     type="date"
                     value={newDueDate}
                     onChange={e => setNewDueDate(e.target.value)}
-                    className="w-full bg-[#07080B] border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
+                    className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                   />
                 </div>
               </div>

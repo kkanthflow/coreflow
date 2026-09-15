@@ -8,7 +8,7 @@ export const SidebarProfile = () => {
   const navigate = useNavigate();
 
   return (
-    <div className="p-3 border-t border-white/5 bg-[#1D1D29]/30 flex flex-col gap-3">
+    <div className="p-3 border-t border-white/5 bg-hover/30 flex flex-col gap-3">
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#FF6B4A] to-[#FFA86B] flex items-center justify-center font-bold text-main shadow-inner">
           {(fullName || session?.user?.email || 'U').charAt(0).toUpperCase()}
