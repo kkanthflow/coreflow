@@ -17,6 +17,7 @@ import Register from './pages/Register';
 import Landing from './pages/Landing';
 
 // Lazy loaded pages (code-split)
+const RegisterSetup   = lazy(() => import('./pages/RegisterSetup'));
 const Onboarding      = lazy(() => import('./pages/Onboarding'));
 const Dashboard       = lazy(() => import('./pages/Dashboard'));
 const Projects        = lazy(() => import('./pages/Projects'));
@@ -66,45 +67,51 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  if (!session?.user?.id) return <Navigate to="/" replace />;
-  if (onboardingStatus === 'workspace_required') return <Navigate to="/onboarding" replace />;
-  return <>{children}</>;
-}
+    if (!session?.user?.id) return <Navigate to="/" replace />;
+    if (onboardingStatus === 'setup_required' || onboardingStatus === 'workspace_required') {
+      return <Navigate to="/register/setup" replace />;
+    }
+    return <>{children}</>;
+  }
 
-// Smart root: redirect authenticated users to dashboard, else show landing
-function RootRoute() {
-  const { session, loading, onboardingStatus } = useAuth();
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
-        <div className="w-10 h-10 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-muted text-sm">Loading...</p>
-      </div>
-    );
+  // Smart root: redirect authenticated users to dashboard or setup, else show landing
+  function RootRoute() {
+    const { session, loading, onboardingStatus } = useAuth();
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
+          <div className="w-10 h-10 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin mb-4" />
+          <p className="text-muted text-sm">Loading...</p>
+        </div>
+      );
+    }
+    if (session?.user?.id) {
+      if (onboardingStatus === 'setup_required' || onboardingStatus === 'workspace_required') {
+        return <Navigate to="/register/setup" replace />;
+      }
+      return <Navigate to="/dashboard" replace />;
+    }
+    return <Landing />;
   }
-  if (session?.user?.id) {
-    if (onboardingStatus === 'workspace_required') return <Navigate to="/onboarding" replace />;
-    return <Navigate to="/dashboard" replace />;
-  }
-  return <Landing />;
-}
 
-// Redirect already-logged-in users away from auth pages
-function GuestRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading, onboardingStatus } = useAuth();
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
-        <div className="w-8 h-8 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
+  // Redirect already-logged-in users away from auth pages
+  function GuestRoute({ children }: { children: React.ReactNode }) {
+    const { session, loading, onboardingStatus } = useAuth();
+    if (loading) {
+      return (
+        <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
+          <div className="w-8 h-8 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin" />
+        </div>
+      );
+    }
+    if (session?.user?.id) {
+      if (onboardingStatus === 'setup_required' || onboardingStatus === 'workspace_required') {
+        return <Navigate to="/register/setup" replace />;
+      }
+      return <Navigate to="/dashboard" replace />;
+    }
+    return <>{children}</>;
   }
-  if (session?.user?.id) {
-    if (onboardingStatus === 'workspace_required') return <Navigate to="/onboarding" replace />;
-    return <Navigate to="/dashboard" replace />;
-  }
-  return <>{children}</>;
-}
 
 import { ToastProvider } from './components/ui/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -152,9 +159,8 @@ function App() {
                     <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
                     <Route path="/pricing" element={<Suspense fallback={<PageLoader />}><Pricing /></Suspense>} />
 
-                    <Route path="/onboarding" element={
-                      <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>
-                    } />
+                    <Route path="/register/setup" element={<Suspense fallback={<PageLoader />}><RegisterSetup /></Suspense>} />
+                    <Route path="/onboarding" element={<Navigate to="/register/setup" replace />} />
 
                     {/* ── All shell-wrapped protected routes ── */}
                     <Route element={<AuthGuard><AppShell /></AuthGuard>}>
@@ -196,9 +202,11 @@ function App() {
                       <Route path="/invoices/:id" element={<Suspense fallback={<PageLoader />}><InvoiceDetail /></Suspense>} />
                       <Route path="/payments"  element={<Suspense fallback={<PageLoader />}><Payments /></Suspense>} />
                       
-                      {/* Analytics & Settings & Audit Logs */}
+                      {/* Analytics & Settings & Audit Logs & Billing */}
                       <Route path="/analytics" element={<Suspense fallback={<PageLoader />}><Analytics /></Suspense>} />
                       <Route path="/settings"  element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
+                      <Route path="/billing"   element={<Navigate to="/settings?tab=billing" replace />} />
+                      <Route path="/subscription" element={<Navigate to="/settings?tab=billing" replace />} />
                       <Route path="/audit-logs" element={<Suspense fallback={<PageLoader />}><AuditLogs /></Suspense>} />
                     </Route>
 

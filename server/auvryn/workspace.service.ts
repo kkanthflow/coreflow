@@ -169,34 +169,49 @@ export async function approveJoinRequest(params: {
 }
 
 // ==========================================
-// WORKSPACE PROVISIONING (OAUTH)
+// EXPLICIT WORKSPACE ONBOARDING (USER-SELECTED ONLY)
 // ==========================================
-export async function provisionGoogleUserWorkspace(params: {
-  userId: number;       // Drizzle User ID
-  userOpenId: string;   // Supabase Auth UUID
+
+export async function setupFreelancerWorkspace(params: {
+  userId?: number;
+  userOpenId: string;
   fullName: string;
+  skills?: string[];
+  portfolio?: string;
 }) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
 
   return await db.transaction(async (tx) => {
-    // 1. Update user to freelancer role
+    // 1. Explicitly persist account_type as 'freelancer' and mark setup completed
     await tx.execute(sql`
       UPDATE users 
-      SET role = 'freelancer', default_workspace_id = 'independent' 
+      SET 
+        account_type = 'freelancer',
+        role = 'freelancer', 
+        default_workspace_id = 'independent',
+        account_setup_completed = true,
+        current_plan_tier = 'freelancer_free',
+        subscription_status = 'free'
       WHERE id = ${params.userOpenId}::uuid
     `);
 
-    // 2. Insert into Supabase legacy tables (workspaces, workspace_members, freelancer_profiles)
-    // using raw SQL since they aren't in Drizzle schema.
+    // 2. Insert into freelancer_profiles
     await tx.execute(sql`
-      INSERT INTO freelancer_profiles (id, freelancer_type) 
-      VALUES (${params.userOpenId}::uuid, 'independent')
-      ON CONFLICT (id) DO NOTHING;
+      INSERT INTO freelancer_profiles (id, freelancer_type, skills, portfolio) 
+      VALUES (
+        ${params.userOpenId}::uuid, 
+        'independent', 
+        ${params.skills || []}::text[], 
+        ${params.portfolio || ''}
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        skills = EXCLUDED.skills,
+        portfolio = EXCLUDED.portfolio;
     `);
 
-    // Check if independent workspace exists
-    const existingWs = await tx.execute(sql`
+    // 3. Ensure independent workspace exists
+    const existingWs: any = await tx.execute(sql`
       SELECT id FROM workspaces 
       WHERE owner_id = ${params.userOpenId}::uuid 
       AND type = 'independent'
@@ -207,9 +222,9 @@ export async function provisionGoogleUserWorkspace(params: {
     if (existingWs.length > 0) {
       wsId = existingWs[0].id;
     } else {
-      const insertedWs = await tx.execute(sql`
+      const insertedWs: any = await tx.execute(sql`
         INSERT INTO workspaces (name, type, owner_id, status)
-        VALUES (${params.fullName} || ' Freelancing', 'independent', ${params.userOpenId}::uuid, 'active')
+        VALUES (${params.fullName || 'User'} || ' Workspace', 'independent', ${params.userOpenId}::uuid, 'active')
         RETURNING id;
       `);
       wsId = insertedWs[0].id;
@@ -223,6 +238,130 @@ export async function provisionGoogleUserWorkspace(params: {
       `);
     }
 
-    return { success: true, workspaceId: wsId };
+    return { success: true, workspaceId: wsId, accountType: 'freelancer' };
+  });
+}
+
+export async function setupOrganizationWorkspace(params: {
+  userId?: number;
+  userOpenId: string;
+  fullName: string;
+  orgName: string;
+  jobTitle?: string;
+  defaultCurrency?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  return await db.transaction(async (tx) => {
+    // 1. Create Organization in Supabase organizations table
+    const insertedOrg: any = await tx.execute(sql`
+      INSERT INTO organizations (name, default_currency, current_plan_tier, subscription_status)
+      VALUES (${params.orgName}, ${params.defaultCurrency || 'USD'}, 'business_free', 'free')
+      RETURNING id;
+    `);
+    const orgId = insertedOrg[0].id;
+
+    // 2. Add user as owner in user_organizations
+    await tx.execute(sql`
+      INSERT INTO user_organizations (user_id, org_id, role)
+      VALUES (${params.userOpenId}::uuid, ${orgId}::uuid, 'owner')
+      ON CONFLICT DO NOTHING;
+    `);
+
+    // 3. Update user profile to account_type = 'organization', role = 'owner', default_workspace_id = orgId
+    await tx.execute(sql`
+      UPDATE users 
+      SET 
+        account_type = 'organization',
+        role = 'owner', 
+        default_workspace_id = ${String(orgId)},
+        account_setup_completed = true,
+        current_plan_tier = 'business_free',
+        subscription_status = 'free'
+      WHERE id = ${params.userOpenId}::uuid
+    `);
+
+    // 4. Create default organization workspace
+    const insertedWs: any = await tx.execute(sql`
+      INSERT INTO workspaces (name, type, owner_id, status)
+      VALUES (${params.orgName}, 'organization', ${params.userOpenId}::uuid, 'active')
+      RETURNING id;
+    `);
+    const wsId = insertedWs[0].id;
+
+    if (wsId) {
+      await tx.execute(sql`
+        INSERT INTO workspace_members (workspace_id, user_id, status)
+        VALUES (${wsId}, ${params.userOpenId}::uuid, 'active')
+        ON CONFLICT (workspace_id, user_id) DO NOTHING;
+      `);
+    }
+
+    return { success: true, organizationId: orgId, workspaceId: wsId, accountType: 'organization' };
+  });
+}
+
+export async function setupJoinOrganizationWorkspace(params: {
+  userId?: number;
+  userOpenId: string;
+  fullName: string;
+  organizationId: string;
+  jobTitle?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  // Validate Organization Exists
+  const orgCheck: any = await db.execute(sql`
+    SELECT id, name, current_plan_tier FROM organizations WHERE id = ${params.organizationId}::uuid LIMIT 1;
+  `);
+  if (!orgCheck || orgCheck.length === 0) {
+    throw new Error('Organization not found. Please verify the Organization ID.');
+  }
+
+  // Enforce seat limit before joining
+  const seatCheck = await EntitlementsService.checkEntitlement({
+    userId: params.userOpenId,
+    orgId: params.organizationId,
+    feature: 'seats',
+  });
+  if (!seatCheck.allowed) {
+    throw new Error(`quota_exceeded:seats: Organization team member quota of ${seatCheck.limit} reached. Contact the organization owner to upgrade.`);
+  }
+
+  return await db.transaction(async (tx) => {
+    // Add user as regular member (never self-assign owner or admin)
+    await tx.execute(sql`
+      INSERT INTO user_organizations (user_id, org_id, role)
+      VALUES (${params.userOpenId}::uuid, ${params.organizationId}::uuid, 'employee')
+      ON CONFLICT (user_id, org_id) DO NOTHING;
+    `);
+
+    // Update user record: account_type = 'organization', account_setup_completed = true
+    await tx.execute(sql`
+      UPDATE users 
+      SET 
+        account_type = 'organization',
+        role = 'employee', 
+        default_workspace_id = ${params.organizationId},
+        account_setup_completed = true
+      WHERE id = ${params.userOpenId}::uuid
+    `);
+
+    return { success: true, organizationId: params.organizationId, accountType: 'organization' };
+  });
+}
+
+// Backward compatibility alias: only invoked when explicitly requested by legacy code
+export async function provisionGoogleUserWorkspace(params: {
+  userId: number;
+  userOpenId: string;
+  fullName: string;
+}) {
+  return await setupFreelancerWorkspace({
+    userId: params.userId,
+    userOpenId: params.userOpenId,
+    fullName: params.fullName,
   });
 }

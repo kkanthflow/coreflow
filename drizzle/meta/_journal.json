@@ -8,6 +8,20 @@
       "when": 1784736876317,
       "tag": "0000_broken_sentinels",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790241974274,
+      "tag": "0001_glamorous_overlord",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1790246047507,
+      "tag": "0002_silent_boom_boom",
+      "breakpoints": true
     }
   ]
 }

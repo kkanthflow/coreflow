@@ -71,6 +71,7 @@ export default function Sidebar() {
         { name: 'Settlements', to: '/payments', icon: CreditCard, permission: 'record_payments' },
         { name: 'Telemetry', to: '/analytics', icon: BarChart3, permission: 'view_reports' },
         { name: 'Plans & Pricing', to: '/pricing', icon: Sparkles, permission: null },
+        { name: 'Subscription & Billing', to: '/settings?tab=billing', icon: CreditCard, permission: null },
       ]
     }
   ];

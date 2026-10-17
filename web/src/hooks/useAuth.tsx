@@ -7,8 +7,11 @@ type AuthContextType = {
   user: User | null;
   role: string | null;
   fullName: string | null;
-  onboardingStatus: string | null;
+  accountType: 'freelancer' | 'organization' | null;
+  accountSetupCompleted: boolean;
+  onboardingStatus: 'completed' | 'setup_required' | null;
   loading: boolean;
+  refreshUserDetails: () => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -17,8 +20,11 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   role: null,
   fullName: null,
+  accountType: null,
+  accountSetupCompleted: false,
   onboardingStatus: null,
   loading: true,
+  refreshUserDetails: async () => {},
   signOut: async () => {},
 });
 
@@ -27,33 +33,43 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
-  const [onboardingStatus, setOnboardingStatus] = useState<string | null>(null);
+  const [accountType, setAccountType] = useState<'freelancer' | 'organization' | null>(null);
+  const [accountSetupCompleted, setAccountSetupCompleted] = useState<boolean>(false);
+  const [onboardingStatus, setOnboardingStatus] = useState<'completed' | 'setup_required' | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchUserDetails = async (userEmail: string) => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('role, full_name, default_workspace_id')
+        .select('role, full_name, default_workspace_id, account_type, account_setup_completed')
         .eq('email', userEmail)
         .single();
         
       if (data && !error) {
         setRole(data.role);
         setFullName(data.full_name);
+        setAccountType(data.account_type as any);
+        setAccountSetupCompleted(data.account_setup_completed === true);
         
-        const isExecutive = ['owner', 'administrator'].includes(data.role || '');
-        setOnboardingStatus(data.default_workspace_id || isExecutive ? 'completed' : 'workspace_required');
+        // Strict Onboarding Resolution:
+        // Must explicitly have account_setup_completed = true AND valid account_type
+        const isSetup = data.account_setup_completed === true && !!data.account_type;
+        setOnboardingStatus(isSetup ? 'completed' : 'setup_required');
       } else {
         setRole(null);
         setFullName(null);
-        setOnboardingStatus(null);
+        setAccountType(null);
+        setAccountSetupCompleted(false);
+        setOnboardingStatus('setup_required');
       }
     } catch (err) {
       console.error('Error fetching user details:', err);
       setRole(null);
       setFullName(null);
-      setOnboardingStatus(null);
+      setAccountType(null);
+      setAccountSetupCompleted(false);
+      setOnboardingStatus('setup_required');
     }
   };
 
@@ -111,6 +127,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, []);
 
+  const refreshUserDetails = async () => {
+    if (session?.user?.email) {
+      await fetchUserDetails(session.user.email);
+    }
+  };
+
   const signOut = async () => {
     try {
       await supabase.auth.signOut();
@@ -121,13 +143,26 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       setUser(null);
       setRole(null);
       setFullName(null);
+      setAccountType(null);
+      setAccountSetupCompleted(false);
       setOnboardingStatus(null);
       setLoading(false);
     }
   };
 
   return (
-    <AuthContext.Provider value={{ session, user, role, fullName, onboardingStatus, loading, signOut }}>
+    <AuthContext.Provider value={{ 
+      session, 
+      user, 
+      role, 
+      fullName, 
+      accountType, 
+      accountSetupCompleted, 
+      onboardingStatus, 
+      loading, 
+      refreshUserDetails, 
+      signOut 
+    }}>
       {children}
     </AuthContext.Provider>
   );

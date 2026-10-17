@@ -7,7 +7,7 @@ dotenv.config();
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 
 async function main() {
-  const migrationPath = path.resolve(process.cwd(), 'supabase/migrations/20261018010000_subscription_entitlements.sql');
+  const migrationPath = path.resolve(process.cwd(), 'supabase/migrations/20261018030000_account_setup_and_rbac.sql');
   const sql = fs.readFileSync(migrationPath, 'utf8');
 
   let dbUrl = process.env.DATABASE_URL;

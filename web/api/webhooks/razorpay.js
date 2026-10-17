@@ -13,7 +13,7 @@ const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABAS
 const supabaseAdmin = createClient(supabaseUrl, supabaseKey);
 
 const PRIMARY_SECRET = process.env.RAZORPAY_WEBHOOK_SECRET || 'Krishna0okanth#@';
-const FALLBACK_SECRET = process.env.RAZORPAY_KEY_SECRET || 'jX3JWseZHp08O1haOrJdt5sP';
+const FALLBACK_SECRET = process.env.RAZORPAY_KEY_SECRET || 'AoOKahZG7xU24Khmz0yyLy2O';
 
 // Helper to buffer the raw body from the request stream
 function getRawBody(req) {

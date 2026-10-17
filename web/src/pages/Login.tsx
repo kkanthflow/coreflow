@@ -82,10 +82,21 @@ export default function Login() {
 
       if (authError) throw authError;
 
+      // Check user account setup state
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('account_type, account_setup_completed')
+        .eq('email', email)
+        .maybeSingle();
+
+      const targetPath = (!userProfile?.account_setup_completed || !userProfile?.account_type)
+        ? '/register/setup'
+        : (from === '/' ? '/dashboard' : from);
+
       // Hero transition sequence
       setAuthSuccess(true);
       setTimeout(() => {
-        navigate(from, { replace: true, state: { fromAuthUnlock: true } });
+        navigate(targetPath, { replace: true, state: { fromAuthUnlock: true } });
       }, 750);
 
     } catch (err: any) {

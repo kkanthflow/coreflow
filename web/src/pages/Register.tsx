@@ -156,92 +156,12 @@ export default function Register() {
 
       if (!userId) throw new Error('Failed to obtain user session after registration.');
 
-      // Helpers for workspace seeding
-      const joinOrgWorkspace = async (orgDbId: string) => {
-        const { data: existingWs } = await supabase
-          .from('workspaces')
-          .select('id')
-          .eq('organization_id', orgDbId)
-          .eq('type', 'organization')
-          .maybeSingle();
-
-        let wsId = existingWs?.id;
-        if (!wsId) {
-          const { data: newWs } = await supabase
-            .from('workspaces')
-            .insert({ name: cleanOrgName + ' Organization', type: 'organization', owner_id: userId, organization_id: orgDbId, status: 'active' })
-            .select('id')
-            .single();
-          wsId = newWs?.id;
-        }
-        if (wsId) {
-          await supabase
-            .from('workspace_members')
-            .upsert({ workspace_id: wsId, user_id: userId, status: 'active' }, { onConflict: 'workspace_id,user_id' });
-        }
-      };
-
-      const createIndependentWorkspace = async () => {
-        const { data: existingWs } = await supabase
-          .from('workspaces')
-          .select('id')
-          .eq('owner_id', userId)
-          .eq('type', 'independent')
-          .maybeSingle();
-
-        if (!existingWs) {
-          const { data: newWs } = await supabase
-            .from('workspaces')
-            .insert({ name: fullName.trim() + ' Freelancing', type: 'independent', owner_id: userId, status: 'active' })
-            .select('id')
-            .single();
-
-          if (newWs?.id) {
-            await supabase
-              .from('workspace_members')
-              .insert({ workspace_id: newWs.id, user_id: userId, status: 'active' });
-          }
-        }
-      };
-
-      // 3. Associate roles and organizations
-      if (accountType === 'freelancer') {
-        if (freelancerWorkType === 'organization' && existingOrg) {
-          orgId = existingOrg.id;
-          await supabase.from('user_organizations').insert({ user_id: userId, org_id: orgId, role: 'freelancer' });
-          await supabase.from('users').update({ role: 'freelancer', freelancer_type: 'organization' }).eq('id', userId);
-          await supabase.from('freelancer_profiles').upsert({ id: userId, freelancer_type: 'organization' }, { onConflict: 'id' });
-          await joinOrgWorkspace(orgId);
-          await createIndependentWorkspace();
-        } else {
-          await supabase.from('users').update({ role: 'freelancer', freelancer_type: 'independent' }).eq('id', userId);
-          await supabase.from('freelancer_profiles').upsert({ id: userId, freelancer_type: 'independent' }, { onConflict: 'id' });
-          await createIndependentWorkspace();
-        }
-      } else if (accountType === 'join' && existingOrg) {
-        orgId = existingOrg.id;
-        const assignedRole = role || 'employee';
-        await supabase.from('user_organizations').insert({ user_id: userId, org_id: orgId, role: assignedRole });
-        await supabase.from('users').update({ role: assignedRole }).eq('id', userId);
-        await joinOrgWorkspace(orgId);
-        await createIndependentWorkspace();
-      } else if (accountType === 'create') {
-        const { data: newOrg, error: createOrgError } = await supabase
-          .from('organizations')
-          .insert({ name: cleanOrgName, default_currency: defaultCurrency })
-          .select('id')
-          .single();
-
-        if (createOrgError) throw createOrgError;
-        orgId = newOrg.id;
-
-        await supabase.from('user_organizations').insert({ user_id: userId, org_id: orgId, role: 'owner' });
-        await supabase.from('users').update({ role: 'owner' }).eq('id', userId);
-        await joinOrgWorkspace(orgId);
-        await createIndependentWorkspace();
-      }
-
-      navigate('/dashboard', { replace: true });
+      // Registration creates the authentication identity only.
+      // Account type, organization, and profile are explicitly selected at /register/setup.
+      navigate('/register/setup', {
+        replace: true,
+        state: { fullName: fullName.trim(), email: email.trim() },
+      });
     } catch (err: any) {
       console.error('Registration failed:', err);
       let msg = err.message || 'Registration failed. Please check inputs.';
@@ -695,7 +615,7 @@ export default function Register() {
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
                 </svg>
-                <span>Continue with Google</span>
+                <span>Sign up with Google</span>
               </button>
 
               {/* Sign In Link */}

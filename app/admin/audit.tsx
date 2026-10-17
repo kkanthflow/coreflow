@@ -23,26 +23,26 @@ export default function AuditLogScreen() {
     setIsLoading(true);
     try {
       let query = supabase
-        .from('activity_logs')
+        .from('audit_logs')
         .select(`
           id,
           action,
-          entity_type,
-          entity_id,
-          old_value,
-          new_value,
+          resource_type,
+          resource_id,
+          old_values,
+          new_values,
           created_at,
           actor:actor_id (
             full_name,
             email
           )
         `)
-        .eq('org_id', user.organizationId)
+        .eq('workspace_id', user.organizationId)
         .order('created_at', { ascending: false })
         .limit(100);
 
       if (activeTab !== 'all') {
-        query = query.eq('entity_type', activeTab);
+        query = query.eq('resource_type', activeTab);
       }
 
       const { data, error } = await query;
@@ -75,24 +75,24 @@ export default function AuditLogScreen() {
   }
 
   const formatLogMessage = (item: any) => {
-    const actor = item.actor?.full_name || 'System';
+    const actor = item.actor?.full_name || item.actor?.email || 'System';
     switch (item.action) {
       case 'role_changed':
-        return `${actor} changed role of ${item.new_value?.user_name || 'user'} to "${item.new_value?.role}"`;
+        return `${actor} changed role of ${item.new_values?.user_name || 'user'} to "${item.new_values?.role}"`;
       case 'project_created':
-        return `${actor} created project "${item.new_value?.title || 'Unknown'}"`;
+        return `${actor} created project "${item.new_values?.title || 'Unknown'}"`;
       case 'project_deleted':
-        return `${actor} deleted project "${item.new_value?.title || 'Unknown'}"`;
+        return `${actor} deleted project "${item.old_values?.title || 'Unknown'}"`;
       case 'task_created':
-        return `${actor} created task "${item.new_value?.title || 'Unknown'}"`;
+        return `${actor} created task "${item.new_values?.title || 'Unknown'}"`;
       case 'task_status_changed':
-        return `${actor} changed task status for "${item.new_value?.title || 'Task'}" to "${item.new_value?.status}"`;
+        return `${actor} changed task status for "${item.new_values?.title || 'Task'}" to "${item.new_values?.status}"`;
       case 'file_uploaded':
-        return `${actor} uploaded file "${item.new_value?.file_name}"`;
+        return `${actor} uploaded file "${item.new_values?.file_name}"`;
       case 'file_deleted':
-        return `${actor} deleted file "${item.new_value?.file_name}"`;
+        return `${actor} deleted file "${item.old_values?.file_name}"`;
       default:
-        return `${actor} performed action "${item.action.replace('_', ' ')}" on ${item.entity_type}`;
+        return `${actor} performed action "${item.action?.replace(/_/g, ' ') || 'unknown'}" on ${item.resource_type || 'resource'}`;
     }
   };
 
@@ -171,7 +171,7 @@ export default function AuditLogScreen() {
             >
               <View style={styles.logHeader}>
                 <View style={[styles.iconBox, { backgroundColor: `${colors.primary}12` }]}>
-                  <Ionicons name={getEntityIcon(item.entity_type)} size={18} color={colors.primary} />
+                  <Ionicons name={getEntityIcon(item.resource_type)} size={18} color={colors.primary} />
                 </View>
                 <View style={styles.logMeta}>
                   <Text style={[styles.logMsg, { color: colors.foreground }]}>

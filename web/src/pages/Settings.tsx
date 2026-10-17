@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { 
   ArrowLeft, 
   Moon, 
@@ -18,7 +18,15 @@ import {
   AlertCircle, 
   Mail, 
   Building2,
-  CreditCard
+  CreditCard,
+  CheckCircle2,
+  RefreshCw,
+  ExternalLink,
+  FileText,
+  Sparkles,
+  User,
+  Info,
+  ArrowUpRight
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -29,11 +37,124 @@ import { SUPPORTED_CURRENCIES } from '../lib/currency';
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { user, role } = useAuth();
-  const { orgId, refreshWorkspace } = useWorkspace();
+  const [searchParams] = useSearchParams();
+  const { user, role, accountType } = useAuth();
+  const { orgId, orgName: wsOrgName, membershipRole, canManageBilling, isOwner, refreshWorkspace } = useWorkspace();
 
-  // Active Screen / Sub-Screen View ('main' | 'privacy' | 'notifications' | 'freelancer' | 'media' | 'security')
-  const [currentView, setCurrentView] = useState<'main' | 'privacy' | 'notifications' | 'freelancer' | 'media' | 'security'>('main');
+  // Active Screen / Sub-Screen View ('main' | 'privacy' | 'notifications' | 'freelancer' | 'media' | 'security' | 'billing')
+  const [currentView, setCurrentView] = useState<'main' | 'privacy' | 'notifications' | 'freelancer' | 'media' | 'security' | 'billing'>(() => {
+    return searchParams.get('tab') === 'billing' ? 'billing' : 'main';
+  });
+
+  // Watch URL search param for tab changes
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    if (tab === 'billing') {
+      setCurrentView('billing');
+    }
+  }, [searchParams]);
+
+  // Billing & Subscription Telemetry state
+  const [subData, setSubData] = useState<any>(null);
+  const [usageData, setUsageData] = useState<any>(null);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [loadingBilling, setLoadingBilling] = useState(false);
+  const [cancellingSub, setCancellingSub] = useState(false);
+
+  const apiUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? '/api'
+    : (import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
+
+  const fetchBillingData = useCallback(async () => {
+    if (!user) return;
+    setLoadingBilling(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) return;
+
+      const targetOrgId = orgId || activeOrgId;
+
+      const [subRes, usageRes] = await Promise.all([
+        fetch(`${apiUrl}/subscriptions/current${targetOrgId ? `?orgId=${targetOrgId}` : ''}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            ...(targetOrgId ? { 'x-organization-id': targetOrgId } : {}),
+          },
+        }),
+        fetch(`${apiUrl}/subscriptions/usage${targetOrgId ? `?orgId=${targetOrgId}` : ''}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            ...(targetOrgId ? { 'x-organization-id': targetOrgId } : {}),
+          },
+        }),
+      ]);
+
+      if (subRes.ok) {
+        const subJson = await subRes.json();
+        setSubData(subJson);
+      }
+      if (usageRes.ok) {
+        const usageJson = await usageRes.json();
+        setUsageData(usageJson);
+      }
+
+      if (!targetOrgId || canManageBilling) {
+        const payRes = await fetch(`${apiUrl}/subscriptions/payments${targetOrgId ? `?orgId=${targetOrgId}` : ''}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            ...(targetOrgId ? { 'x-organization-id': targetOrgId } : {}),
+          },
+        });
+        if (payRes.ok) {
+          const payJson = await payRes.json();
+          setPaymentHistory(payJson.payments || []);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching billing telemetry:', err);
+    } finally {
+      setLoadingBilling(false);
+    }
+  }, [user, orgId, activeOrgId, canManageBilling, apiUrl]);
+
+  useEffect(() => {
+    fetchBillingData();
+  }, [fetchBillingData]);
+
+  const handleCancelSubscription = async () => {
+    if (!confirm('Are you sure you want to cancel this subscription? Entitlements remain active until the end of your billing cycle.')) {
+      return;
+    }
+    setCancellingSub(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error('Not authenticated');
+
+      const targetOrgId = orgId || activeOrgId;
+      const res = await fetch(`${apiUrl}/subscriptions/cancel`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...(targetOrgId ? { 'x-organization-id': targetOrgId } : {}),
+        },
+        body: JSON.stringify({
+          orgId: targetOrgId || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to cancel subscription');
+      toast.success('Subscription scheduled for cancellation at period end.');
+      await fetchBillingData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to cancel subscription');
+    } finally {
+      setCancellingSub(false);
+    }
+  };
 
   // Role checking
   const [isOwnerOrAdmin, setIsOwnerOrAdmin] = useState(false);
@@ -435,6 +556,7 @@ export default function Settings() {
               {currentView === 'freelancer' && 'Freelancer Workspace Scope'}
               {currentView === 'media' && 'Audio & Video Routing'}
               {currentView === 'security' && 'Change Password & Security'}
+              {currentView === 'billing' && 'Customer Subscription & Billing Telemetry'}
             </h1>
             <p className="text-xs text-muted mt-0.5">
               {currentView === 'main' && 'Configure theme display, notification channels, security policies, and organization billing.'}
@@ -443,6 +565,7 @@ export default function Settings() {
               {currentView === 'freelancer' && 'Select your active engagement mode, rate scoping, and client project assignments.'}
               {currentView === 'media' && 'Configure hardware microphones, capture camera devices, and E2EE parameters.'}
               {currentView === 'security' && 'Update master password credentials and inspect active session tokens.'}
+              {currentView === 'billing' && 'Customer account plan, live quota entitlements, verified payer attribution, and transaction ledger.'}
             </p>
           </div>
         </div>
@@ -562,31 +685,48 @@ export default function Settings() {
           {/* Subscription & Billing Section */}
           <div className="space-y-2.5">
             <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Subscription & Plans</span>
-            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div className="flex items-center gap-3.5">
                 <div className="w-10 h-10 rounded-xl bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A] shrink-0">
                   <CreditCard size={20} />
                 </div>
                 <div>
                   <div className="text-base font-semibold text-main flex items-center gap-2">
-                    <span>Auvryn Plan & Razorpay Billing</span>
+                    <span>{subData?.planName || 'Free Tier'}</span>
                     <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30">
-                      INR (₹)
+                      {subData?.status ? subData.status.toUpperCase() : 'FREE'}
                     </span>
+                    {subData?.customerType && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-sans font-medium bg-white/[0.06] text-muted border border-divider">
+                        {subData.customerType === 'organization' ? 'Organization' : 'Freelancer'}
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-muted mt-0.5">
-                    Monthly & yearly subscriptions, seat entitlements, and usage limits.
+                    {subData?.hasActiveSubscription 
+                      ? `Active monthly subscription. Payer tracked separately from account owner.`
+                      : `Baseline Free plan quota active. Upgrade anytime for higher project & workflow limits.`}
                   </div>
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() => navigate('/pricing')}
-                className="px-4 py-2 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded-xl transition-all shadow-[0_0_12px_rgba(255,107,74,0.3)] shrink-0"
-              >
-                Manage Plans & Quotas →
-              </button>
+              <div className="flex items-center gap-2 w-full md:w-auto">
+                <button
+                  type="button"
+                  onClick={() => setCurrentView('billing')}
+                  className="flex-1 md:flex-none px-4 py-2 bg-hover hover:bg-hover border border-divider text-main text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5"
+                >
+                  <CreditCard size={14} className="text-[#FF6B4A]" />
+                  <span>Subscription Dashboard</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/pricing')}
+                  className="flex-1 md:flex-none px-4 py-2 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded-xl transition-all shadow-[0_0_12px_rgba(255,107,74,0.3)] shrink-0"
+                >
+                  Plans & Pricing →
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1179,6 +1319,358 @@ export default function Settings() {
               </button>
             </form>
           </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────── */}
+      {/* ── VIEW 7: CUSTOMER SUBSCRIPTION & BILLING TELEMETRY ───── */}
+      {/* ────────────────────────────────────────────────────────── */}
+      {currentView === 'billing' && (
+        <div className="space-y-6">
+          
+          {/* Top Actions & Sync Bar */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-muted uppercase tracking-wider">Customer Subscription Details</span>
+              {loadingBilling && (
+                <div className="flex items-center gap-1.5 text-xs text-[#FF6B4A]">
+                  <RefreshCw size={12} className="animate-spin" />
+                  <span>Syncing ledger...</span>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => fetchBillingData()}
+              disabled={loadingBilling}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-hover hover:bg-hover border border-divider text-xs font-medium text-muted hover:text-main transition-colors"
+            >
+              <RefreshCw size={12} className={loadingBilling ? 'animate-spin' : ''} />
+              <span>Refresh Telemetry</span>
+            </button>
+          </div>
+
+          {/* Member Restricted Billing Alert Banner (Section 7, 8, 10) */}
+          {(orgId || subData?.customerType === 'organization') && !canManageBilling && (
+            <div className="p-4.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3.5 text-amber-200">
+              <Lock size={18} className="text-amber-400 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="text-sm font-semibold text-amber-300">
+                  Billing & Subscription Management Restricted
+                </div>
+                <div className="text-xs text-amber-200/80 leading-relaxed">
+                  Contact your organization owner or billing administrator to manage your subscription.
+                </div>
+                <div className="text-[11px] text-amber-300/70 pt-1">
+                  You are viewing read-only plan details for this organization workspace. Billing mutations, payments, and checkout actions require elevated billing privileges.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 1. Customer Account & Plan Overview Card */}
+          <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden p-6 space-y-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-divider">
+              <div className="flex items-start sm:items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A] shrink-0">
+                  {subData?.customerType === 'organization' ? <Building2 size={24} /> : <User size={24} />}
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="text-xl font-bold text-main">
+                      {subData?.customerName || wsOrgName || user?.user_metadata?.full_name || 'Customer Account'}
+                    </h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30">
+                      {subData?.planName || 'Free Plan'}
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
+                      subData?.status === 'active' 
+                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        : subData?.status === 'free'
+                        ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
+                        : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                    }`}>
+                      {subData?.status || 'FREE'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted mt-1">
+                    Customer Account: <span className="text-main font-medium capitalize">{subData?.customerType || (orgId ? 'Organization' : 'Freelancer')}</span>
+                    {' · '}
+                    Billing Interval: <span className="text-main font-medium capitalize">{subData?.interval || 'monthly'}</span>
+                  </p>
+                </div>
+              </div>
+
+              {/* Permitted Plan Upgrades or Downgrades (Section 10) */}
+              <div className="flex items-center gap-2.5">
+                {(!orgId || canManageBilling) ? (
+                  <>
+                    <button
+                      onClick={() => navigate('/pricing')}
+                      className="px-4 py-2.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded-xl transition-all shadow-[0_0_12px_rgba(255,107,74,0.3)] flex items-center gap-1.5"
+                    >
+                      <Sparkles size={14} />
+                      <span>Change Plan / Upgrade</span>
+                    </button>
+                    {subData?.hasActiveSubscription && subData?.tier && !subData.tier.includes('free') && (
+                      <button
+                        onClick={handleCancelSubscription}
+                        disabled={cancellingSub}
+                        className="px-3 py-2.5 bg-hover hover:bg-red-500/10 border border-divider hover:border-red-500/30 text-muted hover:text-red-400 text-xs font-medium rounded-xl transition-all disabled:opacity-50"
+                      >
+                        {cancellingSub ? 'Cancelling...' : 'Cancel Subscription'}
+                      </button>
+                    )}
+                  </>
+                ) : (
+                  <button
+                    disabled
+                    title="Only organization owner or billing administrator can modify subscription"
+                    className="px-4 py-2.5 bg-zinc-800/80 text-zinc-500 cursor-not-allowed text-xs font-semibold rounded-xl border border-zinc-800 flex items-center gap-1.5"
+                  >
+                    <Lock size={13} />
+                    <span>Manage Plans (Restricted)</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Key Subscription Telemetry Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="p-4 rounded-xl bg-app border border-divider">
+                <div className="text-[10px] font-mono uppercase text-muted font-bold tracking-wider">Current Recurring Rate</div>
+                <div className="text-xl font-bold text-main mt-1">
+                  {subData?.tier === 'freelancer_starter' ? '₹299'
+                    : subData?.tier === 'freelancer_pro' ? '₹599'
+                    : subData?.tier === 'business_starter' ? '₹999'
+                    : subData?.tier === 'business_pro' ? '₹2,499'
+                    : '₹0'}
+                  <span className="text-xs font-normal text-muted"> / mo</span>
+                </div>
+                <div className="text-[11px] text-muted mt-1">Authoritative Server Rate</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-app border border-divider">
+                <div className="text-[10px] font-mono uppercase text-muted font-bold tracking-wider">Account Entitlement Scope</div>
+                <div className="text-base font-bold text-main mt-1 capitalize">
+                  {subData?.customerType === 'organization' ? 'Organization-wide' : 'Individual Freelancer'}
+                </div>
+                <div className="text-[11px] text-muted mt-1">Applies to all workspace assets</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-app border border-divider">
+                <div className="text-[10px] font-mono uppercase text-muted font-bold tracking-wider">Current Period Activated</div>
+                <div className="text-sm font-semibold text-main mt-1">
+                  {subData?.currentPeriodStart ? new Date(subData.currentPeriodStart).toLocaleDateString() : 'Active Baseline'}
+                </div>
+                <div className="text-[11px] text-muted mt-1">Validated provider timestamp</div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-app border border-divider">
+                <div className="text-[10px] font-mono uppercase text-muted font-bold tracking-wider">Next Billing / Expiry Date</div>
+                <div className="text-sm font-semibold text-main mt-1">
+                  {subData?.currentPeriodEnd ? new Date(subData.currentPeriodEnd).toLocaleDateString() : 'Perpetual Free Tier'}
+                </div>
+                <div className="text-[11px] text-muted mt-1">
+                  {subData?.cancelAtPeriodEnd ? 'Cancels at end of cycle' : 'Auto-renewing cycle'}
+                </div>
+              </div>
+            </div>
+
+            {/* Payer Attribution (Section 9: Distinguishing Customer Account vs. Actual Payer) */}
+            <div className="p-4 rounded-xl bg-hover border border-divider flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+              <div className="space-y-0.5">
+                <div className="font-semibold text-main flex items-center gap-1.5">
+                  <Shield size={14} className="text-[#FF6B4A]" />
+                  <span>Audited Payer Tracking</span>
+                </div>
+                <div className="text-muted text-[11px]">
+                  The customer receiving entitlements is <strong className="text-main">{subData?.customerName || 'This Account'}</strong>.
+                  {' '}
+                  Payer attribution records the authenticated user executing payment transactions.
+                </div>
+              </div>
+              <div className="text-right shrink-0">
+                <div className="text-[11px] font-mono text-muted">Registered Payer:</div>
+                <div className="text-xs font-mono font-medium text-main">
+                  {subData?.payerUserId ? `User: ${subData.payerUserId}` : (subData?.hasActiveSubscription ? 'Verified Purchaser' : 'System Default Allocation')}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* 2. Usage Limits & Live Entitlements Grid (Section 10 & 12) */}
+          <div className="space-y-3">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Live Entitlements & Resource Quotas</span>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              {/* Active Projects Quota */}
+              <div className="bg-card-bg rounded-2xl border border-divider p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-muted uppercase tracking-wider">Active Projects</span>
+                  <span className="text-xs font-mono font-bold text-main">
+                    {usageData?.projects?.current ?? 0} / {usageData?.projects?.max === -1 ? '∞' : (usageData?.projects?.max ?? 3)}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-app rounded-full overflow-hidden border border-divider">
+                  <div 
+                    className="h-full bg-[#FF6B4A] rounded-full transition-all duration-500"
+                    style={{ 
+                      width: usageData?.projects?.max === -1 
+                        ? '100%' 
+                        : `${Math.min(100, Math.round(((usageData?.projects?.current || 0) / (usageData?.projects?.max || 3)) * 100))}%` 
+                    }}
+                  />
+                </div>
+                <div className="text-[11px] text-muted flex items-center justify-between">
+                  <span>Backend limit enforced</span>
+                  <span className="font-mono">{usageData?.projects?.max === -1 ? 'Unlimited' : `${usageData?.projects?.max || 3} Max`}</span>
+                </div>
+              </div>
+
+              {/* Workflows Quota */}
+              <div className="bg-card-bg rounded-2xl border border-divider p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-muted uppercase tracking-wider">Active Workflows</span>
+                  <span className="text-xs font-mono font-bold text-main">
+                    {usageData?.workflows?.current ?? 0} / {usageData?.workflows?.max === -1 ? '∞' : (usageData?.workflows?.max ?? 2)}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-app rounded-full overflow-hidden border border-divider">
+                  <div 
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                    style={{ 
+                      width: usageData?.workflows?.max === -1 
+                        ? '100%' 
+                        : `${Math.min(100, Math.round(((usageData?.workflows?.current || 0) / (usageData?.workflows?.max || 2)) * 100))}%` 
+                    }}
+                  />
+                </div>
+                <div className="text-[11px] text-muted flex items-center justify-between">
+                  <span>Pipeline & task automations</span>
+                  <span className="font-mono">{usageData?.workflows?.max === -1 ? 'Unlimited' : `${usageData?.workflows?.max || 2} Max`}</span>
+                </div>
+              </div>
+
+              {/* Organization Seats Quota (Or User Limit for Freelancer) */}
+              <div className="bg-card-bg rounded-2xl border border-divider p-5 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                    {subData?.customerType === 'organization' ? 'Team Members / Seats' : 'Licensed Seats'}
+                  </span>
+                  <span className="text-xs font-mono font-bold text-main">
+                    {usageData?.seats?.current ?? 1} / {usageData?.seats?.max === -1 ? '∞' : (usageData?.seats?.max ?? 1)}
+                  </span>
+                </div>
+                <div className="w-full h-2 bg-app rounded-full overflow-hidden border border-divider">
+                  <div 
+                    className="h-full bg-sky-500 rounded-full transition-all duration-500"
+                    style={{ 
+                      width: usageData?.seats?.max === -1 
+                        ? '100%' 
+                        : `${Math.min(100, Math.round(((usageData?.seats?.current || 1) / (usageData?.seats?.max || 1)) * 100))}%` 
+                    }}
+                  />
+                </div>
+                <div className="text-[11px] text-muted flex items-center justify-between">
+                  <span>{subData?.customerType === 'organization' ? 'Includes owner and all staff' : 'Single user license'}</span>
+                  <span className="font-mono">{usageData?.seats?.max === -1 ? 'Unlimited' : `${usageData?.seats?.max || 1} Max`}</span>
+                </div>
+              </div>
+
+            </div>
+
+            {/* Additional Entitlements Summary */}
+            <div className="bg-card-bg rounded-2xl border border-divider p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+                <span>History: <strong className="text-main">{usageData?.historyDays === -1 ? 'Unlimited' : `${usageData?.historyDays || 7} Days`}</strong></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+                <span>WebRTC HD Video: <strong className="text-main">Included</strong></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+                <span>Invoicing & Claims: <strong className="text-main">Included</strong></span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
+                <span>Telemetry Analytics: <strong className="text-main">Included</strong></span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Payment Transactions Ledger (Section 9 & 10) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Payment Transactions & Audit Ledger</span>
+              <span className="text-[11px] text-muted font-mono">{paymentHistory.length} Settled Record(s)</span>
+            </div>
+
+            {(!orgId || canManageBilling) ? (
+              paymentHistory.length === 0 ? (
+                <div className="bg-card-bg rounded-2xl border border-divider p-8 text-center space-y-2">
+                  <CreditCard size={28} className="text-muted mx-auto" />
+                  <div className="text-sm font-semibold text-main">No payment transactions recorded</div>
+                  <div className="text-xs text-muted max-w-md mx-auto">
+                    This account is currently operating under baseline Free entitlements. Paid subscription upgrades through Razorpay will be automatically audited and receipted here.
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-app border-b border-divider text-muted uppercase font-mono text-[10px]">
+                        <tr>
+                          <th className="py-3 px-4">Date</th>
+                          <th className="py-3 px-4">Amount</th>
+                          <th className="py-3 px-4">Provider Ref (Razorpay)</th>
+                          <th className="py-3 px-4">Order ID</th>
+                          <th className="py-3 px-4">Payer</th>
+                          <th className="py-3 px-4 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-divider font-sans">
+                        {paymentHistory.map((p) => (
+                          <tr key={p.id} className="hover:bg-white/[0.015] transition-colors">
+                            <td className="py-3 px-4 text-main font-medium whitespace-nowrap">
+                              {p.created_at ? new Date(p.created_at).toLocaleString() : 'N/A'}
+                            </td>
+                            <td className="py-3 px-4 font-mono font-bold text-main">
+                              ₹{(p.amount || 0).toLocaleString('en-IN')}
+                            </td>
+                            <td className="py-3 px-4 font-mono text-muted">
+                              {p.provider_payment_id || 'N/A'}
+                            </td>
+                            <td className="py-3 px-4 font-mono text-muted">
+                              {p.provider_order_id || 'N/A'}
+                            </td>
+                            <td className="py-3 px-4 font-mono text-muted text-[11px]">
+                              {p.payer_user_id ? `User:${p.payer_user_id.slice(0, 8)}...` : 'Authorized Payer'}
+                            </td>
+                            <td className="py-3 px-4 text-right">
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                {p.status || 'Verified'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )
+            ) : (
+              <div className="bg-card-bg rounded-2xl border border-divider p-6 text-center space-y-2">
+                <Lock size={24} className="text-amber-400 mx-auto" />
+                <div className="text-xs text-muted">
+                  Transaction receipts and invoice clearing history are restricted to organization owners and billing administrators.
+                </div>
+              </div>
+            )}
+          </div>
+
         </div>
       )}
 

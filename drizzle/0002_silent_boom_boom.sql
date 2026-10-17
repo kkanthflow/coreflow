@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "onboardingStatus" varchar(50) DEFAULT 'workspace_required';

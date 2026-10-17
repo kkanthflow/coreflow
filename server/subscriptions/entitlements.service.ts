@@ -4,6 +4,7 @@ import {
   PlanTier,
   BillingInterval,
   PlanLimits,
+  normalizePlanTier,
 } from './subscription.config.js';
 import { SubscriptionService, SubscriptionRecord } from './subscription.service.js';
 
@@ -15,7 +16,7 @@ export interface UsagePeriod {
 
 export interface EntitlementCheckResult {
   allowed: boolean;
-  feature: 'invoices' | 'projects' | 'meetings' | 'seats' | 'analytics';
+  feature: 'invoices' | 'projects' | 'workflows' | 'history' | 'meetings' | 'seats' | 'analytics';
   current: number;
   limit: number | null;
   tier: PlanTier;
@@ -94,7 +95,7 @@ export class EntitlementsService {
 
     if (activeSub && ['active', 'authenticated'].includes(activeSub.status)) {
       return {
-        tier: (activeSub.plan_tier || 'freelancer') as PlanTier,
+        tier: normalizePlanTier(activeSub.plan_tier),
         interval: (activeSub.plan_interval || 'monthly') as BillingInterval,
         status: activeSub.status,
         subscription: activeSub,
@@ -112,16 +113,14 @@ export class EntitlementsService {
           .maybeSingle();
 
         if (orgData?.current_plan_tier) {
-          const orgTier = orgData.current_plan_tier.toLowerCase() as PlanTier;
-          if (SUBSCRIPTION_PLANS[orgTier]) {
-            return {
-              tier: orgTier,
-              interval: 'monthly',
-              status: orgData.subscription_status || 'active',
-              subscription: null,
-              verifiedOrgId,
-            };
-          }
+          const orgTier = normalizePlanTier(orgData.current_plan_tier);
+          return {
+            tier: orgTier,
+            interval: 'monthly',
+            status: orgData.subscription_status || 'free',
+            subscription: null,
+            verifiedOrgId,
+          };
         }
       } catch (err) {
         console.warn('[EntitlementsService] Org plan query error:', err);
@@ -137,26 +136,25 @@ export class EntitlementsService {
         .maybeSingle();
 
       if (userData?.current_plan_tier) {
-        const userTier = userData.current_plan_tier.toLowerCase() as PlanTier;
-        if (SUBSCRIPTION_PLANS[userTier]) {
-          return {
-            tier: userTier,
-            interval: 'monthly',
-            status: userData.subscription_status || 'active',
-            subscription: null,
-            verifiedOrgId,
-          };
-        }
+        const userTier = normalizePlanTier(userData.current_plan_tier);
+        return {
+          tier: userTier,
+          interval: 'monthly',
+          status: userData.subscription_status || 'free',
+          subscription: null,
+          verifiedOrgId,
+        };
       }
     } catch (err) {
       console.warn('[EntitlementsService] User plan query error:', err);
     }
 
-    // Default baseline tier
+    // Default baseline tier (Free tier according to context)
+    const defaultTier: PlanTier = verifiedOrgId ? 'business_free' : 'freelancer_free';
     return {
-      tier: 'freelancer',
+      tier: defaultTier,
       interval: 'monthly',
-      status: 'active',
+      status: 'free',
       subscription: null,
       verifiedOrgId,
     };
@@ -338,7 +336,7 @@ export class EntitlementsService {
     const planDef = SUBSCRIPTION_PLANS[tier];
     const limits = planDef.limits;
 
-    const isPro = tier === 'pro';
+    const isPro = tier === 'freelancer_pro' || tier === 'business_pro' || tier === 'pro';
 
     // Handle analytics tier check
     if (params.feature === 'analytics') {
@@ -352,14 +350,14 @@ export class EntitlementsService {
       };
     }
 
-    // Pro is NEVER blocked by artificial numeric quotas
+    // Pro plans have unlimited covered usage
     if (isPro) {
       return {
         allowed: true,
         feature: params.feature,
         current: 0,
         limit: null,
-        tier: 'pro',
+        tier,
         resetDate: period.resetDate,
         remaining: null,
         percent: 0,
@@ -392,6 +390,14 @@ export class EntitlementsService {
       case 'seats':
         current = usage.teamSeatsCount;
         limit = limits.maxSeats;
+        break;
+      case 'workflows':
+        current = 0;
+        limit = limits.maxWorkflows;
+        break;
+      case 'history':
+        current = 0;
+        limit = limits.historyDays;
         break;
     }
 

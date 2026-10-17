@@ -6,6 +6,9 @@ import {
   PlanTier,
   BillingInterval,
   getPlanConfig,
+  isFreelancerPlan,
+  isOrganizationPlan,
+  normalizePlanTier,
   GRACE_PERIOD_DAYS,
 } from './subscription.config.js';
 
@@ -13,6 +16,8 @@ export interface SubscriptionRecord {
   id: string;
   user_id: string;
   organization_id?: string | null;
+  customer_type?: 'freelancer' | 'organization';
+  payer_user_id?: string;
   workspace_type: 'independent' | 'organization';
   plan_tier: PlanTier;
   plan_interval: BillingInterval;
@@ -146,8 +151,11 @@ export class SubscriptionService {
 
   /**
    * Initiates checkout for a subscription plan.
-   * Validates parameters, checks for existing active subscription (idempotency),
-   * resolves plan ID, and creates Razorpay subscription.
+   * Enforces server-side RBAC:
+   * - Organization plans require active organization membership as owner or billing_admin.
+   * - Freelancer plans cannot be applied to an organization.
+   * - Free plans directly activate without payment gateway checkout.
+   * - Records purchaser/payer identity explicitly.
    */
   public static async initiateCheckout(params: {
     userId: string;
@@ -155,24 +163,89 @@ export class SubscriptionService {
     userName?: string;
     orgId?: string | null;
     tier: string;
-    interval: string;
+    interval?: string;
   }) {
-    const config = getPlanConfig(params.tier, params.interval);
+    const normTier = normalizePlanTier(params.tier);
+    const interval = 'monthly';
+    const config = getPlanConfig(normTier, interval);
     if (!config) {
-      throw new Error(`Invalid plan tier "${params.tier}" or interval "${params.interval}"`);
+      throw new Error(`Invalid plan tier "${params.tier}"`);
     }
 
-    const { tier, interval, plan, pricing, planKey } = config;
+    const { tier, plan, pricing, planKey } = config;
 
-    // Check if user or organization already has an active subscription
+    // 1. RBAC Check for Organization plans
+    if (isOrganizationPlan(tier)) {
+      if (!params.orgId) {
+        throw new Error('An organization ID is required to subscribe to a Business plan.');
+      }
+
+      // Check user membership role in organization
+      const { data: membership, error: memErr } = await supabaseAdmin
+        .from('user_organizations')
+        .select('role')
+        .eq('user_id', params.userId)
+        .eq('org_id', params.orgId)
+        .maybeSingle();
+
+      if (memErr || !membership) {
+        throw new Error('Forbidden: You are not a member of this organization.');
+      }
+
+      const role = (membership.role || '').toLowerCase();
+      if (!['owner', 'billing_admin'].includes(role)) {
+        throw new Error('Forbidden: Only an organization owner or billing administrator can purchase or manage organization subscriptions.');
+      }
+    }
+
+    // 2. Validation for Freelancer plans
+    if (isFreelancerPlan(tier)) {
+      if (params.orgId) {
+        throw new Error('Freelancer plans cannot be applied to an organization. Please select a Business plan.');
+      }
+    }
+
+    // 3. Free Plan Activation (₹0) - Instant activation without payment gateway
+    if (pricing.priceInr === 0) {
+      if (params.orgId) {
+        await supabaseAdmin
+          .from('organizations')
+          .update({
+            current_plan_tier: tier,
+            subscription_status: 'free',
+          })
+          .eq('id', params.orgId);
+      } else {
+        await supabaseAdmin
+          .from('users')
+          .update({
+            current_plan_tier: tier,
+            subscription_status: 'free',
+          })
+          .eq('id', params.userId);
+      }
+
+      return {
+        isFreePlan: true,
+        success: true,
+        planTier: tier,
+        planInterval: interval,
+        planName: plan.name,
+        amountInr: 0,
+        amountPaise: 0,
+        currency: 'INR',
+        message: `${plan.name} activated successfully.`,
+      };
+    }
+
+    // 4. Paid Plan: Check if user or organization already has an active subscription
     const existingActive = await this.getActiveSubscription({
       userId: params.userId,
       orgId: params.orgId,
     });
 
     if (existingActive && existingActive.status === 'active') {
-      // If already on this exact plan, prevent duplicate subscription
-      if (existingActive.plan_tier === tier && existingActive.plan_interval === interval) {
+      if (existingActive.plan_tier === tier) {
         return {
           alreadySubscribed: true,
           subscriptionId: existingActive.razorpay_subscription_id,
@@ -180,7 +253,7 @@ export class SubscriptionService {
           planName: plan.name,
           interval,
           currentPeriodEnd: existingActive.current_period_end,
-          message: `You are already actively subscribed to ${plan.name} (${interval}).`,
+          message: `You are already actively subscribed to ${plan.name}.`,
         };
       }
     }
@@ -189,24 +262,28 @@ export class SubscriptionService {
     const razorpayPlanId = await razorpayService.getOrCreatePlanId(tier, interval);
 
     // Call Razorpay Subscriptions API
-    const totalCycles = interval === 'monthly' ? 120 : 10;
+    const totalCycles = 120;
     const rzpSub = await razorpayService.createSubscription({
       planId: razorpayPlanId,
       totalCount: totalCycles,
       notes: {
         userId: params.userId,
+        payerUserId: params.userId,
         orgId: params.orgId || '',
+        customerType: params.orgId ? 'organization' : 'freelancer',
         tier,
         interval,
         appName: 'Auvryn',
       },
     });
 
-    // Record subscription in database with status 'created'
+    // Record subscription in database with customer_type and payer_user_id
     const newRecord: SubscriptionRecord = {
       id: crypto.randomUUID(),
       user_id: params.userId,
       organization_id: params.orgId || null,
+      customer_type: params.orgId ? 'organization' : 'freelancer',
+      payer_user_id: params.userId,
       workspace_type: plan.workspaceType,
       plan_tier: tier,
       plan_interval: interval,
@@ -227,6 +304,8 @@ export class SubscriptionService {
         priceInr: pricing.priceInr,
         userName: params.userName,
         userEmail: params.userEmail,
+        payerUserId: params.userId,
+        customerType: params.orgId ? 'organization' : 'freelancer',
       },
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -287,8 +366,11 @@ export class SubscriptionService {
       sub = {
         id: crypto.randomUUID(),
         user_id: params.userId,
-        workspace_type: 'independent',
-        plan_tier: 'freelancer',
+        payer_user_id: params.userId,
+        customer_type: (rzpDetails.notes as any)?.orgId ? 'organization' : 'freelancer',
+        organization_id: (rzpDetails.notes as any)?.orgId || null,
+        workspace_type: (rzpDetails.notes as any)?.orgId ? 'organization' : 'independent',
+        plan_tier: (rzpDetails.notes as any)?.tier || 'freelancer_starter',
         plan_interval: 'monthly',
         razorpay_subscription_id: params.subscriptionId,
         status: 'active',
@@ -305,20 +387,24 @@ export class SubscriptionService {
       sub.current_period_start = periodStart;
       sub.current_period_end = periodEnd;
       sub.paid_count = (sub.paid_count || 0) + 1;
+      sub.payer_user_id = params.userId; // Explicitly record actual payer
     }
 
     await this.saveSubscription(sub);
 
-    // 4. Log payment in subscription_payments table
+    // 4. Log payment in subscription_payments table with payer_user_id and customer_type
     const paymentRecord = {
       id: crypto.randomUUID(),
       subscription_id: sub.id,
       razorpay_subscription_id: params.subscriptionId,
       razorpay_payment_id: params.paymentId,
-      amount: rzpDetails.plan?.item?.amount || (sub.plan_interval === 'yearly' ? 299000 : 29900),
+      amount: rzpDetails.plan?.item?.amount || (SUBSCRIPTION_PLANS[sub.plan_tier]?.pricing.monthly.pricePaise || 29900),
       currency: 'INR',
       status: 'captured',
       method: 'online',
+      payer_user_id: params.userId,
+      customer_type: sub.customer_type || (sub.organization_id ? 'organization' : 'freelancer'),
+      organization_id: sub.organization_id || null,
       captured_at: new Date().toISOString(),
       created_at: new Date().toISOString(),
     };
@@ -558,7 +644,7 @@ export class SubscriptionService {
     orgId?: string | null;
   }): Promise<SubscriptionRecord | null> {
     try {
-      // Check org subscription first if orgId provided
+      // 1. If orgId is provided, query ONLY organization subscription for this specific orgId
       if (params.orgId) {
         const { data: orgSub } = await supabaseAdmin
           .from('subscriptions')
@@ -570,28 +656,29 @@ export class SubscriptionService {
           .maybeSingle();
 
         if (orgSub) return orgSub as SubscriptionRecord;
+      } else {
+        // 2. Freelancer query: ONLY return personal subscriptions where organization_id IS NULL
+        const { data: userSub } = await supabaseAdmin
+          .from('subscriptions')
+          .select('*')
+          .eq('user_id', params.userId)
+          .is('organization_id', null)
+          .in('status', ['active', 'authenticated'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (userSub) return userSub as SubscriptionRecord;
       }
-
-      // Check user-level subscription
-      const { data: userSub } = await supabaseAdmin
-        .from('subscriptions')
-        .select('*')
-        .eq('user_id', params.userId)
-        .in('status', ['active', 'authenticated'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (userSub) return userSub as SubscriptionRecord;
     } catch {
       // Check fallback memory
     }
 
-    // Fallback scan
+    // Fallback scan with strict isolation
     for (const sub of fallbackSubscriptions.values()) {
       if (['active', 'authenticated'].includes(sub.status)) {
         if (params.orgId && sub.organization_id === params.orgId) return sub;
-        if (sub.user_id === params.userId) return sub;
+        if (!params.orgId && !sub.organization_id && sub.user_id === params.userId) return sub;
       }
     }
 
