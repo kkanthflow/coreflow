@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import {
   LayoutDashboard, Briefcase, CheckSquare, Calendar, Video,
   MessageSquare, Users, Building2, Building, FileText,
-  CreditCard, BarChart3, Settings, ChevronLeft
+  CreditCard, BarChart3, Settings, ChevronLeft, ShieldCheck, Sparkles
 } from 'lucide-react';
 import { useRole } from '../hooks/useRole';
 import { useWorkspace } from '../hooks/useWorkspace';
@@ -54,6 +54,7 @@ export default function Sidebar() {
         items: [
           { name: 'Employees', to: '/employees', icon: Users, permission: 'view_team_directory' },
           { name: 'Departments', to: '/departments', icon: Building2, permission: 'manage_departments' },
+          { name: 'Audit Logs', to: '/audit-logs', icon: ShieldCheck, permission: 'view_audit_logs' },
         ]
       }
     ] : []),
@@ -69,6 +70,7 @@ export default function Sidebar() {
         { name: 'Invoices', to: '/invoices', icon: FileText, permission: 'view_invoices' },
         { name: 'Settlements', to: '/payments', icon: CreditCard, permission: 'record_payments' },
         { name: 'Telemetry', to: '/analytics', icon: BarChart3, permission: 'view_reports' },
+        { name: 'Plans & Pricing', to: '/pricing', icon: Sparkles, permission: null },
       ]
     }
   ];

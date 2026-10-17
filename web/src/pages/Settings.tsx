@@ -17,7 +17,8 @@ import {
   ShieldAlert, 
   AlertCircle, 
   Mail, 
-  Building2
+  Building2,
+  CreditCard
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -555,6 +556,37 @@ export default function Settings() {
                 <ChevronRight size={18} className="text-muted" />
               </button>
 
+            </div>
+          </div>
+
+          {/* Subscription & Billing Section */}
+          <div className="space-y-2.5">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Subscription & Plans</span>
+            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5">
+                <div className="w-10 h-10 rounded-xl bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A] shrink-0">
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <div className="text-base font-semibold text-main flex items-center gap-2">
+                    <span>Auvryn Plan & Razorpay Billing</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30">
+                      INR (₹)
+                    </span>
+                  </div>
+                  <div className="text-xs text-muted mt-0.5">
+                    Monthly & yearly subscriptions, seat entitlements, and usage limits.
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate('/pricing')}
+                className="px-4 py-2 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded-xl transition-all shadow-[0_0_12px_rgba(255,107,74,0.3)] shrink-0"
+              >
+                Manage Plans & Quotas →
+              </button>
             </div>
           </div>
 

@@ -64,7 +64,7 @@ export default function Clients() {
         .order('created_at', { ascending: false });
 
       if (orgId) {
-        query = query.or(`organization_id.eq.${orgId},org_id.eq.${orgId}`);
+        query = query.eq('organization_id', orgId);
       } else {
         query = query.eq('owner_id', user.id);
       }

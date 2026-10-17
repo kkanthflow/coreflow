@@ -44,56 +44,24 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
         .maybeSingle();
 
       if (userOrg && userOrg.organizations) {
+        const org: any = Array.isArray(userOrg.organizations) ? userOrg.organizations[0] : userOrg.organizations;
         setOrgId(userOrg.org_id);
-        // @ts-ignore
-        setOrgName(userOrg.organizations?.name || null);
-        // @ts-ignore
-        if (userOrg.organizations?.default_currency) {
-          // @ts-ignore
-          setDefaultCurrency(userOrg.organizations.default_currency);
+        setOrgName(org?.name || null);
+        if (org?.default_currency) {
+          setDefaultCurrency(org.default_currency);
         }
         return;
       }
 
-      // 2. Try checking if user owns an organization directly
-      const { data: ownedOrg } = await supabase
-        .from('organizations')
-        .select('id, name, default_currency')
-        .eq('owner_id', session.user.id)
-        .limit(1)
-        .maybeSingle();
-
-      if (ownedOrg) {
-        setOrgId(ownedOrg.id);
-        setOrgName(ownedOrg.name);
-        if (ownedOrg.default_currency) setDefaultCurrency(ownedOrg.default_currency);
-        return;
-      }
-
-      // 3. Fallback to check users table org_id if present
+      // 2. Fallback: load user preferences for currency only
       const { data: userData } = await supabase
         .from('users')
-        .select('org_id, preferences')
+        .select('preferences')
         .eq('id', session.user.id)
         .maybeSingle();
 
       if (userData?.preferences?.currency) {
         setDefaultCurrency(userData.preferences.currency);
-      }
-
-      if (userData?.org_id) {
-        const { data: orgData } = await supabase
-          .from('organizations')
-          .select('id, name, default_currency')
-          .eq('id', userData.org_id)
-          .maybeSingle();
-
-        if (orgData) {
-          setOrgId(orgData.id);
-          setOrgName(orgData.name);
-          if (orgData.default_currency) setDefaultCurrency(orgData.default_currency);
-          return;
-        }
       }
 
       setOrgId(null);

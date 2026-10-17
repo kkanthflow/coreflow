@@ -11,4 +11,9 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  supabaseJwtSecret: process.env.SUPABASE_JWT_SECRET ?? process.env.JWT_SECRET ?? "",
+  razorpayKeyId: process.env.RAZORPAY_KEY_ID ?? "",
+  razorpayKeySecret: process.env.RAZORPAY_KEY_SECRET ?? "",
+  razorpayWebhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET ?? "",
 };
+

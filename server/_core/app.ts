@@ -14,6 +14,10 @@ import { startCronJobs } from "./cron";
 import { sanitizationMiddleware } from "../security/validation";
 import { globalRateLimiter } from "../security/rateLimit";
 import { dispatchFCMPush } from "./notification";
+import { subscriptionsRouter } from "../subscriptions/subscriptions.routes";
+import { webhookRouter } from "../subscriptions/webhook.routes";
+import { contactRouter } from "../contact/contact.routes";
+import { razorpayStandardRouter } from "../payments/razorpay-standard.routes";
 
 function createPgClient() {
   const dbUrl = process.env.DATABASE_URL;
@@ -88,6 +92,8 @@ export function createExpressApp() {
             v_due_date DATE;
             v_department_id UUID;
             v_org_id UUID;
+            v_limits RECORD;
+            v_active_count INTEGER;
           BEGIN
             -- 1. Resolve the calling user
             v_user_id := auth.uid();
@@ -110,7 +116,25 @@ export function createExpressApp() {
               END IF;
             END IF;
 
-            -- 3. Insert the project
+            -- 3. Atomic Quota Verification
+            SELECT * INTO v_limits FROM public.fn_get_effective_limits(v_user_id::text, p_org_id);
+
+            IF v_limits.out_max_projects IS NOT NULL THEN
+              SELECT COUNT(*) INTO v_active_count
+              FROM public.projects
+              WHERE ((v_org_id IS NOT NULL AND org_id = v_org_id)
+                  OR (v_org_id IS NULL AND owner_id = v_user_id))
+                AND status NOT IN ('completed', 'archived')
+                AND deleted_at IS NULL;
+
+              IF v_active_count >= v_limits.out_max_projects THEN
+                RAISE EXCEPTION 'quota_exceeded:projects: Active project quota of % reached for % tier (% active). Upgrade at /pricing.',
+                  v_limits.out_max_projects, v_limits.out_plan_tier, v_active_count
+                  USING ERRCODE = 'P0001';
+              END IF;
+            END IF;
+
+            -- 4. Insert the project
             INSERT INTO public.projects (
               title, description, priority, cover_color, status,
               owner_id, created_by, due_date, department_id, org_id
@@ -120,12 +144,12 @@ export function createExpressApp() {
             )
             RETURNING id INTO v_project_id;
 
-            -- 4. Add creator as project owner member
+            -- 5. Add creator as project owner member
             INSERT INTO public.project_members (project_id, user_id, role, is_active, added_by)
             VALUES (v_project_id, v_user_id, 'owner', true, v_user_id)
             ON CONFLICT (project_id, user_id) DO UPDATE SET role = 'owner', is_active = true;
 
-            -- 5. Return the created project as JSON
+            -- 6. Return the created project as JSON
             SELECT jsonb_build_object(
               'id', p.id,
               'title', p.title,
@@ -195,7 +219,12 @@ export function createExpressApp() {
     next();
   });
 
-  app.use(express.json({ limit: "50mb" }));
+  app.use(express.json({
+    limit: "50mb",
+    verify: (req: any, _res, buf) => {
+      req.rawBody = buf;
+    }
+  }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   // Global input sanitization layer
@@ -209,6 +238,10 @@ export function createExpressApp() {
   registerAuthProxyRoutes(app);
   app.use('/api/meetings', meetingsRouter);
   app.use('/api/causality', causalityRouter);
+  app.use('/api/subscriptions', subscriptionsRouter);
+  app.use('/api/webhooks', webhookRouter);
+  app.use('/api/contact', contactRouter);
+  app.use('/api', razorpayStandardRouter);
 
   app.post("/api/notifications/send-push", async (req, res) => {
     const authHeader = req.headers.authorization;
@@ -319,7 +352,10 @@ export function createExpressApp() {
       <div class="ep"><span class="method">ANY</span><span class="path">/api/trpc/*</span></div>
       <div class="ep"><span class="method">ANY</span><span class="path">/api/meetings/*</span></div>
       <div class="ep"><span class="method">ANY</span><span class="path">/api/causality/*</span></div>
-      <div class="ep"><span class="method">POST</span><span class="path">/api/notifications/send-push</span></div>
+      <div class="ep"><span class="method">ANY</span><span class="path">/api/subscriptions/*</span></div>
+      <div class="ep"><span class="method">POST</span><span class="path">/api/webhooks/razorpay</span></div>
+      <div class="ep"><span class="method">POST</span><span class="path">/api/create-order</span></div>
+      <div class="ep"><span class="method">POST</span><span class="path">/api/verify-payment</span></div>
       <div class="ep"><span class="method">ANY</span><span class="path">/auth/*</span></div>
       <div class="ep"><span class="method">ANY</span><span class="path">/storage/*</span></div>
     </div>

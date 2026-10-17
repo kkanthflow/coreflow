@@ -187,14 +187,19 @@ class SDKServer {
     }
 
     try {
-      const secretKey = this.getSessionSecret();
+      const secret = ENV.supabaseJwtSecret || ENV.cookieSecret;
+      const secretKey = new TextEncoder().encode(secret);
       const { jwtVerify } = await import("jose");
       const { payload } = await jwtVerify(cookieValue, secretKey, {
         algorithms: ["HS256"],
       });
-      const { openId, appId, name } = payload as Record<string, unknown>;
 
-      if (!isNonEmptyString(openId) || !isNonEmptyString(appId) || !isNonEmptyString(name)) {
+      // Supabase JWT puts the user ID in the 'sub' claim.
+      const openId = (payload.sub || payload.openId) as string;
+      const appId = (payload.appId as string) || ENV.appId;
+      const name = (payload.name as string) || "";
+
+      if (!isNonEmptyString(openId)) {
         console.warn("[Auth] Session payload missing required fields");
         return null;
       }

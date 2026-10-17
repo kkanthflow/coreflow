@@ -116,7 +116,7 @@ export default function Dashboard() {
       const invoicesPromise = supabase
         .from('invoices')
         .select('id, invoice_number, total_amount, status, due_date')
-        .eq(isIndie ? 'owner_id' : 'org_id', isIndie ? user.id : orgId)
+        .eq(isIndie ? 'owner_id' : 'organization_id', isIndie ? user.id : orgId)
         .eq('is_deleted', false);
 
       // 5. Team / Members
@@ -130,7 +130,7 @@ export default function Dashboard() {
         .select('id', { count: 'exact', head: true });
 
       if (orgId) {
-        clientsPromise = clientsPromise.or(`organization_id.eq.${orgId},org_id.eq.${orgId}`);
+        clientsPromise = clientsPromise.eq('organization_id', orgId);
       } else {
         clientsPromise = clientsPromise.eq('owner_id', user.id);
       }

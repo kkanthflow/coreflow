@@ -17,7 +17,11 @@ import {
   TrendingUp,
   Mic,
   Monitor,
-  LayoutDashboard
+  LayoutDashboard,
+  Sparkles,
+  Check,
+  Menu,
+  X
 } from 'lucide-react';
 import AuvrynLogo from '../components/AuvrynLogo';
 
@@ -41,6 +45,8 @@ export default function Landing() {
   // Dynamic interactive states
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
   const [analyticsHoverIndex, setAnalyticsHoverIndex] = useState<number | null>(4);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [landingBillingInterval, setLandingBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
 
   // Projects live state during scroll
   const [projectProgress, setProjectProgress] = useState(14);
@@ -182,22 +188,25 @@ export default function Landing() {
 
       // ── 7. FINAL ECOSYSTEM CONVERGENCE ──
       if (finalRevealRef.current) {
-        gsap.fromTo(
-          '.ecosystem-node',
-          { scale: 0.7, opacity: 0 },
-          {
-            scale: 1,
-            opacity: 1,
-            stagger: 0.08,
-            ease: 'power2.out',
-            scrollTrigger: {
-              trigger: finalRevealRef.current,
-              start: 'top 80%',
-              end: 'bottom bottom',
-              scrub: 1,
+        const nodes = finalRevealRef.current.querySelectorAll('.ecosystem-node');
+        if (nodes && nodes.length > 0) {
+          gsap.fromTo(
+            nodes,
+            { scale: 0.7, opacity: 0 },
+            {
+              scale: 1,
+              opacity: 1,
+              stagger: 0.08,
+              ease: 'power2.out',
+              scrollTrigger: {
+                trigger: finalRevealRef.current,
+                start: 'top 80%',
+                end: 'bottom bottom',
+                scrub: 1,
+              }
             }
-          }
-        );
+          );
+        }
       }
 
     }, landingRef);
@@ -259,37 +268,70 @@ export default function Landing() {
             <a href="#chat" className="hover:text-main transition-colors">Conferencing</a>
             <a href="#finance" className="hover:text-main transition-colors">Ledger & Billing</a>
             <a href="#analytics" className="hover:text-main transition-colors">Telemetry</a>
+            <a href="#pricing" className="text-[#FF6B4A] hover:text-[#FF552B] font-bold transition-colors">Pricing</a>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
             {isAuthenticated ? (
               <Link
                 to="/dashboard"
                 className="text-xs font-semibold px-4 py-1.5 rounded-full bg-[#FF6B4A] hover:bg-[#FF552B] text-main transition-all shadow-[0_0_14px_rgba(255,107,74,0.35)] flex items-center gap-1.5"
               >
                 <LayoutDashboard size={13} />
-                <span>Go to Dashboard</span>
+                <span className="hidden sm:inline">Go to</span>
+                <span>Dashboard</span>
                 <ArrowRight size={13} />
               </Link>
             ) : (
               <>
                 <Link
                   to="/login"
-                  className="text-xs text-muted hover:text-main px-3.5 py-1.5 rounded-full hover:bg-white/[0.05] transition-all font-mono"
+                  className="text-xs text-muted hover:text-main px-3 py-1.5 rounded-full hover:bg-white/[0.05] transition-all font-mono hidden sm:inline"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="text-xs font-semibold px-4 py-1.5 rounded-full bg-[#FF6B4A] hover:bg-[#FF552B] text-main transition-all shadow-[0_0_14px_rgba(255,107,74,0.35)] flex items-center gap-1.5"
+                  className="text-xs font-semibold px-3.5 sm:px-4 py-1.5 rounded-full bg-[#FF6B4A] hover:bg-[#FF552B] text-main transition-all shadow-[0_0_14px_rgba(255,107,74,0.35)] flex items-center gap-1.5"
                 >
                   <span>Get Started</span>
                   <ArrowRight size={13} />
                 </Link>
               </>
             )}
+
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-1.5 rounded-full text-muted hover:text-main hover:bg-white/[0.08] transition-colors"
+              title="Toggle Menu"
+            >
+              {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
+            </button>
           </div>
         </nav>
+
+        {/* Mobile Dropdown Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden mt-2 bg-card-bg/95 backdrop-blur-2xl border border-divider rounded-2xl p-4 shadow-2xl space-y-2 text-xs font-mono text-muted animate-in fade-in slide-in-from-top-2 duration-150">
+            <a href="#projects" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-main transition-colors">Projects</a>
+            <a href="#tasks" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-main transition-colors">Tasks Kanban</a>
+            <a href="#chat" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-main transition-colors">Conferencing & Meetings</a>
+            <a href="#finance" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-main transition-colors">Ledger & Billing</a>
+            <a href="#analytics" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-main transition-colors">Telemetry</a>
+            <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="block py-2 text-[#FF6B4A] font-bold border-t border-divider">
+              Plans & Pricing (₹299 - ₹499)
+            </a>
+            <Link to="/pricing" onClick={() => setMobileMenuOpen(false)} className="block py-1 text-white underline underline-offset-4">
+              Open Full Pricing Matrix →
+            </Link>
+            {!isAuthenticated && (
+              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 text-zinc-300 border-t border-divider pt-2">
+                Sign In to Account
+              </Link>
+            )}
+          </div>
+        )}
       </header>
 
       {/* ──────────────────────────────────────────────────────────── */}
@@ -313,14 +355,14 @@ export default function Landing() {
 
         {/* Physical Headline Assembly */}
         <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.08] max-w-4xl text-main mb-6">
-          <span className="hero-headline-word-1 inline-block mr-3">One system.</span>
+          <span className="hero-headline-word-1 inline-block mr-3">Unite.</span>
           <span className="hero-headline-word-2 inline-block text-transparent bg-clip-text bg-gradient-to-r from-[#FF6B4A] via-[#FF8E75] to-white">
-            Unbroken flow.
+            Evolve. Rise.
           </span>
         </h1>
 
         <p className="hero-subtext text-xs sm:text-sm md:text-base text-muted max-w-2xl leading-relaxed mb-8">
-          A unified operating workbench for projects, real-time messaging, WebRTC video conferences, CRM accounts, and financial receivables.
+          AUVRYN is a secure workspace platform for organizations, teams, freelancers and clients to manage projects, tasks, files, meetings, communication and business workflows from one unified workspace.
         </p>
 
         {/* Primary Action Group */}
@@ -870,6 +912,268 @@ export default function Landing() {
       </section>
 
       {/* ──────────────────────────────────────────────────────────── */}
+      {/* ── SECTION 6.5: PLANS & PRICING ARCHITECTURE ─────────────── */}
+      {/* ──────────────────────────────────────────────────────────── */}
+      <section id="pricing" className="relative z-10 py-28 px-4 sm:px-6 border-t border-divider max-w-7xl mx-auto">
+        <div className="text-center space-y-4 max-w-3xl mx-auto mb-16">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-card-bg border border-divider text-[11px] font-mono text-muted shadow-sm">
+            <Sparkles size={12} className="text-[#FF6B4A]" />
+            <span>Transparent Scalable Architecture</span>
+          </div>
+
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-main">
+            Transparent Subscriptions. <br className="hidden sm:inline" />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#FF6B4A] to-white">
+              Zero Artificial Roadblocks.
+            </span>
+          </h2>
+
+          <p className="text-muted text-xs sm:text-sm md:text-base max-w-xl mx-auto leading-relaxed">
+            Monthly and yearly recurring billing with automated seat quotas, instant Razorpay checkout, and unrestricted capabilities.
+          </p>
+
+          {/* Monthly / Yearly Toggle */}
+          <div className="pt-4 flex items-center justify-center gap-3">
+            <div className="bg-card-bg border border-divider rounded-xl p-1.5 flex items-center gap-1 shadow-lg">
+              <button
+                onClick={() => setLandingBillingInterval('monthly')}
+                className={`px-5 py-2 rounded-lg text-xs font-mono font-semibold transition-all ${
+                  landingBillingInterval === 'monthly'
+                    ? 'bg-[#FF6B4A] text-white shadow-[0_0_15px_rgba(255,107,74,0.4)]'
+                    : 'text-muted hover:text-main'
+                }`}
+              >
+                Monthly Billing
+              </button>
+              <button
+                onClick={() => setLandingBillingInterval('yearly')}
+                className={`px-5 py-2 rounded-lg text-xs font-mono font-semibold transition-all flex items-center gap-2 ${
+                  landingBillingInterval === 'yearly'
+                    ? 'bg-[#FF6B4A] text-white shadow-[0_0_15px_rgba(255,107,74,0.4)]'
+                    : 'text-muted hover:text-main'
+                }`}
+              >
+                <span>Yearly Billing</span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                  Save 2 Months
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* 3 Tier Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-stretch">
+          
+          {/* 1. Freelancer */}
+          <div className="rounded-2xl flex flex-col justify-between bg-card-bg border border-divider hover:border-white/20 p-7 space-y-6 shadow-xl transition-all">
+            <div className="space-y-4">
+              <div>
+                <span className="text-[11px] font-mono text-zinc-400 tracking-wider uppercase font-semibold">Individual Workspace</span>
+                <h3 className="text-2xl font-bold text-main mt-0.5">Freelancer</h3>
+                <p className="text-xs text-muted mt-1 leading-relaxed">Solo specialists, independent consultants, and verified operators.</p>
+              </div>
+
+              <div className="pt-2 pb-4 border-b border-divider">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-4xl font-extrabold font-mono text-main">
+                    ₹{landingBillingInterval === 'monthly' ? '299' : '2,990'}
+                  </span>
+                  <span className="text-xs font-mono text-muted">
+                    / {landingBillingInterval === 'monthly' ? 'month' : 'year'}
+                  </span>
+                </div>
+                {landingBillingInterval === 'yearly' && (
+                  <p className="text-[11px] font-mono text-emerald-400 mt-1">₹249/mo effective · 2 months free</p>
+                )}
+              </div>
+
+              <div className="space-y-2.5 text-xs font-mono">
+                <div className="flex justify-between py-1 border-b border-divider/50">
+                  <span className="text-muted">Workspace Member:</span>
+                  <span className="text-main font-semibold">1 User Seat</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-divider/50">
+                  <span className="text-muted">Invoices Quota:</span>
+                  <span className="text-main font-semibold">15 / month</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-divider/50">
+                  <span className="text-muted">Active Projects:</span>
+                  <span className="text-main font-semibold">5 Projects</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-divider/50">
+                  <span className="text-muted">Secure Meetings:</span>
+                  <span className="text-main font-semibold">20 / month</span>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 text-xs text-muted">
+                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Automated PDF invoice generation</span></div>
+                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Basic telemetry ledger</span></div>
+                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>NIST P-256 encrypted chat</span></div>
+              </div>
+            </div>
+
+            <Link
+              to={`/pricing?plan=freelancer&interval=${landingBillingInterval}`}
+              aria-label="Get Started with Freelancer Plan"
+              className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-main border border-divider text-center transition-all flex items-center justify-center gap-2"
+            >
+              <span>Get Started →</span>
+            </Link>
+          </div>
+
+          {/* 2. Business Starter */}
+          <div className="rounded-2xl flex flex-col justify-between bg-card-bg border border-divider hover:border-white/20 p-7 space-y-6 shadow-xl transition-all">
+            <div className="space-y-4">
+              <div>
+                <span className="text-[11px] font-mono text-zinc-400 tracking-wider uppercase font-semibold">Small Agency & Studio</span>
+                <h3 className="text-2xl font-bold text-main mt-0.5">Business Starter</h3>
+                <p className="text-xs text-muted mt-1 leading-relaxed">Growing agile units, boutique consultancies, and multi-disciplinary teams.</p>
+              </div>
+
+              <div className="pt-2 pb-4 border-b border-divider">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-4xl font-extrabold font-mono text-main">
+                    ₹{landingBillingInterval === 'monthly' ? '399' : '3,990'}
+                  </span>
+                  <span className="text-xs font-mono text-muted">
+                    / {landingBillingInterval === 'monthly' ? 'month' : 'year'}
+                  </span>
+                </div>
+                {landingBillingInterval === 'yearly' && (
+                  <p className="text-[11px] font-mono text-emerald-400 mt-1">₹332/mo effective · 2 months free</p>
+                )}
+              </div>
+
+              <div className="space-y-2.5 text-xs font-mono">
+                <div className="flex justify-between py-1 border-b border-divider/50">
+                  <span className="text-muted">Team Members:</span>
+                  <span className="text-main font-semibold">Up to 5 Users</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-divider/50">
+                  <span className="text-muted">Invoices Quota:</span>
+                  <span className="text-main font-semibold">100 / month</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-divider/50">
+                  <span className="text-muted">Active Projects:</span>
+                  <span className="text-main font-semibold">25 Projects</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-divider/50">
+                  <span className="text-muted">Conferencing:</span>
+                  <span className="text-main font-semibold">100 / month + Recordings</span>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 text-xs text-muted">
+                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Role-based access control (RBAC)</span></div>
+                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Standard velocity telemetry</span></div>
+                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Priority ticketing & email support</span></div>
+              </div>
+            </div>
+
+            <Link
+              to={`/pricing?plan=starter&interval=${landingBillingInterval}`}
+              aria-label="Grow with Auvryn Starter Plan"
+              className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-main border border-divider text-center transition-all flex items-center justify-center gap-2"
+            >
+              <span>Grow with Auvryn →</span>
+            </Link>
+          </div>
+
+          {/* 3. Auvryn Pro (Featured) */}
+          <div className="relative rounded-2xl flex flex-col justify-between bg-card-bg border-2 border-[#FF6B4A] p-7 space-y-6 shadow-[0_0_35px_rgba(255,107,74,0.25)] transition-all">
+            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#FF6B4A] text-white text-[10px] font-mono font-bold tracking-wider rounded-full shadow-[0_0_12px_#FF6B4A]">
+              MOST POPULAR
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <span className="text-[11px] font-mono text-[#FF6B4A] tracking-wider uppercase font-semibold">Uncapped Velocity</span>
+                <h3 className="text-2xl font-bold text-main mt-0.5">Auvryn Pro</h3>
+                <p className="text-xs text-muted mt-1 leading-relaxed">Enterprise scaling with zero arbitrary seat limits and uncapped quotas.</p>
+              </div>
+
+              <div className="pt-2 pb-4 border-b border-divider">
+                <div className="flex items-baseline gap-1.5">
+                  <span className="text-4xl font-extrabold font-mono text-main">
+                    ₹{landingBillingInterval === 'monthly' ? '499' : '4,990'}
+                  </span>
+                  <span className="text-xs font-mono text-muted">
+                    / {landingBillingInterval === 'monthly' ? 'month' : 'year'}
+                  </span>
+                </div>
+                {landingBillingInterval === 'yearly' && (
+                  <p className="text-[11px] font-mono text-emerald-400 mt-1">₹415/mo effective · 2 months free</p>
+                )}
+              </div>
+
+              <div className="space-y-2.5 text-xs font-mono">
+                <div className="flex justify-between py-1 border-b border-divider/50">
+                  <span className="text-muted">Team Members:</span>
+                  <span className="text-emerald-400 font-bold">Unlimited (No Cap)</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-divider/50">
+                  <span className="text-muted">Invoices Quota:</span>
+                  <span className="text-emerald-400 font-bold">Unlimited Invoices</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-divider/50">
+                  <span className="text-muted">Active Projects:</span>
+                  <span className="text-emerald-400 font-bold">Unlimited Projects</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-divider/50">
+                  <span className="text-muted">Conferencing:</span>
+                  <span className="text-emerald-400 font-bold">Unlimited Meetings</span>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2 text-xs text-muted">
+                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Unlimited telemetry & deep audit trails</span></div>
+                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Multi-currency billing & custom payment rails</span></div>
+                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Dedicated 24/7 priority SLA support</span></div>
+              </div>
+            </div>
+
+            <Link
+              to={`/pricing?plan=pro&interval=${landingBillingInterval}`}
+              aria-label="Unlock Auvryn Pro Plan"
+              className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#FF6B4A] hover:bg-[#FF552B] text-white shadow-[0_0_20px_rgba(255,107,74,0.4)] text-center transition-all flex items-center justify-center gap-2"
+            >
+              <span>Unlock Auvryn Pro →</span>
+            </Link>
+          </div>
+
+        </div>
+
+        {/* Link to Full Pricing & Comparison Matrix */}
+        <div className="mt-12 text-center">
+          <Link
+            to="/pricing"
+            className="inline-flex items-center gap-2 text-xs font-mono text-[#FF6B4A] hover:text-[#FF552B] hover:underline underline-offset-4"
+          >
+            <span>View Comprehensive 10-Point Quota & Capability Comparison Matrix</span>
+            <ArrowRight size={14} />
+          </Link>
+        </div>
+
+        {/* Custom Development CTA Banner */}
+        <div className="mt-8 max-w-4xl mx-auto bg-card-bg border border-divider rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 text-left shadow-lg">
+          <div className="space-y-1">
+            <span className="text-[11px] font-mono text-[#FF6B4A] uppercase tracking-wider font-semibold">Custom Development</span>
+            <h4 className="text-lg font-bold text-main">Need Bespoke Architecture or Specialized Integrations?</h4>
+            <p className="text-xs text-muted">Tailored ERP connectors, dedicated private cloud deployments, and custom modules.</p>
+          </div>
+          <Link
+            to="/pricing?inquiry=true"
+            aria-label="Contact Our Team for Custom Development"
+            className="px-6 py-3 bg-white text-zinc-900 hover:bg-zinc-200 font-bold text-xs rounded-xl transition-all shadow-md shrink-0 flex items-center gap-2"
+          >
+            <span>Contact Our Team →</span>
+          </Link>
+        </div>
+      </section>
+
+      {/* ──────────────────────────────────────────────────────────── */}
       {/* ── SECTION 7: FINAL ECOSYSTEM CONVERGENCE & CALL TO ACTION ─ */}
       {/* ──────────────────────────────────────────────────────────── */}
       <section
@@ -933,8 +1237,14 @@ export default function Landing() {
           )}
         </div>
 
-        <div className="mt-20 pt-8 border-t border-divider w-full max-w-4xl flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono text-muted">
-          <span>© 2026 AUVRYN by Skavelon Technologies.</span>
+        <div className="mt-20 pt-8 border-t border-divider w-full max-w-4xl flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono text-muted gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
+            <span>© 2026 AUVRYN by Skavelon Technologies.</span>
+            <Link to="/pricing" className="text-[#FF6B4A] hover:underline font-semibold">Pricing</Link>
+            <Link to="/privacy-policy" className="hover:text-main">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-main">Terms of Service</Link>
+            <Link to="/contact" className="hover:text-main">Contact</Link>
+          </div>
           <span>NIST P-256 · TLS 1.3 · LiveKit SFU</span>
         </div>
       </section>

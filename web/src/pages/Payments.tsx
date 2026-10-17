@@ -10,6 +10,7 @@ import {
 import {
   PageHeader, MetricStrip, EmptyState, SkeletonRow, type MetricItem
 } from '../components/ui/ObsidianPrimitives';
+import RazorpayStandardCheckoutButton from '../components/RazorpayStandardCheckoutButton';
 
 export default function Payments() {
   const { user } = useAuth();
@@ -82,13 +83,21 @@ export default function Payments() {
         title="Settlements & Financial Transactions"
         description="Reconciled payment receipts, clearing ledger, and audit history."
         actions={
-          <button
-            onClick={fetchPayments}
-            className="p-2 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider transition-colors"
-            title="Sync settlements"
-          >
-            <RefreshCw size={13} />
-          </button>
+          <div className="flex items-center gap-3">
+            <RazorpayStandardCheckoutButton
+              amountInRupees={500}
+              description="Settlement Retainer / Direct Payment"
+              buttonText="Proceed to Payment (₹500) →"
+              onSuccess={() => fetchPayments()}
+            />
+            <button
+              onClick={fetchPayments}
+              className="p-2 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider transition-colors"
+              title="Sync settlements"
+            >
+              <RefreshCw size={13} />
+            </button>
+          </div>
         }
       />
 

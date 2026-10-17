@@ -37,9 +37,37 @@ export default function Analytics() {
     total: 0, done: 0, inProgress: 0, review: 0, todo: 0,
   });
 
+  const [analyticsTier, setAnalyticsTier] = useState<'basic' | 'standard' | 'unlimited'>('basic');
+  const [canViewExecutive, setCanViewExecutive] = useState(true);
+
+  const apiUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? '/api'
+    : (import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
+
   const fetchAnalytics = useCallback(async () => {
     if (!user) { setLoading(false); return; }
     try {
+      // 1. Check server-enforced analytics entitlement
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (token) {
+          const res = await fetch(`${apiUrl}/subscriptions/analytics`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              ...(orgId ? { 'x-organization-id': orgId } : {}),
+            },
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setAnalyticsTier(data.level || 'basic');
+            setCanViewExecutive(data.features?.executiveVelocity ?? true);
+          }
+        }
+      } catch (err) {
+        console.warn('Analytics entitlement check non-fatal error:', err);
+      }
+
       if (orgId) {
         const { data: orgData } = await supabase
           .from('organizations').select('default_currency').eq('id', orgId).single();
@@ -55,7 +83,7 @@ export default function Analytics() {
             ? supabase.from('tasks').select('id, status').eq('org_id', orgId)
             : supabase.from('tasks').select('id, status').eq('created_by', user.id),
           orgId
-            ? supabase.from('invoices').select('id, status, total_amount, amount_paid').eq('org_id', orgId).eq('is_deleted', false)
+            ? supabase.from('invoices').select('id, status, total_amount, amount_paid').eq('organization_id', orgId).eq('is_deleted', false)
             : supabase.from('invoices').select('id, status, total_amount, amount_paid').eq('owner_id', user.id).eq('is_deleted', false),
         ]);
 
@@ -173,6 +201,16 @@ export default function Analytics() {
               })}
             </div>
 
+            <div className={`px-2.5 py-1 rounded text-[11px] font-mono border ${
+              analyticsTier === 'unlimited'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-bold'
+                : analyticsTier === 'standard'
+                ? 'bg-blue-500/10 border-blue-500/30 text-blue-400 font-bold'
+                : 'bg-zinc-800 border-zinc-700 text-zinc-300'
+            }`}>
+              {analyticsTier === 'unlimited' ? 'Advanced Analytics (Pro)' : analyticsTier === 'standard' ? 'Standard Analytics' : 'Basic Analytics'}
+            </div>
+
             <button
               onClick={handleRefresh}
               disabled={refreshing}
@@ -187,6 +225,23 @@ export default function Analytics() {
 
       {/* ── Metric Strip ── */}
       <MetricStrip metrics={metrics} />
+
+      {!canViewExecutive && (
+        <div className="p-4 rounded-lg bg-card-bg border border-[#FF6B4A]/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+          <div>
+            <span className="font-bold text-main">Executive Velocity & Telemetry</span>
+            <p className="text-muted text-[11px] mt-0.5">
+              Advanced initiative trajectories and sprint velocity curves are included in Business Starter and Auvryn Pro plans.
+            </p>
+          </div>
+          <a
+            href="/pricing"
+            className="px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-white font-semibold shrink-0 transition-colors shadow"
+          >
+            Upgrade Plan at /pricing →
+          </a>
+        </div>
+      )}
 
       {loading ? (
         <SkeletonRow count={4} />

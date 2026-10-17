@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { MeetingsController } from './meetings.controller.js';
+import { requireEntitlement } from '../subscriptions/entitlements.middleware.js';
 
 
 const router = Router();
@@ -42,7 +43,7 @@ const requireAuth = async (req: any, res: any, next: any) => {
 };
 
 // Secured user endpoints
-router.post('/', requireAuth, MeetingsController.createMeeting);
+router.post('/', requireAuth, requireEntitlement('meetings'), MeetingsController.createMeeting);
 router.get('/:id', requireAuth, MeetingsController.getMeetingDetails);
 router.post('/:id/join', requireAuth, MeetingsController.joinMeeting);
 router.post('/:id/invite', requireAuth, MeetingsController.inviteUser);

@@ -58,7 +58,7 @@ export default function Invoices() {
         .order('created_at', { ascending: false });
 
       if (orgId) {
-        query = query.eq('org_id', orgId);
+        query = query.eq('organization_id', orgId);
       } else {
         query = query.eq('owner_id', user.id);
       }

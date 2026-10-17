@@ -26,6 +26,10 @@ export default function NewProject() {
   const [departments, setDepartments] = useState<any[]>([]);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [quotaError, setQuotaError] = useState<{
+    message: string;
+    upgradeUrl: string;
+  } | null>(null);
 
   useEffect(() => {
     async function loadDepts() {
@@ -41,6 +45,7 @@ export default function NewProject() {
     if (!title.trim() || !user) return;
     setSaving(true);
     setErrorMsg(null);
+    setQuotaError(null);
     try {
       // Use SECURITY DEFINER RPC to atomically create project + owner membership
       const { data, error } = await supabase.rpc('create_project_with_member', {
@@ -63,7 +68,15 @@ export default function NewProject() {
       }
     } catch (e: any) {
       console.error('Failed to create project:', e);
-      setErrorMsg(e.message || 'Failed to create project.');
+      const msg = e.message || 'Failed to create project.';
+      if (msg.includes('quota_exceeded')) {
+        setQuotaError({
+          message: msg.replace(/.*quota_exceeded:[^:]*:\s*/, ''),
+          upgradeUrl: '/pricing',
+        });
+      } else {
+        setErrorMsg(msg);
+      }
     } finally {
       setSaving(false);
     }
@@ -88,6 +101,32 @@ export default function NewProject() {
           </button>
         }
       />
+
+      {quotaError && (
+        <div className="max-w-2xl p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-300">
+          <div className="space-y-1">
+            <div className="font-bold text-amber-200 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
+              <span>Active Project Quota Reached</span>
+            </div>
+            <p className="text-zinc-300">{quotaError.message}</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => navigate('/pricing')}
+              className="px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-white font-semibold transition-colors shadow-md"
+            >
+              Upgrade at /pricing →
+            </button>
+            <button
+              onClick={() => setQuotaError(null)}
+              className="px-2 py-1.5 rounded hover:bg-white/10 text-zinc-400 hover:text-white"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {errorMsg && (
         <div className="bg-red-500/10 border border-red-500/20 rounded p-3 text-xs text-red-400">

@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from './hooks/useAuth';
 import { WorkspaceProvider } from './hooks/useWorkspace';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { trpc } from './lib/trpc';
+import { supabase } from './lib/supabase';
 import AppShell from './components/AppShell';
 
 // Eagerly loaded
@@ -16,6 +17,7 @@ import Register from './pages/Register';
 import Landing from './pages/Landing';
 
 // Lazy loaded pages (code-split)
+const Onboarding      = lazy(() => import('./pages/Onboarding'));
 const Dashboard       = lazy(() => import('./pages/Dashboard'));
 const Projects        = lazy(() => import('./pages/Projects'));
 const NewProject      = lazy(() => import('./pages/NewProject'));
@@ -39,17 +41,23 @@ const Analytics       = lazy(() => import('./pages/Analytics'));
 const Settings        = lazy(() => import('./pages/Settings'));
 const PreJoin         = lazy(() => import('./pages/PreJoin'));
 const MeetingRoom     = lazy(() => import('./pages/MeetingRoom'));
+const AuditLogs       = lazy(() => import('./pages/AuditLogs'));
+const Privacy         = lazy(() => import('./pages/Privacy'));
+const Terms           = lazy(() => import('./pages/Terms'));
+const Contact         = lazy(() => import('./pages/Contact'));
+const Pricing         = lazy(() => import('./pages/Pricing'));
 
 function PageLoader() {
   return (
-    <div className="flex items-center justify-center h-full">
-      <div className="w-8 h-8 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin" />
+    <div className="min-h-[60vh] w-full flex flex-col items-center justify-center text-main">
+      <div className="w-10 h-10 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin mb-3" />
+      <span className="text-xs font-mono text-muted tracking-wider">LOADING MODULE...</span>
     </div>
   );
 }
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth();
+  const { session, loading, onboardingStatus } = useAuth();
   if (loading) {
     return (
       <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
@@ -59,12 +67,13 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
   if (!session?.user?.id) return <Navigate to="/" replace />;
+  if (onboardingStatus === 'workspace_required') return <Navigate to="/onboarding" replace />;
   return <>{children}</>;
 }
 
 // Smart root: redirect authenticated users to dashboard, else show landing
 function RootRoute() {
-  const { session, loading } = useAuth();
+  const { session, loading, onboardingStatus } = useAuth();
   if (loading) {
     return (
       <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
@@ -73,19 +82,32 @@ function RootRoute() {
       </div>
     );
   }
-  if (session?.user?.id) return <Navigate to="/dashboard" replace />;
+  if (session?.user?.id) {
+    if (onboardingStatus === 'workspace_required') return <Navigate to="/onboarding" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
   return <Landing />;
 }
 
 // Redirect already-logged-in users away from auth pages
 function GuestRoute({ children }: { children: React.ReactNode }) {
-  const { session, loading } = useAuth();
-  if (loading) return null;
-  if (session?.user?.id) return <Navigate to="/dashboard" replace />;
+  const { session, loading, onboardingStatus } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
+        <div className="w-8 h-8 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+  if (session?.user?.id) {
+    if (onboardingStatus === 'workspace_required') return <Navigate to="/onboarding" replace />;
+    return <Navigate to="/dashboard" replace />;
+  }
   return <>{children}</>;
 }
 
 import { ToastProvider } from './components/ui/Toast';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function App() {
   const [queryClient] = useState(() => new QueryClient({
@@ -98,7 +120,9 @@ function App() {
           url: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
           transformer: superjson as any,
           async headers() {
-            return {};
+            const { data } = await supabase.auth.getSession();
+            const token = data.session?.access_token;
+            return token ? { Authorization: `Bearer ${token}` } : {};
           },
         }),
       ],
@@ -106,19 +130,28 @@ function App() {
   );
 
   return (
-    <trpc.Provider client={trpcClient} queryClient={queryClient}>
-      <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <ThemeProvider>
-            <div className="min-h-screen bg-app text-main antialiased">
-              <AuthProvider>
-                <WorkspaceProvider>
-                  <BrowserRouter>
+    <ErrorBoundary>
+      <trpc.Provider client={trpcClient} queryClient={queryClient}>
+        <QueryClientProvider client={queryClient}>
+          <ToastProvider>
+            <ThemeProvider>
+              <div className="min-h-screen bg-app text-main antialiased">
+                <AuthProvider>
+                  <WorkspaceProvider>
+                    <BrowserRouter>
                   <Routes>
                     <Route path="/" element={<RootRoute />} />
                     <Route path="/landing" element={<Landing />} />
                     <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
                     <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
+                    <Route path="/privacy-policy" element={<Suspense fallback={<PageLoader />}><Privacy /></Suspense>} />
+                    <Route path="/terms" element={<Suspense fallback={<PageLoader />}><Terms /></Suspense>} />
+                    <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
+                    <Route path="/pricing" element={<Suspense fallback={<PageLoader />}><Pricing /></Suspense>} />
+
+                    <Route path="/onboarding" element={
+                      <Suspense fallback={<PageLoader />}><Onboarding /></Suspense>
+                    } />
 
                     {/* ── All shell-wrapped protected routes ── */}
                     <Route element={<AuthGuard><AppShell /></AuthGuard>}>
@@ -160,9 +193,10 @@ function App() {
                       <Route path="/invoices/:id" element={<Suspense fallback={<PageLoader />}><InvoiceDetail /></Suspense>} />
                       <Route path="/payments"  element={<Suspense fallback={<PageLoader />}><Payments /></Suspense>} />
                       
-                      {/* Analytics & Settings */}
+                      {/* Analytics & Settings & Audit Logs */}
                       <Route path="/analytics" element={<Suspense fallback={<PageLoader />}><Analytics /></Suspense>} />
                       <Route path="/settings"  element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
+                      <Route path="/audit-logs" element={<Suspense fallback={<PageLoader />}><AuditLogs /></Suspense>} />
                     </Route>
 
                     {/* ── Standalone meeting routes (no shell, full-screen) ── */}
@@ -179,6 +213,7 @@ function App() {
         </ToastProvider>
       </QueryClientProvider>
     </trpc.Provider>
+    </ErrorBoundary>
   );
 }
 

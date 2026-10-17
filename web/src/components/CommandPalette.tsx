@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import {
   Search, LayoutDashboard, Briefcase, CheckSquare, Video,
   MessageSquare, Building, FileText, BarChart3,
-  Settings as SettingsIcon, Plus
+  Settings as SettingsIcon, Plus, Sparkles
 } from 'lucide-react';
 
 interface CommandPaletteProps {
@@ -19,6 +19,7 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
 
   const ACTIONS = [
     { section: 'Navigation', title: 'Go to Dashboard', icon: LayoutDashboard, path: '/dashboard', shortcut: 'G D' },
+    { section: 'Navigation', title: 'Open Plans & Pricing', icon: Sparkles, path: '/pricing', shortcut: 'G $' },
     { section: 'Navigation', title: 'Open Projects', icon: Briefcase, path: '/projects', shortcut: 'G P' },
     { section: 'Navigation', title: 'Open Tasks Kanban', icon: CheckSquare, path: '/tasks', shortcut: 'G T' },
     { section: 'Navigation', title: 'Open Live Chat', icon: MessageSquare, path: '/chat', shortcut: 'G C' },
@@ -141,7 +142,8 @@ export default function CommandPalette({ isOpen, onClose }: CommandPaletteProps)
                       </div>
                     </motion.div>
                   );
-                })
+   
+                      })
               )}
             </div>
 

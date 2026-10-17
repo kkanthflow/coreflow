@@ -4,6 +4,14 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/webhooks/razorpay",
+      "destination": "/api/webhooks/razorpay"
+    },
+    {
+      "source": "/api/(.*)",
+      "destination": "https://coreflow-one-seven.vercel.app/api/$1"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

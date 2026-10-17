@@ -1,14 +1,5 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": ["api/index.js"]
-      }
-    }
-  ],
   "routes": [
     { "src": "/(.*)", "dest": "/api/index.js" }
   ],
@@ -16,6 +7,8 @@
     "VITE_SUPABASE_URL": "https://rltygdzldplkmwuqfadm.supabase.co",
     "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsdHlnZHpsZHBsa213dXFmYWRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDM5NTUsImV4cCI6MjA5Njc3OTk1NX0.xmZ5bCZimFP4-AO9Y3CPMD_9thUK0qpilajd6zftvs0",
     "EXPO_PUBLIC_SUPABASE_URL": "https://rltygdzldplkmwuqfadm.supabase.co",
-    "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsdHlnZHpsZHBsa213dXFmYWRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDM5NTUsImV4cCI6MjA5Njc3OTk1NX0.xmZ5bCZimFP4-AO9Y3CPMD_9thUK0qpilajd6zftvs0"
+    "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJsdHlnZHpsZHBsa213dXFmYWRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDM5NTUsImV4cCI6MjA5Njc3OTk1NX0.xmZ5bCZimFP4-AO9Y3CPMD_9thUK0qpilajd6zftvs0",
+    "VITE_API_URL": "https://coreflow-kk5480346-9617s-projects.vercel.app/api",
+    "EXPO_PUBLIC_API_URL": "https://coreflow-kk5480346-9617s-projects.vercel.app/api"
   }
 }
