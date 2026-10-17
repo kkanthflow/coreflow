@@ -145,7 +145,10 @@ function App() {
                     <Route path="/login" element={<GuestRoute><Login /></GuestRoute>} />
                     <Route path="/register" element={<GuestRoute><Register /></GuestRoute>} />
                     <Route path="/privacy-policy" element={<Suspense fallback={<PageLoader />}><Privacy /></Suspense>} />
+                    <Route path="/privacy" element={<Suspense fallback={<PageLoader />}><Privacy /></Suspense>} />
                     <Route path="/terms" element={<Suspense fallback={<PageLoader />}><Terms /></Suspense>} />
+                    <Route path="/terms-and-conditions" element={<Suspense fallback={<PageLoader />}><Terms /></Suspense>} />
+                    <Route path="/terms-of-service" element={<Suspense fallback={<PageLoader />}><Terms /></Suspense>} />
                     <Route path="/contact" element={<Suspense fallback={<PageLoader />}><Contact /></Suspense>} />
                     <Route path="/pricing" element={<Suspense fallback={<PageLoader />}><Pricing /></Suspense>} />
 

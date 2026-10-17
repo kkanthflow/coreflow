@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Check, Shield, Activity, Lock, ArrowRight, Loader2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { EASINGS } from '../lib/motionSystem';
@@ -213,7 +213,26 @@ export default function Onboarding() {
                   onChange={(e) => setFormData({...formData, termsAccepted: e.target.checked})}
                 />
                 <span className="text-xs text-muted">
-                  I agree to the AUVRYN Terms & Conditions and Privacy Policy.
+                  I agree to the AUVRYN{' '}
+                  <Link
+                    to="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-[#FF6B4A] underline hover:text-[#FF552B]"
+                  >
+                    Terms & Conditions
+                  </Link>{' '}
+                  and{' '}
+                  <Link
+                    to="/privacy-policy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-[#FF6B4A] underline hover:text-[#FF552B]"
+                  >
+                    Privacy Policy
+                  </Link>.
                 </span>
               </label>
               <button 

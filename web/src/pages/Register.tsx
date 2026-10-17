@@ -628,8 +628,25 @@ export default function Register() {
                   />
                   <span className="text-[11px] text-muted leading-relaxed">
                     I acknowledge and agree to the{' '}
-                    <span className="text-[#FF6B4A] font-semibold hover:underline">Privacy Policy</span> and{' '}
-                    <span className="text-[#FF6B4A] font-semibold hover:underline">Terms & Conditions</span>.
+                    <Link
+                      to="/privacy-policy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[#FF6B4A] font-semibold hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>{' '}
+                    and{' '}
+                    <Link
+                      to="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[#FF6B4A] font-semibold hover:underline"
+                    >
+                      Terms & Conditions
+                    </Link>.
                   </span>
                 </label>
                 {errors.agreed && <div className="text-[10px] text-red-400">{errors.agreed}</div>}
