@@ -5,8 +5,8 @@ import Razorpay from 'razorpay';
 export const razorpayStandardRouter = Router();
 
 function getRazorpayClient(): { client: any; keyId: string; keySecret: string } {
-  const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_live_ToxuTZUJk9Kjs0';
-  const keySecret = process.env.RAZORPAY_KEY_SECRET || 'jX3JWseZHp08O1haOrJdt5sP';
+  const keyId = process.env.RAZORPAY_KEY_ID || 'rzp_test_Tp698ZJF4kqofH';
+  const keySecret = process.env.RAZORPAY_KEY_SECRET || 'AoOKahZG7xU24Khmz0yyLy2O';
 
   const client = new (Razorpay as any)({
     key_id: keyId,

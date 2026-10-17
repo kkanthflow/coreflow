@@ -135,7 +135,7 @@ export async function openRazorpayStandardCheckout(options: OpenRazorpayStandard
     throw new Error('Unable to connect to Razorpay payment gateway. Please check your internet connection.');
   }
 
-  const razorpayKey = options.key || (import.meta.env as any).VITE_RAZORPAY_KEY_ID || 'rzp_live_ToxuTZUJk9Kjs0';
+  const razorpayKey = options.key || (import.meta.env as any).VITE_RAZORPAY_KEY_ID || 'rzp_test_Tp698ZJF4kqofH';
 
   const checkoutOptions = {
     key: razorpayKey,

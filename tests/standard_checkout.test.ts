@@ -11,8 +11,8 @@ function assert(condition: boolean, message: string) {
 async function testStandardCheckoutFlow() {
   console.log('🧪 Starting Razorpay Standard Web Checkout Test Suite...\n');
 
-  const KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_live_ToxuTZUJk9Kjs0';
-  const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'jX3JWseZHp08O1haOrJdt5sP';
+  const KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_test_Tp698ZJF4kqofH';
+  const KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'AoOKahZG7xU24Khmz0yyLy2O';
 
   // Test 1: HMAC-SHA256 algorithm verification
   console.log('Test 1: Signature generation algorithm verification...');
