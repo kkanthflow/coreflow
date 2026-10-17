@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
+  <url>
+       <loc>https://auvrynplatform.vercel.app/</loc>
+       <lastmod>2026-10-17T20:36:12+00:00</lastmod>
+       <priority>1.0000</priority>
+  </url>
+  <url>
+       <loc>https://auvrynplatform.vercel.app/login</loc>
+       <lastmod>2026-10-17T20:36:12+00:00</lastmod>
+       <priority>0.6400</priority>
+  </url>
+  <url>
+       <loc>https://auvrynplatform.vercel.app/register</loc>
+       <lastmod>2026-10-17T20:36:12+00:00</lastmod>
+       <priority>0.6400</priority>
+  </url>
+  <url>
+       <loc>https://auvrynplatform.vercel.app/pricing?plan=freelancer&amp;interval=monthly</loc>
+       <lastmod>2026-10-17T20:36:12+00:00</lastmod>
+       <priority>0.6400</priority>
+  </url>
+  <url>
+       <loc>https://auvrynplatform.vercel.app/pricing?plan=starter&amp;interval=monthly</loc>
+       <lastmod>2026-10-17T20:36:12+00:00</lastmod>
+       <priority>0.6400</priority>
+  </url>
+  <url>
+       <loc>https://auvrynplatform.vercel.app/pricing?plan=pro&amp;interval=monthly</loc>
+       <lastmod>2026-10-17T20:36:12+00:00</lastmod>
+       <priority>0.6400</priority>
+  </url>
+  <url>
+       <loc>https://auvrynplatform.vercel.app/pricing</loc>
+       <lastmod>2026-10-17T20:36:12+00:00</lastmod>
+       <priority>0.6400</priority>
+  </url>
+  <url>
+       <loc>https://auvrynplatform.vercel.app/pricing?inquiry=true</loc>
+       <lastmod>2026-10-17T20:36:12+00:00</lastmod>
+       <priority>0.6400</priority>
+  </url>
+  <url>
+       <loc>https://auvrynplatform.vercel.app/privacy-policy</loc>
+       <lastmod>2026-10-17T20:36:12+00:00</lastmod>
+       <priority>0.6400</priority>
+  </url>
+  <url>
+       <loc>https://auvrynplatform.vercel.app/terms</loc>
+       <lastmod>2026-10-17T20:36:12+00:00</lastmod>
+       <priority>0.6400</priority>
+  </url>
+  <url>
+       <loc>https://auvrynplatform.vercel.app/contact</loc>
+       <lastmod>2026-10-17T20:36:12+00:00</lastmod>
+       <priority>0.6400</priority>
+  </url>
+</urlset>
