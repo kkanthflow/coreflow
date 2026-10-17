@@ -1,4 +1,4 @@
-import express from "express";
+import express, { Request, Response, NextFunction } from "express";
 import path from "path";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import pg from "pg";
@@ -178,7 +178,7 @@ export function createExpressApp() {
         console.log("[Migration] ✓ create_project_with_member database RPC applied successfully");
         await client.end();
       })
-      .catch((err) => {
+      .catch((err: any) => {
         console.error("[Migration] Error executing startup database migration:", err);
       });
   }
@@ -192,7 +192,7 @@ export function createExpressApp() {
   app.disable("x-powered-by");
 
   // Enable CORS for all routes - reflect the request origin to support credentials
-  app.use((req, res, next) => {
+  app.use((req: Request, res: Response, next: NextFunction) => {
     const origin = req.headers.origin;
     if (origin) {
       res.header("Access-Control-Allow-Origin", origin);
@@ -221,7 +221,7 @@ export function createExpressApp() {
 
   app.use(express.json({
     limit: "50mb",
-    verify: (req: any, _res, buf) => {
+    verify: (req: any, _res: any, buf: any) => {
       req.rawBody = buf;
     }
   }));
@@ -243,7 +243,7 @@ export function createExpressApp() {
   app.use('/api/contact', contactRouter);
   app.use('/api', razorpayStandardRouter);
 
-  app.post("/api/notifications/send-push", async (req, res) => {
+  app.post("/api/notifications/send-push", async (req: Request, res: Response) => {
     const authHeader = req.headers.authorization;
     const authSecret = "cf_internal_push_secret_2026";
     if (!authHeader || authHeader !== `Bearer ${authSecret}`) {
@@ -370,13 +370,13 @@ export function createExpressApp() {
     // Only serve static frontend files if the dist folder exists (not present in API-only deployments)
     if (require("fs").existsSync(path.join(distPath, "index.html"))) {
       app.use(express.static(distPath));
-      app.get("*", (req, res, next) => {
+      app.get("*", (req: Request, res: Response, next: NextFunction) => {
         if (req.path.startsWith("/api")) return next();
         res.sendFile(path.join(distPath, "index.html"));
       });
     } else {
       // Backend-only: serve status page at root, 404 for everything else
-      app.use((req, res, next) => {
+      app.use((req: Request, res: Response, next: NextFunction) => {
         if (req.path.startsWith("/api")) return next();
         if (req.method === "GET" && (req.path === "/" || req.path === "")) {
           res.setHeader("Content-Type", "text/html");
