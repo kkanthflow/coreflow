@@ -132757,25 +132757,57 @@ async function enforceOrgPermission(userId, organizationId, requiredRoleLevel = 
 
 // server/subscriptions/subscription.config.ts
 var SUBSCRIPTION_PLANS = {
-  freelancer: {
-    tier: "freelancer",
-    name: "Freelancer",
-    tagline: "Individual workspace engineered for solo specialists and consultants",
+  // ── Freelancer Plans ──
+  freelancer_free: {
+    tier: "freelancer_free",
+    name: "Free",
+    tagline: "Individual workspace for solo specialists and consultants",
     workspaceType: "independent",
     limits: {
       maxSeats: 1,
+      maxActiveProjects: 3,
+      maxWorkflows: 2,
+      historyDays: 7,
       maxInvoicesPerMonth: 15,
-      maxActiveProjects: 5,
       maxMeetingsPerMonth: 20,
       analyticsTier: "basic"
     },
     features: [
-      "Individual workspace for 1 user",
-      "Up to 15 invoices / month",
-      "Up to 5 active projects",
-      "Up to 20 meetings / month",
-      "Basic revenue & task analytics",
+      "Maximum 3 projects",
+      "Maximum 2 workflows",
+      "1 user workspace",
+      "7-day history",
       "PDF invoice export & client portal",
+      "Standard community support"
+    ],
+    pricing: {
+      monthly: {
+        priceInr: 0,
+        pricePaise: 0
+      }
+    }
+  },
+  freelancer_starter: {
+    tier: "freelancer_starter",
+    name: "Starter",
+    tagline: "Expanded capacity for growing freelancers and solo practitioners",
+    workspaceType: "independent",
+    limits: {
+      maxSeats: 1,
+      maxActiveProjects: 10,
+      maxWorkflows: 5,
+      historyDays: 30,
+      maxInvoicesPerMonth: 50,
+      maxMeetingsPerMonth: 50,
+      analyticsTier: "basic"
+    },
+    features: [
+      "Maximum 10 projects",
+      "Maximum 5 workflows",
+      "1 user workspace",
+      "30-day history",
+      "Up to 50 invoices / month",
+      "Basic revenue & task analytics",
       "Standard email support"
     ],
     pricing: {
@@ -132783,96 +132815,163 @@ var SUBSCRIPTION_PLANS = {
         priceInr: 299,
         pricePaise: 29900,
         razorpayPlanId: process.env.RAZORPAY_PLAN_FREELANCER_MONTHLY
-      },
-      yearly: {
-        priceInr: 2990,
-        pricePaise: 299e3,
-        razorpayPlanId: process.env.RAZORPAY_PLAN_FREELANCER_YEARLY,
-        discountNote: "2 months free included (Save \u20B9598/yr)"
       }
     }
   },
-  starter: {
-    tier: "starter",
+  freelancer_pro: {
+    tier: "freelancer_pro",
+    name: "Pro",
+    tagline: "Uncapped individual operating environment with zero limits",
+    workspaceType: "independent",
+    limits: {
+      maxSeats: 1,
+      maxActiveProjects: null,
+      maxWorkflows: null,
+      historyDays: null,
+      maxInvoicesPerMonth: null,
+      maxMeetingsPerMonth: null,
+      analyticsTier: "unlimited"
+    },
+    features: [
+      "Unlimited projects",
+      "Unlimited workflows",
+      "Unlimited usage for covered features",
+      "1 user workspace",
+      "Unlimited history retention",
+      "Advanced telemetry and analytics",
+      "Priority support"
+    ],
+    pricing: {
+      monthly: {
+        priceInr: 599,
+        pricePaise: 59900,
+        razorpayPlanId: process.env.RAZORPAY_PLAN_FREELANCER_PRO_MONTHLY
+      }
+    }
+  },
+  // ── Organization Plans ──
+  business_free: {
+    tier: "business_free",
+    name: "Business Free",
+    tagline: "Team collaboration workspace for small startup founding squads",
+    workspaceType: "organization",
+    limits: {
+      maxSeats: 3,
+      // Maximum 3 members, including the owner
+      maxActiveProjects: 5,
+      maxWorkflows: 3,
+      historyDays: 7,
+      maxInvoicesPerMonth: 25,
+      maxMeetingsPerMonth: 25,
+      analyticsTier: "basic"
+    },
+    features: [
+      "Maximum 5 projects",
+      "Maximum 3 workflows",
+      "Maximum 3 members, including the owner",
+      "7-day history",
+      "Standard team workspace & channels",
+      "Standard community support"
+    ],
+    pricing: {
+      monthly: {
+        priceInr: 0,
+        pricePaise: 0
+      }
+    }
+  },
+  business_starter: {
+    tier: "business_starter",
     name: "Business Starter",
     tagline: "Collaborative operating workbench for agile teams and growing agencies",
     workspaceType: "organization",
     limits: {
       maxSeats: 5,
-      maxInvoicesPerMonth: 100,
+      // Maximum 5 members
       maxActiveProjects: 25,
+      maxWorkflows: 15,
+      historyDays: 30,
+      maxInvoicesPerMonth: 150,
       maxMeetingsPerMonth: 100,
       analyticsTier: "standard"
     },
     features: [
-      "Dedicated organization workspace",
-      "Up to 5 team members included",
-      "Up to 100 invoices / month",
-      "Up to 25 active projects",
-      "Up to 100 meetings / month with recording",
-      "Standard executive telemetry & velocity reports",
+      "Maximum 25 projects",
+      "Maximum 15 workflows",
+      "Maximum 5 members",
+      "30-day history",
       "Role-based access controls (RBAC)",
+      "Standard executive velocity reports",
       "Priority email & chat support"
     ],
     pricing: {
       monthly: {
-        priceInr: 399,
-        pricePaise: 39900,
-        razorpayPlanId: process.env.RAZORPAY_PLAN_STARTER_MONTHLY
-      },
-      yearly: {
-        priceInr: 3990,
-        pricePaise: 399e3,
-        razorpayPlanId: process.env.RAZORPAY_PLAN_STARTER_YEARLY,
-        discountNote: "2 months free included (Save \u20B9798/yr)"
+        priceInr: 999,
+        pricePaise: 99900,
+        razorpayPlanId: process.env.RAZORPAY_PLAN_BUSINESS_STARTER_MONTHLY
       }
     }
   },
-  pro: {
-    tier: "pro",
-    name: "Auvryn Pro",
+  business_pro: {
+    tier: "business_pro",
+    name: "Business Pro",
     tagline: "Uncapped velocity and enterprise governance without arbitrary limits",
     workspaceType: "organization",
     limits: {
       maxSeats: null,
-      // Unlimited seats
-      maxInvoicesPerMonth: null,
-      // Unlimited invoices
+      // Unlimited team members
       maxActiveProjects: null,
       // Unlimited projects
+      maxWorkflows: null,
+      // Unlimited workflows
+      historyDays: null,
+      // Unlimited history
+      maxInvoicesPerMonth: null,
+      // Unlimited usage
       maxMeetingsPerMonth: null,
-      // Unlimited meetings
+      // Unlimited usage
       analyticsTier: "unlimited"
     },
     features: [
-      "Unlimited team members (no fixed seat limit)",
-      "Unlimited invoices & recurring billing cycles",
-      "Unlimited active projects & milestones",
-      "Unlimited HD encrypted meetings & cloud storage",
-      "Unlimited deep analytics, velocity metrics & exports",
-      "Full audit log trails & compliance exports",
-      "Multi-currency invoices & custom payment rails",
-      "Dedicated 24/7 priority support & onboarding"
+      "Unlimited projects",
+      "Unlimited workflows",
+      "Unlimited team members",
+      "Unlimited usage for the features covered by the Pro subscription",
+      "Unlimited audit log trails & compliance exports",
+      "Dedicated 24/7 priority SLA support"
     ],
     pricing: {
       monthly: {
-        priceInr: 499,
-        pricePaise: 49900,
-        razorpayPlanId: process.env.RAZORPAY_PLAN_PRO_MONTHLY
-      },
-      yearly: {
-        priceInr: 4990,
-        pricePaise: 499e3,
-        razorpayPlanId: process.env.RAZORPAY_PLAN_PRO_YEARLY,
-        discountNote: "2 months free included (Save \u20B9998/yr)"
+        priceInr: 2499,
+        pricePaise: 249900,
+        razorpayPlanId: process.env.RAZORPAY_PLAN_BUSINESS_PRO_MONTHLY
       }
     }
   }
 };
+SUBSCRIPTION_PLANS["freelancer"] = SUBSCRIPTION_PLANS["freelancer_starter"];
+SUBSCRIPTION_PLANS["starter"] = SUBSCRIPTION_PLANS["business_starter"];
+SUBSCRIPTION_PLANS["pro"] = SUBSCRIPTION_PLANS["business_pro"];
 var GRACE_PERIOD_DAYS = parseInt(process.env.SUBSCRIPTION_GRACE_PERIOD_DAYS || "3", 10);
-function getPlanConfig(tier, interval2) {
-  const normTier = tier?.toLowerCase();
-  const normInterval = interval2?.toLowerCase();
+function normalizePlanTier(tier) {
+  const norm = (tier || "").toLowerCase().trim();
+  if (norm === "freelancer") return "freelancer_starter";
+  if (norm === "starter") return "business_starter";
+  if (norm === "pro") return "business_pro";
+  if (norm in SUBSCRIPTION_PLANS) return norm;
+  return "freelancer_free";
+}
+function isFreelancerPlan(tier) {
+  const t3 = normalizePlanTier(tier);
+  return t3.startsWith("freelancer");
+}
+function isOrganizationPlan(tier) {
+  const t3 = normalizePlanTier(tier);
+  return t3.startsWith("business") || t3 === "business_starter" || t3 === "business_pro" || t3 === "business_free";
+}
+function getPlanConfig(tier, interval2 = "monthly") {
+  const normTier = normalizePlanTier(tier);
+  const normInterval = "monthly";
   const plan = SUBSCRIPTION_PLANS[normTier];
   if (!plan) return null;
   const pricing = plan.pricing[normInterval];
@@ -132885,8 +132984,20 @@ function getPlanConfig(tier, interval2) {
     planKey: `${normTier}_${normInterval}`
   };
 }
-function getAllPlansList() {
-  return Object.values(SUBSCRIPTION_PLANS).map((p) => ({
+function getAllPlansList(filterWorkspace) {
+  const canonicalKeys = [
+    "freelancer_free",
+    "freelancer_starter",
+    "freelancer_pro",
+    "business_free",
+    "business_starter",
+    "business_pro"
+  ];
+  return canonicalKeys.map((key) => SUBSCRIPTION_PLANS[key]).filter((p) => {
+    if (!p) return false;
+    if (filterWorkspace) return p.workspaceType === filterWorkspace;
+    return true;
+  }).map((p) => ({
     tier: p.tier,
     name: p.name,
     tagline: p.tagline,
@@ -132896,13 +133007,8 @@ function getAllPlansList() {
     pricing: {
       monthly: {
         priceInr: p.pricing.monthly.priceInr,
+        pricePaise: p.pricing.monthly.pricePaise,
         interval: "monthly"
-      },
-      yearly: {
-        priceInr: p.pricing.yearly.priceInr,
-        interval: "yearly",
-        discountNote: p.pricing.yearly.discountNote,
-        effectiveMonthlyInr: Math.round(p.pricing.yearly.priceInr / 12)
       }
     }
   }));
@@ -133198,21 +133304,68 @@ var SubscriptionService = class {
   }
   /**
    * Initiates checkout for a subscription plan.
-   * Validates parameters, checks for existing active subscription (idempotency),
-   * resolves plan ID, and creates Razorpay subscription.
+   * Enforces server-side RBAC:
+   * - Organization plans require active organization membership as owner or billing_admin.
+   * - Freelancer plans cannot be applied to an organization.
+   * - Free plans directly activate without payment gateway checkout.
+   * - Records purchaser/payer identity explicitly.
    */
   static async initiateCheckout(params) {
-    const config2 = getPlanConfig(params.tier, params.interval);
+    const normTier = normalizePlanTier(params.tier);
+    const interval2 = "monthly";
+    const config2 = getPlanConfig(normTier, interval2);
     if (!config2) {
-      throw new Error(`Invalid plan tier "${params.tier}" or interval "${params.interval}"`);
+      throw new Error(`Invalid plan tier "${params.tier}"`);
     }
-    const { tier, interval: interval2, plan, pricing, planKey } = config2;
+    const { tier, plan, pricing, planKey } = config2;
+    if (isOrganizationPlan(tier)) {
+      if (!params.orgId) {
+        throw new Error("An organization ID is required to subscribe to a Business plan.");
+      }
+      const { data: membership, error: memErr } = await supabaseAdmin.from("user_organizations").select("role").eq("user_id", params.userId).eq("org_id", params.orgId).maybeSingle();
+      if (memErr || !membership) {
+        throw new Error("Forbidden: You are not a member of this organization.");
+      }
+      const role = (membership.role || "").toLowerCase();
+      if (!["owner", "billing_admin"].includes(role)) {
+        throw new Error("Forbidden: Only an organization owner or billing administrator can purchase or manage organization subscriptions.");
+      }
+    }
+    if (isFreelancerPlan(tier)) {
+      if (params.orgId) {
+        throw new Error("Freelancer plans cannot be applied to an organization. Please select a Business plan.");
+      }
+    }
+    if (pricing.priceInr === 0) {
+      if (params.orgId) {
+        await supabaseAdmin.from("organizations").update({
+          current_plan_tier: tier,
+          subscription_status: "free"
+        }).eq("id", params.orgId);
+      } else {
+        await supabaseAdmin.from("users").update({
+          current_plan_tier: tier,
+          subscription_status: "free"
+        }).eq("id", params.userId);
+      }
+      return {
+        isFreePlan: true,
+        success: true,
+        planTier: tier,
+        planInterval: interval2,
+        planName: plan.name,
+        amountInr: 0,
+        amountPaise: 0,
+        currency: "INR",
+        message: `${plan.name} activated successfully.`
+      };
+    }
     const existingActive = await this.getActiveSubscription({
       userId: params.userId,
       orgId: params.orgId
     });
     if (existingActive && existingActive.status === "active") {
-      if (existingActive.plan_tier === tier && existingActive.plan_interval === interval2) {
+      if (existingActive.plan_tier === tier) {
         return {
           alreadySubscribed: true,
           subscriptionId: existingActive.razorpay_subscription_id,
@@ -133220,18 +133373,20 @@ var SubscriptionService = class {
           planName: plan.name,
           interval: interval2,
           currentPeriodEnd: existingActive.current_period_end,
-          message: `You are already actively subscribed to ${plan.name} (${interval2}).`
+          message: `You are already actively subscribed to ${plan.name}.`
         };
       }
     }
     const razorpayPlanId = await razorpayService.getOrCreatePlanId(tier, interval2);
-    const totalCycles = interval2 === "monthly" ? 120 : 10;
+    const totalCycles = 120;
     const rzpSub = await razorpayService.createSubscription({
       planId: razorpayPlanId,
       totalCount: totalCycles,
       notes: {
         userId: params.userId,
+        payerUserId: params.userId,
         orgId: params.orgId || "",
+        customerType: params.orgId ? "organization" : "freelancer",
         tier,
         interval: interval2,
         appName: "Auvryn"
@@ -133241,6 +133396,8 @@ var SubscriptionService = class {
       id: import_crypto5.default.randomUUID(),
       user_id: params.userId,
       organization_id: params.orgId || null,
+      customer_type: params.orgId ? "organization" : "freelancer",
+      payer_user_id: params.userId,
       workspace_type: plan.workspaceType,
       plan_tier: tier,
       plan_interval: interval2,
@@ -133260,7 +133417,9 @@ var SubscriptionService = class {
         planName: plan.name,
         priceInr: pricing.priceInr,
         userName: params.userName,
-        userEmail: params.userEmail
+        userEmail: params.userEmail,
+        payerUserId: params.userId,
+        customerType: params.orgId ? "organization" : "freelancer"
       },
       created_at: (/* @__PURE__ */ new Date()).toISOString(),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
@@ -133301,8 +133460,11 @@ var SubscriptionService = class {
       sub = {
         id: import_crypto5.default.randomUUID(),
         user_id: params.userId,
-        workspace_type: "independent",
-        plan_tier: "freelancer",
+        payer_user_id: params.userId,
+        customer_type: rzpDetails.notes?.orgId ? "organization" : "freelancer",
+        organization_id: rzpDetails.notes?.orgId || null,
+        workspace_type: rzpDetails.notes?.orgId ? "organization" : "independent",
+        plan_tier: rzpDetails.notes?.tier || "freelancer_starter",
         plan_interval: "monthly",
         razorpay_subscription_id: params.subscriptionId,
         status: "active",
@@ -133319,6 +133481,7 @@ var SubscriptionService = class {
       sub.current_period_start = periodStart;
       sub.current_period_end = periodEnd;
       sub.paid_count = (sub.paid_count || 0) + 1;
+      sub.payer_user_id = params.userId;
     }
     await this.saveSubscription(sub);
     const paymentRecord = {
@@ -133326,10 +133489,13 @@ var SubscriptionService = class {
       subscription_id: sub.id,
       razorpay_subscription_id: params.subscriptionId,
       razorpay_payment_id: params.paymentId,
-      amount: rzpDetails.plan?.item?.amount || (sub.plan_interval === "yearly" ? 299e3 : 29900),
+      amount: rzpDetails.plan?.item?.amount || (SUBSCRIPTION_PLANS[sub.plan_tier]?.pricing.monthly.pricePaise || 29900),
       currency: "INR",
       status: "captured",
       method: "online",
+      payer_user_id: params.userId,
+      customer_type: sub.customer_type || (sub.organization_id ? "organization" : "freelancer"),
+      organization_id: sub.organization_id || null,
       captured_at: (/* @__PURE__ */ new Date()).toISOString(),
       created_at: (/* @__PURE__ */ new Date()).toISOString()
     };
@@ -133513,15 +133679,16 @@ var SubscriptionService = class {
       if (params.orgId) {
         const { data: orgSub } = await supabaseAdmin.from("subscriptions").select("*").eq("organization_id", params.orgId).in("status", ["active", "authenticated"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
         if (orgSub) return orgSub;
+      } else {
+        const { data: userSub } = await supabaseAdmin.from("subscriptions").select("*").eq("user_id", params.userId).is("organization_id", null).in("status", ["active", "authenticated"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
+        if (userSub) return userSub;
       }
-      const { data: userSub } = await supabaseAdmin.from("subscriptions").select("*").eq("user_id", params.userId).in("status", ["active", "authenticated"]).order("created_at", { ascending: false }).limit(1).maybeSingle();
-      if (userSub) return userSub;
     } catch {
     }
     for (const sub of fallbackSubscriptions.values()) {
       if (["active", "authenticated"].includes(sub.status)) {
         if (params.orgId && sub.organization_id === params.orgId) return sub;
-        if (sub.user_id === params.userId) return sub;
+        if (!params.orgId && !sub.organization_id && sub.user_id === params.userId) return sub;
       }
     }
     return null;
@@ -133627,7 +133794,7 @@ var EntitlementsService = class {
     });
     if (activeSub && ["active", "authenticated"].includes(activeSub.status)) {
       return {
-        tier: activeSub.plan_tier || "freelancer",
+        tier: normalizePlanTier(activeSub.plan_tier),
         interval: activeSub.plan_interval || "monthly",
         status: activeSub.status,
         subscription: activeSub,
@@ -133638,16 +133805,14 @@ var EntitlementsService = class {
       try {
         const { data: orgData } = await supabaseAdmin.from("organizations").select("current_plan_tier, subscription_status").eq("id", verifiedOrgId).maybeSingle();
         if (orgData?.current_plan_tier) {
-          const orgTier = orgData.current_plan_tier.toLowerCase();
-          if (SUBSCRIPTION_PLANS[orgTier]) {
-            return {
-              tier: orgTier,
-              interval: "monthly",
-              status: orgData.subscription_status || "active",
-              subscription: null,
-              verifiedOrgId
-            };
-          }
+          const orgTier = normalizePlanTier(orgData.current_plan_tier);
+          return {
+            tier: orgTier,
+            interval: "monthly",
+            status: orgData.subscription_status || "free",
+            subscription: null,
+            verifiedOrgId
+          };
         }
       } catch (err) {
         console.warn("[EntitlementsService] Org plan query error:", err);
@@ -133656,24 +133821,23 @@ var EntitlementsService = class {
     try {
       const { data: userData } = await supabaseAdmin.from("users").select("current_plan_tier, subscription_status").eq("id", params.userId).maybeSingle();
       if (userData?.current_plan_tier) {
-        const userTier = userData.current_plan_tier.toLowerCase();
-        if (SUBSCRIPTION_PLANS[userTier]) {
-          return {
-            tier: userTier,
-            interval: "monthly",
-            status: userData.subscription_status || "active",
-            subscription: null,
-            verifiedOrgId
-          };
-        }
+        const userTier = normalizePlanTier(userData.current_plan_tier);
+        return {
+          tier: userTier,
+          interval: "monthly",
+          status: userData.subscription_status || "free",
+          subscription: null,
+          verifiedOrgId
+        };
       }
     } catch (err) {
       console.warn("[EntitlementsService] User plan query error:", err);
     }
+    const defaultTier = verifiedOrgId ? "business_free" : "freelancer_free";
     return {
-      tier: "freelancer",
+      tier: defaultTier,
       interval: "monthly",
-      status: "active",
+      status: "free",
       subscription: null,
       verifiedOrgId
     };
@@ -133791,7 +133955,7 @@ var EntitlementsService = class {
     const period = this.calculateUsagePeriod(subscription);
     const planDef = SUBSCRIPTION_PLANS[tier];
     const limits = planDef.limits;
-    const isPro = tier === "pro";
+    const isPro = tier === "freelancer_pro" || tier === "business_pro" || tier === "pro";
     if (params.feature === "analytics") {
       return {
         allowed: true,
@@ -133808,7 +133972,7 @@ var EntitlementsService = class {
         feature: params.feature,
         current: 0,
         limit: null,
-        tier: "pro",
+        tier,
         resetDate: period.resetDate,
         remaining: null,
         percent: 0,
@@ -133838,6 +134002,14 @@ var EntitlementsService = class {
       case "seats":
         current = usage.teamSeatsCount;
         limit = limits.maxSeats;
+        break;
+      case "workflows":
+        current = 0;
+        limit = limits.maxWorkflows;
+        break;
+      case "history":
+        current = 0;
+        limit = limits.historyDays;
         break;
     }
     const allowed2 = limit === null || current < limit;
@@ -134069,19 +134241,32 @@ async function approveJoinRequest(params) {
     return { request, membership };
   });
 }
-async function provisionGoogleUserWorkspace(params) {
+async function setupFreelancerWorkspace(params) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
   return await db.transaction(async (tx) => {
     await tx.execute(sql`
       UPDATE users 
-      SET role = 'freelancer', default_workspace_id = 'independent' 
+      SET 
+        account_type = 'freelancer',
+        role = 'freelancer', 
+        default_workspace_id = 'independent',
+        account_setup_completed = true,
+        current_plan_tier = 'freelancer_free',
+        subscription_status = 'free'
       WHERE id = ${params.userOpenId}::uuid
     `);
     await tx.execute(sql`
-      INSERT INTO freelancer_profiles (id, freelancer_type) 
-      VALUES (${params.userOpenId}::uuid, 'independent')
-      ON CONFLICT (id) DO NOTHING;
+      INSERT INTO freelancer_profiles (id, freelancer_type, skills, portfolio) 
+      VALUES (
+        ${params.userOpenId}::uuid, 
+        'independent', 
+        ${params.skills || []}::text[], 
+        ${params.portfolio || ""}
+      )
+      ON CONFLICT (id) DO UPDATE SET
+        skills = EXCLUDED.skills,
+        portfolio = EXCLUDED.portfolio;
     `);
     const existingWs = await tx.execute(sql`
       SELECT id FROM workspaces 
@@ -134095,7 +134280,7 @@ async function provisionGoogleUserWorkspace(params) {
     } else {
       const insertedWs = await tx.execute(sql`
         INSERT INTO workspaces (name, type, owner_id, status)
-        VALUES (${params.fullName} || ' Freelancing', 'independent', ${params.userOpenId}::uuid, 'active')
+        VALUES (${params.fullName || "User"} || ' Workspace', 'independent', ${params.userOpenId}::uuid, 'active')
         RETURNING id;
       `);
       wsId = insertedWs[0].id;
@@ -134107,17 +134292,141 @@ async function provisionGoogleUserWorkspace(params) {
         ON CONFLICT (workspace_id, user_id) DO NOTHING;
       `);
     }
-    return { success: true, workspaceId: wsId };
+    return { success: true, workspaceId: wsId, accountType: "freelancer" };
+  });
+}
+async function setupOrganizationWorkspace(params) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  return await db.transaction(async (tx) => {
+    const insertedOrg = await tx.execute(sql`
+      INSERT INTO organizations (name, default_currency, current_plan_tier, subscription_status)
+      VALUES (${params.orgName}, ${params.defaultCurrency || "USD"}, 'business_free', 'free')
+      RETURNING id;
+    `);
+    const orgId = insertedOrg[0].id;
+    await tx.execute(sql`
+      INSERT INTO user_organizations (user_id, org_id, role)
+      VALUES (${params.userOpenId}::uuid, ${orgId}::uuid, 'owner')
+      ON CONFLICT DO NOTHING;
+    `);
+    await tx.execute(sql`
+      UPDATE users 
+      SET 
+        account_type = 'organization',
+        role = 'owner', 
+        default_workspace_id = ${String(orgId)},
+        account_setup_completed = true,
+        current_plan_tier = 'business_free',
+        subscription_status = 'free'
+      WHERE id = ${params.userOpenId}::uuid
+    `);
+    const insertedWs = await tx.execute(sql`
+      INSERT INTO workspaces (name, type, owner_id, status)
+      VALUES (${params.orgName}, 'organization', ${params.userOpenId}::uuid, 'active')
+      RETURNING id;
+    `);
+    const wsId = insertedWs[0].id;
+    if (wsId) {
+      await tx.execute(sql`
+        INSERT INTO workspace_members (workspace_id, user_id, status)
+        VALUES (${wsId}, ${params.userOpenId}::uuid, 'active')
+        ON CONFLICT (workspace_id, user_id) DO NOTHING;
+      `);
+    }
+    return { success: true, organizationId: orgId, workspaceId: wsId, accountType: "organization" };
+  });
+}
+async function setupJoinOrganizationWorkspace(params) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const orgCheck = await db.execute(sql`
+    SELECT id, name, current_plan_tier FROM organizations WHERE id = ${params.organizationId}::uuid LIMIT 1;
+  `);
+  if (!orgCheck || orgCheck.length === 0) {
+    throw new Error("Organization not found. Please verify the Organization ID.");
+  }
+  const seatCheck = await EntitlementsService.checkEntitlement({
+    userId: params.userOpenId,
+    orgId: params.organizationId,
+    feature: "seats"
+  });
+  if (!seatCheck.allowed) {
+    throw new Error(`quota_exceeded:seats: Organization team member quota of ${seatCheck.limit} reached. Contact the organization owner to upgrade.`);
+  }
+  return await db.transaction(async (tx) => {
+    await tx.execute(sql`
+      INSERT INTO user_organizations (user_id, org_id, role)
+      VALUES (${params.userOpenId}::uuid, ${params.organizationId}::uuid, 'employee')
+      ON CONFLICT (user_id, org_id) DO NOTHING;
+    `);
+    await tx.execute(sql`
+      UPDATE users 
+      SET 
+        account_type = 'organization',
+        role = 'employee', 
+        default_workspace_id = ${params.organizationId},
+        account_setup_completed = true
+      WHERE id = ${params.userOpenId}::uuid
+    `);
+    return { success: true, organizationId: params.organizationId, accountType: "organization" };
+  });
+}
+async function provisionGoogleUserWorkspace(params) {
+  return await setupFreelancerWorkspace({
+    userId: params.userId,
+    userOpenId: params.userOpenId,
+    fullName: params.fullName
   });
 }
 
 // server/auvryn/auvryn.router.ts
 var auvrynRouter = router({
+  // Legacy alias
   provisionGoogleUserWorkspace: protectedProcedure.mutation(async ({ ctx }) => {
     return await provisionGoogleUserWorkspace({
       userId: ctx.user.id,
       userOpenId: ctx.user.openId,
       fullName: ctx.user.name || "User"
+    });
+  }),
+  // Explicit User-Selected Onboarding Endpoints
+  setupFreelancer: protectedProcedure.input(external_exports.object({
+    skills: external_exports.array(external_exports.string()).optional(),
+    portfolio: external_exports.string().optional()
+  }).optional()).mutation(async ({ ctx, input }) => {
+    return await setupFreelancerWorkspace({
+      userId: ctx.user.id,
+      userOpenId: ctx.user.openId,
+      fullName: ctx.user.name || "User",
+      skills: input?.skills,
+      portfolio: input?.portfolio
+    });
+  }),
+  setupOrganization: protectedProcedure.input(external_exports.object({
+    orgName: external_exports.string().min(1, "Organization name is required"),
+    jobTitle: external_exports.string().optional(),
+    defaultCurrency: external_exports.string().default("USD")
+  })).mutation(async ({ ctx, input }) => {
+    return await setupOrganizationWorkspace({
+      userId: ctx.user.id,
+      userOpenId: ctx.user.openId,
+      fullName: ctx.user.name || "User",
+      orgName: input.orgName,
+      jobTitle: input.jobTitle,
+      defaultCurrency: input.defaultCurrency
+    });
+  }),
+  setupJoinOrganization: protectedProcedure.input(external_exports.object({
+    organizationId: external_exports.string().min(1, "Organization ID is required"),
+    jobTitle: external_exports.string().optional()
+  })).mutation(async ({ ctx, input }) => {
+    return await setupJoinOrganizationWorkspace({
+      userId: ctx.user.id,
+      userOpenId: ctx.user.openId,
+      fullName: ctx.user.name || "User",
+      organizationId: input.organizationId,
+      jobTitle: input.jobTitle
     });
   }),
   createOrganization: protectedProcedure.input(external_exports.object({
@@ -143452,17 +143761,79 @@ async function requireAuth3(req, res, next) {
     res.status(401).json({ error: "Authentication failed", details: err.message });
   }
 }
-subscriptionsRouter.get("/plans", (_req, res) => {
+async function tryResolveUser(req) {
+  const authHeader = req.headers.authorization || req.headers.Authorization;
+  if (!authHeader || typeof authHeader !== "string" || !authHeader.startsWith("Bearer ")) {
+    return null;
+  }
+  const token = authHeader.slice("Bearer ".length).trim();
   try {
-    const plans = getAllPlansList();
+    const payload = await verifySupabaseToken(token);
+    if (payload?.sub) return { id: payload.sub, email: payload.email };
+    const { data: { user } } = await supabaseAdmin.auth.getUser(token);
+    if (user) return { id: user.id, email: user.email };
+  } catch {
+  }
+  return null;
+}
+subscriptionsRouter.get("/plans", async (req, res) => {
+  try {
+    const orgId = req.query.orgId || req.headers["x-organization-id"] || null;
+    const requestedWorkspace = req.query.workspace || null;
+    const authUser = await tryResolveUser(req);
+    if (orgId) {
+      if (!authUser) {
+        res.status(401).json({ error: "Authentication required to inspect organization pricing." });
+        return;
+      }
+      const { data: membership, error: memErr } = await supabaseAdmin.from("user_organizations").select("role").eq("user_id", authUser.id).eq("org_id", orgId).maybeSingle();
+      if (memErr || !membership) {
+        res.status(403).json({ error: "Forbidden: You are not a member of this organization." });
+        return;
+      }
+      const role = (membership.role || "").toLowerCase();
+      const canManageBilling = ["owner", "billing_admin"].includes(role);
+      const orgPlans = getAllPlansList("organization");
+      res.json({
+        success: true,
+        currency: "INR",
+        context: "organization",
+        orgId,
+        userRole: role,
+        canManageBilling,
+        message: canManageBilling ? void 0 : "Contact your organization owner or billing administrator to manage your subscription.",
+        plans: orgPlans
+      });
+      return;
+    }
+    if (authUser) {
+      const { data: userData } = await supabaseAdmin.from("users").select("account_type, role, default_workspace_id").eq("id", authUser.id).maybeSingle();
+      if (userData?.account_type === "freelancer" || userData?.role === "freelancer" || !userData?.account_type && requestedWorkspace === "independent") {
+        const freelancerPlans = getAllPlansList("independent");
+        res.json({
+          success: true,
+          currency: "INR",
+          context: "freelancer",
+          canManageBilling: true,
+          plans: freelancerPlans
+        });
+        return;
+      }
+    }
+    let filteredPlans;
+    if (requestedWorkspace === "organization") {
+      filteredPlans = getAllPlansList("organization");
+    } else if (requestedWorkspace === "independent") {
+      filteredPlans = getAllPlansList("independent");
+    } else {
+      filteredPlans = getAllPlansList();
+    }
     res.json({
       success: true,
       currency: "INR",
-      plans,
-      discounts: {
-        yearlyMonthsFree: 2,
-        description: "Yearly billing includes 2 months free equivalent"
-      }
+      context: requestedWorkspace || "all",
+      canManageBilling: false,
+      plans: filteredPlans
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to retrieve subscription plans", details: err.message });
@@ -143472,28 +143843,75 @@ subscriptionsRouter.get("/current", requireAuth3, async (req, res) => {
   try {
     const user = req.user;
     const orgId = req.query.orgId || req.headers["x-organization-id"] || null;
-    const activeSub = await SubscriptionService.getActiveSubscription({
-      userId: user.id,
-      orgId
-    });
-    if (!activeSub) {
+    if (orgId) {
+      const { data: membership, error: memErr } = await supabaseAdmin.from("user_organizations").select("role").eq("user_id", user.id).eq("org_id", orgId).maybeSingle();
+      if (memErr || !membership) {
+        res.status(403).json({ error: "Forbidden: You do not have access to this organization workspace." });
+        return;
+      }
+      const role = (membership.role || "").toLowerCase();
+      const canManageBilling = ["owner", "billing_admin"].includes(role);
+      const activeSub2 = await SubscriptionService.getActiveSubscription({
+        userId: user.id,
+        orgId
+      });
+      const { data: orgData } = await supabaseAdmin.from("organizations").select("name, current_plan_tier, subscription_status").eq("id", orgId).maybeSingle();
+      const effectiveTier2 = activeSub2?.plan_tier || orgData?.current_plan_tier || "business_free";
+      const effectiveStatus2 = activeSub2?.status || orgData?.subscription_status || "free";
+      const planDef2 = SUBSCRIPTION_PLANS[effectiveTier2] || SUBSCRIPTION_PLANS["business_free"];
+      if (!canManageBilling) {
+        res.json({
+          hasActiveSubscription: !!activeSub2,
+          customerType: "organization",
+          customerName: orgData?.name || "Organization",
+          tier: effectiveTier2,
+          planName: planDef2.name,
+          status: effectiveStatus2,
+          canManageBilling: false,
+          isMemberReadOnly: true,
+          message: "Contact your organization owner or billing administrator to manage your subscription."
+        });
+        return;
+      }
       res.json({
-        hasActiveSubscription: false,
-        tier: "freelancer",
-        // default free/basic tier
-        status: "none",
-        planName: "Free Workspace"
+        hasActiveSubscription: !!activeSub2,
+        customerType: "organization",
+        customerName: orgData?.name || "Organization",
+        subscription: activeSub2,
+        tier: effectiveTier2,
+        planName: planDef2.name,
+        interval: activeSub2?.plan_interval || "monthly",
+        status: effectiveStatus2,
+        canManageBilling: true,
+        payerUserId: activeSub2?.payer_user_id || null,
+        currentPeriodStart: activeSub2?.current_period_start || null,
+        currentPeriodEnd: activeSub2?.current_period_end || null,
+        cancelAtPeriodEnd: activeSub2?.cancel_at_period_end || false
       });
       return;
     }
+    const activeSub = await SubscriptionService.getActiveSubscription({
+      userId: user.id,
+      orgId: null
+    });
+    const { data: userData } = await supabaseAdmin.from("users").select("full_name, current_plan_tier, subscription_status").eq("id", user.id).maybeSingle();
+    const effectiveTier = activeSub?.plan_tier || userData?.current_plan_tier || "freelancer_free";
+    const effectiveStatus = activeSub?.status || userData?.subscription_status || "free";
+    const planDef = SUBSCRIPTION_PLANS[effectiveTier] || SUBSCRIPTION_PLANS["freelancer_free"];
     res.json({
-      hasActiveSubscription: true,
+      hasActiveSubscription: !!activeSub,
+      customerType: "freelancer",
+      customerName: userData?.full_name || user.name,
       subscription: activeSub,
-      tier: activeSub.plan_tier,
-      interval: activeSub.plan_interval,
-      status: activeSub.status,
-      currentPeriodEnd: activeSub.current_period_end,
-      cancelAtPeriodEnd: activeSub.cancel_at_period_end
+      tier: effectiveTier,
+      planName: planDef.name,
+      interval: activeSub?.plan_interval || "monthly",
+      status: effectiveStatus,
+      canManageBilling: true,
+      payerUserId: user.id,
+      currentPeriodStart: activeSub?.current_period_start || null,
+      currentPeriodEnd: activeSub?.current_period_end || null,
+      cancelAtPeriodEnd: activeSub?.cancel_at_period_end || false
     });
   } catch (err) {
     res.status(500).json({ error: "Failed to retrieve subscription status", details: err.message });
@@ -143513,45 +143931,36 @@ subscriptionsRouter.get("/usage", requireAuth3, async (req, res) => {
     res.status(500).json({ error: "Failed to retrieve subscription usage report", details: err.message });
   }
 });
-subscriptionsRouter.get("/analytics", requireAuth3, requireEntitlement("analytics"), async (req, res) => {
+subscriptionsRouter.get("/payments", requireAuth3, async (req, res) => {
   try {
     const user = req.user;
     const orgId = req.query.orgId || req.headers["x-organization-id"] || null;
-    const { tier } = await EntitlementsService.resolveEffectiveSubscription({
-      userId: user.id,
-      orgId
-    });
-    const isPro = tier === "pro";
-    const isStarter = tier === "starter";
-    res.json({
-      success: true,
-      tier,
-      level: isPro ? "unlimited" : isStarter ? "standard" : "basic",
-      features: {
-        basicLedger: true,
-        taskTrajectories: true,
-        executiveVelocity: isStarter || isPro,
-        sprintThroughput: isStarter || isPro,
-        financialCurves: isStarter || isPro,
-        deepAuditTrail: isPro,
-        complianceExport: isPro,
-        predictiveTelemetry: isPro
+    if (orgId) {
+      const { data: membership } = await supabaseAdmin.from("user_organizations").select("role").eq("user_id", user.id).eq("org_id", orgId).maybeSingle();
+      if (!membership || !["owner", "billing_admin"].includes((membership.role || "").toLowerCase())) {
+        res.status(403).json({ error: "Forbidden: You do not have permission to view billing history for this organization." });
+        return;
       }
-    });
+      const { data: payments2 } = await supabaseAdmin.from("subscription_payments").select("*").eq("organization_id", orgId).order("created_at", { ascending: false });
+      res.json({ success: true, payments: payments2 || [] });
+      return;
+    }
+    const { data: payments } = await supabaseAdmin.from("subscription_payments").select("*").eq("payer_user_id", user.id).is("organization_id", null).order("created_at", { ascending: false });
+    res.json({ success: true, payments: payments || [] });
   } catch (err) {
-    res.status(500).json({ error: "Failed to load analytics telemetry", details: err.message });
+    res.status(500).json({ error: "Failed to retrieve payment records", details: err.message });
   }
 });
 var createSubSchema = external_exports.object({
-  tier: external_exports.enum(["freelancer", "starter", "pro"]),
-  interval: external_exports.enum(["monthly", "yearly"]),
+  tier: external_exports.string().min(1, "Plan tier is required"),
+  interval: external_exports.string().optional().default("monthly"),
   orgId: external_exports.string().optional().nullable()
 });
 subscriptionsRouter.post("/create", requireAuth3, async (req, res) => {
   try {
     const parseResult = createSubSchema.safeParse(req.body);
     if (!parseResult.success) {
-      res.status(400).json({ error: "Invalid plan or billing interval parameters", issues: parseResult.error.format() });
+      res.status(400).json({ error: "Invalid parameters", issues: parseResult.error.format() });
       return;
     }
     const { tier, interval: interval2, orgId } = parseResult.data;
@@ -143569,8 +143978,8 @@ subscriptionsRouter.post("/create", requireAuth3, async (req, res) => {
       ...result
     });
   } catch (err) {
-    console.error("[Subscriptions Route] Error creating subscription checkout:", err);
-    res.status(500).json({ error: err.message || "Failed to initiate checkout" });
+    const status = err.message?.startsWith("Forbidden") ? 403 : 400;
+    res.status(status).json({ error: err.message || "Failed to initiate checkout" });
   }
 });
 subscriptionsRouter.post("/verify", requireAuth3, async (req, res) => {
@@ -143580,7 +143989,7 @@ subscriptionsRouter.post("/verify", requireAuth3, async (req, res) => {
     const signature = req.body.razorpay_signature || req.body.signature;
     if (!subscriptionId || !paymentId || !signature) {
       res.status(400).json({
-        error: "Missing required signature verification fields. Required: razorpay_payment_id (or paymentId), razorpay_subscription_id (or subscriptionId), razorpay_signature (or signature)."
+        error: "Missing required signature verification fields. Required: razorpay_payment_id, razorpay_subscription_id, razorpay_signature."
       });
       return;
     }
@@ -143606,6 +144015,13 @@ subscriptionsRouter.post("/cancel", requireAuth3, async (req, res) => {
     const parseResult = cancelSubSchema.safeParse(req.body);
     const { orgId, cancelAtPeriodEnd } = parseResult.success ? parseResult.data : { orgId: null, cancelAtPeriodEnd: true };
     const user = req.user;
+    if (orgId) {
+      const { data: membership } = await supabaseAdmin.from("user_organizations").select("role").eq("user_id", user.id).eq("org_id", orgId).maybeSingle();
+      if (!membership || !["owner", "billing_admin"].includes((membership.role || "").toLowerCase())) {
+        res.status(403).json({ error: "Forbidden: Only an organization owner or billing administrator can cancel the subscription." });
+        return;
+      }
+    }
     const result = await SubscriptionService.cancelSubscription({
       userId: user.id,
       orgId: orgId || null,
@@ -143617,7 +144033,7 @@ subscriptionsRouter.post("/cancel", requireAuth3, async (req, res) => {
   }
 });
 var quotaCheckSchema = external_exports.object({
-  feature: external_exports.enum(["seats", "invoices", "projects", "meetings", "analytics"]),
+  feature: external_exports.enum(["seats", "invoices", "projects", "workflows", "meetings", "analytics"]),
   orgId: external_exports.string().optional().nullable()
 });
 subscriptionsRouter.post("/quota-check", requireAuth3, async (req, res) => {
