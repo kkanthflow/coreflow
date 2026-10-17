@@ -9,8 +9,7 @@ import {
   Briefcase, 
   Check, 
   Sparkles,
-  ShieldCheck,
-  Globe
+  ShieldCheck
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
