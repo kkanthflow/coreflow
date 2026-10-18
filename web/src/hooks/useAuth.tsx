@@ -44,7 +44,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         .from('users')
         .select('role, full_name, default_workspace_id, account_type, account_setup_completed')
         .eq('email', userEmail)
-        .single();
+        .maybeSingle();
         
       if (data && !error) {
         setRole(data.role);
@@ -57,19 +57,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         const isSetup = data.account_setup_completed === true && !!data.account_type;
         setOnboardingStatus(isSetup ? 'completed' : 'setup_required');
       } else {
+        // User profile missing in public.users - this account was purged/deleted!
+        console.warn('[useAuth] User profile missing from database. Purging stale session...');
+        await supabase.auth.signOut().catch(() => {});
+        setSession(null);
+        setUser(null);
         setRole(null);
         setFullName(null);
         setAccountType(null);
         setAccountSetupCompleted(false);
-        setOnboardingStatus('setup_required');
+        setOnboardingStatus(null);
       }
     } catch (err) {
       console.error('Error fetching user details:', err);
+      await supabase.auth.signOut().catch(() => {});
+      setSession(null);
+      setUser(null);
       setRole(null);
       setFullName(null);
       setAccountType(null);
       setAccountSetupCompleted(false);
-      setOnboardingStatus('setup_required');
+      setOnboardingStatus(null);
     }
   };
 
@@ -83,32 +91,72 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
     }, 3500);
 
+    // Verify session with Supabase server to detect deleted/invalid users immediately
     supabase.auth
-      .getSession()
-      .then(({ data: { session } }) => {
+      .getUser()
+      .then(async ({ data: { user: authUser }, error: authErr }) => {
+        if (!mounted) return;
+        if (authErr || !authUser) {
+          // If a stale token exists in localStorage for a deleted user, wipe it immediately
+          if (authErr && authErr.message && !authErr.message.includes('Auth session missing')) {
+            console.warn('[useAuth] Stale token detected for deleted user. Clearing session...');
+            await supabase.auth.signOut().catch(() => {});
+          }
+          if (mounted) {
+            setSession(null);
+            setUser(null);
+            setRole(null);
+            setFullName(null);
+            setAccountType(null);
+            setAccountSetupCompleted(false);
+            setOnboardingStatus(null);
+            setLoading(false);
+          }
+          return;
+        }
+
+        const { data: { session } } = await supabase.auth.getSession();
         if (!mounted) return;
         setSession(session);
-        setUser(session?.user ?? null);
-        if (session?.user?.email) {
-          fetchUserDetails(session.user.email).finally(() => {
-            if (mounted) setLoading(false);
-          });
+        setUser(authUser);
+
+        if (authUser.email) {
+          await fetchUserDetails(authUser.email);
         } else {
+          setOnboardingStatus(null);
+        }
+        if (mounted) setLoading(false);
+      })
+      .catch(async (err) => {
+        console.warn('[useAuth] User verification failed:', err);
+        await supabase.auth.signOut().catch(() => {});
+        if (mounted) {
+          setSession(null);
+          setUser(null);
+          setOnboardingStatus(null);
           setLoading(false);
         }
-      })
-      .catch((err) => {
-        console.warn('[useAuth] getSession failed or timed out:', err);
-        if (mounted) setLoading(false);
       });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!mounted) return;
+      if (!session?.user?.id) {
+        setSession(null);
+        setUser(null);
+        setRole(null);
+        setFullName(null);
+        setAccountType(null);
+        setAccountSetupCompleted(false);
+        setOnboardingStatus(null);
+        setLoading(false);
+        return;
+      }
+
       setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user?.email) {
+      setUser(session.user);
+      if (session.user.email) {
         fetchUserDetails(session.user.email).finally(() => {
           if (mounted) setLoading(false);
         });

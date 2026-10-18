@@ -132949,9 +132949,93 @@ var SUBSCRIPTION_PLANS = {
     }
   }
 };
-SUBSCRIPTION_PLANS["freelancer"] = SUBSCRIPTION_PLANS["freelancer_starter"];
-SUBSCRIPTION_PLANS["starter"] = SUBSCRIPTION_PLANS["business_starter"];
-SUBSCRIPTION_PLANS["pro"] = SUBSCRIPTION_PLANS["business_pro"];
+SUBSCRIPTION_PLANS["freelancer"] = {
+  tier: "freelancer",
+  name: "Freelancer",
+  tagline: "Legacy individual workspace",
+  workspaceType: "independent",
+  limits: {
+    maxSeats: 1,
+    maxActiveProjects: 5,
+    maxWorkflows: 3,
+    historyDays: 7,
+    maxInvoicesPerMonth: 15,
+    maxMeetingsPerMonth: 20,
+    analyticsTier: "basic"
+  },
+  features: [
+    "Maximum 5 projects",
+    "Maximum 3 workflows",
+    "1 user workspace",
+    "7-day history",
+    "15 invoices / month",
+    "20 meetings / month"
+  ],
+  pricing: {
+    monthly: {
+      priceInr: 0,
+      pricePaise: 0
+    }
+  }
+};
+SUBSCRIPTION_PLANS["starter"] = {
+  tier: "starter",
+  name: "Starter",
+  tagline: "Legacy team workspace",
+  workspaceType: "organization",
+  limits: {
+    maxSeats: 5,
+    maxActiveProjects: 25,
+    maxWorkflows: 15,
+    historyDays: 30,
+    maxInvoicesPerMonth: 100,
+    maxMeetingsPerMonth: 100,
+    analyticsTier: "standard"
+  },
+  features: [
+    "Maximum 25 projects",
+    "Maximum 15 workflows",
+    "5 members",
+    "30-day history",
+    "100 invoices / month",
+    "100 meetings / month"
+  ],
+  pricing: {
+    monthly: {
+      priceInr: 999,
+      pricePaise: 99900
+    }
+  }
+};
+SUBSCRIPTION_PLANS["pro"] = {
+  tier: "pro",
+  name: "Pro",
+  tagline: "Legacy uncapped pro workspace",
+  workspaceType: "organization",
+  limits: {
+    maxSeats: null,
+    maxActiveProjects: null,
+    maxWorkflows: null,
+    historyDays: null,
+    maxInvoicesPerMonth: null,
+    maxMeetingsPerMonth: null,
+    analyticsTier: "unlimited"
+  },
+  features: [
+    "Unlimited projects",
+    "Unlimited workflows",
+    "Unlimited seats",
+    "Unlimited history",
+    "Unlimited invoices",
+    "Unlimited meetings"
+  ],
+  pricing: {
+    monthly: {
+      priceInr: 2499,
+      pricePaise: 249900
+    }
+  }
+};
 var GRACE_PERIOD_DAYS = parseInt(process.env.SUBSCRIPTION_GRACE_PERIOD_DAYS || "3", 10);
 function normalizePlanTier(tier) {
   const norm = (tier || "").toLowerCase().trim();
@@ -134200,32 +134284,38 @@ var EntitlementsService = class {
     if (verifiedOrgId) {
       try {
         const { data: orgData } = await supabaseAdmin.from("organizations").select("current_plan_tier, subscription_status").eq("id", verifiedOrgId).maybeSingle();
-        if (orgData?.current_plan_tier) {
-          const orgTier = normalizePlanTier(orgData.current_plan_tier);
-          return {
-            tier: orgTier,
-            interval: "monthly",
-            status: orgData.subscription_status || "free",
-            subscription: null,
-            verifiedOrgId
-          };
-        }
+        const defaultTier2 = "business_free";
+        const orgStatus = orgData?.subscription_status || "free";
+        const rawTier = orgData?.current_plan_tier;
+        const normalized = rawTier ? normalizePlanTier(rawTier) : defaultTier2;
+        const isLocked = ["suspended", "expired", "pending"].includes(orgStatus) || normalized !== "business_free" && orgStatus !== "active";
+        const tier = isLocked ? defaultTier2 : normalized === "business_free" ? "business_free" : defaultTier2;
+        return {
+          tier,
+          interval: "monthly",
+          status: orgStatus,
+          subscription: null,
+          verifiedOrgId
+        };
       } catch (err) {
         console.warn("[EntitlementsService] Org plan query error:", err);
       }
     }
     try {
       const { data: userData } = await supabaseAdmin.from("users").select("current_plan_tier, subscription_status").eq("id", params.userId).maybeSingle();
-      if (userData?.current_plan_tier) {
-        const userTier = normalizePlanTier(userData.current_plan_tier);
-        return {
-          tier: userTier,
-          interval: "monthly",
-          status: userData.subscription_status || "free",
-          subscription: null,
-          verifiedOrgId
-        };
-      }
+      const defaultTier2 = verifiedOrgId ? "business_free" : "freelancer_free";
+      const userStatus = userData?.subscription_status || "free";
+      const rawTier = userData?.current_plan_tier;
+      const normalized = rawTier ? normalizePlanTier(rawTier) : defaultTier2;
+      const isLocked = ["suspended", "expired", "pending"].includes(userStatus) || !["freelancer_free", "business_free"].includes(normalized) && userStatus !== "active";
+      const tier = isLocked ? defaultTier2 : ["freelancer_free", "business_free"].includes(normalized) ? normalized : defaultTier2;
+      return {
+        tier,
+        interval: "monthly",
+        status: userStatus,
+        subscription: null,
+        verifiedOrgId
+      };
     } catch (err) {
       console.warn("[EntitlementsService] User plan query error:", err);
     }
@@ -144095,7 +144185,7 @@ router3.post("/seal", requireAuth2, CausalityController.sealProject);
 router3.get("/playback", requireAuth2, CausalityController.getPlaybackState);
 router3.get("/compare", requireAuth2, CausalityController.compareStates);
 router3.post("/provision-client", requireAuth2, CausalityController.provisionClientUser);
-router3.post("/projects", requireAuth2, CausalityController.createProject);
+router3.post("/projects", requireAuth2, requireEntitlement("projects"), CausalityController.createProject);
 var causality_routes_default = router3;
 
 // server/_core/cron.ts

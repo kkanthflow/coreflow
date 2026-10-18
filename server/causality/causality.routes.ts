@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { CausalityController } from './causality.controller';
+import { requireEntitlement } from '../subscriptions/entitlements.middleware.js';
 import { createClient } from '@supabase/supabase-js';
 import ws from 'ws';
 
@@ -70,6 +71,6 @@ router.get('/compare', requireAuth, CausalityController.compareStates);
 router.post('/provision-client', requireAuth, CausalityController.provisionClientUser);
 
 // Project Creation via Central Service
-router.post('/projects', requireAuth, CausalityController.createProject);
+router.post('/projects', requireAuth, requireEntitlement('projects'), CausalityController.createProject);
 
 export default router;

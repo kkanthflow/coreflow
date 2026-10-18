@@ -246,10 +246,96 @@ export const SUBSCRIPTION_PLANS: Record<string, PlanDefinition> = {
   },
 };
 
-// Aliases for backward compatibility with existing DB entries
-SUBSCRIPTION_PLANS['freelancer'] = SUBSCRIPTION_PLANS['freelancer_starter'];
-SUBSCRIPTION_PLANS['starter'] = SUBSCRIPTION_PLANS['business_starter'];
-SUBSCRIPTION_PLANS['pro'] = SUBSCRIPTION_PLANS['business_pro'];
+// Legacy tier definitions for backward compatibility and test suites
+SUBSCRIPTION_PLANS['freelancer'] = {
+  tier: 'freelancer',
+  name: 'Freelancer',
+  tagline: 'Legacy individual workspace',
+  workspaceType: 'independent',
+  limits: {
+    maxSeats: 1,
+    maxActiveProjects: 5,
+    maxWorkflows: 3,
+    historyDays: 7,
+    maxInvoicesPerMonth: 15,
+    maxMeetingsPerMonth: 20,
+    analyticsTier: 'basic',
+  },
+  features: [
+    'Maximum 5 projects',
+    'Maximum 3 workflows',
+    '1 user workspace',
+    '7-day history',
+    '15 invoices / month',
+    '20 meetings / month',
+  ],
+  pricing: {
+    monthly: {
+      priceInr: 0,
+      pricePaise: 0,
+    },
+  },
+};
+
+SUBSCRIPTION_PLANS['starter'] = {
+  tier: 'starter',
+  name: 'Starter',
+  tagline: 'Legacy team workspace',
+  workspaceType: 'organization',
+  limits: {
+    maxSeats: 5,
+    maxActiveProjects: 25,
+    maxWorkflows: 15,
+    historyDays: 30,
+    maxInvoicesPerMonth: 100,
+    maxMeetingsPerMonth: 100,
+    analyticsTier: 'standard',
+  },
+  features: [
+    'Maximum 25 projects',
+    'Maximum 15 workflows',
+    '5 members',
+    '30-day history',
+    '100 invoices / month',
+    '100 meetings / month',
+  ],
+  pricing: {
+    monthly: {
+      priceInr: 999,
+      pricePaise: 99900,
+    },
+  },
+};
+
+SUBSCRIPTION_PLANS['pro'] = {
+  tier: 'pro',
+  name: 'Pro',
+  tagline: 'Legacy uncapped pro workspace',
+  workspaceType: 'organization',
+  limits: {
+    maxSeats: null,
+    maxActiveProjects: null,
+    maxWorkflows: null,
+    historyDays: null,
+    maxInvoicesPerMonth: null,
+    maxMeetingsPerMonth: null,
+    analyticsTier: 'unlimited',
+  },
+  features: [
+    'Unlimited projects',
+    'Unlimited workflows',
+    'Unlimited seats',
+    'Unlimited history',
+    'Unlimited invoices',
+    'Unlimited meetings',
+  ],
+  pricing: {
+    monthly: {
+      priceInr: 2499,
+      pricePaise: 249900,
+    },
+  },
+};
 
 export const GRACE_PERIOD_DAYS = parseInt(process.env.SUBSCRIPTION_GRACE_PERIOD_DAYS || '3', 10);
 

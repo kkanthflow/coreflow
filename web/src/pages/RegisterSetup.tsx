@@ -20,6 +20,13 @@ export default function RegisterSetup() {
     }
   }, [accountSetupCompleted, accountType, navigate]);
 
+  // If not authenticated or stale session cleared, redirect to landing page
+  useEffect(() => {
+    if (!user) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
+
   // Initial state is strictly UNSELECTED
   const [selectedMode, setSelectedMode] = useState<SetupMode>(null);
 
@@ -50,10 +57,12 @@ export default function RegisterSetup() {
     setError(null);
 
     try {
-      // 1. Update public.users
+      // 1. Upsert public.users
       const { error: userErr } = await supabase
         .from('users')
-        .update({
+        .upsert({
+          id: user.id,
+          email: user.email,
           full_name: fullName.trim() || 'Freelancer',
           account_type: 'freelancer',
           role: 'freelancer',
@@ -61,8 +70,7 @@ export default function RegisterSetup() {
           account_setup_completed: true,
           current_plan_tier: 'freelancer_free',
           subscription_status: 'free',
-        })
-        .eq('id', user.id);
+        });
 
       if (userErr) throw userErr;
 
@@ -147,10 +155,12 @@ export default function RegisterSetup() {
 
       if (memErr) throw memErr;
 
-      // 3. Update public.users
+      // 3. Upsert public.users
       const { error: userErr } = await supabase
         .from('users')
-        .update({
+        .upsert({
+          id: user.id,
+          email: user.email,
           full_name: fullName.trim() || 'Organization Owner',
           account_type: 'organization',
           role: 'owner',
@@ -158,8 +168,7 @@ export default function RegisterSetup() {
           account_setup_completed: true,
           current_plan_tier: 'business_free',
           subscription_status: 'free',
-        })
-        .eq('id', user.id);
+        });
 
       if (userErr) throw userErr;
 
@@ -217,17 +226,18 @@ export default function RegisterSetup() {
         throw memErr;
       }
 
-      // 3. Update user profile
+      // 3. Upsert user profile
       const { error: userErr } = await supabase
         .from('users')
-        .update({
+        .upsert({
+          id: user.id,
+          email: user.email,
           full_name: fullName.trim() || 'Team Member',
           account_type: 'organization',
           role: 'employee',
           default_workspace_id: targetOrg.id,
           account_setup_completed: true,
-        })
-        .eq('id', user.id);
+        });
 
       if (userErr) throw userErr;
 

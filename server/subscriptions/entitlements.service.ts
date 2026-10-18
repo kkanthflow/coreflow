@@ -104,7 +104,7 @@ export class EntitlementsService {
       };
     }
 
-    // 2. Fallback to organization current_plan_tier
+    // 2. Fallback to organization current_plan_tier (Strict Payment & Subscription Lock)
     if (verifiedOrgId) {
       try {
         const { data: orgData } = await supabaseAdmin
@@ -113,22 +113,30 @@ export class EntitlementsService {
           .eq('id', verifiedOrgId)
           .maybeSingle();
 
-        if (orgData?.current_plan_tier) {
-          const orgTier = normalizePlanTier(orgData.current_plan_tier);
-          return {
-            tier: orgTier,
-            interval: 'monthly',
-            status: orgData.subscription_status || 'free',
-            subscription: null,
-            verifiedOrgId,
-          };
-        }
+        const defaultTier: PlanTier = 'business_free';
+        const orgStatus = orgData?.subscription_status || 'free';
+        const rawTier = orgData?.current_plan_tier;
+        const normalized = rawTier ? normalizePlanTier(rawTier) : defaultTier;
+
+        // If subscription is unverified, pending, expired, or suspended without an active sub, lock to business_free
+        const isLocked = ['suspended', 'expired', 'pending'].includes(orgStatus) ||
+          (normalized !== 'business_free' && orgStatus !== 'active');
+
+        const tier: PlanTier = isLocked ? defaultTier : (normalized === 'business_free' ? 'business_free' : defaultTier);
+
+        return {
+          tier,
+          interval: 'monthly',
+          status: orgStatus,
+          subscription: null,
+          verifiedOrgId,
+        };
       } catch (err) {
         console.warn('[EntitlementsService] Org plan query error:', err);
       }
     }
 
-    // 3. Fallback to user current_plan_tier
+    // 3. Fallback to user current_plan_tier (Strict Payment & Subscription Lock)
     try {
       const { data: userData } = await supabaseAdmin
         .from('users')
@@ -136,16 +144,24 @@ export class EntitlementsService {
         .eq('id', params.userId)
         .maybeSingle();
 
-      if (userData?.current_plan_tier) {
-        const userTier = normalizePlanTier(userData.current_plan_tier);
-        return {
-          tier: userTier,
-          interval: 'monthly',
-          status: userData.subscription_status || 'free',
-          subscription: null,
-          verifiedOrgId,
-        };
-      }
+      const defaultTier: PlanTier = verifiedOrgId ? 'business_free' : 'freelancer_free';
+      const userStatus = userData?.subscription_status || 'free';
+      const rawTier = userData?.current_plan_tier;
+      const normalized = rawTier ? normalizePlanTier(rawTier) : defaultTier;
+
+      // If subscription is unverified, pending, expired, or suspended without an active sub, lock to free tier
+      const isLocked = ['suspended', 'expired', 'pending'].includes(userStatus) ||
+        (!['freelancer_free', 'business_free'].includes(normalized) && userStatus !== 'active');
+
+      const tier: PlanTier = isLocked ? defaultTier : (['freelancer_free', 'business_free'].includes(normalized) ? normalized : defaultTier);
+
+      return {
+        tier,
+        interval: 'monthly',
+        status: userStatus,
+        subscription: null,
+        verifiedOrgId,
+      };
     } catch (err) {
       console.warn('[EntitlementsService] User plan query error:', err);
     }
