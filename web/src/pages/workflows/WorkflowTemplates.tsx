@@ -7,7 +7,7 @@ import {
   Zap,
   Search,
 } from 'lucide-react';
-import { WORKFLOW_TEMPLATES } from '../../../../server/workflows/workflow.templates.js';
+import { WORKFLOW_TEMPLATES } from './workflowTemplatesData';
 
 export default function WorkflowTemplates() {
   const navigate = useNavigate();
