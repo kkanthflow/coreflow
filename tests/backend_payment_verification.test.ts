@@ -48,7 +48,7 @@ async function runPaymentVerificationTestSuite() {
   assert(checkout1.amountInr === 299, 'Freelancer Starter must cost ₹299');
   assert(checkout1.amountPaise === 29900, 'Amount must be 29900 paise');
 
-  const subId1 = checkout1.subscriptionId;
+  const subId1 = checkout1.subscriptionId!;
   const payId1 = `pay_test_${crypto.randomBytes(6).toString('hex')}`;
   const validSignature1 = crypto
     .createHmac('sha256', testSecret)
@@ -91,7 +91,7 @@ async function runPaymentVerificationTestSuite() {
     userId: userId2,
     tier: 'freelancer_pro',
   });
-  const subId2 = checkout2.subscriptionId;
+  const subId2 = checkout2.subscriptionId!;
   const payId2 = `pay_fail_${crypto.randomBytes(6).toString('hex')}`;
   const validSignature2 = crypto
     .createHmac('sha256', testSecret)
@@ -136,7 +136,7 @@ async function runPaymentVerificationTestSuite() {
     userId: userId3,
     tier: 'freelancer_starter',
   });
-  const subId3 = checkout3.subscriptionId;
+  const subId3 = checkout3.subscriptionId!;
 
   const latestSub3 = await SubscriptionService.getLatestSubscription({ userId: userId3 });
   assert(latestSub3 !== null, 'Latest subscription must exist');
@@ -180,7 +180,7 @@ async function runPaymentVerificationTestSuite() {
     userId: userId5,
     tier: 'freelancer_starter',
   });
-  const subId5 = checkout5.subscriptionId;
+  const subId5 = checkout5.subscriptionId!;
   const payId5 = `pay_tamper_${crypto.randomBytes(6).toString('hex')}`;
   const forgedSignature = 'deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef';
 
@@ -271,7 +271,7 @@ async function runPaymentVerificationTestSuite() {
     userId: userId7,
     tier: 'freelancer_starter', // ₹299 (29900 paise)
   });
-  const subId7 = checkout7.subscriptionId;
+  const subId7 = checkout7.subscriptionId!;
 
   // 7a: Currency mismatch (e.g. USD instead of INR)
   (razorpayService as any).fetchPayment = async (pId: string) => ({
