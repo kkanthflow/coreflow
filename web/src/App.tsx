@@ -18,7 +18,6 @@ import Landing from './pages/Landing';
 
 // Lazy loaded pages (code-split)
 const RegisterSetup   = lazy(() => import('./pages/RegisterSetup'));
-const Onboarding      = lazy(() => import('./pages/Onboarding'));
 const Dashboard       = lazy(() => import('./pages/Dashboard'));
 const Projects        = lazy(() => import('./pages/Projects'));
 const NewProject      = lazy(() => import('./pages/NewProject'));
@@ -68,7 +67,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     );
   }
     if (!session?.user?.id) return <Navigate to="/" replace />;
-    if (onboardingStatus === 'setup_required' || onboardingStatus === 'workspace_required') {
+    if (onboardingStatus === 'setup_required') {
       return <Navigate to="/register/setup" replace />;
     }
     return <>{children}</>;
@@ -86,7 +85,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       );
     }
     if (session?.user?.id) {
-      if (onboardingStatus === 'setup_required' || onboardingStatus === 'workspace_required') {
+      if (onboardingStatus === 'setup_required') {
         return <Navigate to="/register/setup" replace />;
       }
       return <Navigate to="/dashboard" replace />;
@@ -105,7 +104,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       );
     }
     if (session?.user?.id) {
-      if (onboardingStatus === 'setup_required' || onboardingStatus === 'workspace_required') {
+      if (onboardingStatus === 'setup_required') {
         return <Navigate to="/register/setup" replace />;
       }
       return <Navigate to="/dashboard" replace />;

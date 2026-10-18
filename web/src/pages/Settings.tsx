@@ -21,12 +21,8 @@ import {
   CreditCard,
   CheckCircle2,
   RefreshCw,
-  ExternalLink,
-  FileText,
   Sparkles,
-  User,
-  Info,
-  ArrowUpRight
+  User
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
@@ -38,8 +34,9 @@ import { SUPPORTED_CURRENCIES } from '../lib/currency';
 export default function Settings() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, role, accountType } = useAuth();
-  const { orgId, orgName: wsOrgName, membershipRole, canManageBilling, isOwner, refreshWorkspace } = useWorkspace();
+  const { user, role } = useAuth();
+  const { orgId, orgName: wsOrgName, canManageBilling, refreshWorkspace } = useWorkspace();
+  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
 
   // Active Screen / Sub-Screen View ('main' | 'privacy' | 'notifications' | 'freelancer' | 'media' | 'security' | 'billing')
   const [currentView, setCurrentView] = useState<'main' | 'privacy' | 'notifications' | 'freelancer' | 'media' | 'security' | 'billing'>(() => {
@@ -164,7 +161,6 @@ export default function Settings() {
   const [hapticsEnabled, setHapticsEnabled] = useState(true);
 
   // Organization settings
-  const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [updatingCurrency, setUpdatingCurrency] = useState(false);
   const [isCompanyModalVisible, setIsCompanyModalVisible] = useState(false);
@@ -1380,7 +1376,7 @@ export default function Settings() {
                       {subData?.customerName || wsOrgName || user?.user_metadata?.full_name || 'Customer Account'}
                     </h2>
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30">
-                      {subData?.planName || 'Free Plan'}
+                      {subData?.planName || ((orgId || activeOrgId) ? 'Business Free' : 'Freelancer Free')}
                     </span>
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
                       subData?.status === 'active' 
@@ -1393,7 +1389,7 @@ export default function Settings() {
                     </span>
                   </div>
                   <p className="text-xs text-muted mt-1">
-                    Customer Account: <span className="text-main font-medium capitalize">{subData?.customerType || (orgId ? 'Organization' : 'Freelancer')}</span>
+                    Customer Account: <span className="text-main font-medium capitalize">{subData?.customerType || ((orgId || activeOrgId) ? 'Organization' : 'Freelancer')}</span>
                     {' · '}
                     Billing Interval: <span className="text-main font-medium capitalize">{subData?.interval || 'monthly'}</span>
                   </p>

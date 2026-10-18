@@ -268,9 +268,53 @@ subscriptionsRouter.get('/current', requireAuth, async (req: Request, res: Respo
       currentPeriodStart: activeSub?.current_period_start || null,
       currentPeriodEnd: activeSub?.current_period_end || null,
       cancelAtPeriodEnd: activeSub?.cancel_at_period_end || false,
+      paymentStatus: activeSub?.payment_status || (effectiveStatus === 'active' ? 'paid' : (effectiveStatus === 'free' ? 'paid' : 'pending')),
+      subscriptionStatus: effectiveStatus,
     });
   } catch (err: any) {
     res.status(500).json({ error: 'Failed to retrieve subscription status', details: err.message });
+  }
+});
+
+// ── GET /api/subscriptions/status (Authenticated, Full Dashboard Telemetry & RBAC) ──
+subscriptionsRouter.get('/status', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    const orgId = (req.query.orgId as string) || (req.headers['x-organization-id'] as string) || null;
+
+    const accountStatus = await SubscriptionService.getSubscriptionAccountStatus({
+      userId: user.id,
+      orgId,
+    });
+
+    res.json(accountStatus);
+  } catch (err: any) {
+    const status = err.message?.startsWith('Forbidden') ? 403 : 500;
+    res.status(status).json({ error: err.message || 'Failed to retrieve account subscription status' });
+  }
+});
+
+// ── POST /api/subscriptions/webhook (Alternative Webhook Route) ──
+subscriptionsRouter.post('/webhook', async (req: Request, res: Response) => {
+  try {
+    const signature = (req.headers['x-razorpay-signature'] as string) || '';
+    const eventHeaderId = (req.headers['x-razorpay-event-id'] as string) || '';
+    const rawBody: Buffer | string = (req as any).rawBody || (typeof req.body === 'string' ? req.body : JSON.stringify(req.body));
+
+    if (!signature) {
+      res.status(400).json({ error: 'Missing X-Razorpay-Signature header' });
+      return;
+    }
+
+    const result = await SubscriptionService.processWebhookEvent({
+      rawBody,
+      signature,
+      eventId: eventHeaderId || undefined,
+    });
+
+    res.status(200).json({ success: true, ...result });
+  } catch (err: any) {
+    res.status(400).json({ error: 'Webhook processing failed', message: err.message });
   }
 });
 

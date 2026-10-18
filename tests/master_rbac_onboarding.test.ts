@@ -389,23 +389,23 @@ describe('AUVRYN MASTER VERIFICATION SUITE — ONBOARDING, RBAC & BILLING', () =
 
     it('18a. Valid Razorpay signature verifies successfully', () => {
       const paymentId = 'pay_real_123';
-      const orderId = 'order_real_456';
-      const expectedPayload = `${orderId}|${paymentId}`;
+      const subscriptionId = 'sub_real_456';
+      const expectedPayload = `${paymentId}|${subscriptionId}`;
       const validSignature = crypto
         .createHmac('sha256', testSecret)
         .update(expectedPayload)
         .digest('hex');
 
-      const verified = razorpayService.verifyPaymentSignature(orderId, paymentId, validSignature);
+      const verified = razorpayService.verifyCheckoutSignature({ paymentId, subscriptionId, signature: validSignature });
       expect(verified).toBe(true);
     });
 
     it('18b. Tampered or missing signature is rejected and does not activate plan', () => {
       const paymentId = 'pay_tampered_123';
-      const orderId = 'order_tampered_456';
+      const subscriptionId = 'sub_tampered_456';
       const forgedSignature = 'forged_signature_hex_value';
 
-      const verified = razorpayService.verifyPaymentSignature(orderId, paymentId, forgedSignature);
+      const verified = razorpayService.verifyCheckoutSignature({ paymentId, subscriptionId, signature: forgedSignature });
       expect(verified).toBe(false);
 
       // Activation guard
@@ -485,9 +485,10 @@ describe('AUVRYN MASTER VERIFICATION SUITE — ONBOARDING, RBAC & BILLING', () =
   describe('Test 22: Backward Compatibility & System Integrity', () => {
     it('22a. Plan tier normalizer handles both new authoritative IDs and legacy aliases seamlessly', () => {
       expect(normalizePlanTier('freelancer_starter')).toBe('freelancer_starter');
-      expect(normalizePlanTier('starter')).toBe('freelancer_starter');
+      expect(normalizePlanTier('starter')).toBe('business_starter');
       expect(normalizePlanTier('freelancer_pro')).toBe('freelancer_pro');
-      expect(normalizePlanTier('pro')).toBe('freelancer_pro');
+      expect(normalizePlanTier('pro')).toBe('business_pro');
+      expect(normalizePlanTier('freelancer')).toBe('freelancer_starter');
       expect(normalizePlanTier('business_starter')).toBe('business_starter');
       expect(normalizePlanTier('business_pro')).toBe('business_pro');
       expect(normalizePlanTier('freelancer_free')).toBe('freelancer_free');

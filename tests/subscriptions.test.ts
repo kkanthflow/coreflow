@@ -11,35 +11,21 @@ import { razorpayService } from '../server/subscriptions/razorpay.service';
 import { SubscriptionService } from '../server/subscriptions/subscription.service';
 
 describe('Auvryn Razorpay Subscription Plans & Pricing', () => {
-  it('should define all three required plans with correct pricing', () => {
-    // 1. Freelancer: ₹299/mo or ₹2,990/yr
-    expect(SUBSCRIPTION_PLANS.freelancer.pricing.monthly.priceInr).toBe(299);
-    expect(SUBSCRIPTION_PLANS.freelancer.pricing.yearly.priceInr).toBe(2990);
-    expect(SUBSCRIPTION_PLANS.freelancer.limits.maxSeats).toBe(1);
+  it('should define authoritative monthly plans with correct pricing', () => {
+    // 1. Freelancer: ₹299/mo
+    expect(SUBSCRIPTION_PLANS.freelancer_starter.pricing.monthly.priceInr).toBe(299);
+    expect(SUBSCRIPTION_PLANS.freelancer_starter.limits.maxSeats).toBe(1);
 
-    // 2. Business Starter: ₹399/mo or ₹3,990/yr
-    expect(SUBSCRIPTION_PLANS.starter.pricing.monthly.priceInr).toBe(399);
-    expect(SUBSCRIPTION_PLANS.starter.pricing.yearly.priceInr).toBe(3990);
-    expect(SUBSCRIPTION_PLANS.starter.limits.maxSeats).toBe(5);
+    // 2. Business Starter: ₹999/mo
+    expect(SUBSCRIPTION_PLANS.business_starter.pricing.monthly.priceInr).toBe(999);
+    expect(SUBSCRIPTION_PLANS.business_starter.limits.maxSeats).toBe(5);
 
-    // 3. Auvryn Pro: ₹499/mo or ₹4,990/yr (Unlimited)
-    expect(SUBSCRIPTION_PLANS.pro.pricing.monthly.priceInr).toBe(499);
-    expect(SUBSCRIPTION_PLANS.pro.pricing.yearly.priceInr).toBe(4990);
-    expect(SUBSCRIPTION_PLANS.pro.limits.maxSeats).toBeNull(); // Unlimited seats
-    expect(SUBSCRIPTION_PLANS.pro.limits.maxInvoicesPerMonth).toBeNull(); // Unlimited invoices
-    expect(SUBSCRIPTION_PLANS.pro.limits.maxActiveProjects).toBeNull(); // Unlimited projects
-    expect(SUBSCRIPTION_PLANS.pro.limits.maxMeetingsPerMonth).toBeNull(); // Unlimited meetings
-  });
-
-  it('should ensure yearly prices provide two months equivalent discount', () => {
-    // 10x monthly price = 2 months free discount compared to 12 months
-    const plans: PlanTier[] = ['freelancer', 'starter', 'pro'];
-    for (const tier of plans) {
-      const monthly = SUBSCRIPTION_PLANS[tier].pricing.monthly.priceInr;
-      const yearly = SUBSCRIPTION_PLANS[tier].pricing.yearly.priceInr;
-      expect(yearly).toBe(monthly * 10);
-      expect(monthly * 12 - yearly).toBe(monthly * 2);
-    }
+    // 3. Business Pro: ₹2,499/mo (Unlimited)
+    expect(SUBSCRIPTION_PLANS.business_pro.pricing.monthly.priceInr).toBe(2499);
+    expect(SUBSCRIPTION_PLANS.business_pro.limits.maxSeats).toBeNull(); // Unlimited seats
+    expect(SUBSCRIPTION_PLANS.business_pro.limits.maxInvoicesPerMonth).toBeNull(); // Unlimited invoices
+    expect(SUBSCRIPTION_PLANS.business_pro.limits.maxActiveProjects).toBeNull(); // Unlimited projects
+    expect(SUBSCRIPTION_PLANS.business_pro.limits.maxMeetingsPerMonth).toBeNull(); // Unlimited meetings
   });
 
   it('should format public plans list accurately', () => {

@@ -101,7 +101,6 @@ export default function Register() {
     setError(null);
 
     try {
-      let orgId = null;
       let existingOrg = null;
       const cleanOrgName = organization.trim();
       const needsOrg = accountType !== 'freelancer' || (accountType === 'freelancer' && freelancerWorkType === 'organization');

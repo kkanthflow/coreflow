@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { User, Building2, Users2, ArrowRight, Check, Shield, Sparkles, Loader2, AlertCircle } from 'lucide-react';
+import { User, Building2, Users2, ArrowRight, Check, Loader2, AlertCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
-import { trpc } from '../lib/trpc';
 import AuvrynLogo from '../components/AuvrynLogo';
 
 type SetupMode = 'freelancer' | 'create_org' | 'join_org' | null;

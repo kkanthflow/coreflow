@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Check,
   Sparkles,
@@ -12,12 +12,14 @@ import {
   Building2,
   User,
   Users,
-  CreditCard,
   Clock,
-  Briefcase
+  Briefcase,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useWorkspace } from '../hooks/useWorkspace';
+import { useTheme } from '../contexts/ThemeContext';
 import { supabase } from '../lib/supabase';
 import { openRazorpaySubscriptionCheckout } from '../lib/razorpay';
 import ContactTeamModal from '../components/ContactTeamModal';
@@ -185,12 +187,11 @@ export const ORGANIZATION_PLANS: PlanDetail[] = [
 
 export default function Pricing() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { session, user, accountType, role: userRole } = useAuth();
-  const { orgId, orgName, membershipRole, canManageBilling, isOwner } = useWorkspace();
+  const { theme, toggleTheme } = useTheme();
+  const { session, user, accountType } = useAuth();
+  const { orgId, orgName, membershipRole, canManageBilling } = useWorkspace();
 
   // Active Plan View: resolved strictly by authenticated account type
-  const isFreelancerAccount = accountType === 'freelancer' || (!orgId && !accountType);
   const isOrganizationAccount = accountType === 'organization' || !!orgId;
 
   // For unauthenticated visitors, allow tab toggle. For logged-in users, lock to their account type.
@@ -204,21 +205,8 @@ export default function Pricing() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Active subscription check
-  const [currentSubscription, setCurrentSubscription] = useState<any | null>(null);
-  const [activePlanTier, setActivePlanTier] = useState<string>('freelancer_free');
+  const [activePlanTier, setActivePlanTier] = useState<string>(() => isOrganizationAccount ? 'business_free' : 'freelancer_free');
   const [activePlanStatus, setActivePlanStatus] = useState<string>('free');
-
-  // Confirmation screen state
-  const [confirmationData, setConfirmationData] = useState<{
-    tier: string;
-    planName: string;
-    subscriptionId?: string;
-    amount: number;
-    currentPeriodEnd?: string;
-  } | null>(null);
-
-  // Live Usage Report & Quotas
-  const [usageReport, setUsageReport] = useState<any | null>(null);
 
   // Modal State
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
@@ -238,33 +226,17 @@ export default function Pricing() {
 
       const targetOrgId = isOrganizationAccount ? orgId : null;
 
-      const [subRes, usageRes] = await Promise.all([
-        fetch(`${apiUrl}/subscriptions/current${targetOrgId ? `?orgId=${targetOrgId}` : ''}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            ...(targetOrgId ? { 'x-organization-id': targetOrgId } : {}),
-          },
-        }),
-        fetch(`${apiUrl}/subscriptions/usage${targetOrgId ? `?orgId=${targetOrgId}` : ''}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            ...(targetOrgId ? { 'x-organization-id': targetOrgId } : {}),
-          },
-        }),
-      ]);
+      const subRes = await fetch(`${apiUrl}/subscriptions/current${targetOrgId ? `?orgId=${targetOrgId}` : ''}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          ...(targetOrgId ? { 'x-organization-id': targetOrgId } : {}),
+        },
+      });
 
       if (subRes.ok) {
         const data = await subRes.json();
         setActivePlanTier(data.tier || (isOrganizationAccount ? 'business_free' : 'freelancer_free'));
         setActivePlanStatus(data.status || 'free');
-        if (data.hasActiveSubscription) {
-          setCurrentSubscription(data.subscription);
-        }
-      }
-
-      if (usageRes.ok) {
-        const usageData = await usageRes.json();
-        setUsageReport(usageData);
       }
     } catch (e) {
       console.warn('Failed to load active subscription or usage:', e);
@@ -272,8 +244,9 @@ export default function Pricing() {
   };
 
   useEffect(() => {
+    setActivePlanTier(isOrganizationAccount ? 'business_free' : 'freelancer_free');
     fetchCurrentAndUsage();
-  }, [session?.user?.id, orgId, accountType]);
+  }, [session?.user?.id, orgId, accountType, isOrganizationAccount]);
 
   // Handle Checkout / Upgrade
   const handleSubscribe = async (tier: string) => {
@@ -339,13 +312,7 @@ export default function Pricing() {
 
       // If user already active on this exact plan
       if (createData.alreadySubscribed) {
-        setConfirmationData({
-          tier,
-          planName: createData.planName,
-          subscriptionId: createData.subscriptionId,
-          amount: tier.includes('starter') ? (isOrgPlan ? 999 : 299) : (isOrgPlan ? 2499 : 599),
-          currentPeriodEnd: createData.currentPeriodEnd,
-        });
+        setSuccessMessage(`You are already subscribed to ${createData.planName}.`);
         setLoadingTier(null);
         return;
       }
@@ -378,14 +345,9 @@ export default function Pricing() {
               throw new Error(verifyData.error || 'Payment signature verification failed.');
             }
 
-            setConfirmationData({
-              tier,
-              planName: createData.planName,
-              subscriptionId: verifyPayload.razorpay_subscription_id,
-              amount: createData.amountInr,
-              currentPeriodEnd: verifyData.subscription?.current_period_end,
-            });
-
+            setSuccessMessage(`Payment successful! You are now subscribed to ${createData.planName}.`);
+            setActivePlanTier(tier);
+            setActivePlanStatus('active');
             await fetchCurrentAndUsage();
           } catch (verErr: any) {
             setError(verErr.message || 'Payment verified signature mismatch. Please contact support.');
@@ -413,34 +375,46 @@ export default function Pricing() {
   const displayedPlans = activeCategory === 'organization' ? ORGANIZATION_PLANS : FREELANCER_PLANS;
 
   return (
-    <div className="min-h-screen bg-[#07070A] text-zinc-100 flex flex-col justify-between selection:bg-[#FF6B4A]/30 font-sans relative overflow-x-hidden">
+    <div className="min-h-screen bg-app text-main flex flex-col justify-between selection:bg-[#FF6B4A]/30 font-sans relative overflow-x-hidden transition-colors duration-200">
       {/* Background Ambience */}
       <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-5%] left-1/2 -translate-x-1/2 w-[900px] h-[550px] bg-gradient-to-b from-[#FF6B4A]/10 to-transparent blur-[150px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-blue-600/5 blur-[130px] rounded-full" />
+        <div className="absolute top-[-5%] left-1/2 -translate-x-1/2 w-[900px] h-[550px] bg-gradient-to-b from-[#FF6B4A]/10 to-transparent blur-[150px] rounded-full dark:opacity-80 opacity-35" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[500px] h-[500px] bg-blue-600/5 blur-[130px] rounded-full dark:opacity-80 opacity-20" />
       </div>
 
       {/* Top Navbar */}
-      <header className="relative z-10 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between border-b border-white/[0.06]">
+      <header className="relative z-10 w-full max-w-7xl mx-auto px-6 py-6 flex items-center justify-between border-b border-divider bg-card-bg/40 backdrop-blur-md">
         <Link to="/" className="flex items-center gap-3">
           <AuvrynLogo className="h-8 w-auto text-[#FF6B4A]" />
-          <span className="font-extrabold text-lg tracking-wider text-white">AUVRYN</span>
-          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-white/[0.05] border border-white/[0.08] text-zinc-400">
+          <span className="font-extrabold text-lg tracking-wider text-main">AUVRYN</span>
+          <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-hover/70 border border-divider text-muted">
             Authoritative Plans
           </span>
         </Link>
-        <div className="flex items-center gap-4 text-xs font-mono">
+        <div className="flex items-center gap-3 text-xs font-mono">
+          {/* Quick Theme Switcher */}
+          <button
+            type="button"
+            onClick={toggleTheme}
+            aria-label="Toggle light or dark theme"
+            className="p-2 rounded-lg bg-card-bg hover:bg-hover border border-divider text-muted hover:text-main transition-colors shadow-sm cursor-pointer flex items-center gap-1.5"
+            title={theme === 'dark' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
+          >
+            {theme === 'dark' ? <Sun size={15} className="text-amber-400" /> : <Moon size={15} className="text-indigo-600" />}
+            <span className="hidden sm:inline capitalize text-[11px]">{theme}</span>
+          </button>
+
           {session?.user?.id ? (
             <Link
               to="/dashboard"
-              className="px-4 py-2 rounded-lg bg-white/[0.06] hover:bg-white/[0.1] border border-white/[0.1] text-white transition-colors"
+              className="px-4 py-2 rounded-lg bg-card-bg hover:bg-hover border border-divider text-main transition-colors shadow-sm font-semibold"
             >
               Dashboard →
             </Link>
           ) : (
             <div className="flex items-center gap-3">
-              <Link to="/login" className="text-zinc-400 hover:text-white transition-colors">Sign In</Link>
-              <Link to="/register" className="px-3.5 py-1.5 rounded-lg bg-[#FF6B4A] hover:bg-[#FF552B] text-white font-semibold transition-colors">
+              <Link to="/login" className="text-muted hover:text-main transition-colors font-medium">Sign In</Link>
+              <Link to="/register" className="px-3.5 py-1.5 rounded-lg bg-[#FF6B4A] hover:bg-[#FF552B] text-white font-semibold transition-colors shadow-md">
                 Sign Up
               </Link>
             </div>
@@ -452,15 +426,15 @@ export default function Pricing() {
       <main className="relative z-10 flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
         {/* Title Header */}
         <div className="text-center space-y-4 mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-400">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-card-bg border border-divider text-xs font-mono text-muted shadow-sm">
             <Shield size={12} className="text-[#FF6B4A]" />
             <span>Role-Based Governance · Transparent Billing</span>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-main">
             {activeCategory === 'organization' ? 'Organization Subscription Plans' : 'Freelancer Subscription Plans'}
           </h1>
-          <p className="text-zinc-400 text-sm sm:text-base max-w-xl mx-auto">
+          <p className="text-muted text-sm sm:text-base max-w-xl mx-auto">
             {activeCategory === 'organization'
               ? 'Multi-member collaborative workbench for growing agencies, businesses, and enterprise teams.'
               : 'Independent operating architecture engineered for solo specialists, contractors, and consultants.'}
@@ -468,26 +442,28 @@ export default function Pricing() {
 
           {/* Customer & Payer Context Indicator for Authenticated Users */}
           {session?.user?.id && (
-            <div className="inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-4 p-3 rounded-xl bg-white/[0.02] border border-white/[0.08] text-xs font-mono text-zinc-300 mx-auto mt-4">
+            <div className="inline-flex flex-col sm:flex-row items-center gap-2 sm:gap-4 p-3 rounded-xl bg-card-bg border border-divider text-xs font-mono text-main shadow-sm mx-auto mt-4">
               <div className="flex items-center gap-2">
-                <span className="text-zinc-500">Customer Account:</span>
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  {isOrganizationAccount ? <Building2 size={13} className="text-[#FF6B4A]" /> : <User size={13} className="text-emerald-400" />}
+                <span className="text-muted">Customer Account:</span>
+                <span className="font-bold text-main flex items-center gap-1.5">
+                  {isOrganizationAccount ? <Building2 size={13} className="text-[#FF6B4A]" /> : <User size={13} className="text-emerald-500" />}
                   {isOrganizationAccount ? (orgName || 'Organization Workspace') : 'Freelancer Account'}
                 </span>
               </div>
-              <span className="hidden sm:inline text-zinc-600">|</span>
+              <span className="hidden sm:inline text-muted/40">|</span>
               <div className="flex items-center gap-2">
-                <span className="text-zinc-500">Current Plan:</span>
-                <span className="font-semibold text-emerald-400 uppercase tracking-wider">{activePlanTier.replace(/_/g, ' ')}</span>
+                <span className="text-muted">Current Plan:</span>
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                  {activePlanTier.replace(/_/g, ' ')} ({activePlanStatus})
+                </span>
               </div>
               {isOrganizationAccount && (
                 <>
-                  <span className="hidden sm:inline text-zinc-600">|</span>
+                  <span className="hidden sm:inline text-muted/40">|</span>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-zinc-500">Your Role:</span>
+                    <span className="text-muted">Your Role:</span>
                     <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                      canManageBilling ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-zinc-800 text-zinc-400'
+                      canManageBilling ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-hover text-muted border border-divider'
                     }`}>
                       {membershipRole || 'member'}
                     </span>
@@ -500,13 +476,13 @@ export default function Pricing() {
           {/* Public Visitor Plan Suite Selector (Only rendered when unauthenticated) */}
           {!session?.user?.id && (
             <div className="flex justify-center mt-6">
-              <div className="inline-flex p-1 rounded-xl bg-white/[0.04] border border-white/[0.08]">
+              <div className="inline-flex p-1 rounded-xl bg-hover/60 border border-divider shadow-sm">
                 <button
                   onClick={() => setPublicCategoryTab('freelancer')}
                   className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     publicCategoryTab === 'freelancer'
                       ? 'bg-[#FF6B4A] text-white shadow-md'
-                      : 'text-zinc-400 hover:text-white'
+                      : 'text-muted hover:text-main'
                   }`}
                 >
                   Freelancer Plans (₹0 – ₹599)
@@ -516,7 +492,7 @@ export default function Pricing() {
                   className={`px-5 py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     publicCategoryTab === 'organization'
                       ? 'bg-[#FF6B4A] text-white shadow-md'
-                      : 'text-zinc-400 hover:text-white'
+                      : 'text-muted hover:text-main'
                   }`}
                 >
                   Organization Plans (₹0 – ₹2,499)
@@ -528,14 +504,14 @@ export default function Pricing() {
 
         {/* Alerts & Messages */}
         {error && (
-          <div className="max-w-3xl mx-auto mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3 text-red-400 text-xs sm:text-sm">
+          <div className="max-w-3xl mx-auto mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3 text-red-600 dark:text-red-400 text-xs sm:text-sm">
             <AlertCircle size={18} className="shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {successMessage && (
-          <div className="max-w-3xl mx-auto mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-400 text-xs sm:text-sm">
+          <div className="max-w-3xl mx-auto mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm">
             <CheckCircle2 size={18} className="shrink-0" />
             <span>{successMessage}</span>
           </div>
@@ -543,8 +519,8 @@ export default function Pricing() {
 
         {/* Member Restricted Billing Notice */}
         {isOrganizationAccount && !canManageBilling && (
-          <div className="max-w-3xl mx-auto mb-8 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start sm:items-center gap-3 text-amber-300 text-xs sm:text-sm">
-            <Lock size={18} className="shrink-0 mt-0.5 sm:mt-0 text-amber-400" />
+          <div className="max-w-3xl mx-auto mb-8 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start sm:items-center gap-3 text-amber-700 dark:text-amber-300 text-xs sm:text-sm">
+            <Lock size={18} className="shrink-0 mt-0.5 sm:mt-0 text-amber-500" />
             <div>
               <span className="font-semibold">Billing Actions Restricted: </span>
               <span>Contact your organization owner or billing administrator to manage your subscription.</span>
@@ -556,15 +532,14 @@ export default function Pricing() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto mb-16">
           {displayedPlans.map((plan) => {
             const isCurrent = activePlanTier === plan.tier;
-            const isPro = plan.tier.includes('pro');
 
             return (
               <div
                 key={plan.tier}
                 className={`rounded-2xl p-6 sm:p-8 border flex flex-col justify-between transition-all duration-300 relative ${
                   plan.isPopular
-                    ? 'bg-gradient-to-b from-white/[0.06] to-white/[0.02] border-[#FF6B4A]/60 shadow-[0_0_35px_rgba(255,107,74,0.12)]'
-                    : 'bg-white/[0.02] border-white/[0.08] hover:border-white/[0.18]'
+                    ? 'bg-card-bg border-[#FF6B4A] shadow-[0_4px_30px_rgba(255,107,74,0.15)] ring-1 ring-[#FF6B4A]/25'
+                    : 'bg-card-bg border-divider hover:border-black/20 dark:hover:border-white/20 shadow-sm hover:shadow-md'
                 }`}
               >
                 {/* Popular or Enterprise Badge */}
@@ -577,50 +552,50 @@ export default function Pricing() {
                 <div>
                   {/* Header */}
                   <div className="space-y-2 mb-6">
-                    <h3 className="text-xl font-extrabold text-white">{plan.name}</h3>
-                    <p className="text-xs text-zinc-400 min-h-[32px] leading-relaxed">
+                    <h3 className="text-xl font-extrabold text-main">{plan.name}</h3>
+                    <p className="text-xs text-muted min-h-[32px] leading-relaxed">
                       {plan.tagline}
                     </p>
                   </div>
 
                   {/* Pricing Display */}
-                  <div className="mb-6 pb-6 border-b border-white/[0.08]">
+                  <div className="mb-6 pb-6 border-b border-divider">
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-3xl sm:text-4xl font-extrabold text-white">
+                      <span className="text-3xl sm:text-4xl font-extrabold text-main tabular-nums">
                         ₹{plan.priceMonthly.toLocaleString('en-IN')}
                       </span>
-                      <span className="text-xs text-zinc-400 font-mono">/ month</span>
+                      <span className="text-xs text-muted font-mono">/ month</span>
                     </div>
-                    <div className="text-[11px] text-zinc-500 font-mono mt-1">
+                    <div className="text-[11px] text-muted font-mono mt-1">
                       {plan.priceMonthly === 0 ? 'No credit card required' : 'Billed monthly via Razorpay'}
                     </div>
                   </div>
 
                   {/* Key Quota Limits */}
-                  <div className="space-y-2.5 mb-6 text-xs font-mono text-zinc-300">
-                    <div className="flex items-center justify-between py-1 border-b border-white/[0.04]">
-                      <span className="text-zinc-500 flex items-center gap-1.5"><Users size={12} /> Seats:</span>
-                      <span className="font-semibold text-white">{plan.limits.seats}</span>
+                  <div className="space-y-2.5 mb-6 text-xs font-mono text-muted">
+                    <div className="flex items-center justify-between py-1 border-b border-divider/60">
+                      <span className="flex items-center gap-1.5"><Users size={12} className="text-[#FF6B4A]" /> Seats:</span>
+                      <span className="font-semibold text-main">{plan.limits.seats}</span>
                     </div>
-                    <div className="flex items-center justify-between py-1 border-b border-white/[0.04]">
-                      <span className="text-zinc-500 flex items-center gap-1.5"><Briefcase size={12} /> Projects:</span>
-                      <span className="font-semibold text-white">{plan.limits.projects}</span>
+                    <div className="flex items-center justify-between py-1 border-b border-divider/60">
+                      <span className="flex items-center gap-1.5"><Briefcase size={12} className="text-[#FF6B4A]" /> Projects:</span>
+                      <span className="font-semibold text-main">{plan.limits.projects}</span>
                     </div>
-                    <div className="flex items-center justify-between py-1 border-b border-white/[0.04]">
-                      <span className="text-zinc-500 flex items-center gap-1.5"><Sparkles size={12} /> Workflows:</span>
-                      <span className="font-semibold text-white">{plan.limits.workflows}</span>
+                    <div className="flex items-center justify-between py-1 border-b border-divider/60">
+                      <span className="flex items-center gap-1.5"><Sparkles size={12} className="text-[#FF6B4A]" /> Workflows:</span>
+                      <span className="font-semibold text-main">{plan.limits.workflows}</span>
                     </div>
-                    <div className="flex items-center justify-between py-1 border-b border-white/[0.04]">
-                      <span className="text-zinc-500 flex items-center gap-1.5"><Clock size={12} /> History:</span>
-                      <span className="font-semibold text-white">{plan.limits.history}</span>
+                    <div className="flex items-center justify-between py-1 border-b border-divider/60">
+                      <span className="flex items-center gap-1.5"><Clock size={12} className="text-[#FF6B4A]" /> History:</span>
+                      <span className="font-semibold text-main">{plan.limits.history}</span>
                     </div>
                   </div>
 
                   {/* Included Features List */}
-                  <div className="space-y-2.5 text-xs text-zinc-400 mb-8">
+                  <div className="space-y-2.5 text-xs text-muted mb-8">
                     {plan.features.map((feat, idx) => (
                       <div key={idx} className="flex items-start gap-2.5">
-                        <Check size={14} className="text-emerald-400 shrink-0 mt-0.5" />
+                        <Check size={14} className="text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5" />
                         <span>{feat}</span>
                       </div>
                     ))}
@@ -635,13 +610,13 @@ export default function Pricing() {
                       className={`w-full py-3 px-4 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
                         plan.isPopular
                           ? 'bg-[#FF6B4A] hover:bg-[#FF552B] text-white shadow-lg shadow-[#FF6B4A]/25'
-                          : 'bg-white/[0.06] hover:bg-white/[0.1] text-white border border-white/[0.1]'
+                          : 'bg-hover hover:bg-black/10 dark:hover:bg-white/10 text-main border border-divider shadow-sm'
                       }`}
                     >
                       <span>Sign Up to Get Started →</span>
                     </button>
                   ) : isCurrent ? (
-                    <div className="w-full py-3 px-4 rounded-xl bg-white/[0.04] border border-emerald-500/30 text-emerald-400 font-semibold text-xs flex items-center justify-center gap-2">
+                    <div className="w-full py-3 px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-semibold text-xs flex items-center justify-center gap-2">
                       <CheckCircle2 size={14} />
                       <span>Current Active Plan</span>
                     </div>
@@ -649,7 +624,7 @@ export default function Pricing() {
                     <button
                       disabled
                       title="Only organization owner or billing administrator can purchase"
-                      className="w-full py-3 px-4 rounded-xl bg-white/[0.03] border border-white/[0.06] text-zinc-600 font-semibold text-xs flex items-center justify-center gap-2 cursor-not-allowed"
+                      className="w-full py-3 px-4 rounded-xl bg-hover border border-divider text-muted opacity-60 font-semibold text-xs flex items-center justify-center gap-2 cursor-not-allowed"
                     >
                       <Lock size={12} />
                       <span>Locked (Contact Owner)</span>
@@ -660,10 +635,10 @@ export default function Pricing() {
                       disabled={loadingTier === plan.tier}
                       className={`w-full py-3 px-4 rounded-xl font-semibold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer ${
                         plan.priceMonthly === 0
-                          ? 'bg-zinc-800 hover:bg-zinc-700 text-white border border-white/[0.1]'
+                          ? 'bg-hover hover:bg-black/10 dark:hover:bg-white/10 text-main border border-divider shadow-sm'
                           : plan.isPopular
                           ? 'bg-[#FF6B4A] hover:bg-[#FF552B] text-white shadow-lg shadow-[#FF6B4A]/25'
-                          : 'bg-white/[0.08] hover:bg-white/[0.14] text-white border border-white/[0.1]'
+                          : 'bg-[#FF6B4A]/10 hover:bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30'
                       }`}
                     >
                       {loadingTier === plan.tier ? (
@@ -683,16 +658,16 @@ export default function Pricing() {
         </div>
 
         {/* Custom Development Banner */}
-        <div className="max-w-5xl mx-auto bg-gradient-to-r from-[#181824] via-[#121218] to-[#181824] border border-white/10 rounded-2xl p-8 sm:p-10 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 mb-12">
+        <div className="max-w-5xl mx-auto bg-gradient-to-r from-orange-500/[0.04] via-card-bg to-orange-500/[0.08] dark:from-[#181824] dark:via-[#121218] dark:to-[#181824] border border-divider rounded-2xl p-8 sm:p-10 shadow-lg relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8 mb-12">
           <div className="space-y-3 max-w-xl text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-[11px] font-mono text-zinc-400">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-hover/70 border border-divider text-[11px] font-mono text-muted">
               <Code2 size={12} className="text-[#FF6B4A]" />
               <span>Bespoke Engineering Services</span>
             </div>
-            <h3 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-main tracking-tight">
               Need Custom Architecture or Tailored Quotas?
             </h3>
-            <p className="text-xs sm:text-sm text-zinc-400 leading-relaxed">
+            <p className="text-xs sm:text-sm text-muted leading-relaxed">
               For enterprises needing company-specific workflows, private cloud deployments, custom ERP sync rails, or bespoke modules. Skavelon Technologies provides custom architectural scoping and tailored quotations.
             </p>
           </div>
@@ -700,7 +675,7 @@ export default function Pricing() {
           <div className="shrink-0">
             <button
               onClick={() => setIsContactModalOpen(true)}
-              className="px-6 py-3.5 bg-white text-zinc-900 hover:bg-zinc-200 font-bold text-xs rounded-xl transition-all shadow-[0_0_25px_rgba(255,255,255,0.2)] flex items-center gap-2 cursor-pointer"
+              className="px-6 py-3.5 bg-zinc-900 text-white hover:bg-zinc-800 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200 font-bold text-xs rounded-xl transition-all shadow-md flex items-center gap-2 cursor-pointer"
             >
               <span>Contact Our Team →</span>
             </button>
@@ -709,13 +684,13 @@ export default function Pricing() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-10 px-6 bg-[#08080c] text-xs font-mono text-zinc-500">
+      <footer className="border-t border-divider py-10 px-6 bg-app text-xs font-mono text-muted transition-colors">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-4">
             <span>© {new Date().getFullYear()} AUVRYN by Skavelon Technologies.</span>
-            <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
-            <Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy</Link>
-            <Link to="/contact" className="hover:text-white transition-colors">Support</Link>
+            <Link to="/terms" className="hover:text-main transition-colors">Terms</Link>
+            <Link to="/privacy-policy" className="hover:text-main transition-colors">Privacy</Link>
+            <Link to="/contact" className="hover:text-main transition-colors">Support</Link>
           </div>
           <span>Razorpay Subscriptions Gateway · INR (₹)</span>
         </div>

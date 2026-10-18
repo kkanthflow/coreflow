@@ -25,6 +25,7 @@ export interface EntitlementCheckResult {
   percent?: number;
   unlimited: boolean;
   upgradeUrl?: string;
+  upgradeRequired?: boolean;
 }
 
 export interface UsageReport {
@@ -93,7 +94,7 @@ export class EntitlementsService {
       orgId: verifiedOrgId,
     });
 
-    if (activeSub && ['active', 'authenticated'].includes(activeSub.status)) {
+    if (activeSub && ['active', 'authenticated', 'cancelled', 'past_due'].includes(activeSub.status)) {
       return {
         tier: normalizePlanTier(activeSub.plan_tier),
         interval: (activeSub.plan_interval || 'monthly') as BillingInterval,
@@ -173,7 +174,7 @@ export class EntitlementsService {
       const subStart = new Date(subscription.current_period_start);
       const subEnd = new Date(subscription.current_period_end);
 
-      if (subscription.plan_interval === 'yearly') {
+      if ((subscription.plan_interval as string) === 'yearly') {
         // Calculate monthly window anchored on subStart date
         let windowStart = new Date(subStart);
         let windowEnd = new Date(subStart);
@@ -329,7 +330,8 @@ export class EntitlementsService {
   public static async checkEntitlement(params: {
     userId: string;
     orgId?: string | null;
-    feature: 'invoices' | 'projects' | 'meetings' | 'seats' | 'analytics';
+    feature: 'invoices' | 'projects' | 'workflows' | 'history' | 'meetings' | 'seats' | 'analytics';
+    currentUsage?: number;
   }): Promise<EntitlementCheckResult> {
     const { tier, subscription, verifiedOrgId } = await this.resolveEffectiveSubscription(params);
     const period = this.calculateUsagePeriod(subscription);
@@ -401,6 +403,10 @@ export class EntitlementsService {
         break;
     }
 
+    if (params.currentUsage !== undefined) {
+      current = params.currentUsage;
+    }
+
     const allowed = limit === null || current < limit;
     const remaining = limit !== null ? Math.max(0, limit - current) : null;
     const percent = limit !== null ? Math.min(100, Math.round((current / limit) * 100)) : 0;
@@ -416,6 +422,7 @@ export class EntitlementsService {
       percent,
       unlimited: limit === null,
       upgradeUrl: '/pricing',
+      upgradeRequired: !allowed,
     };
   }
 

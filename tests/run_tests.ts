@@ -18,23 +18,12 @@ async function runAllTests() {
   console.log('🧪 Starting Auvryn Razorpay Subscription Test Suite...\n');
 
   // Test 1: Plans and Pricing configuration
-  console.log('Test 1: Plan prices and discount verification...');
-  assert(SUBSCRIPTION_PLANS.freelancer.pricing.monthly.priceInr === 299, 'Freelancer monthly should be ₹299');
-  assert(SUBSCRIPTION_PLANS.freelancer.pricing.yearly.priceInr === 2990, 'Freelancer yearly should be ₹2,990');
-  assert(SUBSCRIPTION_PLANS.starter.pricing.monthly.priceInr === 399, 'Starter monthly should be ₹399');
-  assert(SUBSCRIPTION_PLANS.starter.pricing.yearly.priceInr === 3990, 'Starter yearly should be ₹3,990');
-  assert(SUBSCRIPTION_PLANS.pro.pricing.monthly.priceInr === 499, 'Pro monthly should be ₹499');
-  assert(SUBSCRIPTION_PLANS.pro.pricing.yearly.priceInr === 4990, 'Pro yearly should be ₹4,990');
-
-  // 2 months free equivalent verification
-  const tiers: PlanTier[] = ['freelancer', 'starter', 'pro'];
-  for (const t of tiers) {
-    const monthly = SUBSCRIPTION_PLANS[t].pricing.monthly.priceInr;
-    const yearly = SUBSCRIPTION_PLANS[t].pricing.yearly.priceInr;
-    assert(yearly === monthly * 10, `${t} yearly should be 10x monthly (2 months free discount)`);
-    assert(monthly * 12 - yearly === monthly * 2, `${t} discount must equal 2 months free`);
-  }
-  console.log('✓ Plan pricing and 2-month discounts verified successfully.');
+  console.log('Test 1: Plan prices and configuration verification...');
+  assert(SUBSCRIPTION_PLANS.freelancer_starter.pricing.monthly.priceInr === 299, 'Freelancer starter monthly should be ₹299');
+  assert(SUBSCRIPTION_PLANS.freelancer_pro.pricing.monthly.priceInr === 599, 'Freelancer pro monthly should be ₹599');
+  assert(SUBSCRIPTION_PLANS.business_starter.pricing.monthly.priceInr === 999, 'Business Starter monthly should be ₹999');
+  assert(SUBSCRIPTION_PLANS.business_pro.pricing.monthly.priceInr === 2499, 'Business Pro monthly should be ₹2,499');
+  console.log('✓ Authoritative monthly plan pricing verified successfully.');
 
   // Test 2: Uncapped Pro entitlements
   console.log('\nTest 2: Pro entitlements are uncapped...');
@@ -47,10 +36,10 @@ async function runAllTests() {
 
   // Test 3: Freelancer & Starter limits
   console.log('\nTest 3: Enforcing Freelancer and Starter quotas...');
-  assert(SUBSCRIPTION_PLANS.freelancer.limits.maxSeats === 1, 'Freelancer must allow 1 seat');
-  assert(SUBSCRIPTION_PLANS.freelancer.limits.maxInvoicesPerMonth === 15, 'Freelancer must allow 15 invoices/mo');
-  assert(SUBSCRIPTION_PLANS.starter.limits.maxSeats === 5, 'Starter must allow 5 seats');
-  assert(SUBSCRIPTION_PLANS.starter.limits.maxInvoicesPerMonth === 100, 'Starter must allow 100 invoices/mo');
+  assert(SUBSCRIPTION_PLANS.freelancer_free.limits.maxSeats === 1, 'Freelancer Free must allow 1 seat');
+  assert(SUBSCRIPTION_PLANS.freelancer_free.limits.maxInvoicesPerMonth === 15, 'Freelancer Free must allow 15 invoices/mo');
+  assert(SUBSCRIPTION_PLANS.business_starter.limits.maxSeats === 5, 'Business Starter must allow 5 seats');
+  assert(SUBSCRIPTION_PLANS.business_starter.limits.maxWorkflows === 15, 'Business Starter must allow 15 workflows');
   console.log('✓ Quota limits verified.');
 
   // Test 4: Checkout Signature Verification

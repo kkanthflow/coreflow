@@ -310,7 +310,7 @@ async function runAllTests() {
       user_id: 'u_yr',
       workspace_type: 'organization',
       plan_tier: 'starter',
-      plan_interval: 'yearly',
+      plan_interval: 'yearly' as any,
       razorpay_subscription_id: 'sub_rzp_yr',
       status: 'active',
       current_period_start: '2026-01-31T00:00:00.000Z',

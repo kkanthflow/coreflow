@@ -9,6 +9,23 @@ export type PlanTier =
   | 'starter'
   | 'pro';
 
+export type SubscriptionStatus =
+  | 'free'
+  | 'pending'
+  | 'active'
+  | 'past_due'
+  | 'cancelled'
+  | 'expired'
+  | 'suspended';
+
+export type PaymentStatus =
+  | 'created'
+  | 'pending'
+  | 'paid'
+  | 'failed'
+  | 'refunded'
+  | 'partially_refunded';
+
 export type BillingInterval = 'monthly';
 
 export interface PlanLimits {
@@ -312,4 +329,87 @@ export function getAllPlansList(filterWorkspace?: 'independent' | 'organization'
         },
       },
     }));
+}
+
+/**
+ * Maps Razorpay provider subscription status to internal SubscriptionStatus.
+ */
+export function mapRazorpaySubscriptionStatus(
+  rzpStatus: string,
+  currentPeriodEnd?: string | number | null,
+  isGracePeriodActive: boolean = true
+): SubscriptionStatus {
+  const norm = (rzpStatus || '').toLowerCase().trim();
+
+  switch (norm) {
+    case 'created':
+    case 'authenticated':
+      return 'pending';
+
+    case 'active':
+      return 'active';
+
+    case 'pending':
+      // Razorpay 'pending' means a recurring debit attempt failed and retry is pending
+      return isGracePeriodActive ? 'past_due' : 'suspended';
+
+    case 'halted':
+      // Max retries exhausted
+      return isGracePeriodActive ? 'past_due' : 'suspended';
+
+    case 'cancelled': {
+      if (currentPeriodEnd) {
+        const endTime = typeof currentPeriodEnd === 'number' 
+          ? (currentPeriodEnd > 1e11 ? currentPeriodEnd : currentPeriodEnd * 1000)
+          : new Date(currentPeriodEnd).getTime();
+        if (endTime > Date.now()) {
+          return 'cancelled'; // Still in paid period
+        }
+      }
+      return 'expired';
+    }
+
+    case 'completed':
+    case 'expired':
+      return 'expired';
+
+    default:
+      return 'pending';
+  }
+}
+
+/**
+ * Maps Razorpay provider payment status to internal PaymentStatus.
+ */
+export function mapRazorpayPaymentStatus(
+  rzpStatus: string,
+  amountRefunded?: number,
+  totalAmount?: number
+): PaymentStatus {
+  const norm = (rzpStatus || '').toLowerCase().trim();
+
+  switch (norm) {
+    case 'created':
+      return 'created';
+
+    case 'authorized':
+      return 'pending';
+
+    case 'captured':
+    case 'paid':
+      return 'paid';
+
+    case 'failed':
+      return 'failed';
+
+    case 'refunded': {
+      if (amountRefunded && totalAmount && amountRefunded < totalAmount) {
+        return 'partially_refunded';
+      }
+      return 'refunded';
+    }
+
+    default:
+      return 'pending';
+  }
 }
