@@ -7,6 +7,7 @@ import {
   Plus,
   Trash2,
   Check,
+  Sliders,
 } from 'lucide-react';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { supabase } from '../../lib/supabase';
