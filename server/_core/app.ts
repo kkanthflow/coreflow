@@ -18,6 +18,7 @@ import { subscriptionsRouter } from "../subscriptions/subscriptions.routes";
 import { webhookRouter } from "../subscriptions/webhook.routes";
 import { contactRouter } from "../contact/contact.routes";
 import { razorpayStandardRouter } from "../payments/razorpay-standard.routes";
+import { workflowsRouter } from "../workflows/workflows.routes.js";
 
 function createPgClient() {
   const dbUrl = process.env.DATABASE_URL;
@@ -241,6 +242,7 @@ export function createExpressApp() {
   app.use('/api/subscriptions', subscriptionsRouter);
   app.use('/api/webhooks', webhookRouter);
   app.use('/api/contact', contactRouter);
+  app.use('/api/workflows', workflowsRouter);
   app.use('/api', razorpayStandardRouter);
 
   app.post("/api/notifications/send-push", async (req: Request, res: Response) => {

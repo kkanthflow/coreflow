@@ -19,6 +19,11 @@ import Landing from './pages/Landing';
 // Lazy loaded pages (code-split)
 const RegisterSetup   = lazy(() => import('./pages/RegisterSetup'));
 const Dashboard       = lazy(() => import('./pages/Dashboard'));
+const WorkflowDashboard = lazy(() => import('./pages/workflows/WorkflowDashboard'));
+const WorkflowBuilder   = lazy(() => import('./pages/workflows/WorkflowBuilder'));
+const WorkflowTemplates = lazy(() => import('./pages/workflows/WorkflowTemplates'));
+const WorkflowHistory   = lazy(() => import('./pages/workflows/WorkflowHistory'));
+const WorkflowApprovals = lazy(() => import('./pages/workflows/WorkflowApprovals'));
 const Projects        = lazy(() => import('./pages/Projects'));
 const NewProject      = lazy(() => import('./pages/NewProject'));
 const ProjectDetails  = lazy(() => import('./pages/ProjectDetails'));
@@ -165,6 +170,15 @@ function App() {
                     <Route element={<AuthGuard><AppShell /></AuthGuard>}>
                       <Route path="/dashboard" element={<Suspense fallback={<PageLoader />}><Dashboard /></Suspense>} />
                       
+                      {/* Workflows */}
+                      <Route path="/workflows" element={<Suspense fallback={<PageLoader />}><WorkflowDashboard /></Suspense>} />
+                      <Route path="/workflows/new" element={<Suspense fallback={<PageLoader />}><WorkflowBuilder /></Suspense>} />
+                      <Route path="/workflows/:id/edit" element={<Suspense fallback={<PageLoader />}><WorkflowBuilder /></Suspense>} />
+                      <Route path="/workflows/templates" element={<Suspense fallback={<PageLoader />}><WorkflowTemplates /></Suspense>} />
+                      <Route path="/workflows/history" element={<Suspense fallback={<PageLoader />}><WorkflowHistory /></Suspense>} />
+                      <Route path="/workflows/:id/history" element={<Suspense fallback={<PageLoader />}><WorkflowHistory /></Suspense>} />
+                      <Route path="/workflows/approvals" element={<Suspense fallback={<PageLoader />}><WorkflowApprovals /></Suspense>} />
+
                       {/* Projects */}
                       <Route path="/projects"  element={<Suspense fallback={<PageLoader />}><Projects /></Suspense>} />
                       <Route path="/projects/new" element={<Suspense fallback={<PageLoader />}><NewProject /></Suspense>} />

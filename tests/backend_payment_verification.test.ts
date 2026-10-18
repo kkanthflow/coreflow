@@ -541,15 +541,44 @@ async function runPaymentVerificationTestSuite() {
   // CRITERION 12: Refreshing dashboard displays backend-confirmed subscription status
   // ─────────────────────────────────────────────────────────────
   console.log('▶ [Criterion 12/12] Refreshing dashboard displays backend-confirmed subscription status');
+  // Part A: Unconfigured user must not be silently assigned freelancer
+  const unconfiguredStatus = await SubscriptionService.getSubscriptionAccountStatus({
+    userId: 'usr_unconfigured_telemetry',
+  });
+  assert(unconfiguredStatus.success === true, 'Telemetry request must succeed');
+  assert(unconfiguredStatus.accountType === null, 'Unconfigured user must NOT be silently assigned freelancer');
+
+  // Part B: User with recorded freelancer subscription
   const userId12 = 'usr_dashboard_telemetry_test';
+  await SubscriptionService.saveSubscription({
+    id: 'sub_dashboard_test_12',
+    user_id: userId12,
+    organization_id: null,
+    customer_type: 'freelancer',
+    payer_user_id: userId12,
+    workspace_type: 'independent',
+    plan_tier: 'freelancer_starter',
+    plan_interval: 'monthly',
+    razorpay_subscription_id: 'sub_telemetry_rzp_123',
+    status: 'active',
+    payment_status: 'paid',
+    current_period_start: new Date().toISOString(),
+    current_period_end: new Date(Date.now() + 30 * 86400000).toISOString(),
+    cancel_at_period_end: false,
+    total_count: 12,
+    paid_count: 1,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
   const statusTelemetry = await SubscriptionService.getSubscriptionAccountStatus({
     userId: userId12,
   });
 
   assert(statusTelemetry.success === true, 'Telemetry request must succeed');
-  assert(statusTelemetry.accountType === 'freelancer', 'Account type matches');
-  assert(statusTelemetry.planTier === 'freelancer_free', 'Default baseline plan tier is freelancer_free');
-  assert(statusTelemetry.subscriptionStatus === 'free', 'Subscription status is free');
+  assert(statusTelemetry.accountType === 'freelancer', 'Account type matches freelancer');
+  assert(statusTelemetry.planTier === 'freelancer_starter', 'Plan tier matches');
+  assert(statusTelemetry.subscriptionStatus === 'active', 'Subscription status is active');
   assert(statusTelemetry.paymentStatus === 'paid', 'Payment status is paid');
   assert(statusTelemetry.currency === 'INR', 'Currency is INR');
   assert(statusTelemetry.canManageBilling === true, 'Freelancer can manage billing');

@@ -209,18 +209,18 @@ describe('AUVRYN MASTER VERIFICATION SUITE — ONBOARDING, RBAC & BILLING', () =
       expect(p.limits.historyDays).toBe(7);
     });
 
-    it('9e. Business Starter — ₹999/mo, 25 projects, 15 workflows, 5 members, 30d history', () => {
+    it('9e. Business Starter — ₹399/mo, 25 projects, 15 workflows, 5 members, 30d history', () => {
       const p = SUBSCRIPTION_PLANS['business_starter'];
-      expect(p.pricing.monthly.priceInr).toBe(999);
+      expect(p.pricing.monthly.priceInr).toBe(399);
       expect(p.limits.maxActiveProjects).toBe(25);
       expect(p.limits.maxWorkflows).toBe(15);
       expect(p.limits.maxSeats).toBe(5);
       expect(p.limits.historyDays).toBe(30);
     });
 
-    it('9f. Business Pro — ₹2,499/mo, Unlimited projects, workflows, and team members', () => {
+    it('9f. Business Pro — ₹499/mo, Unlimited projects, workflows, and team members', () => {
       const p = SUBSCRIPTION_PLANS['business_pro'];
-      expect(p.pricing.monthly.priceInr).toBe(2499);
+      expect(p.pricing.monthly.priceInr).toBe(499);
       expect(p.limits.maxActiveProjects).toBeNull(); // Unlimited
       expect(p.limits.maxWorkflows).toBeNull(); // Unlimited
       expect(p.limits.maxSeats).toBeNull(); // Unlimited

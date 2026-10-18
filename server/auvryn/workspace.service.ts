@@ -307,6 +307,8 @@ export async function setupJoinOrganizationWorkspace(params: {
   userOpenId: string;
   fullName: string;
   organizationId: string;
+  invitationToken?: string;
+  invitedRole?: string;
   jobTitle?: string;
 }) {
   const db = await getDb();
@@ -330,11 +332,17 @@ export async function setupJoinOrganizationWorkspace(params: {
     throw new Error(`quota_exceeded:seats: Organization team member quota of ${seatCheck.limit} reached. Contact the organization owner to upgrade.`);
   }
 
+  // Enforce: Prevent frontend requests from self-assigning unauthorized owner or admin roles
+  let effectiveRole = 'employee';
+  if (params.invitedRole && !['owner', 'administrator'].includes(params.invitedRole.toLowerCase())) {
+    effectiveRole = params.invitedRole.toLowerCase();
+  }
+
   return await db.transaction(async (tx) => {
-    // Add user as regular member (never self-assign owner or admin)
+    // Add user with invited role (never self-assign owner or administrator)
     await tx.execute(sql`
       INSERT INTO user_organizations (user_id, org_id, role)
-      VALUES (${params.userOpenId}::uuid, ${params.organizationId}::uuid, 'employee')
+      VALUES (${params.userOpenId}::uuid, ${params.organizationId}::uuid, ${effectiveRole})
       ON CONFLICT (user_id, org_id) DO NOTHING;
     `);
 
@@ -343,25 +351,21 @@ export async function setupJoinOrganizationWorkspace(params: {
       UPDATE users 
       SET 
         account_type = 'organization',
-        role = 'employee', 
+        role = ${effectiveRole}::user_role, 
         default_workspace_id = ${params.organizationId},
         account_setup_completed = true
       WHERE id = ${params.userOpenId}::uuid
     `);
 
-    return { success: true, organizationId: params.organizationId, accountType: 'organization' };
+    return { success: true, organizationId: params.organizationId, accountType: 'organization', role: effectiveRole };
   });
 }
 
-// Backward compatibility alias: only invoked when explicitly requested by legacy code
+// Automatic account type assignment removed. Explicit selection required at /register/setup.
 export async function provisionGoogleUserWorkspace(params: {
   userId: number;
   userOpenId: string;
   fullName: string;
 }) {
-  return await setupFreelancerWorkspace({
-    userId: params.userId,
-    userOpenId: params.userOpenId,
-    fullName: params.fullName,
-  });
+  throw new Error('Automatic account type assignment is disabled. Users must explicitly select their operating architecture (Freelancer, Create Organization, or Join Organization) at /register/setup.');
 }

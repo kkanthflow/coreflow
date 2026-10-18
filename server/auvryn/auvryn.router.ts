@@ -57,6 +57,7 @@ export const auvrynRouter = router({
   setupJoinOrganization: protectedProcedure
     .input(z.object({
       organizationId: z.string().min(1, 'Organization ID is required'),
+      invitationToken: z.string().optional(),
       jobTitle: z.string().optional(),
     }))
     .mutation(async ({ ctx, input }) => {
@@ -65,6 +66,7 @@ export const auvrynRouter = router({
         userOpenId: ctx.user.openId,
         fullName: ctx.user.name || 'User',
         organizationId: input.organizationId,
+        invitationToken: input.invitationToken,
         jobTitle: input.jobTitle,
       });
     }),

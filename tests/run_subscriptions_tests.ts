@@ -19,12 +19,12 @@ async function run() {
   assert(SUBSCRIPTION_PLANS.freelancer_starter.pricing.monthly.priceInr === 299, 'Freelancer starter is 299');
   assert(SUBSCRIPTION_PLANS.freelancer_starter.limits.maxSeats === 1, 'Freelancer starter maxSeats is 1');
 
-  // 2. Business Starter: ₹999/mo
-  assert(SUBSCRIPTION_PLANS.business_starter.pricing.monthly.priceInr === 999, 'Business starter is 999');
+  // 2. Business Starter: ₹399/mo
+  assert(SUBSCRIPTION_PLANS.business_starter.pricing.monthly.priceInr === 399, 'Business starter is 399');
   assert(SUBSCRIPTION_PLANS.business_starter.limits.maxSeats === 5, 'Business starter maxSeats is 5');
 
-  // 3. Business Pro: ₹2,499/mo
-  assert(SUBSCRIPTION_PLANS.business_pro.pricing.monthly.priceInr === 2499, 'Business pro is 2499');
+  // 3. Business Pro: ₹499/mo
+  assert(SUBSCRIPTION_PLANS.business_pro.pricing.monthly.priceInr === 499, 'Business pro is 499');
   assert(SUBSCRIPTION_PLANS.business_pro.limits.maxSeats === null, 'Business pro maxSeats is null');
   assert(SUBSCRIPTION_PLANS.business_pro.limits.maxActiveProjects === null, 'Business pro projects is null');
 

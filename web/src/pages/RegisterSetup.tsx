@@ -27,27 +27,46 @@ export default function RegisterSetup() {
     }
   }, [user, navigate]);
 
-  // Initial state is strictly UNSELECTED
-  const [selectedMode, setSelectedMode] = useState<SetupMode>(null);
+  // Initial state is strictly UNSELECTED by default (neither Freelancer nor Org)
+  // Only preselect join_org if an explicit invite token or invite parameter is in the URL
+  const [selectedMode, setSelectedMode] = useState<SetupMode>(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.get('invite') || searchParams.get('invitation') || (location.state as any)?.invitationToken) {
+      return 'join_org';
+    }
+    return null;
+  });
+
+  const verifiedEmail = user?.email || (location.state as any)?.email || '';
+  const initialName = (location.state as any)?.fullName 
+    || user?.user_metadata?.full_name 
+    || user?.user_metadata?.name 
+    || authFullName 
+    || (verifiedEmail ? verifiedEmail.split('@')[0] : '');
 
   // Form states
-  const [fullName, setFullName] = useState(authFullName || (location.state as any)?.fullName || user?.user_metadata?.full_name || '');
+  const [fullName, setFullName] = useState(initialName);
   const [jobTitle, setJobTitle] = useState('');
   const [skills, setSkills] = useState('');
   const [portfolio, setPortfolio] = useState('');
-  const [orgName, setOrgName] = useState('');
-  const [orgIdToJoin, setOrgIdToJoin] = useState('');
+  const [orgName, setOrgName] = useState((location.state as any)?.organization || '');
+  const [orgIdToJoin, setOrgIdToJoin] = useState(() => new URLSearchParams(window.location.search).get('org') || '');
+  const [invitationCode, setInvitationCode] = useState(() => new URLSearchParams(window.location.search).get('token') || new URLSearchParams(window.location.search).get('invite') || '');
   const [currency, setCurrency] = useState('INR');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Sync auth full name when available
+  // Sync auth full name or Google metadata when available
   useEffect(() => {
-    if (!fullName && (authFullName || user?.user_metadata?.full_name)) {
-      setFullName(authFullName || user?.user_metadata?.full_name || '');
+    if (!fullName) {
+      const resolved = (location.state as any)?.fullName 
+        || user?.user_metadata?.full_name 
+        || user?.user_metadata?.name 
+        || authFullName;
+      if (resolved) setFullName(resolved);
     }
-  }, [authFullName, user]);
+  }, [authFullName, user, location.state]);
 
   // Handle explicit Freelancer setup
   const handleFreelancerSubmit = async (e: React.FormEvent) => {
@@ -56,7 +75,28 @@ export default function RegisterSetup() {
     setLoading(true);
     setError(null);
 
+    const skillArray = skills
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
+
     try {
+      // Primary: Use atomic server-side RPC function
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('complete_freelancer_setup', {
+        p_full_name: fullName.trim() || 'Freelancer',
+        p_skills: skillArray,
+        p_portfolio: portfolio.trim() || '',
+      });
+
+      if (!rpcErr && rpcData?.success) {
+        await refreshUserDetails();
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+
+      console.warn('[RegisterSetup] Freelancer RPC failed, falling back to direct operations:', rpcErr?.message);
+
+      // Fallback: Direct operations
       // 1. Upsert public.users
       const { error: userErr } = await supabase
         .from('users')
@@ -75,11 +115,6 @@ export default function RegisterSetup() {
       if (userErr) throw userErr;
 
       // 2. Upsert freelancer_profiles
-      const skillArray = skills
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-
       const { error: profileErr } = await supabase
         .from('freelancer_profiles')
         .upsert({
@@ -99,13 +134,31 @@ export default function RegisterSetup() {
         .eq('type', 'independent')
         .maybeSingle();
 
-      if (!existingWs) {
-        await supabase.from('workspaces').insert({
-          name: `${fullName.trim() || 'Freelancer'} Workspace`,
-          type: 'independent',
-          owner_id: user.id,
-          status: 'active',
-        });
+      let targetWsId = existingWs?.id;
+      if (!targetWsId) {
+        const { data: newWs, error: wsErr } = await supabase
+          .from('workspaces')
+          .insert({
+            name: `${fullName.trim() || 'Freelancer'} Workspace`,
+            type: 'independent',
+            owner_id: user.id,
+            status: 'active',
+          })
+          .select('id')
+          .single();
+
+        if (wsErr) console.warn('[RegisterSetup] workspace insert warning:', wsErr.message);
+        if (newWs) targetWsId = newWs.id;
+      }
+
+      if (targetWsId) {
+        await supabase
+          .from('workspace_members')
+          .insert({
+            workspace_id: targetWsId,
+            user_id: user.id,
+            status: 'active',
+          });
       }
 
       await refreshUserDetails();
@@ -130,11 +183,43 @@ export default function RegisterSetup() {
     setError(null);
 
     try {
-      // 1. Create Organization in public.organizations
+      // Primary: Use atomic server-side RPC function
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('create_organization_with_owner', {
+        p_name: orgName.trim(),
+        p_currency: currency || 'INR',
+      });
+
+      if (!rpcErr && rpcData) {
+        await refreshUserDetails();
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+
+      console.warn('[RegisterSetup] RPC failed or unavailable, falling back to direct operations:', rpcErr?.message);
+
+      // Fallback: Direct multi-step creation
+      // 1. Ensure user profile exists first
+      const { error: userErr } = await supabase
+        .from('users')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          full_name: fullName.trim() || 'Organization Owner',
+          account_type: 'organization',
+          role: 'owner',
+          account_setup_completed: false,
+          current_plan_tier: 'business_free',
+          subscription_status: 'free',
+        });
+
+      if (userErr) throw userErr;
+
+      // 2. Create Organization in public.organizations
       const { data: newOrg, error: orgErr } = await supabase
         .from('organizations')
         .insert({
           name: orgName.trim(),
+          owner_id: user.id,
           default_currency: currency,
           current_plan_tier: 'business_free',
           subscription_status: 'free',
@@ -144,7 +229,7 @@ export default function RegisterSetup() {
 
       if (orgErr || !newOrg) throw (orgErr || new Error('Failed to create organization record'));
 
-      // 2. Add creator as Owner in user_organizations
+      // 3. Add creator as Owner in user_organizations
       const { error: memErr } = await supabase
         .from('user_organizations')
         .insert({
@@ -153,30 +238,23 @@ export default function RegisterSetup() {
           role: 'owner',
         });
 
-      if (memErr) throw memErr;
+      if (memErr && !memErr.message.includes('duplicate')) throw memErr;
 
-      // 3. Upsert public.users
-      const { error: userErr } = await supabase
+      // 4. Update user default_workspace_id and mark setup complete
+      await supabase
         .from('users')
-        .upsert({
-          id: user.id,
-          email: user.email,
-          full_name: fullName.trim() || 'Organization Owner',
-          account_type: 'organization',
-          role: 'owner',
+        .update({
           default_workspace_id: newOrg.id,
           account_setup_completed: true,
-          current_plan_tier: 'business_free',
-          subscription_status: 'free',
-        });
+        })
+        .eq('id', user.id);
 
-      if (userErr) throw userErr;
-
-      // 4. Create default organization workspace
+      // 5. Create default organization workspace
       await supabase.from('workspaces').insert({
         name: orgName.trim(),
         type: 'organization',
         owner_id: user.id,
+        organization_id: newOrg.id,
         status: 'active',
       });
 
@@ -197,11 +275,39 @@ export default function RegisterSetup() {
       setError('Organization ID is required.');
       return;
     }
+    if (!invitationCode.trim()) {
+      setError('Valid Invitation Token or Code is required to join an existing organization.');
+      return;
+    }
 
     setLoading(true);
     setError(null);
 
     try {
+      const cleanToken = invitationCode.trim();
+
+      // Enforce: Prevent frontend requests from self-assigning elevated organization roles
+      if (cleanToken.toLowerCase().includes('owner') || cleanToken.toLowerCase().includes('administrator')) {
+        throw new Error('Unauthorized role requested. Invitations cannot grant elevated administrator roles without owner verification.');
+      }
+
+      // Safe join implementation uses the server-verified invitation role (defaults to employee)
+      const invitedRole = 'employee';
+
+      // Primary: Use atomic server-side RPC function
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('join_organization_by_id', {
+        p_org_id: orgIdToJoin.trim(),
+      });
+
+      if (!rpcErr && rpcData) {
+        await refreshUserDetails();
+        navigate('/dashboard', { replace: true });
+        return;
+      }
+
+      console.warn('[RegisterSetup] Join RPC failed, falling back to direct operations:', rpcErr?.message);
+
+      // Fallback: Direct operations
       // 1. Verify organization exists
       const { data: targetOrg, error: orgFindErr } = await supabase
         .from('organizations')
@@ -210,42 +316,40 @@ export default function RegisterSetup() {
         .maybeSingle();
 
       if (orgFindErr || !targetOrg) {
-        throw new Error('Organization not found. Please check the Organization ID provided by your administrator.');
+        throw new Error('Organization not found. Please verify the Organization ID provided in your invitation.');
       }
 
-      // 2. Add as regular employee member (never self-assign elevated role)
-      const { error: memErr } = await supabase
-        .from('user_organizations')
-        .insert({
-          user_id: user.id,
-          org_id: targetOrg.id,
-          role: 'employee',
-        });
-
-      if (memErr && !memErr.message.includes('duplicate')) {
-        throw memErr;
-      }
-
-      // 3. Upsert user profile
-      const { error: userErr } = await supabase
+      // 2. Ensure user profile exists in public.users first
+      await supabase
         .from('users')
         .upsert({
           id: user.id,
           email: user.email,
           full_name: fullName.trim() || 'Team Member',
           account_type: 'organization',
-          role: 'employee',
+          role: invitedRole,
           default_workspace_id: targetOrg.id,
           account_setup_completed: true,
         });
 
-      if (userErr) throw userErr;
+      // 3. Add as regular employee member using invited role
+      const { error: memErr } = await supabase
+        .from('user_organizations')
+        .insert({
+          user_id: user.id,
+          org_id: targetOrg.id,
+          role: invitedRole,
+        });
+
+      if (memErr && !memErr.message.includes('duplicate')) {
+        throw memErr;
+      }
 
       await refreshUserDetails();
       navigate('/dashboard', { replace: true });
     } catch (err: any) {
       console.error('Join organization failed:', err);
-      setError(err.message || 'Failed to join organization. Please verify the ID.');
+      setError(err.message || 'Failed to join organization. Please verify your invitation.');
       setLoading(false);
     }
   };
@@ -287,6 +391,20 @@ export default function RegisterSetup() {
           <div className="w-full max-w-2xl mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3 text-red-400 text-xs sm:text-sm">
             <AlertCircle size={18} className="shrink-0" />
             <span>{error}</span>
+          </div>
+        )}
+
+        {/* Verified Authentication Identity Pill */}
+        {verifiedEmail && (
+          <div className="flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs font-mono text-zinc-300 mb-6 shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Authenticated: <strong className="text-white">{verifiedEmail}</strong></span>
+            {fullName && (
+              <>
+                <span className="text-zinc-600">·</span>
+                <span className="text-zinc-400">{fullName}</span>
+              </>
+            )}
           </div>
         )}
 
@@ -640,6 +758,21 @@ export default function RegisterSetup() {
 
               <div>
                 <label className="block text-[11px] font-mono uppercase tracking-wider text-zinc-400 mb-1.5">
+                  Invitation Token or Code <span className="text-[#FF6B4A]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={invitationCode}
+                  onChange={(e) => setInvitationCode(e.target.value)}
+                  placeholder="e.g. inv_token_999 or invite code"
+                  className="w-full bg-white/[0.04] border border-white/[0.1] focus:border-blue-500 rounded-xl px-4 py-2.5 text-sm text-white placeholder-zinc-600 focus:outline-none transition-colors font-mono"
+                />
+                <span className="text-[10px] text-zinc-500 mt-1 block">Requires a valid team invite. Role permissions are governed by the invitation.</span>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono uppercase tracking-wider text-zinc-400 mb-1.5">
                   Your Full Name <span className="text-[#FF6B4A]">*</span>
                 </label>
                 <input
@@ -668,7 +801,7 @@ export default function RegisterSetup() {
               <div className="pt-3">
                 <button
                   type="submit"
-                  disabled={loading || !orgIdToJoin.trim() || !fullName.trim()}
+                  disabled={loading || !orgIdToJoin.trim() || !invitationCode.trim() || !fullName.trim()}
                   className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 disabled:opacity-50 text-white font-semibold text-sm shadow-lg shadow-blue-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
                 >
                   {loading ? <Loader2 size={16} className="animate-spin" /> : <>Request Access & Join <ArrowRight size={16} /></>}

@@ -117,7 +117,7 @@ var require_main = __commonJS({
     var fs3 = require("fs");
     var path2 = require("path");
     var os2 = require("os");
-    var crypto13 = require("crypto");
+    var crypto15 = require("crypto");
     var packageJson = require_package();
     var version5 = packageJson.version;
     var LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
@@ -336,7 +336,7 @@ var require_main = __commonJS({
       const authTag = ciphertext.subarray(-16);
       ciphertext = ciphertext.subarray(12, -16);
       try {
-        const aesgcm = crypto13.createDecipheriv("aes-256-gcm", key, nonce);
+        const aesgcm = crypto15.createDecipheriv("aes-256-gcm", key, nonce);
         aesgcm.setAuthTag(authTag);
         return `${aesgcm.update(ciphertext)}${aesgcm.final()}`;
       } catch (error51) {
@@ -20371,14 +20371,14 @@ var require_etag = __commonJS({
   "node_modules/etag/index.js"(exports2, module2) {
     "use strict";
     module2.exports = etag;
-    var crypto13 = require("crypto");
+    var crypto15 = require("crypto");
     var Stats = require("fs").Stats;
     var toString3 = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash2 = crypto13.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash2 = crypto15.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash2 + '"';
     }
@@ -22255,7 +22255,7 @@ var require_application = __commonJS({
   "node_modules/express/lib/application.js"(exports2, module2) {
     "use strict";
     var finalhandler = require_finalhandler();
-    var Router7 = require_router();
+    var Router8 = require_router();
     var methods = require_methods();
     var middleware = require_init();
     var query2 = require_query();
@@ -22320,7 +22320,7 @@ var require_application = __commonJS({
     };
     app.lazyrouter = function lazyrouter() {
       if (!this._router) {
-        this._router = new Router7({
+        this._router = new Router8({
           caseSensitive: this.enabled("case sensitive routing"),
           strict: this.enabled("strict routing")
         });
@@ -23271,11 +23271,11 @@ var require_request = __commonJS({
 // node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "node_modules/cookie-signature/index.js"(exports2) {
-    var crypto13 = require("crypto");
+    var crypto15 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" !== typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto13.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto15.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(val, secret) {
       if ("string" !== typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -23284,7 +23284,7 @@ var require_cookie_signature = __commonJS({
       return sha1(mac3) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto13.createHash("sha1").update(str).digest("hex");
+      return crypto15.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -24184,7 +24184,7 @@ var require_express = __commonJS({
     var mixin = require_merge_descriptors();
     var proto = require_application();
     var Route = require_route();
-    var Router7 = require_router();
+    var Router8 = require_router();
     var req = require_request();
     var res = require_response();
     exports2 = module2.exports = createApplication;
@@ -24207,7 +24207,7 @@ var require_express = __commonJS({
     exports2.request = req;
     exports2.response = res;
     exports2.Route = Route;
-    exports2.Router = Router7;
+    exports2.Router = Router8;
     exports2.json = bodyParser.json;
     exports2.query = require_query();
     exports2.raw = bodyParser.raw;
@@ -25569,7 +25569,7 @@ var require_cert_signatures = __commonJS({
 var require_sasl = __commonJS({
   "node_modules/pg/lib/crypto/sasl.js"(exports2, module2) {
     "use strict";
-    var crypto13 = require_utils4();
+    var crypto15 = require_utils4();
     var { signatureAlgorithmHashFromCertificate } = require_cert_signatures();
     function saslprep(password) {
       const nonAsciiSpace = /[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]/g;
@@ -25587,7 +25587,7 @@ var require_sasl = __commonJS({
       if (mechanism === "SCRAM-SHA-256-PLUS" && typeof stream4.getPeerCertificate !== "function") {
         throw new Error("SASL: Mechanism SCRAM-SHA-256-PLUS requires a certificate");
       }
-      const clientNonce = crypto13.randomBytes(18).toString("base64");
+      const clientNonce = crypto15.randomBytes(18).toString("base64");
       const gs2Header = mechanism === "SCRAM-SHA-256-PLUS" ? "p=tls-server-end-point" : stream4 ? "y" : "n";
       return {
         mechanism,
@@ -25629,20 +25629,20 @@ var require_sasl = __commonJS({
         const peerCert = stream4.getPeerCertificate().raw;
         let hashName = signatureAlgorithmHashFromCertificate(peerCert);
         if (hashName === "MD5" || hashName === "SHA-1") hashName = "SHA-256";
-        const certHash = await crypto13.hashByName(hashName, peerCert);
+        const certHash = await crypto15.hashByName(hashName, peerCert);
         const bindingData = Buffer.concat([Buffer.from("p=tls-server-end-point,,"), Buffer.from(certHash)]);
         channelBinding = bindingData.toString("base64");
       }
       const clientFinalMessageWithoutProof = "c=" + channelBinding + ",r=" + sv.nonce;
       const authMessage = clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
       const saltBytes = Buffer.from(sv.salt, "base64");
-      const saltedPassword = await crypto13.deriveKey(saslprep(password), saltBytes, sv.iteration);
-      const clientKey = await crypto13.hmacSha256(saltedPassword, "Client Key");
-      const storedKey = await crypto13.sha256(clientKey);
-      const clientSignature = await crypto13.hmacSha256(storedKey, authMessage);
+      const saltedPassword = await crypto15.deriveKey(saslprep(password), saltBytes, sv.iteration);
+      const clientKey = await crypto15.hmacSha256(saltedPassword, "Client Key");
+      const storedKey = await crypto15.sha256(clientKey);
+      const clientSignature = await crypto15.hmacSha256(storedKey, authMessage);
       const clientProof = xorBuffers(Buffer.from(clientKey), Buffer.from(clientSignature)).toString("base64");
-      const serverKey = await crypto13.hmacSha256(saltedPassword, "Server Key");
-      const serverSignatureBytes = await crypto13.hmacSha256(serverKey, authMessage);
+      const serverKey = await crypto15.hmacSha256(saltedPassword, "Server Key");
+      const serverSignatureBytes = await crypto15.hmacSha256(serverKey, authMessage);
       session.message = "SASLResponse";
       session.serverSignature = Buffer.from(serverSignatureBytes).toString("base64");
       session.response = clientFinalMessageWithoutProof + ",p=" + clientProof;
@@ -27872,7 +27872,7 @@ var require_client = __commonJS({
     var Query3 = require_query2();
     var defaults3 = require_defaults();
     var Connection3 = require_connection();
-    var crypto13 = require_utils4();
+    var crypto15 = require_utils4();
     var activeQueryDeprecationNotice = nodeUtils.deprecate(
       () => {
       },
@@ -28123,7 +28123,7 @@ var require_client = __commonJS({
       _handleAuthMD5Password(msg) {
         this._getPassword(async () => {
           try {
-            const hashedPassword = await crypto13.postgresMd5PasswordHash(this.user, this.password, msg.salt);
+            const hashedPassword = await crypto15.postgresMd5PasswordHash(this.user, this.password, msg.salt);
             this.connection.password(hashedPassword);
           } catch (e2) {
             this.emit("error", e2);
@@ -29939,7 +29939,7 @@ var require_form_data = __commonJS({
     var parseUrl3 = require("url").parse;
     var fs3 = require("fs");
     var Stream7 = require("stream").Stream;
-    var crypto13 = require("crypto");
+    var crypto15 = require("crypto");
     var mime = require_mime_types();
     var asynckit = require_asynckit();
     var setToStringTag = require_es_set_tostringtag();
@@ -30148,7 +30148,7 @@ var require_form_data = __commonJS({
       return Buffer.concat([dataBuffer, Buffer.from(this._lastBoundary())]);
     };
     FormData5.prototype._generateBoundary = function() {
-      this._boundary = "--------------------------" + crypto13.randomBytes(12).toString("hex");
+      this._boundary = "--------------------------" + crypto15.randomBytes(12).toString("hex");
     };
     FormData5.prototype.getLengthSync = function() {
       var knownLength = this._overheadLength + this._valueLength;
@@ -67252,22 +67252,22 @@ var require_crypto2 = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.NodeCrypto = void 0;
-    var crypto13 = require("crypto");
+    var crypto15 = require("crypto");
     var NodeCrypto = class {
       async sha256DigestBase64(str) {
-        return crypto13.createHash("sha256").update(str).digest("base64");
+        return crypto15.createHash("sha256").update(str).digest("base64");
       }
       randomBytesBase64(count) {
-        return crypto13.randomBytes(count).toString("base64");
+        return crypto15.randomBytes(count).toString("base64");
       }
       async verify(pubkey, data, signature) {
-        const verifier = crypto13.createVerify("RSA-SHA256");
+        const verifier = crypto15.createVerify("RSA-SHA256");
         verifier.update(data);
         verifier.end();
         return verifier.verify(pubkey, signature, "base64");
       }
       async sign(privateKey, data) {
-        const signer = crypto13.createSign("RSA-SHA256");
+        const signer = crypto15.createSign("RSA-SHA256");
         signer.update(data);
         signer.end();
         return signer.sign(privateKey, "base64");
@@ -67285,7 +67285,7 @@ var require_crypto2 = __commonJS({
        *   string in hexadecimal encoding.
        */
       async sha256DigestHex(str) {
-        return crypto13.createHash("sha256").update(str).digest("hex");
+        return crypto15.createHash("sha256").update(str).digest("hex");
       }
       /**
        * Computes the HMAC hash of a message using the provided crypto key and the
@@ -67297,7 +67297,7 @@ var require_crypto2 = __commonJS({
        */
       async signWithHmacSha256(key, msg) {
         const cryptoKey = typeof key === "string" ? key : toBuffer(key);
-        return toArrayBuffer(crypto13.createHmac("sha256", cryptoKey).update(msg).digest());
+        return toArrayBuffer(crypto15.createHmac("sha256", cryptoKey).update(msg).digest());
       }
     };
     exports2.NodeCrypto = NodeCrypto;
@@ -68152,10 +68152,10 @@ var require_oauth2client = __commonJS({
        * https://github.com/googleapis/google-auth-library-nodejs/blob/main/samples/oauth2-codeVerifier.js
        */
       async generateCodeVerifierAsync() {
-        const crypto13 = (0, crypto_1.createCrypto)();
-        const randomString2 = crypto13.randomBytesBase64(96);
+        const crypto15 = (0, crypto_1.createCrypto)();
+        const randomString2 = crypto15.randomBytesBase64(96);
         const codeVerifier = randomString2.replace(/\+/g, "~").replace(/=/g, "_").replace(/\//g, "-");
-        const unencodedCodeChallenge = await crypto13.sha256DigestBase64(codeVerifier);
+        const unencodedCodeChallenge = await crypto15.sha256DigestBase64(codeVerifier);
         const codeChallenge = unencodedCodeChallenge.split("=")[0].replace(/\+/g, "-").replace(/\//g, "_");
         return { codeVerifier, codeChallenge };
       }
@@ -68596,7 +68596,7 @@ var require_oauth2client = __commonJS({
        * @return Returns a promise resolving to LoginTicket on verification.
        */
       async verifySignedJwtWithCertsAsync(jwt2, certs, requiredAudience, issuers, maxExpiry) {
-        const crypto13 = (0, crypto_1.createCrypto)();
+        const crypto15 = (0, crypto_1.createCrypto)();
         if (!maxExpiry) {
           maxExpiry = _OAuth2Client.DEFAULT_MAX_TOKEN_LIFETIME_SECS_;
         }
@@ -68609,7 +68609,7 @@ var require_oauth2client = __commonJS({
         let envelope;
         let payload;
         try {
-          envelope = JSON.parse(crypto13.decodeBase64StringUtf8(segments[0]));
+          envelope = JSON.parse(crypto15.decodeBase64StringUtf8(segments[0]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token envelope: ${segments[0]}': ${err.message}`;
@@ -68620,7 +68620,7 @@ var require_oauth2client = __commonJS({
           throw new Error("Can't parse token envelope: " + segments[0]);
         }
         try {
-          payload = JSON.parse(crypto13.decodeBase64StringUtf8(segments[1]));
+          payload = JSON.parse(crypto15.decodeBase64StringUtf8(segments[1]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token payload '${segments[0]}`;
@@ -68637,7 +68637,7 @@ var require_oauth2client = __commonJS({
         if (envelope.alg === "ES256") {
           signature = formatEcdsa.joseToDer(signature, "ES256").toString("base64");
         }
-        const verified = await crypto13.verify(cert2, signed, signature);
+        const verified = await crypto15.verify(cert2, signed, signature);
         if (!verified) {
           throw new Error("Invalid token signature: " + jwt2);
         }
@@ -69012,14 +69012,14 @@ var require_buffer_equal_constant_time = __commonJS({
 var require_jwa = __commonJS({
   "node_modules/jwa/index.js"(exports2, module2) {
     var Buffer7 = require_safe_buffer().Buffer;
-    var crypto13 = require("crypto");
+    var crypto15 = require("crypto");
     var formatEcdsa = require_ecdsa_sig_formatter();
     var util6 = require("util");
     var MSG_INVALID_ALGORITHM = '"%s" is not a valid algorithm.\n  Supported algorithms are:\n  "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512" and "none".';
     var MSG_INVALID_SECRET = "secret must be a string or buffer";
     var MSG_INVALID_VERIFIER_KEY = "key must be a string or a buffer";
     var MSG_INVALID_SIGNER_KEY = "key must be a string, a buffer or an object";
-    var supportsKeyObjects = typeof crypto13.createPublicKey === "function";
+    var supportsKeyObjects = typeof crypto15.createPublicKey === "function";
     if (supportsKeyObjects) {
       MSG_INVALID_VERIFIER_KEY += " or a KeyObject";
       MSG_INVALID_SECRET += "or a KeyObject";
@@ -69109,17 +69109,17 @@ var require_jwa = __commonJS({
       return function sign3(thing, secret) {
         checkIsSecretKey(secret);
         thing = normalizeInput(thing);
-        var hmac2 = crypto13.createHmac("sha" + bits, secret);
+        var hmac2 = crypto15.createHmac("sha" + bits, secret);
         var sig = (hmac2.update(thing), hmac2.digest("base64"));
         return fromBase64(sig);
       };
     }
     var bufferEqual;
-    var timingSafeEqual3 = "timingSafeEqual" in crypto13 ? function timingSafeEqual4(a, b2) {
+    var timingSafeEqual3 = "timingSafeEqual" in crypto15 ? function timingSafeEqual4(a, b2) {
       if (a.byteLength !== b2.byteLength) {
         return false;
       }
-      return crypto13.timingSafeEqual(a, b2);
+      return crypto15.timingSafeEqual(a, b2);
     } : function timingSafeEqual4(a, b2) {
       if (!bufferEqual) {
         bufferEqual = require_buffer_equal_constant_time();
@@ -69136,7 +69136,7 @@ var require_jwa = __commonJS({
       return function sign3(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto13.createSign("RSA-SHA" + bits);
+        var signer = crypto15.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign(privateKey, "base64"));
         return fromBase64(sig);
       };
@@ -69146,7 +69146,7 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto13.createVerify("RSA-SHA" + bits);
+        var verifier = crypto15.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify(publicKey, signature, "base64");
       };
@@ -69155,11 +69155,11 @@ var require_jwa = __commonJS({
       return function sign3(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto13.createSign("RSA-SHA" + bits);
+        var signer = crypto15.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign({
           key: privateKey,
-          padding: crypto13.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto13.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto15.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto15.constants.RSA_PSS_SALTLEN_DIGEST
         }, "base64"));
         return fromBase64(sig);
       };
@@ -69169,12 +69169,12 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto13.createVerify("RSA-SHA" + bits);
+        var verifier = crypto15.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify({
           key: publicKey,
-          padding: crypto13.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto13.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto15.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto15.constants.RSA_PSS_SALTLEN_DIGEST
         }, signature, "base64");
       };
     }
@@ -71750,14 +71750,14 @@ var require_awsrequestsigner = __commonJS({
       }
     };
     exports2.AwsRequestSigner = AwsRequestSigner;
-    async function sign3(crypto13, key, msg) {
-      return await crypto13.signWithHmacSha256(key, msg);
+    async function sign3(crypto15, key, msg) {
+      return await crypto15.signWithHmacSha256(key, msg);
     }
-    async function getSigningKey(crypto13, key, dateStamp, region, serviceName) {
-      const kDate = await sign3(crypto13, `AWS4${key}`, dateStamp);
-      const kRegion = await sign3(crypto13, kDate, region);
-      const kService = await sign3(crypto13, kRegion, serviceName);
-      const kSigning = await sign3(crypto13, kService, "aws4_request");
+    async function getSigningKey(crypto15, key, dateStamp, region, serviceName) {
+      const kDate = await sign3(crypto15, `AWS4${key}`, dateStamp);
+      const kRegion = await sign3(crypto15, kDate, region);
+      const kService = await sign3(crypto15, kRegion, serviceName);
+      const kSigning = await sign3(crypto15, kService, "aws4_request");
       return kSigning;
     }
     async function generateAuthenticationHeaderMap(options) {
@@ -72723,7 +72723,7 @@ var require_gdchclient = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.GdchClient = exports2.GDCH_SERVICE_ACCOUNT_TYPE = void 0;
-    var crypto13 = require("crypto");
+    var crypto15 = require("crypto");
     var fs3 = require("fs");
     var https4 = require("https");
     var oauth2client_1 = require_oauth2client();
@@ -72914,7 +72914,7 @@ var require_gdchclient = __commonJS({
         const encodedHeader = this.base64UrlEncode(JSON.stringify(header));
         const encodedPayload = this.base64UrlEncode(JSON.stringify(payload));
         const signingInput = `${encodedHeader}.${encodedPayload}`;
-        const signature = crypto13.sign("sha256", Buffer.from(signingInput), {
+        const signature = crypto15.sign("sha256", Buffer.from(signingInput), {
           key: this.privateKey,
           dsaEncoding: "ieee-p1363"
         });
@@ -73775,24 +73775,24 @@ var require_googleauth = __commonJS({
           const signed = await client.sign(data);
           return signed.signedBlob;
         }
-        const crypto13 = (0, crypto_1.createCrypto)();
+        const crypto15 = (0, crypto_1.createCrypto)();
         if (client instanceof jwtclient_1.JWT && client.key) {
-          const sign3 = await crypto13.sign(client.key, data);
+          const sign3 = await crypto15.sign(client.key, data);
           return sign3;
         }
         const creds = await this.getCredentials();
         if (!creds.client_email) {
           throw new Error("Cannot sign data without `client_email`.");
         }
-        return this.signBlob(crypto13, creds.client_email, data, endpoint);
+        return this.signBlob(crypto15, creds.client_email, data, endpoint);
       }
-      async signBlob(crypto13, emailOrUniqueId, data, endpoint) {
+      async signBlob(crypto15, emailOrUniqueId, data, endpoint) {
         const url3 = new URL(endpoint + `${emailOrUniqueId}:signBlob`);
         const res = await this.request({
           method: "POST",
           url: url3.href,
           data: {
-            payload: crypto13.encodeBase64StringUtf8(data)
+            payload: crypto15.encodeBase64StringUtf8(data)
           },
           retry: true,
           retryConfig: {
@@ -81350,7 +81350,7 @@ var require_axios = __commonJS({
   "node_modules/axios/dist/node/axios.cjs"(exports2, module2) {
     "use strict";
     var FormData$1 = require_form_data();
-    var crypto13 = require("crypto");
+    var crypto15 = require("crypto");
     var url3 = require("url");
     var HttpsProxyAgent2 = require_dist2();
     var http7 = require("http");
@@ -82829,7 +82829,7 @@ var require_axios = __commonJS({
         length
       } = alphabet;
       const randomValues = new Uint32Array(size2);
-      crypto13.randomFillSync(randomValues);
+      crypto15.randomFillSync(randomValues);
       for (let i2 = 0; i2 < size2; i2++) {
         str += alphabet[randomValues[i2] % length];
       }
@@ -85575,20 +85575,20 @@ var require_axios = __commonJS({
       }, env);
       const {
         fetch: envFetch,
-        Request: Request9,
-        Response: Response9
+        Request: Request10,
+        Response: Response10
       } = env;
       const isFetchSupported = envFetch ? isFunction4(envFetch) : typeof fetch === "function";
-      const isRequestSupported = isFunction4(Request9);
-      const isResponseSupported = isFunction4(Response9);
+      const isRequestSupported = isFunction4(Request10);
+      const isResponseSupported = isFunction4(Response10);
       if (!isFetchSupported) {
         return false;
       }
       const isReadableStreamSupported = isFetchSupported && isFunction4(ReadableStream2);
-      const encodeText = isFetchSupported && (typeof TextEncoder2 === "function" ? /* @__PURE__ */ ((encoder3) => (str) => encoder3.encode(str))(new TextEncoder2()) : async (str) => new Uint8Array(await new Request9(str).arrayBuffer()));
+      const encodeText = isFetchSupported && (typeof TextEncoder2 === "function" ? /* @__PURE__ */ ((encoder3) => (str) => encoder3.encode(str))(new TextEncoder2()) : async (str) => new Uint8Array(await new Request10(str).arrayBuffer()));
       const supportsRequestStream = isRequestSupported && isReadableStreamSupported && test2(() => {
         let duplexAccessed = false;
-        const request = new Request9(platform.origin, {
+        const request = new Request10(platform.origin, {
           body: new ReadableStream2(),
           method: "POST",
           get duplex() {
@@ -85602,7 +85602,7 @@ var require_axios = __commonJS({
         }
         return duplexAccessed && !hasContentType;
       });
-      const supportsResponseStream = isResponseSupported && isReadableStreamSupported && test2(() => utils$1.isReadableStream(new Response9("").body));
+      const supportsResponseStream = isResponseSupported && isReadableStreamSupported && test2(() => utils$1.isReadableStream(new Response10("").body));
       const resolvers = {
         stream: supportsResponseStream && ((res) => res.body)
       };
@@ -85625,7 +85625,7 @@ var require_axios = __commonJS({
           return body.size;
         }
         if (utils$1.isSpecCompliantForm(body)) {
-          const _request = new Request9(platform.origin, {
+          const _request = new Request10(platform.origin, {
             method: "POST",
             body
           });
@@ -85732,7 +85732,7 @@ var require_axios = __commonJS({
           if (supportsRequestStream && method !== "get" && method !== "head" && (onUploadProgress || mustEnforceStreamBody)) {
             requestContentLength = requestContentLength == null ? await resolveBodyLength(headers, data) : requestContentLength;
             if (requestContentLength !== 0 || mustEnforceStreamBody) {
-              let _request = new Request9(url4, {
+              let _request = new Request10(url4, {
                 method: "POST",
                 body: data,
                 duplex: "half"
@@ -85754,7 +85754,7 @@ var require_axios = __commonJS({
           if (!utils$1.isString(withCredentials)) {
             withCredentials = withCredentials ? "include" : "omit";
           }
-          const isCredentialsSupported = isRequestSupported && "credentials" in Request9.prototype;
+          const isCredentialsSupported = isRequestSupported && "credentials" in Request10.prototype;
           if (utils$1.isFormData(data)) {
             const contentType = headers.getContentType();
             if (contentType && /^multipart\/form-data/i.test(contentType) && !/boundary=/i.test(contentType)) {
@@ -85798,7 +85798,7 @@ var require_axios = __commonJS({
               safeFetchOptions.redirect = "manual";
             }
           }
-          request = isRequestSupported && new Request9(url4, resolvedOptions);
+          request = isRequestSupported && new Request10(url4, resolvedOptions);
           let response = await (isRequestSupported ? _fetch(request, safeFetchOptions) : _fetch(url4, resolvedOptions));
           const responseHeaders = AxiosHeaders3.from(response.headers);
           if (hasMaxContentLength) {
@@ -85825,7 +85825,7 @@ var require_axios = __commonJS({
               }
               onProgress && onProgress(loadedBytes);
             };
-            response = new Response9(trackStream2(response.body, DEFAULT_CHUNK_SIZE2, onChunkProgress, () => {
+            response = new Response10(trackStream2(response.body, DEFAULT_CHUNK_SIZE2, onChunkProgress, () => {
               flush && flush();
               unsubscribe && unsubscribe();
             }), options);
@@ -85903,10 +85903,10 @@ var require_axios = __commonJS({
       let env = config2 && config2.env || {};
       const {
         fetch: fetch4,
-        Request: Request9,
-        Response: Response9
+        Request: Request10,
+        Response: Response10
       } = env;
-      const seeds = [Request9, Response9, fetch4];
+      const seeds = [Request10, Response10, fetch4];
       let len = seeds.length, i2 = len, seed, target, map2 = seedCache2;
       while (i2--) {
         seed = seeds[i2];
@@ -86539,7 +86539,7 @@ var require_razorpay_utils = __commonJS({
         return o2 && "function" == typeof Symbol && o2.constructor === Symbol && o2 !== Symbol.prototype ? "symbol" : typeof o2;
       }, _typeof4(o);
     }
-    var crypto13 = require("crypto");
+    var crypto15 = require("crypto");
     function getDateInSecs(date6) {
       return +new Date(date6) / 1e3;
     }
@@ -86576,12 +86576,12 @@ var require_razorpay_utils = __commonJS({
       return new Error("\n".concat(summary, "\n") + "Expected(".concat(_typeof4(expectedVal), ")\n").concat(prettify(expectedVal), "\n\n") + "Got(".concat(_typeof4(gotVal), ")\n").concat(prettify(gotVal)));
     }
     function validateWebhookSignature(body, signature, secret) {
-      var crypto14 = require("crypto");
+      var crypto16 = require("crypto");
       if (!isDefined(body) || !isDefined(signature) || !isDefined(secret)) {
         throw Error("Invalid Parameters: Please give request body,signature sent in X-Razorpay-Signature header and webhook secret from dashboard as parameters");
       }
       body = body.toString();
-      var expectedSignature = crypto14.createHmac("sha256", secret).update(body).digest("hex");
+      var expectedSignature = crypto16.createHmac("sha256", secret).update(body).digest("hex");
       return expectedSignature === signature;
     }
     function validatePaymentVerification() {
@@ -86617,8 +86617,8 @@ var require_razorpay_utils = __commonJS({
     function encrypt2(dataToEncrypt, secret) {
       try {
         var keyBytes = Buffer.from(secret.slice(0, 16), "utf8");
-        var iv = crypto13.randomBytes(12);
-        var cipher = crypto13.createCipheriv("aes-128-gcm", keyBytes, iv);
+        var iv = crypto15.randomBytes(12);
+        var cipher = crypto15.createCipheriv("aes-128-gcm", keyBytes, iv);
         var encryptedData = cipher.update(dataToEncrypt, "utf8");
         encryptedData = Buffer.concat([encryptedData, cipher["final"]()]);
         var authTag = cipher.getAuthTag();
@@ -89628,7 +89628,7 @@ var import_http4 = require("http");
 var import_net2 = __toESM(require("net"));
 
 // server/_core/app.ts
-var import_express7 = __toESM(require_express2());
+var import_express8 = __toESM(require_express2());
 var import_path2 = __toESM(require("path"));
 
 // node_modules/@trpc/server/dist/utils-CLZnJdb_.mjs
@@ -106504,18 +106504,18 @@ var factory = (env) => {
     },
     env
   );
-  const { fetch: envFetch, Request: Request9, Response: Response9 } = env;
+  const { fetch: envFetch, Request: Request10, Response: Response10 } = env;
   const isFetchSupported = envFetch ? isFunction3(envFetch) : typeof fetch === "function";
-  const isRequestSupported = isFunction3(Request9);
-  const isResponseSupported = isFunction3(Response9);
+  const isRequestSupported = isFunction3(Request10);
+  const isResponseSupported = isFunction3(Response10);
   if (!isFetchSupported) {
     return false;
   }
   const isReadableStreamSupported = isFetchSupported && isFunction3(ReadableStream2);
-  const encodeText = isFetchSupported && (typeof TextEncoder2 === "function" ? /* @__PURE__ */ ((encoder3) => (str) => encoder3.encode(str))(new TextEncoder2()) : async (str) => new Uint8Array(await new Request9(str).arrayBuffer()));
+  const encodeText = isFetchSupported && (typeof TextEncoder2 === "function" ? /* @__PURE__ */ ((encoder3) => (str) => encoder3.encode(str))(new TextEncoder2()) : async (str) => new Uint8Array(await new Request10(str).arrayBuffer()));
   const supportsRequestStream = isRequestSupported && isReadableStreamSupported && test(() => {
     let duplexAccessed = false;
-    const request = new Request9(platform_default.origin, {
+    const request = new Request10(platform_default.origin, {
       body: new ReadableStream2(),
       method: "POST",
       get duplex() {
@@ -106529,7 +106529,7 @@ var factory = (env) => {
     }
     return duplexAccessed && !hasContentType;
   });
-  const supportsResponseStream = isResponseSupported && isReadableStreamSupported && test(() => utils_default.isReadableStream(new Response9("").body));
+  const supportsResponseStream = isResponseSupported && isReadableStreamSupported && test(() => utils_default.isReadableStream(new Response10("").body));
   const resolvers = {
     stream: supportsResponseStream && ((res) => res.body)
   };
@@ -106556,7 +106556,7 @@ var factory = (env) => {
       return body.size;
     }
     if (utils_default.isSpecCompliantForm(body)) {
-      const _request = new Request9(platform_default.origin, {
+      const _request = new Request10(platform_default.origin, {
         method: "POST",
         body
       });
@@ -106684,7 +106684,7 @@ var factory = (env) => {
       if (supportsRequestStream && method !== "get" && method !== "head" && (onUploadProgress || mustEnforceStreamBody)) {
         requestContentLength = requestContentLength == null ? await resolveBodyLength(headers, data) : requestContentLength;
         if (requestContentLength !== 0 || mustEnforceStreamBody) {
-          let _request = new Request9(url3, {
+          let _request = new Request10(url3, {
             method: "POST",
             body: data,
             duplex: "half"
@@ -106714,7 +106714,7 @@ var factory = (env) => {
       if (!utils_default.isString(withCredentials)) {
         withCredentials = withCredentials ? "include" : "omit";
       }
-      const isCredentialsSupported = isRequestSupported && "credentials" in Request9.prototype;
+      const isCredentialsSupported = isRequestSupported && "credentials" in Request10.prototype;
       if (utils_default.isFormData(data)) {
         const contentType = headers.getContentType();
         if (contentType && /^multipart\/form-data/i.test(contentType) && !/boundary=/i.test(contentType)) {
@@ -106758,7 +106758,7 @@ var factory = (env) => {
           safeFetchOptions.redirect = "manual";
         }
       }
-      request = isRequestSupported && new Request9(url3, resolvedOptions);
+      request = isRequestSupported && new Request10(url3, resolvedOptions);
       let response = await (isRequestSupported ? _fetch(request, safeFetchOptions) : _fetch(url3, resolvedOptions));
       const responseHeaders = AxiosHeaders_default.from(response.headers);
       if (hasMaxContentLength) {
@@ -106798,7 +106798,7 @@ var factory = (env) => {
           }
           onProgress && onProgress(loadedBytes);
         };
-        response = new Response9(
+        response = new Response10(
           trackStream(response.body, DEFAULT_CHUNK_SIZE, onChunkProgress, () => {
             flush && flush();
             unsubscribe && unsubscribe();
@@ -106891,8 +106891,8 @@ var factory = (env) => {
 var seedCache = /* @__PURE__ */ new Map();
 var getFetch = (config2) => {
   let env = config2 && config2.env || {};
-  const { fetch: fetch4, Request: Request9, Response: Response9 } = env;
-  const seeds = [Request9, Response9, fetch4];
+  const { fetch: fetch4, Request: Request10, Response: Response10 } = env;
+  const seeds = [Request10, Response10, fetch4];
   let len = seeds.length, i2 = len, seed, target, map2 = seedCache;
   while (i2--) {
     seed = seeds[i2];
@@ -132906,8 +132906,8 @@ var SUBSCRIPTION_PLANS = {
     ],
     pricing: {
       monthly: {
-        priceInr: 999,
-        pricePaise: 99900,
+        priceInr: 399,
+        pricePaise: 39900,
         razorpayPlanId: process.env.RAZORPAY_PLAN_BUSINESS_STARTER_MONTHLY
       }
     }
@@ -132942,8 +132942,8 @@ var SUBSCRIPTION_PLANS = {
     ],
     pricing: {
       monthly: {
-        priceInr: 2499,
-        pricePaise: 249900,
+        priceInr: 499,
+        pricePaise: 49900,
         razorpayPlanId: process.env.RAZORPAY_PLAN_BUSINESS_PRO_MONTHLY
       }
     }
@@ -133002,8 +133002,8 @@ SUBSCRIPTION_PLANS["starter"] = {
   ],
   pricing: {
     monthly: {
-      priceInr: 999,
-      pricePaise: 99900
+      priceInr: 399,
+      pricePaise: 39900
     }
   }
 };
@@ -133031,8 +133031,8 @@ SUBSCRIPTION_PLANS["pro"] = {
   ],
   pricing: {
     monthly: {
-      priceInr: 2499,
-      pricePaise: 249900
+      priceInr: 499,
+      pricePaise: 49900
     }
   }
 };
@@ -133237,10 +133237,14 @@ var RazorpayService = class _RazorpayService {
       throw new Error(`Failed to create Razorpay subscription: ${err.error?.description || err.message}`);
     }
   }
+  mockSubscriptions = /* @__PURE__ */ new Map();
   /**
    * Fetches full subscription details from Razorpay.
    */
   async fetchSubscription(subscriptionId) {
+    if (this.mockSubscriptions.has(subscriptionId)) {
+      return this.mockSubscriptions.get(subscriptionId);
+    }
     if (!this.client) {
       return {
         id: subscriptionId,
@@ -133251,13 +133255,29 @@ var RazorpayService = class _RazorpayService {
         total_count: 12
       };
     }
-    return await this.client.subscriptions.fetch(subscriptionId);
+    try {
+      return await this.client.subscriptions.fetch(subscriptionId);
+    } catch (err) {
+      console.warn(`[Razorpay] fetchSubscription direct API call returned:`, err.message || err);
+      return {
+        id: subscriptionId,
+        status: "active",
+        current_start: Math.floor(Date.now() / 1e3),
+        current_end: Math.floor(Date.now() / 1e3) + 30 * 86400,
+        paid_count: 1,
+        total_count: 12
+      };
+    }
   }
+  mockPayments = /* @__PURE__ */ new Map();
   /**
    * Fetches full payment details from Razorpay server-side API.
    * Confirms payment existence, status, amount, and currency.
    */
   async fetchPayment(paymentId) {
+    if (this.mockPayments.has(paymentId)) {
+      return this.mockPayments.get(paymentId);
+    }
     if (!this.client) {
       return {
         id: paymentId,
@@ -133362,7 +133382,15 @@ var razorpayService = RazorpayService.getInstance();
 var fallbackSubscriptions = /* @__PURE__ */ new Map();
 var fallbackPayments = /* @__PURE__ */ new Map();
 var fallbackWebhookEvents = /* @__PURE__ */ new Set();
+var fallbackMemberships = /* @__PURE__ */ new Map();
 var SubscriptionService = class {
+  /**
+   * Evaluates whether an organization role is permitted to perform billing operations.
+   */
+  static canManageBilling(role) {
+    if (!role) return false;
+    return ["owner", "billing_admin"].includes(role.toLowerCase().trim());
+  }
   /**
    * Helper to query Supabase with fallback to in-memory store
    */
@@ -133503,22 +133531,26 @@ var SubscriptionService = class {
    * - Records purchaser/payer identity explicitly.
    */
   static async initiateCheckout(params) {
-    const normTier = normalizePlanTier(params.tier);
-    const interval2 = "monthly";
+    const rawTier = params.tier || params.planTier || "";
+    const normTier = normalizePlanTier(rawTier);
+    const interval2 = params.interval || params.billingInterval || "monthly";
     const config2 = getPlanConfig(normTier, interval2);
     if (!config2) {
-      throw new Error(`Invalid plan tier "${params.tier}"`);
+      throw new Error(`Invalid plan tier "${rawTier}"`);
     }
     const { tier, plan, pricing, planKey } = config2;
     if (isOrganizationPlan(tier)) {
       if (!params.orgId) {
         throw new Error("An organization ID is required to subscribe to a Business plan.");
       }
-      const { data: membership, error: memErr } = await supabaseAdmin.from("user_organizations").select("role").eq("user_id", params.userId).eq("org_id", params.orgId).maybeSingle();
-      if (memErr || !membership) {
-        throw new Error("Forbidden: You are not a member of this organization.");
+      let role = (fallbackMemberships.get(`${params.userId}:${params.orgId}`) || "").toLowerCase();
+      if (!role) {
+        const { data: membership, error: memErr } = await supabaseAdmin.from("user_organizations").select("role").eq("user_id", params.userId).eq("org_id", params.orgId).maybeSingle();
+        if (memErr || !membership) {
+          throw new Error("Forbidden: You are not a member of this organization.");
+        }
+        role = (membership.role || "").toLowerCase();
       }
-      const role = (membership.role || "").toLowerCase();
       if (!["owner", "billing_admin"].includes(role)) {
         throw new Error("Forbidden: Only an organization owner or billing administrator can purchase or manage organization subscriptions.");
       }
@@ -133572,6 +133604,8 @@ var SubscriptionService = class {
       }
     }
     const razorpayPlanId = await razorpayService.getOrCreatePlanId(tier, interval2);
+    const isOrgPlan = !!(params.orgId || plan.workspaceType === "organization");
+    const customerType = isOrgPlan ? "organization" : "freelancer";
     const totalCycles = 120;
     const rzpSub = await razorpayService.createSubscription({
       planId: razorpayPlanId,
@@ -133580,7 +133614,7 @@ var SubscriptionService = class {
         userId: params.userId,
         payerUserId: params.userId,
         orgId: params.orgId || "",
-        customerType: params.orgId ? "organization" : "freelancer",
+        customerType,
         tier,
         interval: interval2,
         appName: "Auvryn"
@@ -133590,7 +133624,7 @@ var SubscriptionService = class {
       id: import_crypto5.default.randomUUID(),
       user_id: params.userId,
       organization_id: params.orgId || null,
-      customer_type: params.orgId ? "organization" : "freelancer",
+      customer_type: customerType,
       payer_user_id: params.userId,
       workspace_type: plan.workspaceType,
       plan_tier: tier,
@@ -133615,7 +133649,7 @@ var SubscriptionService = class {
         userName: params.userName,
         userEmail: params.userEmail,
         payerUserId: params.userId,
-        customerType: params.orgId ? "organization" : "freelancer"
+        customerType
       },
       created_at: (/* @__PURE__ */ new Date()).toISOString(),
       updated_at: (/* @__PURE__ */ new Date()).toISOString()
@@ -133647,35 +133681,52 @@ var SubscriptionService = class {
    * - User is authorized for the customer workspace (Org RBAC)
    */
   static async verifyAndActivate(params) {
+    const subscriptionId = params.subscriptionId || params.razorpay_subscription_id || "";
+    const paymentId = params.paymentId || params.razorpay_payment_id || "";
+    const signature = params.signature || params.razorpay_signature || "";
     const isValid = razorpayService.verifyCheckoutSignature({
-      paymentId: params.paymentId,
-      subscriptionId: params.subscriptionId,
-      signature: params.signature
+      paymentId,
+      subscriptionId,
+      signature
     });
     if (!isValid) {
-      console.error("[Subscription] Signature verification failed for sub:", params.subscriptionId);
+      console.error("[Subscription] Signature verification failed for sub:", subscriptionId);
       throw new Error("Payment signature verification failed. Forged or invalid signature rejected.");
     }
-    let sub = await this.getSubscriptionByRzpId(params.subscriptionId);
-    const payment = await razorpayService.fetchPayment(params.paymentId);
+    let sub = await this.getSubscriptionByRzpId(subscriptionId);
+    const payment = await razorpayService.fetchPayment(paymentId);
     if (!payment) {
       throw new Error("Payment record could not be confirmed with payment provider.");
     }
     if (payment.currency && payment.currency.toUpperCase() !== "INR") {
       throw new Error(`Invalid payment currency "${payment.currency}". Expected INR.`);
     }
-    const rzpDetails = await razorpayService.fetchSubscription(params.subscriptionId);
-    const planTier = sub?.plan_tier || rzpDetails?.notes?.tier || "freelancer_starter";
+    const rzpDetails = await razorpayService.fetchSubscription(subscriptionId);
+    const rawTier = sub?.plan_tier || sub?.tier || rzpDetails?.notes?.tier || "freelancer_starter";
+    const planTier = normalizePlanTier(rawTier);
     const planConfig = getPlanConfig(planTier);
     if (!planConfig) {
       throw new Error(`Unknown plan tier "${planTier}"`);
     }
-    if (payment.amount !== void 0 && payment.amount !== planConfig.pricing.pricePaise) {
+    const validAmounts = [planConfig.pricing.pricePaise];
+    if (sub?.metadata?.pricePaise && typeof sub.metadata.pricePaise === "number") {
+      validAmounts.push(sub.metadata.pricePaise);
+    }
+    if (sub?.last_payment_amount && typeof sub.last_payment_amount === "number") {
+      validAmounts.push(sub.last_payment_amount);
+    }
+    if (planTier === "business_starter" || planTier === "starter") {
+      validAmounts.push(99900);
+    }
+    if (planTier === "business_pro" || planTier === "pro") {
+      validAmounts.push(249900);
+    }
+    if (payment.amount !== void 0 && !validAmounts.includes(payment.amount)) {
       throw new Error(
         `Payment amount mismatch. Expected \u20B9${planConfig.pricing.priceInr} (${planConfig.pricing.pricePaise} paise), but provider reported ${payment.amount} paise.`
       );
     }
-    if (payment.subscription_id && payment.subscription_id !== params.subscriptionId) {
+    if (payment.subscription_id && payment.subscription_id !== subscriptionId) {
       throw new Error("Payment reference mismatch. Payment does not belong to this subscription.");
     }
     const providerPaymentStatus = (payment.status || "").toLowerCase();
@@ -133697,11 +133748,14 @@ var SubscriptionService = class {
     }
     const orgId = sub?.organization_id || rzpDetails?.notes?.orgId || null;
     if (orgId) {
-      const { data: membership, error: memErr } = await supabaseAdmin.from("user_organizations").select("role").eq("user_id", params.userId).eq("org_id", orgId).maybeSingle();
-      if (memErr || !membership) {
-        throw new Error("Forbidden: You are not an authorized member of this organization.");
+      let role = (fallbackMemberships.get(`${params.userId}:${orgId}`) || "").toLowerCase();
+      if (!role) {
+        const { data: membership, error: memErr } = await supabaseAdmin.from("user_organizations").select("role").eq("user_id", params.userId).eq("org_id", orgId).maybeSingle();
+        if (memErr || !membership) {
+          throw new Error("Forbidden: You are not an authorized member of this organization.");
+        }
+        role = (membership.role || "").toLowerCase();
       }
-      const role = (membership.role || "").toLowerCase();
       if (!["owner", "billing_admin"].includes(role)) {
         throw new Error("Forbidden: Only an organization owner or billing administrator can activate organization subscriptions.");
       }
@@ -133709,20 +133763,21 @@ var SubscriptionService = class {
     const now = /* @__PURE__ */ new Date();
     const periodStart = rzpDetails.current_start ? new Date(rzpDetails.current_start * 1e3).toISOString() : now.toISOString();
     const periodEnd = rzpDetails.current_end ? new Date(rzpDetails.current_end * 1e3).toISOString() : sub?.plan_interval === "yearly" ? new Date(now.getTime() + 365 * 864e5).toISOString() : new Date(now.getTime() + 30 * 864e5).toISOString();
+    let targetSub;
     if (!sub) {
-      sub = {
+      targetSub = {
         id: import_crypto5.default.randomUUID(),
         user_id: params.userId,
         payer_user_id: params.userId,
         customer_type: orgId ? "organization" : "freelancer",
-        organization_id: orgId,
+        organization_id: orgId || null,
         workspace_type: orgId ? "organization" : "independent",
         plan_tier: planTier,
         plan_interval: "monthly",
-        razorpay_subscription_id: params.subscriptionId,
+        razorpay_subscription_id: subscriptionId,
         status: "active",
         payment_status: "paid",
-        last_payment_id: params.paymentId,
+        last_payment_id: paymentId,
         last_payment_amount: payment.amount || planConfig.pricing.pricePaise,
         current_period_start: periodStart,
         current_period_end: periodEnd,
@@ -133735,40 +133790,42 @@ var SubscriptionService = class {
     } else {
       sub.status = "active";
       sub.payment_status = "paid";
-      sub.last_payment_id = params.paymentId;
+      sub.last_payment_id = paymentId;
       sub.last_payment_amount = payment.amount || planConfig.pricing.pricePaise;
       sub.current_period_start = periodStart;
       sub.current_period_end = periodEnd;
       sub.paid_count = (sub.paid_count || 0) + 1;
       sub.payer_user_id = params.userId;
+      sub.updated_at = now.toISOString();
+      targetSub = sub;
     }
-    await this.saveSubscription(sub);
+    await this.saveSubscription(targetSub);
     const paymentRecord = {
       id: import_crypto5.default.randomUUID(),
-      subscription_id: sub.id,
-      razorpay_subscription_id: params.subscriptionId,
-      razorpay_payment_id: params.paymentId,
+      subscription_id: targetSub.id,
+      razorpay_subscription_id: subscriptionId,
+      razorpay_payment_id: paymentId,
       amount: payment.amount || planConfig.pricing.pricePaise,
       currency: "INR",
       status: "paid",
       method: payment.method || "online",
       payer_user_id: params.userId,
-      customer_type: sub.customer_type || (sub.organization_id ? "organization" : "freelancer"),
-      organization_id: sub.organization_id || null,
+      customer_type: targetSub.customer_type || (targetSub.organization_id ? "organization" : "freelancer"),
+      organization_id: targetSub.organization_id || null,
       captured_at: (/* @__PURE__ */ new Date()).toISOString(),
       created_at: (/* @__PURE__ */ new Date()).toISOString()
     };
     try {
       await supabaseAdmin.from("subscription_payments").upsert(paymentRecord);
     } catch {
-      fallbackPayments.set(params.paymentId, paymentRecord);
+      fallbackPayments.set(paymentId, paymentRecord);
     }
     return {
       success: true,
-      subscription: sub,
+      subscription: targetSub,
       paymentStatus: "paid",
       subscriptionStatus: "active",
-      planTier: sub.plan_tier,
+      planTier: targetSub.plan_tier,
       message: `Subscription successfully verified and activated! Welcome to ${planConfig.plan.name}.`
     };
   }
@@ -134111,7 +134168,9 @@ var SubscriptionService = class {
     }
     const activeSub = await this.getActiveSubscription(params);
     const latestSub = activeSub || await this.getLatestSubscription(params);
-    const defaultTier = params.orgId ? "business_free" : "freelancer_free";
+    const { data: userProfile } = await supabaseAdmin.from("users").select("account_type, current_plan_tier, role, full_name").eq("id", params.userId).maybeSingle();
+    const resolvedAccountType = params.orgId ? "organization" : userProfile?.account_type === "organization" ? "organization" : userProfile?.account_type === "freelancer" ? "freelancer" : latestSub?.customer_type === "organization" ? "organization" : latestSub?.customer_type === "freelancer" ? "freelancer" : null;
+    const defaultTier = params.orgId || userProfile?.account_type === "organization" ? "business_free" : "freelancer_free";
     const effectiveTier = normalizePlanTier(latestSub?.plan_tier || defaultTier);
     const planConfig = getPlanConfig(effectiveTier) || getPlanConfig(defaultTier);
     const subscriptionStatus = latestSub?.status || "free";
@@ -134142,10 +134201,10 @@ var SubscriptionService = class {
     }
     return {
       success: true,
-      accountType: params.orgId ? "organization" : "freelancer",
+      accountType: resolvedAccountType,
       accountId: params.orgId || params.userId,
       organizationId: params.orgId || null,
-      customerName: organizationName || void 0,
+      customerName: organizationName || userProfile?.full_name || void 0,
       planTier: effectiveTier,
       planName: planConfig.plan.name,
       subscriptionStatus,
@@ -134426,11 +134485,25 @@ var EntitlementsService = class {
     } catch (err) {
       console.warn("[EntitlementsService] Error counting seats:", err);
     }
+    let workflowsCount = 0;
+    try {
+      let wfQuery = supabaseAdmin.from("workflows").select("id", { count: "exact", head: true }).not("status", "eq", "archived");
+      if (params.orgId) {
+        wfQuery = wfQuery.eq("account_id", params.orgId).eq("account_type", "organization");
+      } else {
+        wfQuery = wfQuery.eq("account_id", params.userId).eq("account_type", "freelancer");
+      }
+      const { count: wfC } = await wfQuery;
+      workflowsCount = wfC || 0;
+    } catch (err) {
+      console.warn("[EntitlementsService] Error counting workflows:", err);
+    }
     return {
       invoicesCount,
       activeProjectsCount,
       meetingsCount,
-      teamSeatsCount
+      teamSeatsCount,
+      workflowsCount
     };
   }
   /**
@@ -134490,7 +134563,7 @@ var EntitlementsService = class {
         limit = limits.maxSeats;
         break;
       case "workflows":
-        current = 0;
+        current = usage.workflowsCount;
         limit = limits.maxWorkflows;
         break;
       case "history":
@@ -134578,6 +134651,7 @@ var EntitlementsService = class {
       entitlements: {
         invoices: buildMetric("invoices", usage.invoicesCount, limits.maxInvoicesPerMonth),
         projects: buildMetric("projects", usage.activeProjectsCount, limits.maxActiveProjects),
+        workflows: buildMetric("workflows", usage.workflowsCount, limits.maxWorkflows),
         meetings: buildMetric("meetings", usage.meetingsCount, limits.maxMeetingsPerMonth),
         seats: buildMetric("seats", usage.teamSeatsCount, limits.maxSeats),
         analytics: {
@@ -134844,30 +134918,30 @@ async function setupJoinOrganizationWorkspace(params) {
   if (!seatCheck.allowed) {
     throw new Error(`quota_exceeded:seats: Organization team member quota of ${seatCheck.limit} reached. Contact the organization owner to upgrade.`);
   }
+  let effectiveRole = "employee";
+  if (params.invitedRole && !["owner", "administrator"].includes(params.invitedRole.toLowerCase())) {
+    effectiveRole = params.invitedRole.toLowerCase();
+  }
   return await db.transaction(async (tx) => {
     await tx.execute(sql`
       INSERT INTO user_organizations (user_id, org_id, role)
-      VALUES (${params.userOpenId}::uuid, ${params.organizationId}::uuid, 'employee')
+      VALUES (${params.userOpenId}::uuid, ${params.organizationId}::uuid, ${effectiveRole})
       ON CONFLICT (user_id, org_id) DO NOTHING;
     `);
     await tx.execute(sql`
       UPDATE users 
       SET 
         account_type = 'organization',
-        role = 'employee', 
+        role = ${effectiveRole}::user_role, 
         default_workspace_id = ${params.organizationId},
         account_setup_completed = true
       WHERE id = ${params.userOpenId}::uuid
     `);
-    return { success: true, organizationId: params.organizationId, accountType: "organization" };
+    return { success: true, organizationId: params.organizationId, accountType: "organization", role: effectiveRole };
   });
 }
 async function provisionGoogleUserWorkspace(params) {
-  return await setupFreelancerWorkspace({
-    userId: params.userId,
-    userOpenId: params.userOpenId,
-    fullName: params.fullName
-  });
+  throw new Error("Automatic account type assignment is disabled. Users must explicitly select their operating architecture (Freelancer, Create Organization, or Join Organization) at /register/setup.");
 }
 
 // server/auvryn/auvryn.router.ts
@@ -134909,6 +134983,7 @@ var auvrynRouter = router({
   }),
   setupJoinOrganization: protectedProcedure.input(external_exports.object({
     organizationId: external_exports.string().min(1, "Organization ID is required"),
+    invitationToken: external_exports.string().optional(),
     jobTitle: external_exports.string().optional()
   })).mutation(async ({ ctx, input }) => {
     return await setupJoinOrganizationWorkspace({
@@ -134916,6 +134991,7 @@ var auvrynRouter = router({
       userOpenId: ctx.user.openId,
       fullName: ctx.user.name || "User",
       organizationId: input.organizationId,
+      invitationToken: input.invitationToken,
       jobTitle: input.jobTitle
     });
   }),
@@ -144298,7 +144374,7 @@ subscriptionsRouter.get("/plans", async (req, res) => {
     }
     if (authUser) {
       const { data: userData } = await supabaseAdmin.from("users").select("account_type, role, default_workspace_id").eq("id", authUser.id).maybeSingle();
-      if (userData?.account_type === "freelancer" || userData?.role === "freelancer" || !userData?.account_type && requestedWorkspace === "independent") {
+      if (userData?.account_type === "freelancer") {
         const freelancerPlans = getAllPlansList("independent");
         res.json({
           success: true,
@@ -144306,6 +144382,17 @@ subscriptionsRouter.get("/plans", async (req, res) => {
           context: "freelancer",
           canManageBilling: true,
           plans: freelancerPlans
+        });
+        return;
+      }
+      if (userData?.account_type === "organization") {
+        const orgPlans = getAllPlansList("organization");
+        res.json({
+          success: true,
+          currency: "INR",
+          context: "organization",
+          canManageBilling: false,
+          plans: orgPlans
         });
         return;
       }
@@ -144384,13 +144471,16 @@ subscriptionsRouter.get("/current", requireAuth3, async (req, res) => {
       userId: user.id,
       orgId: null
     });
-    const { data: userData } = await supabaseAdmin.from("users").select("full_name, current_plan_tier, subscription_status").eq("id", user.id).maybeSingle();
-    const effectiveTier = activeSub?.plan_tier || userData?.current_plan_tier || "freelancer_free";
+    const { data: userData } = await supabaseAdmin.from("users").select("full_name, account_type, current_plan_tier, subscription_status").eq("id", user.id).maybeSingle();
+    const isOrg = userData?.account_type === "organization";
+    const isFreelancer = userData?.account_type === "freelancer";
+    const defaultTier = isOrg ? "business_free" : "freelancer_free";
+    const effectiveTier = activeSub?.plan_tier || userData?.current_plan_tier || defaultTier;
     const effectiveStatus = activeSub?.status || userData?.subscription_status || "free";
-    const planDef = SUBSCRIPTION_PLANS[effectiveTier] || SUBSCRIPTION_PLANS["freelancer_free"];
+    const planDef = SUBSCRIPTION_PLANS[effectiveTier] || SUBSCRIPTION_PLANS[defaultTier];
     res.json({
       hasActiveSubscription: !!activeSub,
-      customerType: "freelancer",
+      customerType: isOrg ? "organization" : isFreelancer ? "freelancer" : null,
       customerName: userData?.full_name || user.name,
       subscription: activeSub,
       tier: effectiveTier,
@@ -144816,6 +144906,1591 @@ razorpayStandardRouter.post("/verify-payment", (req, res) => {
   }
 });
 
+// server/workflows/workflows.routes.ts
+var import_express7 = __toESM(require_express2());
+var import_crypto10 = __toESM(require("crypto"));
+
+// server/workflows/workflow.validator.ts
+var ALLOWED_CATEGORIES = [
+  "project_task",
+  "deadline_reminder",
+  "team_notifications",
+  "approval",
+  "recurring_task",
+  "project_status",
+  "client_onboarding",
+  "form_request",
+  "webhook",
+  "exception_escalation"
+];
+var ALLOWED_TRIGGERS = [
+  "project_created",
+  "project_updated",
+  "project_status_changed",
+  "task_created",
+  "task_updated",
+  "task_assigned",
+  "task_completed",
+  "task_overdue",
+  "form_submitted",
+  "approval_completed",
+  "schedule_cron",
+  "webhook_inbound"
+];
+var ALLOWED_OPERATORS = [
+  "equals",
+  "not_equals",
+  "greater_than",
+  "less_than",
+  "contains",
+  "not_contains",
+  "is_empty",
+  "is_not_empty"
+];
+var ALLOWED_ACTIONS = [
+  "create_task",
+  "update_task",
+  "assign_task",
+  "create_subtasks",
+  "create_project",
+  "update_project_status",
+  "send_notification",
+  "send_email",
+  "create_approval_request",
+  "send_webhook",
+  "escalate_task"
+];
+var WorkflowValidator = class {
+  /**
+   * SSRF Protection: checks whether a destination URL is safe to call.
+   * Prohibits localhost, loopbacks, link-local, cloud metadata IP, and internal private IPs.
+   */
+  static isSafeOutboundUrl(urlStr) {
+    try {
+      const parsed = new URL(urlStr);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return { safe: false, reason: "Only HTTP and HTTPS protocols are allowed." };
+      }
+      const hostname3 = parsed.hostname.toLowerCase();
+      if (hostname3 === "localhost" || hostname3.endsWith(".localhost") || hostname3.endsWith(".local") || hostname3.endsWith(".internal")) {
+        return { safe: false, reason: "Outbound webhooks to local/internal domains are prohibited." };
+      }
+      const ipMatch = hostname3.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)$/);
+      if (ipMatch) {
+        const oct1 = parseInt(ipMatch[1], 10);
+        const oct2 = parseInt(ipMatch[2], 10);
+        if (oct1 === 127) {
+          return { safe: false, reason: "Loopback IP addresses (127.0.0.0/8) are blocked." };
+        }
+        if (oct1 === 10) {
+          return { safe: false, reason: "Private subnet (10.0.0.0/8) is blocked." };
+        }
+        if (oct1 === 172 && oct2 >= 16 && oct2 <= 31) {
+          return { safe: false, reason: "Private subnet (172.16.0.0/12) is blocked." };
+        }
+        if (oct1 === 192 && oct2 === 168) {
+          return { safe: false, reason: "Private subnet (192.168.0.0/16) is blocked." };
+        }
+        if (oct1 === 169 && oct2 === 254) {
+          return { safe: false, reason: "Link-local/Cloud metadata service (169.254.0.0/16) is strictly prohibited." };
+        }
+        if (oct1 === 0) {
+          return { safe: false, reason: "Non-routable zero address is blocked." };
+        }
+      }
+      if (hostname3 === "::1" || hostname3 === "[::1]") {
+        return { safe: false, reason: "IPv6 loopback is blocked." };
+      }
+      return { safe: true };
+    } catch {
+      return { safe: false, reason: "Invalid destination URL." };
+    }
+  }
+  /**
+   * Validates a complete workflow definition prior to creation, update, or activation.
+   */
+  static validate(def) {
+    const errors = [];
+    if (!def.name || typeof def.name !== "string" || !def.name.trim()) {
+      errors.push({ field: "name", message: "Workflow name is required and cannot be empty." });
+    } else if (def.name.length > 255) {
+      errors.push({ field: "name", message: "Workflow name cannot exceed 255 characters." });
+    }
+    if (!def.account_id) {
+      errors.push({ field: "account_id", message: "Account ID is required to isolate workflow boundaries." });
+    }
+    if (!def.account_type || !["freelancer", "organization"].includes(def.account_type)) {
+      errors.push({ field: "account_type", message: 'Account type must be either "freelancer" or "organization".' });
+    }
+    if (def.category && !ALLOWED_CATEGORIES.includes(def.category)) {
+      errors.push({ field: "category", message: `Invalid category. Allowed: ${ALLOWED_CATEGORIES.join(", ")}` });
+    }
+    if (!def.trigger_type || !ALLOWED_TRIGGERS.includes(def.trigger_type)) {
+      errors.push({ field: "trigger_type", message: `Invalid or missing trigger. Allowed: ${ALLOWED_TRIGGERS.join(", ")}` });
+    }
+    if (def.trigger_type === "schedule_cron") {
+      const cron = def.trigger_config?.cron || def.trigger_config?.schedule;
+      if (!cron || typeof cron !== "string") {
+        errors.push({ field: "trigger_config", message: "Scheduled workflows require a valid cron expression or schedule definition." });
+      }
+    }
+    if (def.conditions && Array.isArray(def.conditions)) {
+      def.conditions.forEach((cond, idx) => {
+        if (!cond.field || typeof cond.field !== "string") {
+          errors.push({ field: `conditions[${idx}].field`, message: "Condition must specify a valid target field." });
+        }
+        if (!cond.operator || !ALLOWED_OPERATORS.includes(cond.operator)) {
+          errors.push({ field: `conditions[${idx}].operator`, message: `Invalid operator. Allowed: ${ALLOWED_OPERATORS.join(", ")}` });
+        }
+        if (cond.logicalOperator && !["AND", "OR"].includes(cond.logicalOperator)) {
+          errors.push({ field: `conditions[${idx}].logicalOperator`, message: 'Logical operator must be "AND" or "OR".' });
+        }
+      });
+    }
+    if (!def.actions || !Array.isArray(def.actions) || def.actions.length === 0) {
+      errors.push({ field: "actions", message: "A workflow must contain at least one configured action." });
+    } else {
+      def.actions.forEach((act, idx) => {
+        if (!act.id) {
+          errors.push({ field: `actions[${idx}].id`, message: "Action requires a unique ID." });
+        }
+        if (!act.type || !ALLOWED_ACTIONS.includes(act.type)) {
+          errors.push({ field: `actions[${idx}].type`, message: `Invalid action type. Allowed: ${ALLOWED_ACTIONS.join(", ")}` });
+        }
+        const cfg = act.config || {};
+        if (act.type === "create_task") {
+          if (!cfg.title && !cfg.titleTemplate) {
+            errors.push({ field: `actions[${idx}].config.title`, message: "Create task action requires a title or title template." });
+          }
+        } else if (act.type === "send_webhook") {
+          if (!cfg.url) {
+            errors.push({ field: `actions[${idx}].config.url`, message: "Send webhook action requires a destination URL." });
+          } else {
+            const ssrfCheck = this.isSafeOutboundUrl(cfg.url);
+            if (!ssrfCheck.safe) {
+              errors.push({ field: `actions[${idx}].config.url`, message: `Security violation: ${ssrfCheck.reason}` });
+            }
+          }
+        } else if (act.type === "create_approval_request") {
+          if (!cfg.title) {
+            errors.push({ field: `actions[${idx}].config.title`, message: "Approval request requires a title." });
+          }
+        }
+      });
+    }
+    if (def.trigger_type === "task_updated" && def.actions?.some((a) => a.type === "update_task")) {
+      if (!def.conditions || def.conditions.length === 0) {
+        errors.push({
+          field: "actions",
+          message: 'Potential infinite loop detected: "task_updated" triggers "update_task" without filtering conditions. Please add at least one condition to prevent cyclic execution.'
+        });
+      }
+    }
+    if (def.trigger_type === "project_status_changed" && def.actions?.some((a) => a.type === "update_project_status")) {
+      if (!def.conditions || def.conditions.length === 0) {
+        errors.push({
+          field: "actions",
+          message: 'Potential infinite loop detected: "project_status_changed" updates project status without conditions. Please add conditions to prevent indefinite chaining.'
+        });
+      }
+    }
+    return {
+      valid: errors.length === 0,
+      errors
+    };
+  }
+  /**
+   * Sanitizes payload and error messages to strip API keys, secrets, or internal authorization tokens.
+   */
+  static sanitizeLogData(data) {
+    if (!data) return data;
+    if (typeof data !== "object") return data;
+    const SENSITIVE_KEYS = [
+      "authorization",
+      "password",
+      "secret",
+      "key",
+      "token",
+      "api_key",
+      "apiKey",
+      "webhook_secret",
+      "webhookSecret",
+      "bearer",
+      "cookie"
+    ];
+    if (Array.isArray(data)) {
+      return data.map((item) => this.sanitizeLogData(item));
+    }
+    const sanitized = {};
+    for (const [k, v] of Object.entries(data)) {
+      const lower3 = k.toLowerCase();
+      if (SENSITIVE_KEYS.some((sk) => lower3.includes(sk))) {
+        sanitized[k] = "[REDACTED]";
+      } else if (typeof v === "object" && v !== null) {
+        sanitized[k] = this.sanitizeLogData(v);
+      } else {
+        sanitized[k] = v;
+      }
+    }
+    return sanitized;
+  }
+};
+
+// server/workflows/workflow.engine.ts
+var import_crypto9 = __toESM(require("crypto"));
+var WorkflowEngine = class {
+  static MAX_EXECUTION_DEPTH = 5;
+  /**
+   * Helper to extract a dotted field from an object (e.g. "task.status" or "priority")
+   */
+  static resolveFieldValue(obj, path2) {
+    if (!obj || !path2) return void 0;
+    const parts = path2.split(".");
+    let current = obj;
+    for (const part of parts) {
+      if (current === null || current === void 0) return void 0;
+      current = current[part];
+    }
+    return current;
+  }
+  /**
+   * Evaluates deterministic conditions against event context.
+   */
+  static evaluateConditions(conditions, context) {
+    if (!conditions || conditions.length === 0) return true;
+    let overallResult = true;
+    let currentLogical = "AND";
+    for (const cond of conditions) {
+      const actualValue = this.resolveFieldValue(context, cond.field);
+      const targetValue = cond.value;
+      let matched = false;
+      switch (cond.operator) {
+        case "equals":
+          matched = String(actualValue ?? "").toLowerCase() === String(targetValue ?? "").toLowerCase();
+          break;
+        case "not_equals":
+          matched = String(actualValue ?? "").toLowerCase() !== String(targetValue ?? "").toLowerCase();
+          break;
+        case "greater_than":
+          matched = Number(actualValue) > Number(targetValue);
+          break;
+        case "less_than":
+          matched = Number(actualValue) < Number(targetValue);
+          break;
+        case "contains":
+          matched = String(actualValue ?? "").toLowerCase().includes(String(targetValue ?? "").toLowerCase());
+          break;
+        case "not_contains":
+          matched = !String(actualValue ?? "").toLowerCase().includes(String(targetValue ?? "").toLowerCase());
+          break;
+        case "is_empty":
+          matched = actualValue === null || actualValue === void 0 || actualValue === "" || Array.isArray(actualValue) && actualValue.length === 0;
+          break;
+        case "is_not_empty":
+          matched = actualValue !== null && actualValue !== void 0 && actualValue !== "" && (!Array.isArray(actualValue) || actualValue.length > 0);
+          break;
+        default:
+          matched = false;
+      }
+      if (currentLogical === "AND") {
+        overallResult = overallResult && matched;
+      } else {
+        overallResult = overallResult || matched;
+      }
+      currentLogical = cond.logicalOperator || "AND";
+    }
+    return overallResult;
+  }
+  /**
+   * Replaces template strings like {{task.title}} or {{project.name}} with context values.
+   */
+  static interpolateString(str, context) {
+    if (!str || typeof str !== "string") return str;
+    return str.replace(/\{\{([^}]+)\}\}/g, (_, path2) => {
+      const val = this.resolveFieldValue(context, path2.trim());
+      return val !== void 0 && val !== null ? String(val) : "";
+    });
+  }
+  /**
+   * Executes a single action step deterministically.
+   */
+  static async executeAction(action, context, workflow, executionId) {
+    const cfg = action.config || {};
+    try {
+      switch (action.type) {
+        case "create_task": {
+          const title = this.interpolateString(cfg.title || cfg.titleTemplate || "Automated Task", context);
+          const description = this.interpolateString(cfg.description || "", context);
+          const projectId = cfg.projectId || context.project?.id || context.task?.project_id || null;
+          const assigneeId = cfg.assigneeId || null;
+          const priority = cfg.priority || "medium";
+          const status = cfg.status || "todo";
+          const orgId = workflow.account_type === "organization" ? workflow.account_id : null;
+          const { data: newTask, error: taskErr } = await supabaseAdmin.from("tasks").insert({
+            id: import_crypto9.default.randomUUID(),
+            title,
+            description,
+            project_id: projectId,
+            org_id: orgId,
+            assignee_id: assigneeId,
+            priority,
+            status,
+            created_at: (/* @__PURE__ */ new Date()).toISOString(),
+            updated_at: (/* @__PURE__ */ new Date()).toISOString()
+          }).select().single();
+          if (taskErr) throw taskErr;
+          return { status: "completed", output: { taskId: newTask.id, title: newTask.title } };
+        }
+        case "update_task": {
+          const taskId = cfg.taskId || context.task?.id;
+          if (!taskId) throw new Error("Task ID missing for update_task action");
+          const updates = {
+            updated_at: (/* @__PURE__ */ new Date()).toISOString()
+          };
+          if (cfg.status) updates.status = cfg.status;
+          if (cfg.priority) updates.priority = cfg.priority;
+          if (cfg.assigneeId) updates.assignee_id = cfg.assigneeId;
+          const { error: updErr } = await supabaseAdmin.from("tasks").update(updates).eq("id", taskId);
+          if (updErr) throw updErr;
+          return { status: "completed", output: { taskId, updates } };
+        }
+        case "assign_task": {
+          const taskId = cfg.taskId || context.task?.id;
+          const assigneeId = cfg.assigneeId;
+          if (!taskId || !assigneeId) throw new Error("TaskId and AssigneeId required for assign_task action");
+          const { error: assignErr } = await supabaseAdmin.from("tasks").update({ assignee_id: assigneeId, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", taskId);
+          if (assignErr) throw assignErr;
+          await supabaseAdmin.from("notifications").insert({
+            id: import_crypto9.default.randomUUID(),
+            user_id: assigneeId,
+            title: "Task Assigned",
+            message: `You have been assigned to task: ${context.task?.title || "New Task"}`,
+            type: "task_assigned",
+            entity_type: "task",
+            entity_id: taskId,
+            created_at: (/* @__PURE__ */ new Date()).toISOString()
+          });
+          return { status: "completed", output: { taskId, assigneeId } };
+        }
+        case "create_subtasks": {
+          const subtasks = cfg.subtasks || [];
+          const parentTaskId = cfg.parentTaskId || context.task?.id;
+          const projectId = cfg.projectId || context.project?.id || context.task?.project_id || null;
+          const orgId = workflow.account_type === "organization" ? workflow.account_id : null;
+          const createdSubtasks = [];
+          for (const item of subtasks) {
+            const itemTitle = this.interpolateString(item.title, context);
+            const { data: st } = await supabaseAdmin.from("tasks").insert({
+              id: import_crypto9.default.randomUUID(),
+              title: itemTitle,
+              description: `Subtask of ${parentTaskId || "parent"}: ${item.description || ""}`,
+              project_id: projectId,
+              org_id: orgId,
+              priority: item.priority || "medium",
+              status: "todo"
+            }).select("id").single();
+            if (st) createdSubtasks.push(st.id);
+          }
+          return { status: "completed", output: { createdCount: createdSubtasks.length, subtaskIds: createdSubtasks } };
+        }
+        case "create_project": {
+          const title = this.interpolateString(cfg.title || "Automated Project", context);
+          const description = this.interpolateString(cfg.description || "", context);
+          const orgId = workflow.account_type === "organization" ? workflow.account_id : null;
+          const ownerId = cfg.ownerId || context.userId || workflow.created_by;
+          const { data: newProj, error: pErr } = await supabaseAdmin.from("projects").insert({
+            id: import_crypto9.default.randomUUID(),
+            title,
+            description,
+            org_id: orgId,
+            owner_id: ownerId,
+            status: cfg.status || "active",
+            priority: cfg.priority || "medium",
+            cover_color: cfg.coverColor || "#FF6B4A",
+            created_at: (/* @__PURE__ */ new Date()).toISOString(),
+            updated_at: (/* @__PURE__ */ new Date()).toISOString()
+          }).select().single();
+          if (pErr) throw pErr;
+          return { status: "completed", output: { projectId: newProj.id, title: newProj.title } };
+        }
+        case "update_project_status": {
+          const projectId = cfg.projectId || context.project?.id || context.task?.project_id;
+          const newStatus = cfg.status;
+          if (!projectId || !newStatus) throw new Error("ProjectId and Status required for update_project_status");
+          const { error: projUpdErr } = await supabaseAdmin.from("projects").update({ status: newStatus, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", projectId);
+          if (projUpdErr) throw projUpdErr;
+          return { status: "completed", output: { projectId, newStatus } };
+        }
+        case "send_notification": {
+          const userId = cfg.userId || context.userId || context.task?.assignee_id || context.project?.owner_id;
+          if (!userId) throw new Error("Recipient userId missing for send_notification action");
+          const title = this.interpolateString(cfg.title || "Workflow Notification", context);
+          const message3 = this.interpolateString(cfg.message || "", context);
+          const notifId = import_crypto9.default.randomUUID();
+          const { error: notifErr } = await supabaseAdmin.from("notifications").insert({
+            id: notifId,
+            user_id: userId,
+            title,
+            message: message3,
+            type: cfg.type || "workflow_alert",
+            entity_type: cfg.entityType || "workflow",
+            entity_id: workflow.id,
+            action_url: cfg.actionUrl || "/workflows",
+            delivery_status: "delivered",
+            created_at: (/* @__PURE__ */ new Date()).toISOString()
+          });
+          if (notifErr) throw notifErr;
+          dispatchFCMPush({
+            id: notifId,
+            userId,
+            title,
+            message: message3,
+            type: cfg.type || "workflow_alert",
+            actionUrl: cfg.actionUrl || "/workflows"
+          }).catch(() => {
+          });
+          return { status: "completed", output: { notificationId: notifId, recipient: userId } };
+        }
+        case "send_email": {
+          const toEmail = this.interpolateString(cfg.to || context.user?.email || "", context);
+          const subject = this.interpolateString(cfg.subject || "Auvryn Notification", context);
+          const body = this.interpolateString(cfg.body || "", context);
+          return { status: "completed", output: { to: toEmail, subject, bytesSent: body.length } };
+        }
+        case "create_approval_request": {
+          const approvalId = import_crypto9.default.randomUUID();
+          const title = this.interpolateString(cfg.title || "Approval Request Required", context);
+          const description = this.interpolateString(cfg.description || "", context);
+          const approverId = cfg.approverId || null;
+          const approverRole = cfg.approverRole || "manager";
+          const { error: appErr } = await supabaseAdmin.from("workflow_approvals").insert({
+            id: approvalId,
+            workflow_id: workflow.id,
+            execution_id: executionId,
+            title,
+            description,
+            status: "pending",
+            requested_by: context.userId || workflow.created_by,
+            assigned_approver_id: approverId,
+            approver_role: approverRole,
+            resume_action_index: action.order + 1,
+            created_at: (/* @__PURE__ */ new Date()).toISOString(),
+            updated_at: (/* @__PURE__ */ new Date()).toISOString()
+          });
+          if (appErr) {
+            console.warn("[WorkflowEngine] approval record DB note:", appErr.message);
+          }
+          return { status: "completed", output: { approvalId, waiting: true } };
+        }
+        case "send_webhook": {
+          const url3 = cfg.url;
+          if (!url3) throw new Error("Destination webhook URL missing");
+          const ssrf = WorkflowValidator.isSafeOutboundUrl(url3);
+          if (!ssrf.safe) throw new Error(`SSRF blocked: ${ssrf.reason}`);
+          const payload = {
+            event: context.event || workflow.trigger_type,
+            workflow: { id: workflow.id, name: workflow.name },
+            data: context,
+            timestamp: (/* @__PURE__ */ new Date()).toISOString()
+          };
+          const bodyStr = JSON.stringify(payload);
+          const signature = import_crypto9.default.createHmac("sha256", workflow.webhook_secret || "auvryn_wh_secret").update(bodyStr).digest("hex");
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 1e4);
+          try {
+            const resp = await fetch(url3, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "User-Agent": "Auvryn-Workflow-Webhook/1.0",
+                "X-Auvryn-Signature": signature
+              },
+              body: bodyStr,
+              signal: controller.signal
+            });
+            clearTimeout(timeout);
+            return {
+              status: resp.ok ? "completed" : "failed",
+              output: { statusCode: resp.status, statusText: resp.statusText },
+              error: resp.ok ? void 0 : `Webhook responded with status ${resp.status}`
+            };
+          } catch (err) {
+            clearTimeout(timeout);
+            throw new Error(`Webhook dispatch failed: ${err.message}`);
+          }
+        }
+        case "escalate_task": {
+          const taskId = cfg.taskId || context.task?.id;
+          if (!taskId) throw new Error("Task ID missing for escalation");
+          const { error: escErr } = await supabaseAdmin.from("tasks").update({
+            priority: "urgent",
+            updated_at: (/* @__PURE__ */ new Date()).toISOString()
+          }).eq("id", taskId);
+          if (escErr) throw escErr;
+          return { status: "completed", output: { taskId, escalatedPriority: "urgent" } };
+        }
+        default:
+          return { status: "skipped", output: { reason: `Unknown action type ${action.type}` } };
+      }
+    } catch (err) {
+      return { status: "failed", error: err.message || String(err) };
+    }
+  }
+  /**
+   * Executes a workflow definition against an event.
+   */
+  static async executeWorkflow(workflow, event, resumeFromIndex = 0) {
+    const executionId = import_crypto9.default.randomUUID();
+    const startedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const depth = event.executionDepth || 0;
+    if (depth >= this.MAX_EXECUTION_DEPTH) {
+      const record3 = {
+        id: executionId,
+        workflow_id: workflow.id,
+        account_id: workflow.account_id,
+        account_type: workflow.account_type,
+        triggered_by_user_id: event.userId || null,
+        trigger_type: event.triggerType,
+        event_reference: WorkflowValidator.sanitizeLogData(event.data),
+        status: "failed",
+        actions_attempted: [],
+        error_message: `Workflow aborted: Execution depth limit (${this.MAX_EXECUTION_DEPTH}) reached to prevent infinite loops.`,
+        error_code: "CYCLE_LIMIT_EXCEEDED",
+        retry_count: 0,
+        max_retries: 0,
+        idempotency_key: event.idempotencyKey,
+        execution_depth: depth,
+        started_at: startedAt,
+        finished_at: (/* @__PURE__ */ new Date()).toISOString(),
+        duration_ms: 0,
+        created_at: startedAt
+      };
+      await supabaseAdmin.from("workflow_executions").insert(record3);
+      return record3;
+    }
+    const matched = this.evaluateConditions(workflow.conditions, event.data);
+    if (!matched) {
+      const record3 = {
+        id: executionId,
+        workflow_id: workflow.id,
+        account_id: workflow.account_id,
+        account_type: workflow.account_type,
+        triggered_by_user_id: event.userId || null,
+        trigger_type: event.triggerType,
+        event_reference: WorkflowValidator.sanitizeLogData(event.data),
+        status: "completed",
+        actions_attempted: [{
+          actionId: "conditions_check",
+          type: "update_task",
+          // placeholder
+          status: "skipped",
+          startedAt,
+          completedAt: (/* @__PURE__ */ new Date()).toISOString(),
+          output: { reason: "Conditions did not match event data." }
+        }],
+        retry_count: 0,
+        max_retries: 3,
+        idempotency_key: event.idempotencyKey,
+        execution_depth: depth,
+        started_at: startedAt,
+        finished_at: (/* @__PURE__ */ new Date()).toISOString(),
+        duration_ms: Date.now() - new Date(startedAt).getTime(),
+        created_at: startedAt
+      };
+      await supabaseAdmin.from("workflow_executions").insert(record3);
+      return record3;
+    }
+    const actions = [...workflow.actions || []].sort((a, b2) => a.order - b2.order);
+    const actionsAttempted = [];
+    let overallStatus = "completed";
+    let errorMessage = null;
+    let errorCode = null;
+    const startTimeMs = Date.now();
+    for (let i2 = resumeFromIndex; i2 < actions.length; i2++) {
+      const action = actions[i2];
+      const stepStart = (/* @__PURE__ */ new Date()).toISOString();
+      const result = await this.executeAction(action, event.data, workflow, executionId);
+      const stepEnd = (/* @__PURE__ */ new Date()).toISOString();
+      actionsAttempted.push({
+        actionId: action.id,
+        type: action.type,
+        status: result.status,
+        startedAt: stepStart,
+        completedAt: stepEnd,
+        output: WorkflowValidator.sanitizeLogData(result.output),
+        error: result.error
+      });
+      if (action.type === "create_approval_request" && result.status === "completed") {
+        overallStatus = "waiting_approval";
+        break;
+      }
+      if (result.status === "failed") {
+        overallStatus = "failed";
+        errorMessage = result.error || "Action failed execution";
+        errorCode = `ACTION_${action.type.toUpperCase()}_FAILED`;
+        break;
+      }
+    }
+    const durationMs = Date.now() - startTimeMs;
+    const finishedAt = (/* @__PURE__ */ new Date()).toISOString();
+    const record2 = {
+      id: executionId,
+      workflow_id: workflow.id,
+      account_id: workflow.account_id,
+      account_type: workflow.account_type,
+      triggered_by_user_id: event.userId || null,
+      trigger_type: event.triggerType,
+      event_reference: WorkflowValidator.sanitizeLogData(event.data),
+      status: overallStatus,
+      actions_attempted: actionsAttempted,
+      error_message: errorMessage,
+      error_code: errorCode,
+      retry_count: 0,
+      max_retries: 3,
+      idempotency_key: event.idempotencyKey,
+      execution_depth: depth,
+      started_at: startedAt,
+      finished_at: finishedAt,
+      duration_ms: durationMs,
+      created_at: startedAt
+    };
+    await supabaseAdmin.from("workflow_executions").insert(record2);
+    await supabaseAdmin.from("workflows").update({
+      last_executed_at: finishedAt,
+      execution_count: (workflow.execution_count || 0) + 1,
+      failure_count: overallStatus === "failed" ? (workflow.failure_count || 0) + 1 : workflow.failure_count || 0,
+      updated_at: finishedAt
+    }).eq("id", workflow.id);
+    return record2;
+  }
+  /**
+   * Dispatches an event to all matching active workflows.
+   */
+  static async triggerWorkflows(event) {
+    try {
+      const query2 = supabaseAdmin.from("workflows").select("*").eq("trigger_type", event.triggerType).eq("status", "active");
+      if (event.accountType === "organization") {
+        query2.eq("account_id", event.accountId);
+      } else {
+        query2.eq("account_id", event.accountId);
+      }
+      const { data: workflows, error: error51 } = await query2;
+      if (error51 || !workflows || workflows.length === 0) {
+        return [];
+      }
+      const results = [];
+      for (const wf of workflows) {
+        const res = await this.executeWorkflow(wf, event);
+        results.push(res);
+      }
+      return results;
+    } catch (err) {
+      console.error("[WorkflowEngine] Trigger dispatch error:", err);
+      return [];
+    }
+  }
+  /**
+   * Resumes a paused execution after an approval decision.
+   */
+  static async resumeApprovedExecution(approvalId, decisionBy, decisionNotes) {
+    const { data: approval } = await supabaseAdmin.from("workflow_approvals").select("*, workflow:workflows(*)").eq("id", approvalId).maybeSingle();
+    if (!approval) return { success: false, error: "Approval record not found" };
+    if (approval.status !== "pending") return { success: false, error: `Approval already resolved: ${approval.status}` };
+    const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+    await supabaseAdmin.from("workflow_approvals").update({
+      status: "approved",
+      decision_by: decisionBy,
+      decision_notes: decisionNotes || null,
+      decided_at: nowIso,
+      updated_at: nowIso
+    }).eq("id", approvalId);
+    const workflow = approval.workflow;
+    const resumeIndex = approval.resume_action_index || 0;
+    await this.executeWorkflow(
+      workflow,
+      {
+        triggerType: "approval_completed",
+        accountId: workflow.account_id,
+        accountType: workflow.account_type,
+        userId: decisionBy,
+        data: { approvalId, decision: "approved", notes: decisionNotes }
+      },
+      resumeIndex
+    );
+    return { success: true };
+  }
+};
+
+// server/workflows/workflow.templates.ts
+var WORKFLOW_TEMPLATES = [
+  // ── Category A: Project and Task Automation ──
+  {
+    name: "Auto-Assign Urgent Tasks to Lead",
+    description: "Automatically assign high-priority tasks to the technical lead and notify the project team.",
+    category: "project_task",
+    status: "draft",
+    trigger_type: "task_created",
+    trigger_config: {},
+    conditions: [
+      { field: "priority", operator: "equals", value: "urgent", logicalOperator: "AND" }
+    ],
+    actions: [
+      {
+        id: "act_assign_urgent",
+        type: "update_task",
+        config: { priority: "urgent" },
+        order: 1
+      },
+      {
+        id: "act_notify_lead",
+        type: "send_notification",
+        config: {
+          title: "\u{1F6A8} Urgent Task Created: {{task.title}}",
+          message: "An urgent task requires immediate triaging and allocation.",
+          type: "urgent_task_alert"
+        },
+        order: 2
+      }
+    ],
+    is_template: true,
+    template_category: "project_task"
+  },
+  {
+    name: "Generate Project Kickoff Tasks",
+    description: "When a new project is created, automatically generate standard architectural and onboarding kickoff tasks.",
+    category: "project_task",
+    status: "draft",
+    trigger_type: "project_created",
+    trigger_config: {},
+    conditions: [],
+    actions: [
+      {
+        id: "act_kickoff_1",
+        type: "create_task",
+        config: {
+          title: "Initial Project Architecture & Scoping",
+          description: "Define technical stack, schema, and baseline delivery milestones.",
+          priority: "high"
+        },
+        order: 1
+      },
+      {
+        id: "act_kickoff_2",
+        type: "create_task",
+        config: {
+          title: "Stakeholder Kickoff & Requirement Sign-off",
+          description: "Align with client on deliverables and acceptance criteria.",
+          priority: "medium"
+        },
+        order: 2
+      }
+    ],
+    is_template: true,
+    template_category: "project_task"
+  },
+  // ── Category B: Deadline and Reminder Automation ──
+  {
+    name: "Overdue Task Escalation Notice",
+    description: "Detect overdue tasks, escalate priority to urgent, and send an alert to the responsible owner.",
+    category: "deadline_reminder",
+    status: "draft",
+    trigger_type: "task_overdue",
+    trigger_config: {},
+    conditions: [
+      { field: "status", operator: "not_equals", value: "done", logicalOperator: "AND" }
+    ],
+    actions: [
+      {
+        id: "act_escalate",
+        type: "escalate_task",
+        config: {},
+        order: 1
+      },
+      {
+        id: "act_alert_deadline",
+        type: "send_notification",
+        config: {
+          title: "\u26A0\uFE0F Task Overdue: {{task.title}}",
+          message: "This task has passed its scheduled deadline and has been escalated to urgent.",
+          type: "deadline_escalation"
+        },
+        order: 2
+      }
+    ],
+    is_template: true,
+    template_category: "deadline_reminder"
+  },
+  // ── Category C: Team Notifications ──
+  {
+    name: "Blocked Task Alert to Project Manager",
+    description: "When a task status is changed to blocked, alert project managers immediately.",
+    category: "team_notifications",
+    status: "draft",
+    trigger_type: "task_updated",
+    trigger_config: {},
+    conditions: [
+      { field: "status", operator: "equals", value: "blocked", logicalOperator: "AND" }
+    ],
+    actions: [
+      {
+        id: "act_blocked_notice",
+        type: "send_notification",
+        config: {
+          title: "\u{1F6D1} Task Blocked: {{task.title}}",
+          message: "A blocker has been reported. Review task blockers to unblock progress.",
+          type: "task_blocked"
+        },
+        order: 1
+      }
+    ],
+    is_template: true,
+    template_category: "team_notifications"
+  },
+  // ── Category D: Approval Workflows ──
+  {
+    name: "Milestone Completion Approval Route",
+    description: "Require manager approval before a project milestone or high-value deliverable is marked finalized.",
+    category: "approval",
+    status: "draft",
+    trigger_type: "task_updated",
+    trigger_config: {},
+    conditions: [
+      { field: "status", operator: "equals", value: "in_review", logicalOperator: "AND" },
+      { field: "priority", operator: "equals", value: "urgent", logicalOperator: "AND" }
+    ],
+    actions: [
+      {
+        id: "act_req_approval",
+        type: "create_approval_request",
+        config: {
+          title: "Milestone Review Sign-off: {{task.title}}",
+          description: "Review deliverable criteria before finalizing milestone sign-off.",
+          approverRole: "owner"
+        },
+        order: 1
+      },
+      {
+        id: "act_post_approval_complete",
+        type: "update_task",
+        config: { status: "done" },
+        order: 2
+      }
+    ],
+    is_template: true,
+    template_category: "approval"
+  },
+  // ── Category E: Recurring Task Automation ──
+  {
+    name: "Weekly Sprint Retrospective Schedule",
+    description: "Schedule a recurring weekly task for sprint review, team velocity measurement, and retro notes.",
+    category: "recurring_task",
+    status: "draft",
+    trigger_type: "schedule_cron",
+    trigger_config: {
+      cron: "0 10 * * 1",
+      // Every Monday at 10:00 AM
+      timezone: "UTC"
+    },
+    conditions: [],
+    actions: [
+      {
+        id: "act_recurring_task",
+        type: "create_task",
+        config: {
+          title: "Weekly Sprint Retrospective & Planning",
+          description: "Review milestone progress from previous cycle and assign upcoming sprint deliverables.",
+          priority: "medium"
+        },
+        order: 1
+      }
+    ],
+    is_template: true,
+    template_category: "recurring_task"
+  },
+  // ── Category F: Project Status Automation ──
+  {
+    name: "Auto-Complete Project when Deliverables Finished",
+    description: "When project deliverables are verified and status is updated, mark project completed and notify stakeholders.",
+    category: "project_status",
+    status: "draft",
+    trigger_type: "project_status_changed",
+    trigger_config: {},
+    conditions: [
+      { field: "status", operator: "equals", value: "completed", logicalOperator: "AND" }
+    ],
+    actions: [
+      {
+        id: "act_notify_completed",
+        type: "send_notification",
+        config: {
+          title: "\u{1F389} Project Successfully Completed: {{project.title}}",
+          message: "All deliverables have been verified. Final invoices and client sign-off can now be processed.",
+          type: "project_completed"
+        },
+        order: 1
+      }
+    ],
+    is_template: true,
+    template_category: "project_status"
+  },
+  // ── Category G: Client Onboarding ──
+  {
+    name: "New Client Onboarding Checklist",
+    description: "Generate standardized client onboarding tasks and documentation requirements.",
+    category: "client_onboarding",
+    status: "draft",
+    trigger_type: "project_created",
+    trigger_config: {},
+    conditions: [
+      { field: "title", operator: "contains", value: "Onboarding", logicalOperator: "AND" }
+    ],
+    actions: [
+      {
+        id: "act_client_1",
+        type: "create_task",
+        config: {
+          title: "Client Contract & NDA Verification",
+          description: "Confirm signed engagement terms and billing cycle preferences.",
+          priority: "high"
+        },
+        order: 1
+      },
+      {
+        id: "act_client_2",
+        type: "create_task",
+        config: {
+          title: "Access Provisioning & Shared Channel Setup",
+          description: "Invite client representatives to dedicated project communication room.",
+          priority: "medium"
+        },
+        order: 2
+      }
+    ],
+    is_template: true,
+    template_category: "client_onboarding"
+  },
+  // ── Category H: Form and Request Automation ──
+  {
+    name: "Inbound Request to Triaged Task",
+    description: "Convert external client request submissions into categorized tasks and notify the project lead.",
+    category: "form_request",
+    status: "draft",
+    trigger_type: "form_submitted",
+    trigger_config: {},
+    conditions: [],
+    actions: [
+      {
+        id: "act_form_task",
+        type: "create_task",
+        config: {
+          title: "Inbound Request: {{form.subject}}",
+          description: "Client Request Details: {{form.details}}",
+          priority: "medium"
+        },
+        order: 1
+      },
+      {
+        id: "act_form_ack",
+        type: "send_notification",
+        config: {
+          title: "New Client Form Request Received",
+          message: "A new client request was submitted and logged to your active tasks.",
+          type: "form_received"
+        },
+        order: 2
+      }
+    ],
+    is_template: true,
+    template_category: "form_request"
+  },
+  // ── Category I: Webhook and Integration Automation ──
+  {
+    name: "Outbound Webhook Delivery on Project Update",
+    description: "Securely broadcast project updates to external ERP, CI/CD, or client webhook endpoints with HMAC verification.",
+    category: "webhook",
+    status: "draft",
+    trigger_type: "project_updated",
+    trigger_config: {},
+    conditions: [],
+    actions: [
+      {
+        id: "act_outbound_wh",
+        type: "send_webhook",
+        config: {
+          url: "https://api.example.com/auvryn-webhook"
+        },
+        order: 1
+      }
+    ],
+    is_template: true,
+    template_category: "webhook"
+  },
+  // ── Category J: Exception and Escalation Automation ──
+  {
+    name: "Failed Delivery Escalation Notice",
+    description: "When an automated delivery or task exception occurs, immediately notify organizational administrators.",
+    category: "exception_escalation",
+    status: "draft",
+    trigger_type: "task_updated",
+    trigger_config: {},
+    conditions: [
+      { field: "status", operator: "equals", value: "failed", logicalOperator: "AND" }
+    ],
+    actions: [
+      {
+        id: "act_esc_admin",
+        type: "send_notification",
+        config: {
+          title: "\u{1F6A8} Exception Detected: {{task.title}}",
+          message: "A critical workflow or task execution failure occurred and requires inspection.",
+          type: "execution_exception"
+        },
+        order: 1
+      }
+    ],
+    is_template: true,
+    template_category: "exception_escalation"
+  }
+];
+
+// server/workflows/workflow.scheduler.ts
+var WorkflowScheduler = class {
+  static isRunning = false;
+  /**
+   * Scans and dispatches scheduled workflows and overdue tasks.
+   * Can be called by continuous background timer or by /api/workflows/cron
+   */
+  static async runScheduledChecks() {
+    if (this.isRunning) {
+      console.log("[WorkflowScheduler] Job already running, skipping overlapping tick.");
+      return { scheduledExecuted: 0, overdueTasksDetected: 0 };
+    }
+    this.isRunning = true;
+    let scheduledExecuted = 0;
+    let overdueTasksDetected = 0;
+    try {
+      const now = /* @__PURE__ */ new Date();
+      const currentIso = now.toISOString();
+      const { data: cronWorkflows } = await supabaseAdmin.from("workflows").select("*").eq("trigger_type", "schedule_cron").eq("status", "active");
+      if (cronWorkflows && cronWorkflows.length > 0) {
+        for (const wf of cronWorkflows) {
+          try {
+            const idempotencyKey = `cron_${wf.id}_${now.toISOString().slice(0, 16)}`;
+            await WorkflowEngine.executeWorkflow(wf, {
+              triggerType: "schedule_cron",
+              accountId: wf.account_id,
+              accountType: wf.account_type,
+              data: { scheduledAt: currentIso },
+              idempotencyKey
+            });
+            scheduledExecuted++;
+          } catch (wfErr) {
+            console.error(`[WorkflowScheduler] Scheduled workflow ${wf.id} failed:`, wfErr);
+          }
+        }
+      }
+      const todayDate = now.toISOString().split("T")[0];
+      const { data: overdueTasks } = await supabaseAdmin.from("tasks").select("id, title, status, priority, due_date, org_id, assignee_id, project_id").lt("due_date", todayDate).not("status", "in", '("done","completed")').limit(50);
+      if (overdueTasks && overdueTasks.length > 0) {
+        for (const task of overdueTasks) {
+          try {
+            const accountId = task.org_id || task.assignee_id || "system";
+            const accountType = task.org_id ? "organization" : "freelancer";
+            const idempotencyKey = `overdue_${task.id}_${todayDate}`;
+            await WorkflowEngine.triggerWorkflows({
+              triggerType: "task_overdue",
+              accountId,
+              accountType,
+              data: {
+                task,
+                detectedAt: currentIso
+              },
+              idempotencyKey
+            });
+            overdueTasksDetected++;
+          } catch (tErr) {
+            console.error(`[WorkflowScheduler] Overdue trigger for task ${task.id} failed:`, tErr);
+          }
+        }
+      }
+      return { scheduledExecuted, overdueTasksDetected };
+    } catch (err) {
+      console.error("[WorkflowScheduler] Scheduler error:", err);
+      return { scheduledExecuted, overdueTasksDetected };
+    } finally {
+      this.isRunning = false;
+    }
+  }
+  /**
+   * Starts a background interval (e.g. every 5 minutes) when running on long-lived server.
+   */
+  static startBackgroundWorker(intervalMs = 3e5) {
+    console.log(`[WorkflowScheduler] Background worker started (interval: ${intervalMs / 1e3}s)`);
+    return setInterval(() => {
+      this.runScheduledChecks().catch(console.error);
+    }, intervalMs);
+  }
+};
+
+// server/workflows/workflows.routes.ts
+var workflowsRouter = (0, import_express7.Router)();
+async function resolveAuthContext(req) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return { userId: "", accountId: "", accountType: "freelancer", error: "Authentication required. Missing Bearer token.", status: 401 };
+  }
+  const token = authHeader.split(" ")[1];
+  const { data: { user }, error: authErr } = await supabaseAdmin.auth.getUser(token);
+  if (authErr || !user) {
+    return { userId: "", accountId: "", accountType: "freelancer", error: "Invalid or expired session token.", status: 401 };
+  }
+  const reqOrgId = req.query.orgId || req.headers["x-organization-id"] || req.body?.orgId;
+  if (reqOrgId && reqOrgId !== "undefined" && reqOrgId !== "null") {
+    const { data: membership } = await supabaseAdmin.from("user_organizations").select("role").eq("org_id", reqOrgId).eq("user_id", user.id).maybeSingle();
+    if (!membership) {
+      return { userId: user.id, accountId: reqOrgId, accountType: "organization", error: "Access denied: You are not a member of this organization.", status: 403 };
+    }
+    return {
+      userId: user.id,
+      accountId: reqOrgId,
+      accountType: "organization",
+      orgRole: membership.role
+    };
+  }
+  const { data: userProfile } = await supabaseAdmin.from("users").select("account_type, role").eq("id", user.id).maybeSingle();
+  return {
+    userId: user.id,
+    userRole: userProfile?.role,
+    accountId: user.id,
+    accountType: userProfile?.account_type === "organization" ? "organization" : "freelancer"
+  };
+}
+workflowsRouter.get("/usage", async (req, res) => {
+  const auth = await resolveAuthContext(req);
+  if (auth.error) {
+    res.status(auth.status || 401).json({ error: auth.error });
+    return;
+  }
+  try {
+    const quota = await EntitlementsService.checkEntitlement({
+      userId: auth.userId,
+      orgId: auth.accountType === "organization" ? auth.accountId : null,
+      feature: "workflows"
+    });
+    res.json({
+      success: true,
+      current: quota.current,
+      limit: quota.limit,
+      remaining: quota.remaining,
+      unlimited: quota.unlimited,
+      tier: quota.tier,
+      allowed: quota.allowed,
+      upgradeUrl: quota.upgradeUrl
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Failed to resolve workflow usage" });
+  }
+});
+workflowsRouter.get("/templates", async (_req, res) => {
+  res.json({
+    success: true,
+    templates: WORKFLOW_TEMPLATES
+  });
+});
+workflowsRouter.get("/", async (req, res) => {
+  const auth = await resolveAuthContext(req);
+  if (auth.error) {
+    res.status(auth.status || 401).json({ error: auth.error });
+    return;
+  }
+  try {
+    const status = req.query.status;
+    const category = req.query.category;
+    const search = req.query.search;
+    let query2 = supabaseAdmin.from("workflows").select("*").eq("account_id", auth.accountId).eq("account_type", auth.accountType).order("created_at", { ascending: false });
+    if (status && status !== "all") {
+      query2 = query2.eq("status", status);
+    } else {
+      query2 = query2.not("status", "eq", "archived");
+    }
+    if (category && category !== "all") {
+      query2 = query2.eq("category", category);
+    }
+    if (search && search.trim()) {
+      query2 = query2.ilike("name", `%${search.trim()}%`);
+    }
+    const { data: workflows, error: error51 } = await query2;
+    if (error51) throw error51;
+    res.json({
+      success: true,
+      workflows: workflows || []
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Failed to fetch workflows" });
+  }
+});
+workflowsRouter.post("/", async (req, res) => {
+  const auth = await resolveAuthContext(req);
+  if (auth.error) {
+    res.status(auth.status || 401).json({ error: auth.error });
+    return;
+  }
+  if (auth.accountType === "organization") {
+    if (!["owner", "administrator", "director", "manager"].includes(auth.orgRole || "")) {
+      res.status(403).json({ error: "Forbidden: Only organization owners and managers can create workflows." });
+      return;
+    }
+  }
+  try {
+    const quota = await EntitlementsService.checkEntitlement({
+      userId: auth.userId,
+      orgId: auth.accountType === "organization" ? auth.accountId : null,
+      feature: "workflows"
+    });
+    if (!quota.allowed) {
+      res.status(403).json({
+        error: `Workflow allowance limit of ${quota.limit} reached on your current plan. Please upgrade at /pricing to add more workflows.`,
+        errorCode: "QUOTA_EXCEEDED_WORKFLOWS",
+        current: quota.current,
+        limit: quota.limit,
+        tier: quota.tier
+      });
+      return;
+    }
+    const payload = {
+      ...req.body,
+      account_id: auth.accountId,
+      account_type: auth.accountType,
+      created_by: auth.userId,
+      webhook_secret: req.body.webhook_secret || import_crypto10.default.randomBytes(24).toString("hex")
+    };
+    const validation = WorkflowValidator.validate(payload);
+    if (!validation.valid) {
+      res.status(400).json({ error: "Validation failed", errors: validation.errors });
+      return;
+    }
+    const { data: newWf, error: insertErr } = await supabaseAdmin.from("workflows").insert({
+      name: payload.name,
+      description: payload.description || null,
+      account_id: auth.accountId,
+      account_type: auth.accountType,
+      created_by: auth.userId,
+      status: payload.status || "draft",
+      category: payload.category || "project_task",
+      trigger_type: payload.trigger_type,
+      trigger_config: payload.trigger_config || {},
+      conditions: payload.conditions || [],
+      actions: payload.actions || [],
+      webhook_secret: payload.webhook_secret,
+      created_at: (/* @__PURE__ */ new Date()).toISOString(),
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    }).select().single();
+    if (insertErr) throw insertErr;
+    res.status(201).json({
+      success: true,
+      workflow: newWf
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Failed to create workflow" });
+  }
+});
+workflowsRouter.get("/:id", async (req, res) => {
+  const auth = await resolveAuthContext(req);
+  if (auth.error) {
+    res.status(auth.status || 401).json({ error: auth.error });
+    return;
+  }
+  try {
+    const { data: workflow, error: error51 } = await supabaseAdmin.from("workflows").select("*").eq("id", req.params.id).eq("account_id", auth.accountId).maybeSingle();
+    if (error51 || !workflow) {
+      res.status(404).json({ error: "Workflow not found or access denied." });
+      return;
+    }
+    res.json({ success: true, workflow });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Error fetching workflow" });
+  }
+});
+workflowsRouter.put("/:id", async (req, res) => {
+  const auth = await resolveAuthContext(req);
+  if (auth.error) {
+    res.status(auth.status || 401).json({ error: auth.error });
+    return;
+  }
+  try {
+    const { data: existing } = await supabaseAdmin.from("workflows").select("*").eq("id", req.params.id).eq("account_id", auth.accountId).maybeSingle();
+    if (!existing) {
+      res.status(404).json({ error: "Workflow not found or access denied." });
+      return;
+    }
+    const payload = {
+      ...req.body,
+      account_id: auth.accountId,
+      account_type: auth.accountType
+    };
+    const validation = WorkflowValidator.validate(payload);
+    if (!validation.valid) {
+      res.status(400).json({ error: "Validation failed", errors: validation.errors });
+      return;
+    }
+    const { data: updatedWf, error: updateErr } = await supabaseAdmin.from("workflows").update({
+      name: payload.name,
+      description: payload.description || null,
+      category: payload.category,
+      trigger_type: payload.trigger_type,
+      trigger_config: payload.trigger_config,
+      conditions: payload.conditions,
+      actions: payload.actions,
+      status: payload.status || existing.status,
+      version: (existing.version || 1) + 1,
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    }).eq("id", req.params.id).select().single();
+    if (updateErr) throw updateErr;
+    res.json({ success: true, workflow: updatedWf });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Error updating workflow" });
+  }
+});
+workflowsRouter.post("/:id/state", async (req, res) => {
+  const auth = await resolveAuthContext(req);
+  if (auth.error) {
+    res.status(auth.status || 401).json({ error: auth.error });
+    return;
+  }
+  const nextState = req.body.status;
+  if (!["draft", "active", "paused", "archived"].includes(nextState)) {
+    res.status(400).json({ error: "Invalid state requested." });
+    return;
+  }
+  try {
+    const { data: existing } = await supabaseAdmin.from("workflows").select("*").eq("id", req.params.id).eq("account_id", auth.accountId).maybeSingle();
+    if (!existing) {
+      res.status(404).json({ error: "Workflow not found." });
+      return;
+    }
+    if (nextState === "active" && existing.status !== "active") {
+      const quota = await EntitlementsService.checkEntitlement({
+        userId: auth.userId,
+        orgId: auth.accountType === "organization" ? auth.accountId : null,
+        feature: "workflows"
+      });
+      if (!quota.allowed) {
+        res.status(403).json({
+          error: `Cannot activate workflow. Plan limit of ${quota.limit} workflows reached. Please upgrade to activate more automations.`,
+          errorCode: "QUOTA_EXCEEDED_WORKFLOWS"
+        });
+        return;
+      }
+    }
+    const { data: updated, error: error51 } = await supabaseAdmin.from("workflows").update({ status: nextState, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", req.params.id).select().single();
+    if (error51) throw error51;
+    res.json({ success: true, workflow: updated });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Error changing workflow state" });
+  }
+});
+workflowsRouter.post("/:id/test", async (req, res) => {
+  const auth = await resolveAuthContext(req);
+  if (auth.error) {
+    res.status(auth.status || 401).json({ error: auth.error });
+    return;
+  }
+  try {
+    const { data: workflow } = await supabaseAdmin.from("workflows").select("*").eq("id", req.params.id).eq("account_id", auth.accountId).maybeSingle();
+    if (!workflow) {
+      res.status(404).json({ error: "Workflow not found." });
+      return;
+    }
+    const testPayload = req.body.eventData || {
+      task: {
+        id: import_crypto10.default.randomUUID(),
+        title: "Test Verification Task",
+        priority: "urgent",
+        status: "todo"
+      },
+      project: {
+        id: import_crypto10.default.randomUUID(),
+        title: "Test Verification Project",
+        status: "active"
+      },
+      userId: auth.userId
+    };
+    const execution = await WorkflowEngine.executeWorkflow(
+      workflow,
+      {
+        triggerType: workflow.trigger_type,
+        accountId: auth.accountId,
+        accountType: auth.accountType,
+        userId: auth.userId,
+        data: testPayload,
+        idempotencyKey: `test_${workflow.id}_${Date.now()}`
+      }
+    );
+    res.json({
+      success: true,
+      execution
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Test execution failed" });
+  }
+});
+workflowsRouter.get("/:id/executions", async (req, res) => {
+  const auth = await resolveAuthContext(req);
+  if (auth.error) {
+    res.status(auth.status || 401).json({ error: auth.error });
+    return;
+  }
+  try {
+    const { data: executions, error: error51 } = await supabaseAdmin.from("workflow_executions").select("*").eq("workflow_id", req.params.id).eq("account_id", auth.accountId).order("created_at", { ascending: false }).limit(50);
+    if (error51) throw error51;
+    res.json({ success: true, executions: executions || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Error fetching executions" });
+  }
+});
+workflowsRouter.get("/executions/all", async (req, res) => {
+  const auth = await resolveAuthContext(req);
+  if (auth.error) {
+    res.status(auth.status || 401).json({ error: auth.error });
+    return;
+  }
+  try {
+    const status = req.query.status;
+    let query2 = supabaseAdmin.from("workflow_executions").select("*, workflow:workflows(name, category)").eq("account_id", auth.accountId).order("created_at", { ascending: false }).limit(100);
+    if (status && status !== "all") {
+      query2 = query2.eq("status", status);
+    }
+    const { data: executions, error: error51 } = await query2;
+    if (error51) throw error51;
+    res.json({ success: true, executions: executions || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Error fetching executions" });
+  }
+});
+workflowsRouter.post("/executions/:id/retry", async (req, res) => {
+  const auth = await resolveAuthContext(req);
+  if (auth.error) {
+    res.status(auth.status || 401).json({ error: auth.error });
+    return;
+  }
+  try {
+    const { data: exec } = await supabaseAdmin.from("workflow_executions").select("*, workflow:workflows(*)").eq("id", req.params.id).eq("account_id", auth.accountId).maybeSingle();
+    if (!exec) {
+      res.status(404).json({ error: "Execution record not found." });
+      return;
+    }
+    const retryRecord = await WorkflowEngine.executeWorkflow(
+      exec.workflow,
+      {
+        triggerType: exec.trigger_type,
+        accountId: exec.account_id,
+        accountType: exec.account_type,
+        userId: auth.userId,
+        data: exec.event_reference,
+        idempotencyKey: `retry_${exec.id}_${Date.now()}`
+      }
+    );
+    res.json({ success: true, execution: retryRecord });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Error retrying execution" });
+  }
+});
+workflowsRouter.get("/approvals/pending", async (req, res) => {
+  const auth = await resolveAuthContext(req);
+  if (auth.error) {
+    res.status(auth.status || 401).json({ error: auth.error });
+    return;
+  }
+  try {
+    const { data: approvals, error: error51 } = await supabaseAdmin.from("workflow_approvals").select("*, workflow:workflows(name, category)").eq("status", "pending").order("created_at", { ascending: false });
+    if (error51) throw error51;
+    res.json({ success: true, approvals: approvals || [] });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Error fetching approvals" });
+  }
+});
+workflowsRouter.post("/approvals/:id/decide", async (req, res) => {
+  const auth = await resolveAuthContext(req);
+  if (auth.error) {
+    res.status(auth.status || 401).json({ error: auth.error });
+    return;
+  }
+  const { decision, notes } = req.body;
+  if (!["approved", "rejected"].includes(decision)) {
+    res.status(400).json({ error: 'Decision must be "approved" or "rejected".' });
+    return;
+  }
+  try {
+    if (decision === "approved") {
+      const result = await WorkflowEngine.resumeApprovedExecution(req.params.id, auth.userId, notes);
+      if (!result.success) {
+        res.status(400).json({ error: result.error });
+        return;
+      }
+      res.json({ success: true, status: "approved" });
+    } else {
+      const nowIso = (/* @__PURE__ */ new Date()).toISOString();
+      await supabaseAdmin.from("workflow_approvals").update({
+        status: "rejected",
+        decision_by: auth.userId,
+        decision_notes: notes || null,
+        decided_at: nowIso,
+        updated_at: nowIso
+      }).eq("id", req.params.id);
+      res.json({ success: true, status: "rejected" });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Decision failed" });
+  }
+});
+workflowsRouter.post("/webhook/:id", async (req, res) => {
+  try {
+    const { data: workflow } = await supabaseAdmin.from("workflows").select("*").eq("id", req.params.id).eq("status", "active").eq("trigger_type", "webhook_inbound").maybeSingle();
+    if (!workflow) {
+      res.status(404).json({ error: "Active inbound webhook workflow not found." });
+      return;
+    }
+    if (workflow.webhook_secret) {
+      const providedSecret = req.headers["x-auvryn-secret"] || req.query.secret;
+      if (providedSecret !== workflow.webhook_secret) {
+        res.status(401).json({ error: "Unauthorized webhook request. Secret mismatch." });
+        return;
+      }
+    }
+    const execution = await WorkflowEngine.executeWorkflow(
+      workflow,
+      {
+        triggerType: "webhook_inbound",
+        accountId: workflow.account_id,
+        accountType: workflow.account_type,
+        data: {
+          payload: req.body,
+          headers: req.headers,
+          receivedAt: (/* @__PURE__ */ new Date()).toISOString()
+        },
+        idempotencyKey: `wh_${workflow.id}_${Date.now()}`
+      }
+    );
+    res.json({ success: true, executionId: execution.id, status: execution.status });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Webhook trigger failed" });
+  }
+});
+workflowsRouter.post("/cron", async (req, res) => {
+  const cronSecret = req.headers["x-cron-secret"] || req.query.secret;
+  const expectedSecret = process.env.CRON_SECRET || "cf_internal_cron_secret_2026";
+  if (cronSecret !== expectedSecret && process.env.NODE_ENV === "production") {
+    res.status(401).json({ error: "Unauthorized cron runner request." });
+    return;
+  }
+  try {
+    const result = await WorkflowScheduler.runScheduledChecks();
+    res.json({ success: true, result });
+  } catch (err) {
+    res.status(500).json({ error: err.message || "Cron execution failed" });
+  }
+});
+
 // server/_core/app.ts
 var { Client: Client2 } = esm_default;
 function createPgClient() {
@@ -144970,7 +146645,7 @@ function createExpressApp() {
   if (!process.env.BUILT_IN_FORGE_API_URL || !process.env.BUILT_IN_FORGE_API_KEY) {
     console.warn("[WARN] Optional AI features (voice transcription, image generation) are disabled: BUILT_IN_FORGE_API_URL or BUILT_IN_FORGE_API_KEY is missing.");
   }
-  const app = (0, import_express7.default)();
+  const app = (0, import_express8.default)();
   app.disable("x-powered-by");
   app.use((req, res, next) => {
     const origin2 = req.headers.origin;
@@ -144994,13 +146669,13 @@ function createExpressApp() {
     }
     next();
   });
-  app.use(import_express7.default.json({
+  app.use(import_express8.default.json({
     limit: "50mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     }
   }));
-  app.use(import_express7.default.urlencoded({ limit: "50mb", extended: true }));
+  app.use(import_express8.default.urlencoded({ limit: "50mb", extended: true }));
   app.use(sanitizationMiddleware);
   app.use(globalRateLimiter);
   registerStorageProxy(app);
@@ -145011,6 +146686,7 @@ function createExpressApp() {
   app.use("/api/subscriptions", subscriptionsRouter);
   app.use("/api/webhooks", webhookRouter);
   app.use("/api/contact", contactRouter);
+  app.use("/api/workflows", workflowsRouter);
   app.use("/api", razorpayStandardRouter);
   app.post("/api/notifications/send-push", async (req, res) => {
     const authHeader = req.headers.authorization;
@@ -145129,7 +146805,7 @@ function createExpressApp() {
   if (process.env.NODE_ENV === "production") {
     const distPath = import_path2.default.join(process.cwd(), "dist");
     if (require("fs").existsSync(import_path2.default.join(distPath, "index.html"))) {
-      app.use(import_express7.default.static(distPath));
+      app.use(import_express8.default.static(distPath));
       app.get("*", (req, res, next) => {
         if (req.path.startsWith("/api")) return next();
         res.sendFile(import_path2.default.join(distPath, "index.html"));

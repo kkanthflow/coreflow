@@ -16,7 +16,8 @@ export type SubscriptionStatus =
   | 'past_due'
   | 'cancelled'
   | 'expired'
-  | 'suspended';
+  | 'suspended'
+  | 'halted';
 
 export type PaymentStatus =
   | 'created'
@@ -207,8 +208,8 @@ export const SUBSCRIPTION_PLANS: Record<string, PlanDefinition> = {
     ],
     pricing: {
       monthly: {
-        priceInr: 999,
-        pricePaise: 99900,
+        priceInr: 399,
+        pricePaise: 39900,
         razorpayPlanId: process.env.RAZORPAY_PLAN_BUSINESS_STARTER_MONTHLY,
       },
     },
@@ -238,8 +239,8 @@ export const SUBSCRIPTION_PLANS: Record<string, PlanDefinition> = {
     ],
     pricing: {
       monthly: {
-        priceInr: 2499,
-        pricePaise: 249900,
+        priceInr: 499,
+        pricePaise: 49900,
         razorpayPlanId: process.env.RAZORPAY_PLAN_BUSINESS_PRO_MONTHLY,
       },
     },
@@ -301,8 +302,8 @@ SUBSCRIPTION_PLANS['starter'] = {
   ],
   pricing: {
     monthly: {
-      priceInr: 999,
-      pricePaise: 99900,
+      priceInr: 399,
+      pricePaise: 39900,
     },
   },
 };
@@ -331,8 +332,8 @@ SUBSCRIPTION_PLANS['pro'] = {
   ],
   pricing: {
     monthly: {
-      priceInr: 2499,
-      pricePaise: 249900,
+      priceInr: 499,
+      pricePaise: 49900,
     },
   },
 };

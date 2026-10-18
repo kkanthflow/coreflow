@@ -221,7 +221,7 @@ async function runMasterTestCases() {
 
   // 5. Business Starter
   const bs = SUBSCRIPTION_PLANS['business_starter'];
-  assert(bs.pricing.monthly.priceInr === 999, 'Business Starter must be ₹999/mo');
+  assert(bs.pricing.monthly.priceInr === 399, 'Business Starter must be ₹399/mo');
   assert(bs.limits.maxActiveProjects === 25, 'Business Starter must allow max 25 projects');
   assert(bs.limits.maxWorkflows === 15, 'Business Starter must allow max 15 workflows');
   assert(bs.limits.maxSeats === 5, 'Business Starter must allow max 5 members');
@@ -229,7 +229,7 @@ async function runMasterTestCases() {
 
   // 6. Business Pro
   const bp = SUBSCRIPTION_PLANS['business_pro'];
-  assert(bp.pricing.monthly.priceInr === 2499, 'Business Pro must be ₹2,499/mo');
+  assert(bp.pricing.monthly.priceInr === 499, 'Business Pro must be ₹499/mo');
   assert(bp.limits.maxActiveProjects === null, 'Business Pro must allow unlimited projects');
   assert(bp.limits.maxWorkflows === null, 'Business Pro must allow unlimited workflows');
   assert(bp.limits.maxSeats === null, 'Business Pro must allow unlimited team members');
@@ -465,7 +465,7 @@ async function runMasterTestCases() {
 
   // Server checks authoritative price from subscription.config, not client amount
   const authoritativePrice = SUBSCRIPTION_PLANS['business_pro'].pricing.monthly.priceInr;
-  assert(authoritativePrice === 2499, 'Server price is ₹2,499');
+  assert(authoritativePrice === 499, 'Server price is ₹499');
   assert(authoritativePrice !== clientPayload.amount, 'Client spoofed amount ignored');
   console.log('  ✔ PASS: Direct API requests validated against DB and server configuration.\n');
   passedCount++;

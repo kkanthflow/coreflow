@@ -7,13 +7,10 @@ import {
   EyeOff, 
   Building2, 
   Briefcase, 
-  Check, 
-  Sparkles,
   ShieldCheck
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
-import { SUPPORTED_CURRENCIES } from '../lib/currency';
 import AuvrynLogo from '../components/AuvrynLogo';
 
 export default function Register() {
@@ -33,14 +30,6 @@ export default function Register() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Registration Mode: Join Org, Create Org, or Freelancer
-  const [accountType, setAccountType] = useState<'join' | 'create' | 'freelancer'>('join');
-  const [freelancerWorkType, setFreelancerWorkType] = useState<'organization' | 'independent'>('organization');
-
-  const [organization, setOrganization] = useState('');
-  const [role, setRole] = useState('general_member');
-  const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [agreed, setAgreed] = useState(false);
 
   // States
@@ -78,12 +67,6 @@ export default function Register() {
       isValid = false;
     }
 
-    const needsOrg = accountType !== 'freelancer' || (accountType === 'freelancer' && freelancerWorkType === 'organization');
-    if (needsOrg && !organization.trim()) {
-      newErrors.organization = 'Organization name is required';
-      isValid = false;
-    }
-
     if (!agreed) {
       newErrors.agreed = 'You must agree to the Terms and Privacy Policy to proceed.';
       isValid = false;
@@ -101,40 +84,15 @@ export default function Register() {
     setError(null);
 
     try {
-      let existingOrg = null;
-      const cleanOrgName = organization.trim();
-      const needsOrg = accountType !== 'freelancer' || (accountType === 'freelancer' && freelancerWorkType === 'organization');
-
-      if (needsOrg) {
-        const { data: orgData, error: orgSearchError } = await supabase
-          .from('organizations')
-          .select('id')
-          .ilike('name', cleanOrgName)
-          .maybeSingle();
-
-        if (orgSearchError) throw orgSearchError;
-        existingOrg = orgData;
-
-        if ((accountType === 'join' || accountType === 'freelancer') && !existingOrg) {
-          throw new Error(`Organization "${cleanOrgName}" not found. Please verify the name or create a new organization.`);
-        }
-        if (accountType === 'create' && existingOrg) {
-          throw new Error(`Organization "${cleanOrgName}" already exists. Please join it instead.`);
-        }
-      }
-
-      // 2. Sign up user
-      const metaRole = accountType === 'freelancer'
-        ? 'freelancer'
-        : (accountType === 'create' ? 'owner' : role);
-
+      // 1. Sign up user: creates authentication identity only.
+      // Account type, organization, and profile are explicitly selected at /register/setup.
+      // Do NOT set role to 'freelancer' or 'owner' or preassign account type.
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           data: {
             full_name: fullName.trim(),
-            role: metaRole,
           }
         }
       });
@@ -143,7 +101,7 @@ export default function Register() {
 
       if (signUpError) {
         if (signUpError.message.includes('User already registered')) {
-          const signInResult = await supabase.auth.signInWithPassword({ email, password });
+          const signInResult = await supabase.auth.signInWithPassword({ email: email.trim(), password });
           if (signInResult.error) {
             throw new Error('This email is already registered. Please sign in instead.');
           }
@@ -155,11 +113,14 @@ export default function Register() {
 
       if (!userId) throw new Error('Failed to obtain user session after registration.');
 
-      // Registration creates the authentication identity only.
-      // Account type, organization, and profile are explicitly selected at /register/setup.
+      // Route directly to /register/setup for explicit user selection of operating architecture.
+      // Do NOT pass any preselected account type.
       navigate('/register/setup', {
         replace: true,
-        state: { fullName: fullName.trim(), email: email.trim() },
+        state: { 
+          fullName: fullName.trim(), 
+          email: email.trim(),
+        },
       });
     } catch (err: any) {
       console.error('Registration failed:', err);
@@ -299,7 +260,7 @@ export default function Register() {
 
             <div>
               <h2 className="text-xl font-bold text-main tracking-tight">Create Workspace Account</h2>
-              <p className="text-xs text-muted mt-1">Configure your membership mode, organization details, and credentials.</p>
+              <p className="text-xs text-muted mt-1">Set up your account credentials. You will choose your workspace architecture in the next step.</p>
             </div>
 
             {error && (
@@ -342,155 +303,6 @@ export default function Register() {
                   {errors.email && <div className="text-[10px] text-red-400 mt-1">{errors.email}</div>}
                 </div>
               </div>
-
-              {/* Account Type Selector */}
-              <div className="space-y-2">
-                <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted">
-                  I want to...
-                </label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-                  {[
-                    { id: 'join', title: 'Join Organization', desc: 'Join an existing team' },
-                    { id: 'create', title: 'Create Organization', desc: 'Found a new enterprise' },
-                    { id: 'freelancer', title: 'Register Freelancer', desc: 'Independent contractor' },
-                  ].map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setAccountType(item.id as any)}
-                      className={`p-3 rounded-lg border text-left transition-all ${
-                        accountType === item.id 
-                          ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-main' 
-                          : 'bg-app border-divider text-muted hover:border-white/[0.1]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-semibold">{item.title}</span>
-                        {accountType === item.id && <Check size={13} className="text-[#FF6B4A]" />}
-                      </div>
-                      <p className="text-[10px] text-muted">{item.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Freelancer Scope (if Freelancer chosen) */}
-              {accountType === 'freelancer' && (
-                <div className="space-y-2 p-3.5 bg-app border border-divider rounded-lg">
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted">
-                    Freelancer Engagement Model
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setFreelancerWorkType('organization')}
-                      className={`p-2.5 rounded border text-left transition-all ${
-                        freelancerWorkType === 'organization'
-                          ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-main'
-                          : 'bg-white/[0.02] border-divider text-muted'
-                      }`}
-                    >
-                      <div className="text-xs font-semibold">Join Organization</div>
-                      <div className="text-[10px] text-muted">Contract within an agency</div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFreelancerWorkType('independent')}
-                      className={`p-2.5 rounded border text-left transition-all ${
-                        freelancerWorkType === 'independent'
-                          ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-main'
-                          : 'bg-white/[0.02] border-divider text-muted'
-                      }`}
-                    >
-                      <div className="text-xs font-semibold">Work Independently</div>
-                      <div className="text-[10px] text-muted">Solo client invoicing</div>
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Organization Input (for Join, Create, or Org Freelancer) */}
-              {((accountType !== 'freelancer') || (accountType === 'freelancer' && freelancerWorkType === 'organization')) && (
-                <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted mb-1.5">
-                    {accountType === 'create' ? 'New Organization Name' : 'Organization Name to Join'} <span className="text-[#FF6B4A]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={organization}
-                    onChange={(e) => setOrganization(e.target.value)}
-                    placeholder="Acme Corp"
-                    disabled={loading}
-                    className={`w-full bg-app border ${errors.organization ? 'border-red-500' : 'border-divider'} focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors`}
-                  />
-                  {errors.organization && <div className="text-[10px] text-red-400 mt-1">{errors.organization}</div>}
-                </div>
-              )}
-
-              {/* Role Picker (when joining organization) */}
-              {accountType === 'join' && (
-                <div>
-                  <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted mb-1.5">
-                    Requested Workspace Role
-                  </label>
-                  <select
-                    value={role}
-                    onChange={(e) => setRole(e.target.value)}
-                    className="w-full bg-app border border-divider rounded px-3 py-2 text-xs text-main focus:outline-none"
-                  >
-                    <option value="administrator">Administrator — Org-wide management</option>
-                    <option value="director">Director — Senior leadership</option>
-                    <option value="senior_manager">Senior Manager — Cross-team leadership</option>
-                    <option value="manager">Manager — Team management</option>
-                    <option value="team_lead">Team Lead — Frontline leadership</option>
-                    <option value="senior_employee">Senior Employee — Experienced contributor</option>
-                    <option value="employee">Employee — Team member</option>
-                    <option value="intern">Intern — Entry level</option>
-                    <option value="freelancer">Freelancer — External contractor</option>
-                  </select>
-                </div>
-              )}
-
-              {/* Owner Role Notice & Currency Selector (when creating new org) */}
-              {accountType === 'create' && (
-                <div className="space-y-4">
-                  <div className="p-3.5 rounded bg-[#FF6B4A]/10 border border-[#FF6B4A]/20">
-                    <div className="text-xs font-bold text-[#FF6B4A] flex items-center gap-1.5">
-                      <Sparkles size={13} />
-                      <span>Role: Organization Owner</span>
-                    </div>
-                    <p className="text-[11px] text-muted mt-1">
-                      As the founder, you will be assigned the <strong>Owner</strong> role with complete access to administrative controls, global audit logs, and invoicing.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-mono font-bold uppercase tracking-wider text-muted mb-1.5">
-                      Default Organization Currency
-                    </label>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                      {SUPPORTED_CURRENCIES.map((curr) => {
-                        const isSelected = defaultCurrency === curr.code;
-                        return (
-                          <button
-                            key={curr.code}
-                            type="button"
-                            onClick={() => setDefaultCurrency(curr.code)}
-                            className={`p-2 rounded border text-left flex items-center justify-between transition-all ${
-                              isSelected
-                                ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-main'
-                                : 'bg-app border-divider text-muted hover:border-white/[0.1]'
-                            }`}
-                          >
-                            <span className="text-xs font-semibold">{curr.name}</span>
-                            {isSelected && <Check size={13} className="text-[#FF6B4A]" />}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Passwords */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -586,10 +398,10 @@ export default function Register() {
                   className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors shadow-sm"
                 >
                   {loading ? (
-                    <span>Provisioning workspace...</span>
+                    <span>Creating account...</span>
                   ) : (
                     <>
-                      <span>Complete Registration</span>
+                      <span>Create Account & Continue</span>
                       <ArrowRight size={13} />
                     </>
                   )}

@@ -4,7 +4,7 @@ import { motion } from 'motion/react';
 import {
   LayoutDashboard, Briefcase, CheckSquare, Calendar, Video,
   MessageSquare, Users, Building2, Building, FileText,
-  CreditCard, BarChart3, Settings, ChevronLeft, ShieldCheck, Sparkles
+  CreditCard, BarChart3, Settings, ChevronLeft, ShieldCheck, Sparkles, Zap
 } from 'lucide-react';
 import { useRole } from '../hooks/useRole';
 import { useWorkspace } from '../hooks/useWorkspace';
@@ -36,6 +36,7 @@ export default function Sidebar() {
       label: 'Workspace',
       items: [
         { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, permission: null, shortcut: '1' },
+        { name: 'Workflows', to: '/workflows', icon: Zap, permission: null, shortcut: 'W' },
         { name: 'Projects', to: '/projects', icon: Briefcase, permission: 'view_projects', shortcut: '2' },
         { name: 'Tasks', to: '/tasks', icon: CheckSquare, permission: 'manage_tasks', shortcut: '3' },
         { name: 'Calendar', to: '/calendar', icon: Calendar, permission: null, shortcut: '4' },

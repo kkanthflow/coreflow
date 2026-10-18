@@ -16,12 +16,12 @@ describe('Auvryn Razorpay Subscription Plans & Pricing', () => {
     expect(SUBSCRIPTION_PLANS.freelancer_starter.pricing.monthly.priceInr).toBe(299);
     expect(SUBSCRIPTION_PLANS.freelancer_starter.limits.maxSeats).toBe(1);
 
-    // 2. Business Starter: ₹999/mo
-    expect(SUBSCRIPTION_PLANS.business_starter.pricing.monthly.priceInr).toBe(999);
+    // 2. Business Starter: ₹399/mo
+    expect(SUBSCRIPTION_PLANS.business_starter.pricing.monthly.priceInr).toBe(399);
     expect(SUBSCRIPTION_PLANS.business_starter.limits.maxSeats).toBe(5);
 
-    // 3. Business Pro: ₹2,499/mo (Unlimited)
-    expect(SUBSCRIPTION_PLANS.business_pro.pricing.monthly.priceInr).toBe(2499);
+    // 3. Business Pro: ₹499/mo (Unlimited)
+    expect(SUBSCRIPTION_PLANS.business_pro.pricing.monthly.priceInr).toBe(499);
     expect(SUBSCRIPTION_PLANS.business_pro.limits.maxSeats).toBeNull(); // Unlimited seats
     expect(SUBSCRIPTION_PLANS.business_pro.limits.maxInvoicesPerMonth).toBeNull(); // Unlimited invoices
     expect(SUBSCRIPTION_PLANS.business_pro.limits.maxActiveProjects).toBeNull(); // Unlimited projects

@@ -130,7 +130,7 @@ subscriptionsRouter.get('/plans', async (req: Request, res: Response) => {
         .eq('id', authUser.id)
         .maybeSingle();
 
-      if (userData?.account_type === 'freelancer' || userData?.role === 'freelancer' || (!userData?.account_type && requestedWorkspace === 'independent')) {
+      if (userData?.account_type === 'freelancer') {
         // Freelancers see ONLY Freelancer plans (Business plans completely hidden)
         const freelancerPlans = getAllPlansList('independent');
         res.json({
@@ -139,6 +139,19 @@ subscriptionsRouter.get('/plans', async (req: Request, res: Response) => {
           context: 'freelancer',
           canManageBilling: true,
           plans: freelancerPlans,
+        });
+        return;
+      }
+
+      if (userData?.account_type === 'organization') {
+        // Organization accounts see ONLY Organization plans
+        const orgPlans = getAllPlansList('organization');
+        res.json({
+          success: true,
+          currency: 'INR',
+          context: 'organization',
+          canManageBilling: false,
+          plans: orgPlans,
         });
         return;
       }
@@ -238,7 +251,7 @@ subscriptionsRouter.get('/current', requireAuth, async (req: Request, res: Respo
       return;
     }
 
-    // 2. Freelancer Context (Organization ID is NULL)
+    // 2. Personal Context (Organization ID is NULL)
     const activeSub = await SubscriptionService.getActiveSubscription({
       userId: user.id,
       orgId: null,
@@ -246,17 +259,21 @@ subscriptionsRouter.get('/current', requireAuth, async (req: Request, res: Respo
 
     const { data: userData } = await supabaseAdmin
       .from('users')
-      .select('full_name, current_plan_tier, subscription_status')
+      .select('full_name, account_type, current_plan_tier, subscription_status')
       .eq('id', user.id)
       .maybeSingle();
 
-    const effectiveTier = activeSub?.plan_tier || userData?.current_plan_tier || 'freelancer_free';
+    const isOrg = userData?.account_type === 'organization';
+    const isFreelancer = userData?.account_type === 'freelancer';
+    const defaultTier = isOrg ? 'business_free' : 'freelancer_free';
+
+    const effectiveTier = activeSub?.plan_tier || userData?.current_plan_tier || defaultTier;
     const effectiveStatus = activeSub?.status || userData?.subscription_status || 'free';
-    const planDef = SUBSCRIPTION_PLANS[effectiveTier] || SUBSCRIPTION_PLANS['freelancer_free'];
+    const planDef = SUBSCRIPTION_PLANS[effectiveTier] || SUBSCRIPTION_PLANS[defaultTier];
 
     res.json({
       hasActiveSubscription: !!activeSub,
-      customerType: 'freelancer',
+      customerType: isOrg ? 'organization' : (isFreelancer ? 'freelancer' : null),
       customerName: userData?.full_name || user.name,
       subscription: activeSub,
       tier: effectiveTier,

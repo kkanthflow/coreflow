@@ -142,7 +142,7 @@ export const ORGANIZATION_PLANS: PlanDetail[] = [
     tier: 'business_starter',
     name: 'Business Starter',
     tagline: 'Collaborative operating workbench for agile teams and growing agencies',
-    priceMonthly: 999,
+    priceMonthly: 399,
     workspaceType: 'Organization (Up to 5 Members)',
     limits: {
       seats: 'Maximum 5 members',
@@ -166,7 +166,7 @@ export const ORGANIZATION_PLANS: PlanDetail[] = [
     tagline: 'Uncapped velocity and enterprise governance without arbitrary limits',
     badge: 'ENTERPRISE POWER',
     isPopular: true,
-    priceMonthly: 2499,
+    priceMonthly: 499,
     workspaceType: 'Organization (Unlimited)',
     limits: {
       seats: 'Unlimited team members',
@@ -193,10 +193,11 @@ export default function Pricing() {
 
   // Active Plan View: resolved strictly by authenticated account type
   const isOrganizationAccount = accountType === 'organization' || !!orgId;
+  const isFreelancerAccount = accountType === 'freelancer';
 
-  // For unauthenticated visitors, allow tab toggle. For logged-in users, lock to their account type.
+  // For unauthenticated or setup-pending users, allow tab toggle. For logged-in users with established account types, lock to their account type.
   const [publicCategoryTab, setPublicCategoryTab] = useState<PlanCategory>('freelancer');
-  const activeCategory: PlanCategory = session?.user?.id 
+  const activeCategory: PlanCategory = session?.user?.id && (isOrganizationAccount || isFreelancerAccount)
     ? (isOrganizationAccount ? 'organization' : 'freelancer')
     : publicCategoryTab;
 
@@ -495,7 +496,7 @@ export default function Pricing() {
                       : 'text-muted hover:text-main'
                   }`}
                 >
-                  Organization Plans (₹0 – ₹2,499)
+                  Organization Plans (₹0 – ₹499)
                 </button>
               </div>
             </div>

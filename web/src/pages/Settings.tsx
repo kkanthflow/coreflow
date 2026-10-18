@@ -34,7 +34,7 @@ import { SUPPORTED_CURRENCIES } from '../lib/currency';
 export default function Settings() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, role } = useAuth();
+  const { user, role, accountType } = useAuth();
   const { orgId, orgName: wsOrgName, canManageBilling, refreshWorkspace } = useWorkspace();
   const [activeOrgId, setActiveOrgId] = useState<string | null>(null);
 
@@ -1376,7 +1376,7 @@ export default function Settings() {
                       {subData?.customerName || wsOrgName || user?.user_metadata?.full_name || 'Customer Account'}
                     </h2>
                     <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30">
-                      {subData?.planName || ((orgId || activeOrgId) ? 'Business Free' : 'Freelancer Free')}
+                      {subData?.planName || ((orgId || activeOrgId || accountType === 'organization') ? 'Business Free' : (accountType === 'freelancer' ? 'Freelancer Free' : 'Free Plan'))}
                     </span>
                     <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
                       subData?.status === 'active' 
@@ -1389,7 +1389,7 @@ export default function Settings() {
                     </span>
                   </div>
                   <p className="text-xs text-muted mt-1">
-                    Customer Account: <span className="text-main font-medium capitalize">{subData?.customerType || ((orgId || activeOrgId) ? 'Organization' : 'Freelancer')}</span>
+                    Customer Account: <span className="text-main font-medium capitalize">{subData?.customerType || ((orgId || activeOrgId || accountType === 'organization') ? 'Organization' : (accountType === 'freelancer' ? 'Freelancer' : 'Pending Selection'))}</span>
                     {' · '}
                     Billing Interval: <span className="text-main font-medium capitalize">{subData?.interval || 'monthly'}</span>
                   </p>
@@ -1435,10 +1435,12 @@ export default function Settings() {
               <div className="p-4 rounded-xl bg-app border border-divider">
                 <div className="text-[10px] font-mono uppercase text-muted font-bold tracking-wider">Current Recurring Rate</div>
                 <div className="text-xl font-bold text-main mt-1">
-                  {subData?.tier === 'freelancer_starter' ? '₹299'
+                  {subData?.subscription?.last_payment_amount 
+                    ? `₹${Math.round(subData.subscription.last_payment_amount / 100)}`
+                    : subData?.tier === 'freelancer_starter' ? '₹299'
                     : subData?.tier === 'freelancer_pro' ? '₹599'
-                    : subData?.tier === 'business_starter' ? '₹999'
-                    : subData?.tier === 'business_pro' ? '₹2,499'
+                    : subData?.tier === 'business_starter' ? '₹399'
+                    : subData?.tier === 'business_pro' ? '₹499'
                     : '₹0'}
                   <span className="text-xs font-normal text-muted"> / mo</span>
                 </div>

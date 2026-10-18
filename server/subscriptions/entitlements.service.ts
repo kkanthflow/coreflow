@@ -41,6 +41,7 @@ export interface UsageReport {
   entitlements: {
     invoices: EntitlementCheckResult;
     projects: EntitlementCheckResult;
+    workflows: EntitlementCheckResult;
     meetings: EntitlementCheckResult;
     seats: EntitlementCheckResult;
     analytics: {
@@ -332,11 +333,32 @@ export class EntitlementsService {
       console.warn('[EntitlementsService] Error counting seats:', err);
     }
 
+    let workflowsCount = 0;
+    try {
+      // 5. Workflows count (active, draft, paused definitions)
+      let wfQuery = supabaseAdmin
+        .from('workflows')
+        .select('id', { count: 'exact', head: true })
+        .not('status', 'eq', 'archived');
+
+      if (params.orgId) {
+        wfQuery = wfQuery.eq('account_id', params.orgId).eq('account_type', 'organization');
+      } else {
+        wfQuery = wfQuery.eq('account_id', params.userId).eq('account_type', 'freelancer');
+      }
+
+      const { count: wfC } = await wfQuery;
+      workflowsCount = wfC || 0;
+    } catch (err) {
+      console.warn('[EntitlementsService] Error counting workflows:', err);
+    }
+
     return {
       invoicesCount,
       activeProjectsCount,
       meetingsCount,
       teamSeatsCount,
+      workflowsCount,
     };
   }
 
@@ -410,7 +432,7 @@ export class EntitlementsService {
         limit = limits.maxSeats;
         break;
       case 'workflows':
-        current = 0;
+        current = usage.workflowsCount;
         limit = limits.maxWorkflows;
         break;
       case 'history':
@@ -465,7 +487,7 @@ export class EntitlementsService {
     const isPro = tier === 'pro';
 
     const buildMetric = (
-      feature: 'invoices' | 'projects' | 'meetings' | 'seats',
+      feature: 'invoices' | 'projects' | 'workflows' | 'meetings' | 'seats',
       current: number,
       limit: number | null
     ): EntitlementCheckResult => {
@@ -515,6 +537,7 @@ export class EntitlementsService {
       entitlements: {
         invoices: buildMetric('invoices', usage.invoicesCount, limits.maxInvoicesPerMonth),
         projects: buildMetric('projects', usage.activeProjectsCount, limits.maxActiveProjects),
+        workflows: buildMetric('workflows', usage.workflowsCount, limits.maxWorkflows),
         meetings: buildMetric('meetings', usage.meetingsCount, limits.maxMeetingsPerMonth),
         seats: buildMetric('seats', usage.teamSeatsCount, limits.maxSeats),
         analytics: {
