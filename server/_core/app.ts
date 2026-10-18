@@ -198,10 +198,10 @@ export function createExpressApp() {
     if (origin) {
       res.header("Access-Control-Allow-Origin", origin);
     }
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
     res.header(
       "Access-Control-Allow-Headers",
-      "Origin, X-Requested-With, Content-Type, Accept, Authorization",
+      "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-organization-id, x-workspace-id, x-account-type, x-auvryn-signature",
     );
     res.header("Access-Control-Allow-Credentials", "true");
 
@@ -214,7 +214,7 @@ export function createExpressApp() {
 
     // Handle preflight requests
     if (req.method === "OPTIONS") {
-      res.sendStatus(200);
+      res.sendStatus(204);
       return;
     }
     next();

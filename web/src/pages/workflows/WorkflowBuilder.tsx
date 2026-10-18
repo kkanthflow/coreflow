@@ -111,9 +111,7 @@ export default function WorkflowBuilder() {
   const [errors, setErrors] = useState<string[]>([]);
   const [activeStep, setActiveStep] = useState<'trigger' | 'conditions' | 'actions' | 'preview'>('trigger');
 
-  const apiUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? '/api'
-    : (import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
+  const apiUrl = '/api';
 
   // Load existing workflow if editing
   useEffect(() => {

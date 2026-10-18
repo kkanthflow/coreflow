@@ -36,9 +36,7 @@ export default function WorkflowApprovals() {
   const [decisionNotes, setDecisionNotes] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  const apiUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-    ? '/api'
-    : (import.meta.env.VITE_API_URL || 'http://localhost:3000/api');
+  const apiUrl = '/api';
 
   const fetchApprovals = useCallback(async () => {
     try {

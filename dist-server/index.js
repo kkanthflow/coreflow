@@ -146652,10 +146652,10 @@ function createExpressApp() {
     if (origin2) {
       res.header("Access-Control-Allow-Origin", origin2);
     }
-    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
     res.header(
       "Access-Control-Allow-Headers",
-      "Origin, X-Requested-With, Content-Type, Accept, Authorization"
+      "Origin, X-Requested-With, Content-Type, Accept, Authorization, x-organization-id, x-workspace-id, x-account-type, x-auvryn-signature"
     );
     res.header("Access-Control-Allow-Credentials", "true");
     res.header("Strict-Transport-Security", "max-age=63072000; includeSubDomains; preload");
@@ -146664,7 +146664,7 @@ function createExpressApp() {
     res.header("X-XSS-Protection", "0");
     res.header("Referrer-Policy", "no-referrer");
     if (req.method === "OPTIONS") {
-      res.sendStatus(200);
+      res.sendStatus(204);
       return;
     }
     next();
