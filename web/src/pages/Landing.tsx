@@ -24,10 +24,12 @@ import {
   X,
   Users,
   Briefcase,
-  Clock
+  Clock,
+  Building2,
+  User
 } from 'lucide-react';
 import AuvrynLogo from '../components/AuvrynLogo';
-import { ORGANIZATION_PLANS } from '../lib/plans';
+import { ORGANIZATION_PLANS, FREELANCER_PLANS } from '../lib/plans';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -51,6 +53,7 @@ export default function Landing() {
   const [analyticsHoverIndex, setAnalyticsHoverIndex] = useState<number | null>(4);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [landingBillingInterval, setLandingBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
+  const [landingPlanCategory, setLandingPlanCategory] = useState<'organization' | 'freelancer'>('organization');
 
   // Projects live state during scroll
   const [projectProgress, setProjectProgress] = useState(14);
@@ -936,8 +939,44 @@ export default function Landing() {
             Monthly and yearly recurring billing with automated seat quotas, instant Razorpay checkout, and unrestricted capabilities.
           </p>
 
+          {/* Account Category Switcher: Organizations vs Freelancers */}
+          <div className="pt-2 flex items-center justify-center">
+            <div className="inline-flex p-1.5 rounded-2xl bg-card-bg border border-divider shadow-lg gap-1.5">
+              <button
+                type="button"
+                onClick={() => setLandingPlanCategory('organization')}
+                className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                  landingPlanCategory === 'organization'
+                    ? 'bg-[#FF6B4A] text-white shadow-[0_0_15px_rgba(255,107,74,0.35)]'
+                    : 'text-muted hover:text-main'
+                }`}
+              >
+                <Building2 size={15} />
+                <span>Organizations & Teams</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-black/20 text-white/90">
+                  ₹0 – ₹499
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setLandingPlanCategory('freelancer')}
+                className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all flex items-center gap-2 cursor-pointer ${
+                  landingPlanCategory === 'freelancer'
+                    ? 'bg-[#FF6B4A] text-white shadow-[0_0_15px_rgba(255,107,74,0.35)]'
+                    : 'text-muted hover:text-main'
+                }`}
+              >
+                <User size={15} />
+                <span>Freelancers & Solo</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-black/20 text-white/90">
+                  ₹0 – ₹599
+                </span>
+              </button>
+            </div>
+          </div>
+
           {/* Monthly / Yearly Toggle */}
-          <div className="pt-4 flex items-center justify-center gap-3">
+          <div className="pt-1 flex items-center justify-center gap-3">
             <div className="bg-card-bg border border-divider rounded-xl p-1.5 flex items-center gap-1 shadow-lg">
               <button
                 onClick={() => setLandingBillingInterval('monthly')}
@@ -966,14 +1005,13 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* 3 Tier Organization Cards Grid (Matching Real Account System) */}
+        {/* 3 Tier Plan Cards Grid (Organizations or Freelancers) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-stretch">
-          {ORGANIZATION_PLANS.map((plan) => {
+          {(landingPlanCategory === 'organization' ? ORGANIZATION_PLANS : FREELANCER_PLANS).map((plan) => {
             const isFree = plan.priceMonthly === 0;
-            const price = landingBillingInterval === 'monthly'
-              ? plan.priceMonthly
-              : (plan.priceMonthly === 399 ? 3990 : plan.priceMonthly === 499 ? 4990 : 0);
-            const effectiveMonthly = plan.priceMonthly === 399 ? 332 : plan.priceMonthly === 499 ? 415 : 0;
+            const yearlyPrice = plan.priceMonthly * 10;
+            const effectiveMonthly = Math.round(yearlyPrice / 12);
+            const price = landingBillingInterval === 'monthly' ? plan.priceMonthly : yearlyPrice;
 
             return (
               <div
@@ -1060,28 +1098,28 @@ export default function Landing() {
                 <div className="pt-2">
                   {isFree ? (
                     <Link
-                      to="/register?plan=business_free"
-                      aria-label="Start with Business Free Plan"
+                      to={`/register?plan=${plan.tier}&accountType=${landingPlanCategory}`}
+                      aria-label={`Start with ${plan.name} Plan`}
                       className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-center transition-all flex items-center justify-center gap-2"
                     >
                       <CheckCircle2 size={14} />
-                      <span>Start with Business Free →</span>
+                      <span>Start with {plan.name} Free →</span>
                     </Link>
                   ) : plan.isPopular ? (
                     <Link
-                      to={`/pricing?plan=business_pro&interval=${landingBillingInterval}`}
-                      aria-label="Upgrade to Business Pro Plan"
+                      to={`/pricing?plan=${plan.tier}&interval=${landingBillingInterval}&category=${landingPlanCategory}`}
+                      aria-label={`Upgrade to ${plan.name} Plan`}
                       className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#FF6B4A] hover:bg-[#FF552B] text-white shadow-[0_0_20px_rgba(255,107,74,0.4)] text-center transition-all flex items-center justify-center gap-2"
                     >
-                      <span>Upgrade to Business Pro →</span>
+                      <span>Upgrade to {plan.name} →</span>
                     </Link>
                   ) : (
                     <Link
-                      to={`/pricing?plan=business_starter&interval=${landingBillingInterval}`}
-                      aria-label="Upgrade to Business Starter Plan"
+                      to={`/pricing?plan=${plan.tier}&interval=${landingBillingInterval}&category=${landingPlanCategory}`}
+                      aria-label={`Upgrade to ${plan.name} Plan`}
                       className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#FF6B4A]/10 hover:bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30 text-center transition-all flex items-center justify-center gap-2"
                     >
-                      <span>Upgrade to Business Starter →</span>
+                      <span>Upgrade to {plan.name} →</span>
                     </Link>
                   )}
                 </div>
