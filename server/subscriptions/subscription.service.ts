@@ -230,9 +230,71 @@ export class SubscriptionService {
     fallbackSubscriptions.set(record.razorpay_subscription_id, record);
 
     try {
+      // Whitelist of valid subscription_plans table primary keys
+      const VALID_PLAN_IDS = new Set([
+        'freelancer_starter',
+        'freelancer_pro',
+        'business_starter',
+        'business_pro',
+        'freelancer_free',
+        'business_free',
+        'freelancer_monthly',
+        'freelancer_yearly',
+        'starter_yearly',
+        'starter_monthly',
+        'pro_yearly',
+        'pro_monthly',
+      ]);
+
+      // Resolve valid foreign key plan_id for subscriptions_plan_id_fkey
+      let resolvedPlanId: string | null = null;
+      if (record.plan_id && VALID_PLAN_IDS.has(record.plan_id)) {
+        resolvedPlanId = record.plan_id;
+      } else if (record.plan_tier && VALID_PLAN_IDS.has(record.plan_tier)) {
+        resolvedPlanId = record.plan_tier;
+      }
+
+      // Valid UUID check for subscriptions.id
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(record.id);
+      const dbId = isUuid ? record.id : crypto.randomUUID();
+
+      // Only include valid database table columns
+      const dbPayload: Record<string, any> = {
+        id: dbId,
+        user_id: record.user_id,
+        organization_id: record.organization_id || null,
+        workspace_type: record.workspace_type,
+        plan_tier: record.plan_tier,
+        plan_interval: record.plan_interval,
+        plan_id: resolvedPlanId,
+        razorpay_subscription_id: record.razorpay_subscription_id,
+        razorpay_plan_id: record.razorpay_plan_id || null,
+        razorpay_customer_id: record.razorpay_customer_id || null,
+        status: record.status,
+        current_period_start: record.current_period_start || null,
+        current_period_end: record.current_period_end || null,
+        ended_at: record.ended_at || null,
+        cancelled_at: record.cancelled_at || null,
+        cancel_at_period_end: record.cancel_at_period_end ?? false,
+        total_count: record.total_count ?? 12,
+        paid_count: record.paid_count ?? 0,
+        short_url: record.short_url || null,
+        metadata: {
+          ...(record.metadata || {}),
+          ...(record.last_event_timestamp ? { last_event_timestamp: record.last_event_timestamp } : {}),
+        },
+        created_at: record.created_at,
+        updated_at: record.updated_at,
+        customer_type: record.customer_type || (record.organization_id ? 'organization' : 'freelancer'),
+        payer_user_id: record.payer_user_id || record.user_id,
+        payment_status: record.payment_status || 'created',
+        last_payment_id: record.last_payment_id || null,
+        last_payment_amount: record.last_payment_amount || null,
+      };
+
       const { data, error } = await supabaseAdmin
         .from('subscriptions')
-        .upsert(record, { onConflict: 'razorpay_subscription_id' })
+        .upsert(dbPayload, { onConflict: 'razorpay_subscription_id' })
         .select()
         .single();
 
@@ -240,8 +302,11 @@ export class SubscriptionService {
         await this.syncUserAccessStatus(record);
         return data as SubscriptionRecord;
       }
-    } catch (err) {
-      console.warn('[SubscriptionService] Direct DB upsert failed, stored in memory:', err);
+      if (error) {
+        console.error('[SubscriptionService] Direct DB upsert failed with error:', error.message || error);
+      }
+    } catch (err: any) {
+      console.warn('[SubscriptionService] Direct DB upsert exception, stored in memory:', err.message || err);
     }
 
     await this.syncUserAccessStatus(record);
@@ -397,7 +462,7 @@ export class SubscriptionService {
       workspace_type: plan.workspaceType,
       plan_tier: tier,
       plan_interval: interval,
-      plan_id: planKey,
+      plan_id: tier,
       razorpay_subscription_id: rzpSub.id,
       razorpay_plan_id: razorpayPlanId,
       status: 'pending',
@@ -1022,42 +1087,100 @@ export class SubscriptionService {
     userId: string;
     orgId?: string | null;
   }): Promise<SubscriptionRecord | null> {
-    const candidateSub = await this.getLatestSubscription(params);
-    if (!candidateSub) return null;
-
     const now = Date.now();
-    const periodEndTime = candidateSub.current_period_end ? new Date(candidateSub.current_period_end).getTime() : 0;
 
-    // 1. Active subscription
-    if (candidateSub.status === 'active') {
-      if (periodEndTime && periodEndTime < now) {
-        const daysOverdue = (now - periodEndTime) / 86400000;
-        if (daysOverdue <= GRACE_PERIOD_DAYS) {
-          candidateSub.status = 'past_due';
-          return candidateSub;
-        } else {
-          candidateSub.status = 'expired';
-          return null;
+    try {
+      let query = supabaseAdmin.from('subscriptions').select('*');
+      if (params.orgId) {
+        query = query.eq('organization_id', params.orgId);
+      } else {
+        query = query.eq('user_id', params.userId).is('organization_id', null);
+      }
+
+      // Prioritize active, cancelled, or past_due subscriptions
+      const { data: candidates, error } = await query
+        .in('status', ['active', 'cancelled', 'past_due'])
+        .order('created_at', { ascending: false });
+
+      if (!error && candidates && candidates.length > 0) {
+        for (const candidateSub of candidates as SubscriptionRecord[]) {
+          const periodEndTime = candidateSub.current_period_end ? new Date(candidateSub.current_period_end).getTime() : 0;
+
+          if (candidateSub.status === 'active') {
+            if (periodEndTime && periodEndTime < now) {
+              const daysOverdue = (now - periodEndTime) / 86400000;
+              if (daysOverdue <= GRACE_PERIOD_DAYS) {
+                candidateSub.status = 'past_due';
+                return candidateSub;
+              }
+              candidateSub.status = 'expired';
+              continue;
+            }
+            return candidateSub;
+          }
+
+          if (candidateSub.status === 'cancelled') {
+            if (periodEndTime && periodEndTime > now) {
+              return candidateSub;
+            }
+            continue;
+          }
+
+          if (candidateSub.status === 'past_due') {
+            const daysOverdue = periodEndTime ? (now - periodEndTime) / 86400000 : 0;
+            if (daysOverdue <= GRACE_PERIOD_DAYS) {
+              return candidateSub;
+            }
+            continue;
+          }
         }
       }
-      return candidateSub;
+    } catch {
+      // Fallback to in-memory store
     }
 
-    // 2. Cancelled subscription: retains access until current_period_end
-    if (candidateSub.status === 'cancelled') {
-      if (periodEndTime && periodEndTime > now) {
-        return candidateSub;
+    // In-memory fallback
+    const memoryCandidates: SubscriptionRecord[] = [];
+    for (const sub of fallbackSubscriptions.values()) {
+      if (params.orgId && sub.organization_id === params.orgId) {
+        memoryCandidates.push(sub);
+      } else if (!params.orgId && !sub.organization_id && sub.user_id === params.userId) {
+        memoryCandidates.push(sub);
       }
-      return null;
     }
 
-    // 3. Past Due subscription: allowed during grace period
-    if (candidateSub.status === 'past_due') {
-      const daysOverdue = periodEndTime ? (now - periodEndTime) / 86400000 : 0;
-      if (daysOverdue <= GRACE_PERIOD_DAYS) {
+    memoryCandidates.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    for (const candidateSub of memoryCandidates) {
+      const periodEndTime = candidateSub.current_period_end ? new Date(candidateSub.current_period_end).getTime() : 0;
+
+      if (candidateSub.status === 'active') {
+        if (periodEndTime && periodEndTime < now) {
+          const daysOverdue = (now - periodEndTime) / 86400000;
+          if (daysOverdue <= GRACE_PERIOD_DAYS) {
+            candidateSub.status = 'past_due';
+            return candidateSub;
+          }
+          candidateSub.status = 'expired';
+          continue;
+        }
         return candidateSub;
       }
-      return null;
+
+      if (candidateSub.status === 'cancelled') {
+        if (periodEndTime && periodEndTime > now) {
+          return candidateSub;
+        }
+        continue;
+      }
+
+      if (candidateSub.status === 'past_due') {
+        const daysOverdue = periodEndTime ? (now - periodEndTime) / 86400000 : 0;
+        if (daysOverdue <= GRACE_PERIOD_DAYS) {
+          return candidateSub;
+        }
+        continue;
+      }
     }
 
     return null;

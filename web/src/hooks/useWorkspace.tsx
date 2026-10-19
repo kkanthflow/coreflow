@@ -5,6 +5,8 @@ import { useAuth } from './useAuth';
 type WorkspaceContextType = {
   orgId: string | null;
   orgName: string | null;
+  orgAddress: string | null;
+  orgGst: string | null;
   membershipRole: string | null;
   canManageBilling: boolean;
   isOwner: boolean;
@@ -16,6 +18,8 @@ type WorkspaceContextType = {
 const WorkspaceContext = createContext<WorkspaceContextType>({
   orgId: null,
   orgName: null,
+  orgAddress: null,
+  orgGst: null,
   membershipRole: null,
   canManageBilling: false,
   isOwner: false,
@@ -28,6 +32,8 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
   const { session } = useAuth();
   const [orgId, setOrgId] = useState<string | null>(null);
   const [orgName, setOrgName] = useState<string | null>(null);
+  const [orgAddress, setOrgAddress] = useState<string | null>(null);
+  const [orgGst, setOrgGst] = useState<string | null>(null);
   const [membershipRole, setMembershipRole] = useState<string | null>(null);
   const [canManageBilling, setCanManageBilling] = useState<boolean>(false);
   const [isOwner, setIsOwner] = useState<boolean>(false);
@@ -38,6 +44,8 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
     if (!session?.user?.id) {
       setOrgId(null);
       setOrgName(null);
+      setOrgAddress(null);
+      setOrgGst(null);
       setMembershipRole(null);
       setCanManageBilling(false);
       setIsOwner(false);
@@ -50,7 +58,7 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
       // 1. Try finding organization membership
       const { data: userOrg } = await supabase
         .from('user_organizations')
-        .select('org_id, role, organizations(id, name, default_currency)')
+        .select('org_id, role, organizations(id, name, default_currency, address, gst_number)')
         .eq('user_id', session.user.id)
         .limit(1)
         .maybeSingle();
@@ -58,8 +66,12 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
       if (userOrg && userOrg.organizations) {
         const org: any = Array.isArray(userOrg.organizations) ? userOrg.organizations[0] : userOrg.organizations;
         const role = (userOrg.role || '').toLowerCase();
+        const rawName = org?.name || 'Skavelon Technologies';
+        const formattedName = rawName.replace(/SkavelonTEchnologies/i, 'Skavelon Technologies');
         setOrgId(userOrg.org_id);
-        setOrgName(org?.name || null);
+        setOrgName(formattedName);
+        setOrgAddress(org?.address || 'No. 9, Kamaraj St, Kosapalayam, Puducherry – 13');
+        setOrgGst(org?.gst_number || null);
         setMembershipRole(userOrg.role || null);
         setIsOwner(role === 'owner');
         setCanManageBilling(['owner', 'billing_admin'].includes(role));
@@ -105,6 +117,8 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
     <WorkspaceContext.Provider value={{ 
       orgId, 
       orgName, 
+      orgAddress,
+      orgGst,
       membershipRole,
       canManageBilling,
       isOwner,

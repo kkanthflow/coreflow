@@ -121,7 +121,7 @@ export default function Dashboard() {
 
       // 5. Team / Members
       const membersPromise = orgId
-        ? supabase.from('user_organizations').select('user_id, role, users(id, full_name, email)').eq('org_id', orgId)
+        ? supabase.from('user_organizations').select('user_id, role, users:user_id(id, full_name, email)').eq('org_id', orgId)
         : Promise.resolve({ data: [] as any[] });
 
       // 6. Clients Count from Database
@@ -154,7 +154,7 @@ export default function Dashboard() {
         .reduce((sum, inv) => sum + (Number(inv.total_amount) || 0), 0);
 
       const projectsData = (projectsRes.data || []).map((p: any) => {
-        const pTasks = p.tasks || [];
+        const pTasks = Array.isArray(p.tasks) ? p.tasks : (p.tasks ? [p.tasks] : []);
         const done = pTasks.filter((t: any) => t.status === 'done').length;
         return {
           ...p,
@@ -248,7 +248,7 @@ export default function Dashboard() {
     }
     if (upcomingMeetings.length > 0) {
       const nextMeeting = upcomingMeetings[0];
-      const start = new Date(nextMeeting.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const start = nextMeeting.start_time ? new Date(nextMeeting.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Upcoming';
       list.push({
         type: 'MEETING',
         title: nextMeeting.title || 'Scheduled Conference',
@@ -544,7 +544,7 @@ export default function Dashboard() {
                             {t.title}
                           </span>
                           <span className="text-[10px] font-mono text-muted block">
-                            {t.projects?.title || 'Core Project'} · Due {t.due_date ? new Date(t.due_date).toLocaleDateString() : 'Today'}
+                            {t.project?.title || t.projects?.title || 'Core Project'} · Due {t.due_date ? new Date(t.due_date).toLocaleDateString() : 'Today'}
                           </span>
                         </div>
                       </div>
@@ -588,7 +588,7 @@ export default function Dashboard() {
                     Next Meeting
                   </span>
                   <span className="text-[10px] font-mono text-muted">
-                    {new Date(nextMeeting.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {nextMeeting.start_time ? new Date(nextMeeting.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                   </span>
                 </div>
 
@@ -596,7 +596,7 @@ export default function Dashboard() {
                 <div className="text-[10px] text-muted mb-3">{nextMeeting.participants?.length || 1} participant(s) registered</div>
 
                 <Link
-                  to={`/meetings/${nextMeeting.id}/prejoin`}
+                  to={`/meetings/${nextMeeting.id}`}
                   className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold rounded transition-colors"
                 >
                   <Video size={13} />
@@ -615,11 +615,11 @@ export default function Dashboard() {
                 <div>
                   <span className="text-xs text-zinc-200 block">{m.title}</span>
                   <span className="text-[10px] font-mono text-muted">
-                    {new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {m.start_time ? new Date(m.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                   </span>
                 </div>
                 <Link
-                  to={`/meetings/${m.id}/prejoin`}
+                  to={`/meetings/${m.id}`}
                   className="px-2 py-1 text-[10px] font-semibold text-muted bg-white/[0.04] hover:bg-white/[0.08] rounded transition-colors"
                 >
                   Enter

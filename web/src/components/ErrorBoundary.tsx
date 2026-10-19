@@ -1,5 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
-import { AlertTriangle, RefreshCw, Home, Trash2 } from 'lucide-react';
+import { AlertTriangle, RefreshCw, Home, Trash2, Sparkles } from 'lucide-react';
 import AuvrynLogo from './AuvrynLogo';
 
 interface Props {
@@ -11,6 +11,7 @@ interface State {
   hasError: boolean;
   error: Error | null;
   errorInfo: ErrorInfo | null;
+  isChunkLoadError: boolean;
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
@@ -20,14 +21,39 @@ export default class ErrorBoundary extends Component<Props, State> {
       hasError: false,
       error: null,
       errorInfo: null,
+      isChunkLoadError: false,
     };
   }
 
+  static isChunkError(error?: Error | null): boolean {
+    if (!error) return false;
+    const msg = error.message || '';
+    return (
+      msg.includes('Failed to fetch dynamically imported module') ||
+      msg.includes('Importing a module script failed') ||
+      error.name === 'ChunkLoadError'
+    );
+  }
+
   static getDerivedStateFromError(error: Error): State {
+    const isChunk = ErrorBoundary.isChunkError(error);
+
+    // Auto-reload immediately on chunk failure caused by new deployments
+    if (isChunk && typeof window !== 'undefined') {
+      const key = 'auvryn_eb_chunk_reload';
+      const lastReload = sessionStorage.getItem(key);
+      const now = Date.now();
+      if (!lastReload || now - parseInt(lastReload, 10) > 10000) {
+        sessionStorage.setItem(key, String(now));
+        window.location.reload();
+      }
+    }
+
     return {
       hasError: true,
       error,
       errorInfo: null,
+      isChunkLoadError: isChunk,
     };
   }
 
@@ -37,7 +63,12 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   handleReload = () => {
-    window.location.reload();
+    try {
+      sessionStorage.removeItem('auvryn_eb_chunk_reload');
+      sessionStorage.removeItem('auvryn_last_chunk_reload');
+      sessionStorage.removeItem('auvryn_vite_preload_reload');
+    } catch (_) {}
+    window.location.href = window.location.pathname + '?v=' + Date.now();
   };
 
   handleResetHome = () => {
@@ -49,11 +80,13 @@ export default class ErrorBoundary extends Component<Props, State> {
       localStorage.clear();
       sessionStorage.clear();
     } catch (_) {}
-    window.location.href = '/';
+    window.location.href = '/?v=' + Date.now();
   };
 
   render() {
     if (this.state.hasError) {
+      const isChunk = this.state.isChunkLoadError || ErrorBoundary.isChunkError(this.state.error);
+
       return (
         <div className="min-h-screen bg-[#07070B] text-white flex flex-col items-center justify-center p-6 font-sans select-none">
           <div className="w-full max-w-md bg-[#0C0D12] border border-[#1e1e2e] rounded-2xl p-8 shadow-2xl text-center relative overflow-hidden">
@@ -67,19 +100,21 @@ export default class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#181824] border border-[#2a2a3e] text-[11px] font-mono text-[#FF6B4A] mb-3">
-              <AlertTriangle size={12} />
-              <span>Application Recovery Mode</span>
+              {isChunk ? <Sparkles size={12} /> : <AlertTriangle size={12} />}
+              <span>{isChunk ? 'New Version Available' : 'Application Recovery Mode'}</span>
             </div>
 
             <h1 className="text-xl font-bold tracking-tight text-white mb-2">
-              {this.props.fallbackTitle || 'Workspace Encountered an Error'}
+              {isChunk ? 'Update Ready' : (this.props.fallbackTitle || 'Workspace Encountered an Error')}
             </h1>
             
             <p className="text-sm text-gray-400 mb-6 leading-relaxed">
-              AUVRYN caught an unexpected runtime exception. You can reload the page or return to the landing overview.
+              {isChunk
+                ? 'A new version of AUVRYN has been deployed. Please refresh to load the latest workspace components.'
+                : 'AUVRYN caught an unexpected runtime exception. You can reload the page or return to the landing overview.'}
             </p>
 
-            {this.state.error && (
+            {this.state.error && !isChunk && (
               <div className="mb-6 text-left">
                 <details className="text-xs text-gray-500 bg-[#07070B] p-3 rounded-lg border border-[#181824] cursor-pointer">
                   <summary className="font-mono text-gray-400 hover:text-gray-300">
@@ -95,15 +130,15 @@ export default class ErrorBoundary extends Component<Props, State> {
             <div className="flex flex-col gap-2.5">
               <button
                 onClick={this.handleReload}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#FF6B4A] hover:bg-[#FF552B] text-white font-medium text-xs transition-colors flex items-center justify-center gap-2 shadow-[0_0_16px_rgba(255,107,74,0.3)]"
+                className="w-full py-2.5 px-4 rounded-xl bg-[#FF6B4A] hover:bg-[#FF552B] text-white font-medium text-xs transition-colors flex items-center justify-center gap-2 shadow-[0_0_16px_rgba(255,107,74,0.3)] cursor-pointer"
               >
                 <RefreshCw size={14} />
-                <span>Reload Page</span>
+                <span>{isChunk ? 'Refresh Application Now' : 'Reload Page'}</span>
               </button>
 
               <button
                 onClick={this.handleResetHome}
-                className="w-full py-2.5 px-4 rounded-xl bg-[#14141E] hover:bg-[#1c1c2a] border border-[#26263a] text-gray-300 hover:text-white font-medium text-xs transition-colors flex items-center justify-center gap-2"
+                className="w-full py-2.5 px-4 rounded-xl bg-[#14141E] hover:bg-[#1c1c2a] border border-[#26263a] text-gray-300 hover:text-white font-medium text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Home size={14} />
                 <span>Return to Home</span>
@@ -111,7 +146,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
               <button
                 onClick={this.handleClearCacheAndReload}
-                className="w-full py-2 px-4 rounded-xl hover:bg-red-500/10 text-gray-500 hover:text-red-400 font-mono text-[11px] transition-colors flex items-center justify-center gap-1.5"
+                className="w-full py-2 px-4 rounded-xl hover:bg-red-500/10 text-gray-500 hover:text-red-400 font-mono text-[11px] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Trash2 size={12} />
                 <span>Clear session cache & restart</span>

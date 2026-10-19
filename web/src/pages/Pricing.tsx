@@ -39,8 +39,8 @@ export { FREELANCER_PLANS, ORGANIZATION_PLANS };
 export default function Pricing() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { session, user, accountType } = useAuth();
-  const { orgId, orgName, membershipRole, canManageBilling } = useWorkspace();
+  const { session, user, accountType, loading: authLoading } = useAuth();
+  const { orgId, orgName, membershipRole, canManageBilling, loading: workspaceLoading, refreshWorkspace } = useWorkspace();
 
   // Active Plan View: resolved strictly by authenticated account type
   const isOrganizationAccount = accountType === 'organization' || !!orgId;
@@ -56,9 +56,11 @@ export default function Pricing() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Active subscription check
-  const [activePlanTier, setActivePlanTier] = useState<string>(() => isOrganizationAccount ? 'business_free' : 'freelancer_free');
-  const [activePlanStatus, setActivePlanStatus] = useState<string>('free');
+  // Authoritative subscription state
+  const [subscriptionLoading, setSubscriptionLoading] = useState<boolean>(true);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
+  const [activePlanTier, setActivePlanTier] = useState<string | null>(null);
+  const [activePlanStatus, setActivePlanStatus] = useState<string>('loading');
 
   // Modal State
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
@@ -69,12 +71,19 @@ export default function Pricing() {
 
   // Fetch current subscription and usage from server
   const fetchCurrentAndUsage = async () => {
-    if (!session?.user?.id) return;
+    if (!session?.user?.id) {
+      setSubscriptionLoading(false);
+      return;
+    }
 
+    setSubscriptionLoading(true);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
-      if (!token) return;
+      if (!token) {
+        setSubscriptionLoading(false);
+        return;
+      }
 
       const targetOrgId = isOrganizationAccount ? orgId : null;
 
@@ -89,16 +98,81 @@ export default function Pricing() {
         const data = await subRes.json();
         setActivePlanTier(data.tier || (isOrganizationAccount ? 'business_free' : 'freelancer_free'));
         setActivePlanStatus(data.status || 'free');
+        setSubscriptionError(null);
+      } else {
+        setSubscriptionError('Unable to fetch subscription telemetry.');
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn('Failed to load active subscription or usage:', e);
+      setSubscriptionError(e?.message || 'Network error fetching subscription.');
+    } finally {
+      setSubscriptionLoading(false);
     }
   };
 
   useEffect(() => {
-    setActivePlanTier(isOrganizationAccount ? 'business_free' : 'freelancer_free');
-    fetchCurrentAndUsage();
-  }, [session?.user?.id, orgId, accountType, isOrganizationAccount]);
+    let isMounted = true;
+
+    // Unauthenticated visitors do not have an active subscription
+    if (!authLoading && !session?.user?.id) {
+      setSubscriptionLoading(false);
+      setActivePlanTier(null);
+      setActivePlanStatus('unsubscribed');
+      return;
+    }
+
+    // Wait until both auth and workspace contexts finish initializing
+    if (authLoading || workspaceLoading) {
+      return;
+    }
+
+    const loadSubscription = async () => {
+      setSubscriptionLoading(true);
+      try {
+        const { data: sessionData } = await supabase.auth.getSession();
+        const token = sessionData.session?.access_token;
+        if (!token) {
+          if (isMounted) setSubscriptionLoading(false);
+          return;
+        }
+
+        const targetOrgId = isOrganizationAccount ? orgId : null;
+
+        const subRes = await fetch(`${apiUrl}/subscriptions/current${targetOrgId ? `?orgId=${targetOrgId}` : ''}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            ...(targetOrgId ? { 'x-organization-id': targetOrgId } : {}),
+          },
+        });
+
+        if (!isMounted) return;
+
+        if (subRes.ok) {
+          const data = await subRes.json();
+          setActivePlanTier(data.tier || (isOrganizationAccount ? 'business_free' : 'freelancer_free'));
+          setActivePlanStatus(data.status || 'free');
+          setSubscriptionError(null);
+        } else {
+          setSubscriptionError('Unable to load subscription details.');
+        }
+      } catch (e: any) {
+        if (isMounted) {
+          console.warn('Failed to load active subscription:', e);
+          setSubscriptionError(e?.message || 'Network error fetching subscription.');
+        }
+      } finally {
+        if (isMounted) {
+          setSubscriptionLoading(false);
+        }
+      }
+    };
+
+    loadSubscription();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [authLoading, workspaceLoading, session?.user?.id, orgId, accountType, isOrganizationAccount]);
 
   // Handle Checkout / Upgrade
   const handleSubscribe = async (tier: string) => {
@@ -201,6 +275,7 @@ export default function Pricing() {
             setActivePlanTier(tier);
             setActivePlanStatus('active');
             await fetchCurrentAndUsage();
+            await refreshWorkspace();
           } catch (verErr: any) {
             setError(verErr.message || 'Payment verified signature mismatch. Please contact support.');
           } finally {
@@ -306,7 +381,13 @@ export default function Pricing() {
               <div className="flex items-center gap-2">
                 <span className="text-muted">Current Plan:</span>
                 <span className="font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                  {activePlanTier.replace(/_/g, ' ')} ({activePlanStatus})
+                  {subscriptionLoading ? (
+                    <span className="inline-flex items-center gap-1.5 animate-pulse text-muted">
+                      Checking status...
+                    </span>
+                  ) : (
+                    `${activePlanTier.replace(/_/g, ' ')} (${activePlanStatus})`
+                  )}
                 </span>
               </div>
               {isOrganizationAccount && (
@@ -362,10 +443,26 @@ export default function Pricing() {
           </div>
         )}
 
+        {subscriptionError && !error && (
+          <div className="max-w-3xl mx-auto mb-6 p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3 text-amber-600 dark:text-amber-400 text-xs sm:text-sm">
+            <AlertCircle size={18} className="shrink-0" />
+            <span>{subscriptionError}</span>
+          </div>
+        )}
+
         {successMessage && (
-          <div className="max-w-3xl mx-auto mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center gap-3 text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm">
-            <CheckCircle2 size={18} className="shrink-0" />
-            <span>{successMessage}</span>
+          <div className="max-w-3xl mx-auto mb-6 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-emerald-600 dark:text-emerald-400 text-xs sm:text-sm">
+            <div className="flex items-center gap-3">
+              <CheckCircle2 size={18} className="shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs shadow transition-colors flex items-center gap-1.5 shrink-0 cursor-pointer self-start sm:self-auto"
+            >
+              <span>Go to Dashboard</span>
+              <ArrowRight size={13} />
+            </button>
           </div>
         )}
 
@@ -467,6 +564,10 @@ export default function Pricing() {
                     >
                       <span>Sign Up to Get Started →</span>
                     </button>
+                  ) : subscriptionLoading ? (
+                    <div className="w-full py-3 px-4 rounded-xl bg-hover border border-divider text-muted font-semibold text-xs flex items-center justify-center gap-2 animate-pulse">
+                      <span>Checking plan status...</span>
+                    </div>
                   ) : isCurrent ? (
                     <div className="w-full py-3 px-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-semibold text-xs flex items-center justify-center gap-2">
                       <CheckCircle2 size={14} />

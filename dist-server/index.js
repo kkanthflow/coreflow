@@ -133511,13 +133511,70 @@ var SubscriptionService = class {
     record2.updated_at = (/* @__PURE__ */ new Date()).toISOString();
     fallbackSubscriptions.set(record2.razorpay_subscription_id, record2);
     try {
-      const { data, error: error51 } = await supabaseAdmin.from("subscriptions").upsert(record2, { onConflict: "razorpay_subscription_id" }).select().single();
+      const VALID_PLAN_IDS = /* @__PURE__ */ new Set([
+        "freelancer_starter",
+        "freelancer_pro",
+        "business_starter",
+        "business_pro",
+        "freelancer_free",
+        "business_free",
+        "freelancer_monthly",
+        "freelancer_yearly",
+        "starter_yearly",
+        "starter_monthly",
+        "pro_yearly",
+        "pro_monthly"
+      ]);
+      let resolvedPlanId = null;
+      if (record2.plan_id && VALID_PLAN_IDS.has(record2.plan_id)) {
+        resolvedPlanId = record2.plan_id;
+      } else if (record2.plan_tier && VALID_PLAN_IDS.has(record2.plan_tier)) {
+        resolvedPlanId = record2.plan_tier;
+      }
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(record2.id);
+      const dbId = isUuid ? record2.id : import_crypto5.default.randomUUID();
+      const dbPayload = {
+        id: dbId,
+        user_id: record2.user_id,
+        organization_id: record2.organization_id || null,
+        workspace_type: record2.workspace_type,
+        plan_tier: record2.plan_tier,
+        plan_interval: record2.plan_interval,
+        plan_id: resolvedPlanId,
+        razorpay_subscription_id: record2.razorpay_subscription_id,
+        razorpay_plan_id: record2.razorpay_plan_id || null,
+        razorpay_customer_id: record2.razorpay_customer_id || null,
+        status: record2.status,
+        current_period_start: record2.current_period_start || null,
+        current_period_end: record2.current_period_end || null,
+        ended_at: record2.ended_at || null,
+        cancelled_at: record2.cancelled_at || null,
+        cancel_at_period_end: record2.cancel_at_period_end ?? false,
+        total_count: record2.total_count ?? 12,
+        paid_count: record2.paid_count ?? 0,
+        short_url: record2.short_url || null,
+        metadata: {
+          ...record2.metadata || {},
+          ...record2.last_event_timestamp ? { last_event_timestamp: record2.last_event_timestamp } : {}
+        },
+        created_at: record2.created_at,
+        updated_at: record2.updated_at,
+        customer_type: record2.customer_type || (record2.organization_id ? "organization" : "freelancer"),
+        payer_user_id: record2.payer_user_id || record2.user_id,
+        payment_status: record2.payment_status || "created",
+        last_payment_id: record2.last_payment_id || null,
+        last_payment_amount: record2.last_payment_amount || null
+      };
+      const { data, error: error51 } = await supabaseAdmin.from("subscriptions").upsert(dbPayload, { onConflict: "razorpay_subscription_id" }).select().single();
       if (!error51 && data) {
         await this.syncUserAccessStatus(record2);
         return data;
       }
+      if (error51) {
+        console.error("[SubscriptionService] Direct DB upsert failed with error:", error51.message || error51);
+      }
     } catch (err) {
-      console.warn("[SubscriptionService] Direct DB upsert failed, stored in memory:", err);
+      console.warn("[SubscriptionService] Direct DB upsert exception, stored in memory:", err.message || err);
     }
     await this.syncUserAccessStatus(record2);
     return record2;
@@ -133629,7 +133686,7 @@ var SubscriptionService = class {
       workspace_type: plan.workspaceType,
       plan_tier: tier,
       plan_interval: interval2,
-      plan_id: planKey,
+      plan_id: tier,
       razorpay_subscription_id: rzpSub.id,
       razorpay_plan_id: razorpayPlanId,
       status: "pending",
@@ -134116,35 +134173,83 @@ var SubscriptionService = class {
    * - 'suspended', 'expired', 'pending': does not grant access
    */
   static async getActiveSubscription(params) {
-    const candidateSub = await this.getLatestSubscription(params);
-    if (!candidateSub) return null;
     const now = Date.now();
-    const periodEndTime = candidateSub.current_period_end ? new Date(candidateSub.current_period_end).getTime() : 0;
-    if (candidateSub.status === "active") {
-      if (periodEndTime && periodEndTime < now) {
-        const daysOverdue = (now - periodEndTime) / 864e5;
-        if (daysOverdue <= GRACE_PERIOD_DAYS) {
-          candidateSub.status = "past_due";
-          return candidateSub;
-        } else {
-          candidateSub.status = "expired";
-          return null;
+    try {
+      let query2 = supabaseAdmin.from("subscriptions").select("*");
+      if (params.orgId) {
+        query2 = query2.eq("organization_id", params.orgId);
+      } else {
+        query2 = query2.eq("user_id", params.userId).is("organization_id", null);
+      }
+      const { data: candidates, error: error51 } = await query2.in("status", ["active", "cancelled", "past_due"]).order("created_at", { ascending: false });
+      if (!error51 && candidates && candidates.length > 0) {
+        for (const candidateSub of candidates) {
+          const periodEndTime = candidateSub.current_period_end ? new Date(candidateSub.current_period_end).getTime() : 0;
+          if (candidateSub.status === "active") {
+            if (periodEndTime && periodEndTime < now) {
+              const daysOverdue = (now - periodEndTime) / 864e5;
+              if (daysOverdue <= GRACE_PERIOD_DAYS) {
+                candidateSub.status = "past_due";
+                return candidateSub;
+              }
+              candidateSub.status = "expired";
+              continue;
+            }
+            return candidateSub;
+          }
+          if (candidateSub.status === "cancelled") {
+            if (periodEndTime && periodEndTime > now) {
+              return candidateSub;
+            }
+            continue;
+          }
+          if (candidateSub.status === "past_due") {
+            const daysOverdue = periodEndTime ? (now - periodEndTime) / 864e5 : 0;
+            if (daysOverdue <= GRACE_PERIOD_DAYS) {
+              return candidateSub;
+            }
+            continue;
+          }
         }
       }
-      return candidateSub;
+    } catch {
     }
-    if (candidateSub.status === "cancelled") {
-      if (periodEndTime && periodEndTime > now) {
+    const memoryCandidates = [];
+    for (const sub of fallbackSubscriptions.values()) {
+      if (params.orgId && sub.organization_id === params.orgId) {
+        memoryCandidates.push(sub);
+      } else if (!params.orgId && !sub.organization_id && sub.user_id === params.userId) {
+        memoryCandidates.push(sub);
+      }
+    }
+    memoryCandidates.sort((a, b2) => new Date(b2.created_at).getTime() - new Date(a.created_at).getTime());
+    for (const candidateSub of memoryCandidates) {
+      const periodEndTime = candidateSub.current_period_end ? new Date(candidateSub.current_period_end).getTime() : 0;
+      if (candidateSub.status === "active") {
+        if (periodEndTime && periodEndTime < now) {
+          const daysOverdue = (now - periodEndTime) / 864e5;
+          if (daysOverdue <= GRACE_PERIOD_DAYS) {
+            candidateSub.status = "past_due";
+            return candidateSub;
+          }
+          candidateSub.status = "expired";
+          continue;
+        }
         return candidateSub;
       }
-      return null;
-    }
-    if (candidateSub.status === "past_due") {
-      const daysOverdue = periodEndTime ? (now - periodEndTime) / 864e5 : 0;
-      if (daysOverdue <= GRACE_PERIOD_DAYS) {
-        return candidateSub;
+      if (candidateSub.status === "cancelled") {
+        if (periodEndTime && periodEndTime > now) {
+          return candidateSub;
+        }
+        continue;
       }
-      return null;
+      if (candidateSub.status === "past_due") {
+        const daysOverdue = periodEndTime ? (now - periodEndTime) / 864e5 : 0;
+        if (daysOverdue <= GRACE_PERIOD_DAYS) {
+          return candidateSub;
+        }
+        continue;
+      }
     }
     return null;
   }
@@ -134348,7 +134453,7 @@ var EntitlementsService = class {
         const rawTier = orgData?.current_plan_tier;
         const normalized = rawTier ? normalizePlanTier(rawTier) : defaultTier2;
         const isLocked = ["suspended", "expired", "pending"].includes(orgStatus) || normalized !== "business_free" && orgStatus !== "active";
-        const tier = isLocked ? defaultTier2 : normalized === "business_free" ? "business_free" : defaultTier2;
+        const tier = isLocked ? defaultTier2 : normalized || defaultTier2;
         return {
           tier,
           interval: "monthly",
@@ -134367,7 +134472,7 @@ var EntitlementsService = class {
       const rawTier = userData?.current_plan_tier;
       const normalized = rawTier ? normalizePlanTier(rawTier) : defaultTier2;
       const isLocked = ["suspended", "expired", "pending"].includes(userStatus) || !["freelancer_free", "business_free"].includes(normalized) && userStatus !== "active";
-      const tier = isLocked ? defaultTier2 : ["freelancer_free", "business_free"].includes(normalized) ? normalized : defaultTier2;
+      const tier = isLocked ? defaultTier2 : normalized || defaultTier2;
       return {
         tier,
         interval: "monthly",
@@ -144419,7 +144524,20 @@ subscriptionsRouter.get("/plans", async (req, res) => {
 subscriptionsRouter.get("/current", requireAuth3, async (req, res) => {
   try {
     const user = req.user;
-    const orgId = req.query.orgId || req.headers["x-organization-id"] || null;
+    let orgId = req.query.orgId || req.headers["x-organization-id"] || null;
+    if (!orgId) {
+      const { data: userProfile } = await supabaseAdmin.from("users").select("account_type, default_workspace_id").eq("id", user.id).maybeSingle();
+      if (userProfile?.account_type === "organization") {
+        if (userProfile.default_workspace_id) {
+          orgId = userProfile.default_workspace_id;
+        } else {
+          const { data: membership } = await supabaseAdmin.from("user_organizations").select("org_id").eq("user_id", user.id).limit(1).maybeSingle();
+          if (membership?.org_id) {
+            orgId = membership.org_id;
+          }
+        }
+      }
+    }
     if (orgId) {
       const { data: membership, error: memErr } = await supabaseAdmin.from("user_organizations").select("role").eq("user_id", user.id).eq("org_id", orgId).maybeSingle();
       if (memErr || !membership) {

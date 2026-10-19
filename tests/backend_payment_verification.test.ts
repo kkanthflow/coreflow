@@ -18,6 +18,7 @@ import {
   fallbackWebhookEvents,
   SubscriptionRecord,
 } from '../server/subscriptions/subscription.service.js';
+import { supabaseAdmin } from '../server/_core/supabase.js';
 
 function assert(condition: boolean, message: string) {
   if (!condition) {
@@ -30,6 +31,10 @@ async function runPaymentVerificationTestSuite() {
   console.log('  AUVRYN BACKEND PAYMENT VERIFICATION & SUBSCRIPTION STATUS TEST SUITE');
   console.log('  Testing 12 Comprehensive Acceptance Criteria in Razorpay Test Mode');
   console.log('================================================================================\n');
+
+  try {
+    await supabaseAdmin.from('subscriptions').delete().like('user_id', 'usr_test_%');
+  } catch {}
 
   let passedCount = 0;
   const testSecret = 'AoOKahZG7xU24Khmz0yyLy2O';

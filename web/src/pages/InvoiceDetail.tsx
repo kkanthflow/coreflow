@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { hasPermission } from '../lib/permissions';
 import {
-  ArrowLeft, Download, DollarSign, X, Trash2
+  ArrowLeft, Download, DollarSign, X, Trash2, Edit3
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -214,6 +214,14 @@ export default function InvoiceDetail() {
             >
               <ArrowLeft size={13} />
               <span>Invoices</span>
+            </button>
+            <button
+              onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-zinc-200 border border-divider text-xs font-medium transition-colors"
+              title="Open in Canva-style Invoice Studio"
+            >
+              <Edit3 size={13} className="text-[#FF6B4A]" />
+              <span>Studio Editor</span>
             </button>
             <button
               onClick={handleDownloadPDF}

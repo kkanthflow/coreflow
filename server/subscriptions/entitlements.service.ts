@@ -123,7 +123,7 @@ export class EntitlementsService {
         const isLocked = ['suspended', 'expired', 'pending'].includes(orgStatus) ||
           (normalized !== 'business_free' && orgStatus !== 'active');
 
-        const tier: PlanTier = isLocked ? defaultTier : (normalized === 'business_free' ? 'business_free' : defaultTier);
+        const tier: PlanTier = isLocked ? defaultTier : (normalized || defaultTier);
 
         return {
           tier,
@@ -154,7 +154,7 @@ export class EntitlementsService {
       const isLocked = ['suspended', 'expired', 'pending'].includes(userStatus) ||
         (!['freelancer_free', 'business_free'].includes(normalized) && userStatus !== 'active');
 
-      const tier: PlanTier = isLocked ? defaultTier : (['freelancer_free', 'business_free'].includes(normalized) ? normalized : defaultTier);
+      const tier: PlanTier = isLocked ? defaultTier : (normalized || defaultTier);
 
       return {
         tier,
@@ -253,6 +253,7 @@ export class EntitlementsService {
     activeProjectsCount: number;
     meetingsCount: number;
     teamSeatsCount: number;
+    workflowsCount: number;
   }> {
     const periodStartIso = params.period.start.toISOString();
     const periodEndIso = params.period.end.toISOString();

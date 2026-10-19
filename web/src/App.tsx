@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { lazy, Suspense, useState } from 'react';
+import { Suspense, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpBatchLink } from '@trpc/client';
 import superjson from 'superjson';
@@ -10,47 +10,48 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { trpc } from './lib/trpc';
 import { supabase } from './lib/supabase';
 import AppShell from './components/AppShell';
+import { lazyWithRetry } from './utils/lazyWithRetry';
 
 // Eagerly loaded
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Landing from './pages/Landing';
 
-// Lazy loaded pages (code-split)
-const RegisterSetup   = lazy(() => import('./pages/RegisterSetup'));
-const Dashboard       = lazy(() => import('./pages/Dashboard'));
-const WorkflowDashboard = lazy(() => import('./pages/workflows/WorkflowDashboard'));
-const WorkflowBuilder   = lazy(() => import('./pages/workflows/WorkflowBuilder'));
-const WorkflowTemplates = lazy(() => import('./pages/workflows/WorkflowTemplates'));
-const WorkflowHistory   = lazy(() => import('./pages/workflows/WorkflowHistory'));
-const WorkflowApprovals = lazy(() => import('./pages/workflows/WorkflowApprovals'));
-const Projects        = lazy(() => import('./pages/Projects'));
-const NewProject      = lazy(() => import('./pages/NewProject'));
-const ProjectDetails  = lazy(() => import('./pages/ProjectDetails'));
-const ClientProjectRoom = lazy(() => import('./pages/ClientProjectRoom'));
-const Tasks           = lazy(() => import('./pages/Tasks'));
-const Calendar        = lazy(() => import('./pages/Calendar'));
-const Meetings        = lazy(() => import('./pages/Meetings'));
-const NewMeeting      = lazy(() => import('./pages/NewMeeting'));
-const Chat            = lazy(() => import('./pages/Chat'));
-const ChatRoom        = lazy(() => import('./pages/ChatRoom'));
-const Employees       = lazy(() => import('./pages/Employees'));
-const EmployeeProfile = lazy(() => import('./pages/EmployeeProfile'));
-const Departments     = lazy(() => import('./pages/Departments'));
-const Clients         = lazy(() => import('./pages/Clients'));
-const Invoices        = lazy(() => import('./pages/Invoices'));
-const NewInvoice      = lazy(() => import('./pages/NewInvoice'));
-const InvoiceDetail   = lazy(() => import('./pages/InvoiceDetail'));
-const Payments        = lazy(() => import('./pages/Payments'));
-const Analytics       = lazy(() => import('./pages/Analytics'));
-const Settings        = lazy(() => import('./pages/Settings'));
-const PreJoin         = lazy(() => import('./pages/PreJoin'));
-const MeetingRoom     = lazy(() => import('./pages/MeetingRoom'));
-const AuditLogs       = lazy(() => import('./pages/AuditLogs'));
-const Privacy         = lazy(() => import('./pages/Privacy'));
-const Terms           = lazy(() => import('./pages/Terms'));
-const Contact         = lazy(() => import('./pages/Contact'));
-const Pricing         = lazy(() => import('./pages/Pricing'));
+// Lazy loaded pages with auto-recovery on new deployment chunk changes
+const RegisterSetup   = lazyWithRetry(() => import('./pages/RegisterSetup'));
+const Dashboard       = lazyWithRetry(() => import('./pages/Dashboard'));
+const WorkflowDashboard = lazyWithRetry(() => import('./pages/workflows/WorkflowDashboard'));
+const WorkflowBuilder   = lazyWithRetry(() => import('./pages/workflows/WorkflowBuilder'));
+const WorkflowTemplates = lazyWithRetry(() => import('./pages/workflows/WorkflowTemplates'));
+const WorkflowHistory   = lazyWithRetry(() => import('./pages/workflows/WorkflowHistory'));
+const WorkflowApprovals = lazyWithRetry(() => import('./pages/workflows/WorkflowApprovals'));
+const Projects        = lazyWithRetry(() => import('./pages/Projects'));
+const NewProject      = lazyWithRetry(() => import('./pages/NewProject'));
+const ProjectDetails  = lazyWithRetry(() => import('./pages/ProjectDetails'));
+const ClientProjectRoom = lazyWithRetry(() => import('./pages/ClientProjectRoom'));
+const Tasks           = lazyWithRetry(() => import('./pages/Tasks'));
+const Calendar        = lazyWithRetry(() => import('./pages/Calendar'));
+const Meetings        = lazyWithRetry(() => import('./pages/Meetings'));
+const NewMeeting      = lazyWithRetry(() => import('./pages/NewMeeting'));
+const Chat            = lazyWithRetry(() => import('./pages/Chat'));
+const ChatRoom        = lazyWithRetry(() => import('./pages/ChatRoom'));
+const Employees       = lazyWithRetry(() => import('./pages/Employees'));
+const EmployeeProfile = lazyWithRetry(() => import('./pages/EmployeeProfile'));
+const Departments     = lazyWithRetry(() => import('./pages/Departments'));
+const Clients         = lazyWithRetry(() => import('./pages/Clients'));
+const Invoices        = lazyWithRetry(() => import('./pages/Invoices'));
+const NewInvoice      = lazyWithRetry(() => import('./pages/NewInvoice'));
+const InvoiceDetail   = lazyWithRetry(() => import('./pages/InvoiceDetail'));
+const Payments        = lazyWithRetry(() => import('./pages/Payments'));
+const Analytics       = lazyWithRetry(() => import('./pages/Analytics'));
+const Settings        = lazyWithRetry(() => import('./pages/Settings'));
+const PreJoin         = lazyWithRetry(() => import('./pages/PreJoin'));
+const MeetingRoom     = lazyWithRetry(() => import('./pages/MeetingRoom'));
+const AuditLogs       = lazyWithRetry(() => import('./pages/AuditLogs'));
+const Privacy         = lazyWithRetry(() => import('./pages/Privacy'));
+const Terms           = lazyWithRetry(() => import('./pages/Terms'));
+const Contact         = lazyWithRetry(() => import('./pages/Contact'));
+const Pricing         = lazyWithRetry(() => import('./pages/Pricing'));
 
 function PageLoader() {
   return (
@@ -213,6 +214,7 @@ function App() {
                       <Route path="/invoices"  element={<Suspense fallback={<PageLoader />}><Invoices /></Suspense>} />
                       <Route path="/invoices/new" element={<Suspense fallback={<PageLoader />}><NewInvoice /></Suspense>} />
                       <Route path="/invoices/:id" element={<Suspense fallback={<PageLoader />}><InvoiceDetail /></Suspense>} />
+                      <Route path="/invoices/:id/edit" element={<Suspense fallback={<PageLoader />}><NewInvoice /></Suspense>} />
                       <Route path="/payments"  element={<Suspense fallback={<PageLoader />}><Payments /></Suspense>} />
                       
                       {/* Analytics & Settings & Audit Logs & Billing */}

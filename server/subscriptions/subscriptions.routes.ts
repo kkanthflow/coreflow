@@ -183,7 +183,32 @@ subscriptionsRouter.get('/plans', async (req: Request, res: Response) => {
 subscriptionsRouter.get('/current', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
-    const orgId = (req.query.orgId as string) || (req.headers['x-organization-id'] as string) || null;
+    let orgId = (req.query.orgId as string) || (req.headers['x-organization-id'] as string) || null;
+
+    // If orgId not provided in query/headers, automatically resolve it for organization accounts
+    if (!orgId) {
+      const { data: userProfile } = await supabaseAdmin
+        .from('users')
+        .select('account_type, default_workspace_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (userProfile?.account_type === 'organization') {
+        if (userProfile.default_workspace_id) {
+          orgId = userProfile.default_workspace_id;
+        } else {
+          const { data: membership } = await supabaseAdmin
+            .from('user_organizations')
+            .select('org_id')
+            .eq('user_id', user.id)
+            .limit(1)
+            .maybeSingle();
+          if (membership?.org_id) {
+            orgId = membership.org_id;
+          }
+        }
+      }
+    }
 
     // 1. Organization Context
     if (orgId) {
