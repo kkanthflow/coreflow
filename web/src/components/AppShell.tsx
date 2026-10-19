@@ -30,6 +30,8 @@ export default function AppShell() {
     setMousePos({ x, y });
   };
 
+  const isInvoiceStudio = location.pathname.startsWith('/invoices/new') || (location.pathname.startsWith('/invoices/') && location.pathname.endsWith('/edit'));
+
   return (
     <div 
       onPointerMove={handlePointerMove}
@@ -66,8 +68,8 @@ export default function AppShell() {
       <Sidebar />
       <div className="flex-1 flex flex-col h-full overflow-hidden relative z-10">
         <Topbar onOpenCommandPalette={() => setCommandPaletteOpen(true)} />
-        <main className="flex-1 overflow-auto bg-transparent p-4 sm:p-6 lg:p-7">
-          <div className="w-full max-w-[1700px] mx-auto h-full flex flex-col">
+        <main className={`flex-1 bg-transparent ${isInvoiceStudio ? 'p-0 overflow-hidden' : 'p-4 sm:p-6 lg:p-7 overflow-auto'}`}>
+          <div className={`w-full ${isInvoiceStudio ? 'max-w-none' : 'max-w-[1700px] mx-auto'} h-full flex flex-col`}>
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}

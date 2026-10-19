@@ -8,6 +8,7 @@ import { jsPDF } from 'jspdf';
 import {
   InvoiceStudioToolbar
 } from '../components/invoices/InvoiceStudioToolbar';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   InvoiceStudioLeftPanel
 } from '../components/invoices/InvoiceStudioLeftPanel';
@@ -68,6 +69,8 @@ export default function NewInvoice() {
 
   const { user } = useAuth();
   const { orgId, orgName, orgAddress, orgGst, defaultCurrency } = useWorkspace();
+  const { resolvedTheme, toggleTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
   const canvasRef = useRef<HTMLDivElement>(null);
   const viewportContainerRef = useRef<HTMLDivElement>(null);
 
@@ -826,7 +829,11 @@ export default function NewInvoice() {
   const selectedElement = activeDoc.elements.find((el) => el.id === selectedElementId) || null;
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem)] w-full overflow-hidden bg-[#07080B] text-zinc-100 font-sans">
+    <div
+      className={`flex flex-col h-[calc(100vh-3.5rem)] w-full overflow-hidden font-sans transition-colors ${
+        isDark ? 'bg-[#07080B] text-zinc-100' : 'bg-[#F4F4F6] text-zinc-900'
+      }`}
+    >
       {/* ── TOP WORKSPACE TOOLBAR ── */}
       <InvoiceStudioToolbar
         invoiceNumber={invoiceNumber}
@@ -850,6 +857,8 @@ export default function NewInvoice() {
         onCancel={() => navigate('/invoices')}
         isSaving={isSaving}
         isExistingInvoice={isExistingInvoice}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
       />
 
       {/* ── QUOTA & CONFLICT NOTIFICATIONS ── */}
@@ -931,29 +940,110 @@ export default function NewInvoice() {
             totalTax={totalTax}
             totalAmount={totalAmount}
             onAddCanvasElement={handleAddCanvasElement}
+            isDark={isDark}
           />
         )}
 
         {/* 2. CENTRAL INTERACTIVE A4 PREVIEW STAGE */}
         <main
           ref={viewportContainerRef}
-          className="flex-1 overflow-y-auto overflow-x-auto p-4 sm:p-8 flex flex-col items-center justify-start bg-[#0B0C10] relative select-none scrollbar-thin"
+          className={`flex-1 overflow-y-auto overflow-x-auto p-4 sm:p-8 flex flex-col items-center justify-start relative select-none scrollbar-thin transition-colors ${
+            isDark ? 'bg-[#0B0C10]' : 'bg-[#E4E4E7]'
+          }`}
           style={{
-            backgroundImage:
-              'radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.04) 1px, transparent 0)',
+            backgroundImage: isDark
+              ? 'radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.04) 1px, transparent 0)'
+              : 'radial-gradient(circle at 1px 1px, rgba(0, 0, 0, 0.06) 1px, transparent 0)',
             backgroundSize: '24px 24px',
           }}
         >
-          {/* Top Document Status Ribbon */}
-          <div className="w-full max-w-[800px] mb-3 flex items-center justify-between text-[11px] font-mono text-zinc-400 px-1">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span>A4 Interactive Studio Canvas (794 × 1123 px)</span>
-            </span>
-            <span className="text-zinc-500">
-              Rev: <strong className="text-zinc-300">{activeDoc.revision}</strong> ·{' '}
-              Layers: <strong className="text-zinc-300">{activeDoc.elements.length}</strong>
-            </span>
+          {/* Top Document Status & Quick Edit Ribbon */}
+          <div className="w-full max-w-[800px] mb-3 flex flex-wrap items-center justify-between gap-2 text-[11px] font-mono px-1">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 text-emerald-500 font-semibold">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>A4 Live Canvas</span>
+              </span>
+              <span className={isDark ? 'text-zinc-600' : 'text-zinc-400'}>|</span>
+              <span className={isDark ? 'text-zinc-400' : 'text-zinc-600'}>
+                Rev: <strong className={isDark ? 'text-zinc-200' : 'text-zinc-800'}>{activeDoc.revision}</strong> · Layers: <strong className={isDark ? 'text-zinc-200' : 'text-zinc-800'}>{activeDoc.elements.length}</strong>
+              </span>
+            </div>
+
+            {/* Direct Quick Edit Jump Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+              <button
+                type="button"
+                onClick={() => {
+                  const el = activeDoc.elements.find((e) => e.type === 'data-items-table');
+                  if (el) setSelectedElementId(el.id);
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold border transition-all ${
+                  selectedElement?.type === 'data-items-table'
+                    ? 'bg-[#FF6B4A] text-white border-[#FF6B4A] shadow-xs'
+                    : isDark
+                    ? 'bg-zinc-800/90 hover:bg-zinc-800 text-zinc-200 border-zinc-700 hover:border-[#FF6B4A]/50'
+                    : 'bg-white hover:bg-zinc-50 text-zinc-800 border-zinc-300 hover:border-[#FF6B4A]/50 shadow-2xs'
+                }`}
+                title="Edit Line Items, Rates & Quantities"
+              >
+                <span>✏️ Items ({items.length})</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const el = activeDoc.elements.find((e) => e.type === 'data-client');
+                  if (el) setSelectedElementId(el.id);
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold border transition-all ${
+                  selectedElement?.type === 'data-client'
+                    ? 'bg-[#FF6B4A] text-white border-[#FF6B4A] shadow-xs'
+                    : isDark
+                    ? 'bg-zinc-800/90 hover:bg-zinc-800 text-zinc-200 border-zinc-700 hover:border-[#FF6B4A]/50'
+                    : 'bg-white hover:bg-zinc-50 text-zinc-800 border-zinc-300 hover:border-[#FF6B4A]/50 shadow-2xs'
+                }`}
+                title="Select or edit client details"
+              >
+                <span>👤 Client</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const el = activeDoc.elements.find((e) => e.type === 'data-dates');
+                  if (el) setSelectedElementId(el.id);
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold border transition-all ${
+                  selectedElement?.type === 'data-dates'
+                    ? 'bg-[#FF6B4A] text-white border-[#FF6B4A] shadow-xs'
+                    : isDark
+                    ? 'bg-zinc-800/90 hover:bg-zinc-800 text-zinc-200 border-zinc-700 hover:border-[#FF6B4A]/50'
+                    : 'bg-white hover:bg-zinc-50 text-zinc-800 border-zinc-300 hover:border-[#FF6B4A]/50 shadow-2xs'
+                }`}
+                title="Edit Issue & Due Dates"
+              >
+                <span>📅 Dates</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const el = activeDoc.elements.find((e) => e.type === 'data-header');
+                  if (el) setSelectedElementId(el.id);
+                }}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold border transition-all ${
+                  selectedElement?.type === 'data-header'
+                    ? 'bg-[#FF6B4A] text-white border-[#FF6B4A] shadow-xs'
+                    : isDark
+                    ? 'bg-zinc-800/90 hover:bg-zinc-800 text-zinc-200 border-zinc-700 hover:border-[#FF6B4A]/50'
+                    : 'bg-white hover:bg-zinc-50 text-zinc-800 border-zinc-300 hover:border-[#FF6B4A]/50 shadow-2xs'
+                }`}
+                title="Edit Invoice Number & Organization"
+              >
+                <span>🏢 {invoiceNumber || 'INV-0001'}</span>
+              </button>
+            </div>
           </div>
 
           {/* Notice banner when using sample client data */}
@@ -1054,6 +1144,48 @@ export default function NewInvoice() {
               }
             }}
             onReorderElementLayer={handleReorderLayer}
+            onDeselectElement={() => setSelectedElementId(null)}
+            items={items}
+            onAddItem={handleAddItem}
+            onRemoveItem={handleRemoveItem}
+            onUpdateItem={handleUpdateItem}
+            subtotal={subtotal}
+            totalTax={totalTax}
+            totalAmount={totalAmount}
+            clients={clients}
+            clientId={clientId}
+            onClientChange={(id) => {
+              setClientId(id);
+              setSaveStatus('dirty');
+            }}
+            onOpenCreateClientModal={() => setIsClientModalOpen(true)}
+            issueDate={issueDate}
+            onIssueDateChange={(val) => {
+              setIssueDate(val);
+              setSaveStatus('dirty');
+            }}
+            dueDate={dueDate}
+            onDueDateChange={(val) => {
+              setDueDate(val);
+              setSaveStatus('dirty');
+            }}
+            currency={currency}
+            onCurrencyChange={(val) => {
+              setCurrency(val);
+              setSaveStatus('dirty');
+            }}
+            invoiceNumber={invoiceNumber}
+            onInvoiceNumberChange={(val) => {
+              setInvoiceNumber(val);
+              setSaveStatus('dirty');
+            }}
+            seller={{
+              name: orgName || user?.user_metadata?.full_name || 'My Business',
+              address: orgAddress,
+              gst: orgGst,
+              email: user?.email,
+            }}
+            isDark={isDark}
           />
         )}
       </div>
@@ -1061,8 +1193,12 @@ export default function NewInvoice() {
       {/* ── QUICK REGISTER CLIENT MODAL ── */}
       {isClientModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-fadeIn">
-          <div className="bg-[#12131A] border border-zinc-800 rounded-xl w-full max-w-md p-6 shadow-2xl relative text-zinc-100">
-            <div className="flex items-center justify-between pb-3 border-b border-zinc-800/80 mb-4">
+          <div className={`rounded-xl w-full max-w-md p-6 shadow-2xl relative border ${
+            isDark ? 'bg-[#12131A] border-zinc-800 text-zinc-100' : 'bg-white border-zinc-200 text-zinc-900'
+          }`}>
+            <div className={`flex items-center justify-between pb-3 border-b mb-4 ${
+              isDark ? 'border-zinc-800/80' : 'border-zinc-200'
+            }`}>
               <div className="flex items-center gap-2">
                 <Users size={18} className="text-[#FF6B4A]" />
                 <h3 className="font-bold text-sm">Register Client Account</h3>
@@ -1073,7 +1209,7 @@ export default function NewInvoice() {
                   setIsClientModalOpen(false);
                   setClientSaveError(null);
                 }}
-                className="text-zinc-400 hover:text-zinc-100 transition-colors"
+                className={`transition-colors ${isDark ? 'text-zinc-400 hover:text-zinc-100' : 'text-zinc-500 hover:text-zinc-900'}`}
               >
                 <X size={16} />
               </button>
@@ -1081,7 +1217,9 @@ export default function NewInvoice() {
 
             <form onSubmit={handleCreateClient} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-[11px] font-mono text-zinc-400 uppercase font-semibold mb-1">
+                <label className={`block text-[11px] font-mono uppercase font-semibold mb-1 ${
+                  isDark ? 'text-zinc-400' : 'text-zinc-600'
+                }`}>
                   Contact / Client Name *
                 </label>
                 <input
@@ -1090,12 +1228,16 @@ export default function NewInvoice() {
                   placeholder="e.g. Alex Morgan"
                   value={newClientName}
                   onChange={(e) => setNewClientName(e.target.value)}
-                  className="w-full bg-[#0A0B0E] border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]"
+                  className={`w-full rounded-lg px-3 py-2 border focus:outline-none focus:border-[#FF6B4A] ${
+                    isDark ? 'bg-[#0A0B0E] border-zinc-800 text-zinc-200 placeholder-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400'
+                  }`}
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono text-zinc-400 uppercase font-semibold mb-1">
+                <label className={`block text-[11px] font-mono uppercase font-semibold mb-1 ${
+                  isDark ? 'text-zinc-400' : 'text-zinc-600'
+                }`}>
                   Company / Organization Name
                 </label>
                 <input
@@ -1103,13 +1245,17 @@ export default function NewInvoice() {
                   placeholder="e.g. Acme Technologies Pvt Ltd"
                   value={newClientCompany}
                   onChange={(e) => setNewClientCompany(e.target.value)}
-                  className="w-full bg-[#0A0B0E] border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]"
+                  className={`w-full rounded-lg px-3 py-2 border focus:outline-none focus:border-[#FF6B4A] ${
+                    isDark ? 'bg-[#0A0B0E] border-zinc-800 text-zinc-200 placeholder-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400'
+                  }`}
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-mono text-zinc-400 uppercase font-semibold mb-1">
+                  <label className={`block text-[11px] font-mono uppercase font-semibold mb-1 ${
+                    isDark ? 'text-zinc-400' : 'text-zinc-600'
+                  }`}>
                     Email Address
                   </label>
                   <input
@@ -1117,11 +1263,15 @@ export default function NewInvoice() {
                     placeholder="billing@acme.com"
                     value={newClientEmail}
                     onChange={(e) => setNewClientEmail(e.target.value)}
-                    className="w-full bg-[#0A0B0E] border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]"
+                    className={`w-full rounded-lg px-3 py-2 border focus:outline-none focus:border-[#FF6B4A] ${
+                      isDark ? 'bg-[#0A0B0E] border-zinc-800 text-zinc-200 placeholder-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-mono text-zinc-400 uppercase font-semibold mb-1">
+                  <label className={`block text-[11px] font-mono uppercase font-semibold mb-1 ${
+                    isDark ? 'text-zinc-400' : 'text-zinc-600'
+                  }`}>
                     Phone Number
                   </label>
                   <input
@@ -1129,14 +1279,18 @@ export default function NewInvoice() {
                     placeholder="+91 98765 43210"
                     value={newClientPhone}
                     onChange={(e) => setNewClientPhone(e.target.value)}
-                    className="w-full bg-[#0A0B0E] border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]"
+                    className={`w-full rounded-lg px-3 py-2 border focus:outline-none focus:border-[#FF6B4A] ${
+                      isDark ? 'bg-[#0A0B0E] border-zinc-800 text-zinc-200 placeholder-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400'
+                    }`}
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[11px] font-mono text-zinc-400 uppercase font-semibold mb-1">
+                  <label className={`block text-[11px] font-mono uppercase font-semibold mb-1 ${
+                    isDark ? 'text-zinc-400' : 'text-zinc-600'
+                  }`}>
                     GSTIN / Tax ID
                   </label>
                   <input
@@ -1144,11 +1298,15 @@ export default function NewInvoice() {
                     placeholder="29ABCDE1234F1Z5"
                     value={newClientGst}
                     onChange={(e) => setNewClientGst(e.target.value)}
-                    className="w-full bg-[#0A0B0E] border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 uppercase font-mono placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]"
+                    className={`w-full rounded-lg px-3 py-2 uppercase font-mono border focus:outline-none focus:border-[#FF6B4A] ${
+                      isDark ? 'bg-[#0A0B0E] border-zinc-800 text-zinc-200 placeholder-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400'
+                    }`}
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-mono text-zinc-400 uppercase font-semibold mb-1">
+                  <label className={`block text-[11px] font-mono uppercase font-semibold mb-1 ${
+                    isDark ? 'text-zinc-400' : 'text-zinc-600'
+                  }`}>
                     Billing Address
                   </label>
                   <input
@@ -1156,7 +1314,9 @@ export default function NewInvoice() {
                     placeholder="City, State, Country"
                     value={newClientAddress}
                     onChange={(e) => setNewClientAddress(e.target.value)}
-                    className="w-full bg-[#0A0B0E] border border-zinc-800 rounded-lg px-3 py-2 text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]"
+                    className={`w-full rounded-lg px-3 py-2 border focus:outline-none focus:border-[#FF6B4A] ${
+                      isDark ? 'bg-[#0A0B0E] border-zinc-800 text-zinc-200 placeholder-zinc-600' : 'bg-zinc-50 border-zinc-200 text-zinc-900 placeholder-zinc-400'
+                    }`}
                   />
                 </div>
               </div>
@@ -1167,14 +1327,18 @@ export default function NewInvoice() {
                 </div>
               )}
 
-              <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-zinc-800/80">
+              <div className={`flex items-center justify-end gap-2.5 pt-3 border-t ${
+                isDark ? 'border-zinc-800/80' : 'border-zinc-200'
+              }`}>
                 <button
                   type="button"
                   onClick={() => {
                     setIsClientModalOpen(false);
                     setClientSaveError(null);
                   }}
-                  className="px-3.5 py-1.5 rounded-lg border border-zinc-700 text-zinc-300 hover:bg-zinc-800 text-xs font-semibold transition-colors"
+                  className={`px-3.5 py-1.5 rounded-lg border text-xs font-semibold transition-colors ${
+                    isDark ? 'border-zinc-700 text-zinc-300 hover:bg-zinc-800' : 'border-zinc-300 text-zinc-700 hover:bg-zinc-100'
+                  }`}
                 >
                   Cancel
                 </button>

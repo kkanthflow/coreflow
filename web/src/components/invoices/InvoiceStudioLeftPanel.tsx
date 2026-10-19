@@ -13,7 +13,8 @@ import {
   AlignLeft,
   Square,
   Circle,
-  Minus
+  Minus,
+  Edit3
 } from 'lucide-react';
 import { INVOICE_TEMPLATES } from './templateGalleryData';
 import type {
@@ -51,6 +52,7 @@ interface InvoiceStudioLeftPanelProps {
   totalTax: number;
   totalAmount: number;
   onAddCanvasElement?: (element: CanvasElement) => void;
+  isDark?: boolean;
 }
 
 export function InvoiceStudioLeftPanel({
@@ -78,6 +80,7 @@ export function InvoiceStudioLeftPanel({
   totalTax,
   totalAmount,
   onAddCanvasElement,
+  isDark = true,
 }: InvoiceStudioLeftPanelProps) {
   const [templateCategoryFilter, setTemplateCategoryFilter] = useState<string>('All');
 
@@ -146,16 +149,24 @@ export function InvoiceStudioLeftPanel({
   };
 
   return (
-    <aside className="w-80 md:w-96 flex flex-col border-r border-zinc-800 bg-[#0E0F15] text-[#F5F5F5] h-full shrink-0 select-none">
+    <aside className={`w-80 md:w-96 flex flex-col border-r h-full shrink-0 select-none transition-colors ${
+      isDark
+        ? 'border-zinc-800 bg-[#0E0F15] text-[#F5F5F5]'
+        : 'border-zinc-200 bg-white text-zinc-900 shadow-xs'
+    }`}>
       {/* Sidebar Icon Navigation Rail */}
-      <div className="flex items-center justify-between border-b border-zinc-800 p-1.5 bg-[#0A0B10] text-xs font-mono overflow-x-auto scrollbar-none">
+      <div className={`flex items-center justify-between border-b p-1.5 text-xs font-mono overflow-x-auto scrollbar-none ${
+        isDark ? 'border-zinc-800 bg-[#0A0B10]' : 'border-zinc-200 bg-zinc-50'
+      }`}>
         <button
           type="button"
           onClick={() => onTabChange('templates')}
           className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
             activeTab === 'templates'
               ? 'bg-[#FF6B4A] text-white shadow-sm'
-              : 'text-[#A1A1AA] hover:text-[#F5F5F5]'
+              : isDark
+              ? 'text-[#A1A1AA] hover:text-[#F5F5F5]'
+              : 'text-zinc-600 hover:text-zinc-900'
           }`}
           title="Browse 8 Original Template Designs"
         >
@@ -166,24 +177,33 @@ export function InvoiceStudioLeftPanel({
         <button
           type="button"
           onClick={() => onTabChange('text')}
-          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all shrink-0 ${
             activeTab === 'text'
               ? 'bg-[#FF6B4A] text-white shadow-sm'
-              : 'text-[#A1A1AA] hover:text-[#F5F5F5]'
+              : isDark
+              ? 'text-[#A1A1AA] hover:text-[#F5F5F5] hover:bg-zinc-800/50'
+              : 'text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100'
           }`}
-          title="Invoice Content & Text Entry"
+          title="Edit Invoice Content & Line Items"
         >
-          <FileText size={13} />
-          <span>Text</span>
+          <Edit3 size={13} />
+          <span>Edit Content</span>
+          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
+            activeTab === 'text' ? 'bg-white/20 text-white' : 'bg-[#FF6B4A]/20 text-[#FF6B4A]'
+          }`}>
+            {items.length}
+          </span>
         </button>
 
         <button
           type="button"
           onClick={() => onTabChange('shapes')}
-          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
+          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
             activeTab === 'shapes'
               ? 'bg-[#FF6B4A] text-white shadow-sm'
-              : 'text-[#A1A1AA] hover:text-[#F5F5F5]'
+              : isDark
+              ? 'text-[#A1A1AA] hover:text-[#F5F5F5]'
+              : 'text-zinc-600 hover:text-zinc-900'
           }`}
           title="Shapes & Layout Accents"
         >
@@ -194,10 +214,12 @@ export function InvoiceStudioLeftPanel({
         <button
           type="button"
           onClick={() => onTabChange('images')}
-          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
+          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
             activeTab === 'images'
               ? 'bg-[#FF6B4A] text-white shadow-sm'
-              : 'text-[#A1A1AA] hover:text-[#F5F5F5]'
+              : isDark
+              ? 'text-[#A1A1AA] hover:text-[#F5F5F5]'
+              : 'text-zinc-600 hover:text-zinc-900'
           }`}
           title="Logos, Stamps & Imagery"
         >
@@ -208,10 +230,12 @@ export function InvoiceStudioLeftPanel({
         <button
           type="button"
           onClick={() => onTabChange('elements')}
-          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
+          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
             activeTab === 'elements'
               ? 'bg-[#FF6B4A] text-white shadow-sm'
-              : 'text-[#A1A1AA] hover:text-[#F5F5F5]'
+              : isDark
+              ? 'text-[#A1A1AA] hover:text-[#F5F5F5]'
+              : 'text-zinc-600 hover:text-zinc-900'
           }`}
           title="Functional Blocks & Layout Elements"
         >

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, forwardRef } from 'react';
+import { Edit3 } from 'lucide-react';
 import type {
   AlignmentGuide,
   CanvasElement,
@@ -481,6 +482,23 @@ export const StudioInteractiveCanvas = forwardRef<HTMLDivElement, StudioInteract
                   totalDiscount={totalDiscount}
                   totalAmount={totalAmount}
                 />
+
+                {/* ── VISIBLE EDITABLE INDICATOR BADGE ── */}
+                {!previewMode && (isHovered || isSelected) && (
+                  <div
+                    className={`absolute -top-7 left-0 px-2 py-0.5 rounded text-[10px] font-mono font-bold flex items-center gap-1 shadow-md pointer-events-none z-[10001] transition-all whitespace-nowrap select-none ${
+                      isSelected
+                        ? 'bg-[#FF6B4A] text-white ring-1 ring-white/30'
+                        : 'bg-zinc-900/90 text-zinc-100 border border-zinc-700/80 backdrop-blur-xs'
+                    }`}
+                  >
+                    <Edit3 size={10} className={isSelected ? 'text-white' : 'text-[#FF6B4A]'} />
+                    <span>{element.name || 'Editable Element'}</span>
+                    <span className="text-[9px] opacity-80 font-normal">
+                      · {isSelected ? 'Editing in Panel' : 'Click to edit'}
+                    </span>
+                  </div>
+                )}
 
                 {/* Transform Box with 8 Resize Handles + Rotation Handle */}
                 {!previewMode && (
