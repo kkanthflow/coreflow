@@ -21,9 +21,13 @@ import {
   Sparkles,
   Check,
   Menu,
-  X
+  X,
+  Users,
+  Briefcase,
+  Clock
 } from 'lucide-react';
 import AuvrynLogo from '../components/AuvrynLogo';
+import { ORGANIZATION_PLANS } from '../lib/plans';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -962,187 +966,128 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* 3 Tier Cards Grid */}
+        {/* 3 Tier Organization Cards Grid (Matching Real Account System) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-stretch">
-          
-          {/* 1. Freelancer */}
-          <div className="rounded-2xl flex flex-col justify-between bg-card-bg border border-divider hover:border-white/20 p-7 space-y-6 shadow-xl transition-all">
-            <div className="space-y-4">
-              <div>
-                <span className="text-[11px] font-mono text-zinc-400 tracking-wider uppercase font-semibold">Individual Workspace</span>
-                <h3 className="text-2xl font-bold text-main mt-0.5">Freelancer</h3>
-                <p className="text-xs text-muted mt-1 leading-relaxed">Solo specialists, independent consultants, and verified operators.</p>
-              </div>
+          {ORGANIZATION_PLANS.map((plan) => {
+            const isFree = plan.priceMonthly === 0;
+            const price = landingBillingInterval === 'monthly'
+              ? plan.priceMonthly
+              : (plan.priceMonthly === 399 ? 3990 : plan.priceMonthly === 499 ? 4990 : 0);
+            const effectiveMonthly = plan.priceMonthly === 399 ? 332 : plan.priceMonthly === 499 ? 415 : 0;
 
-              <div className="pt-2 pb-4 border-b border-divider">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-4xl font-extrabold font-mono text-main">
-                    ₹{landingBillingInterval === 'monthly' ? '299' : '2,990'}
-                  </span>
-                  <span className="text-xs font-mono text-muted">
-                    / {landingBillingInterval === 'monthly' ? 'month' : 'year'}
-                  </span>
-                </div>
-                {landingBillingInterval === 'yearly' && (
-                  <p className="text-[11px] font-mono text-emerald-400 mt-1">₹249/mo effective · 2 months free</p>
+            return (
+              <div
+                key={plan.tier}
+                className={`rounded-2xl flex flex-col justify-between p-7 space-y-6 transition-all duration-300 relative ${
+                  plan.isPopular
+                    ? 'bg-card-bg border-2 border-[#FF6B4A] shadow-[0_0_35px_rgba(255,107,74,0.25)] ring-1 ring-[#FF6B4A]/25'
+                    : 'bg-card-bg border border-divider hover:border-black/20 dark:hover:border-white/20 shadow-xl'
+                }`}
+              >
+                {/* Enterprise Power / Most Popular Badge */}
+                {plan.badge && (
+                  <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3.5 py-1 bg-[#FF6B4A] text-white text-[10px] font-mono font-bold tracking-wider rounded-full shadow-[0_0_12px_#FF6B4A] uppercase">
+                    {plan.badge}
+                  </div>
                 )}
-              </div>
 
-              <div className="space-y-2.5 text-xs font-mono">
-                <div className="flex justify-between py-1 border-b border-divider/50">
-                  <span className="text-muted">Workspace Member:</span>
-                  <span className="text-main font-semibold">1 User Seat</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-divider/50">
-                  <span className="text-muted">Invoices Quota:</span>
-                  <span className="text-main font-semibold">15 / month</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-divider/50">
-                  <span className="text-muted">Active Projects:</span>
-                  <span className="text-main font-semibold">5 Projects</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-divider/50">
-                  <span className="text-muted">Secure Meetings:</span>
-                  <span className="text-main font-semibold">20 / month</span>
-                </div>
-              </div>
+                <div className="space-y-4">
+                  {/* Title & Tagline */}
+                  <div>
+                    <h3 className="text-2xl font-bold text-main mt-0.5">{plan.name}</h3>
+                    <p className="text-xs text-muted mt-1 leading-relaxed min-h-[32px]">{plan.tagline}</p>
+                  </div>
 
-              <div className="space-y-2 pt-2 text-xs text-muted">
-                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Automated PDF invoice generation</span></div>
-                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Basic telemetry ledger</span></div>
-                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>NIST P-256 encrypted chat</span></div>
-              </div>
-            </div>
+                  {/* Pricing Display */}
+                  <div className="pt-2 pb-4 border-b border-divider">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-4xl font-extrabold font-mono text-main">
+                        ₹{isFree ? '0' : price.toLocaleString('en-IN')}
+                      </span>
+                      <span className="text-xs font-mono text-muted">
+                        / {isFree ? 'month' : (landingBillingInterval === 'monthly' ? 'month' : 'year')}
+                      </span>
+                    </div>
+                    <div className="text-[11px] font-mono text-muted mt-1">
+                      {isFree
+                        ? 'No credit card required'
+                        : landingBillingInterval === 'yearly'
+                        ? <span className="text-emerald-400">₹{effectiveMonthly}/mo effective · 2 months free</span>
+                        : 'Billed monthly via Razorpay'}
+                    </div>
+                  </div>
 
-            <Link
-              to={`/pricing?plan=freelancer&interval=${landingBillingInterval}`}
-              aria-label="Get Started with Freelancer Plan"
-              className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-main border border-divider text-center transition-all flex items-center justify-center gap-2"
-            >
-              <span>Get Started →</span>
-            </Link>
-          </div>
+                  {/* Key Quota Limits */}
+                  <div className="space-y-2.5 text-xs font-mono text-muted">
+                    <div className="flex justify-between items-center py-1 border-b border-divider/60">
+                      <span className="flex items-center gap-1.5 text-muted">
+                        <Users size={13} className="text-[#FF6B4A]" /> Seats:
+                      </span>
+                      <span className="text-main font-semibold">{plan.limits.seats}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-divider/60">
+                      <span className="flex items-center gap-1.5 text-muted">
+                        <Briefcase size={13} className="text-[#FF6B4A]" /> Projects:
+                      </span>
+                      <span className="text-main font-semibold">{plan.limits.projects}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-divider/60">
+                      <span className="flex items-center gap-1.5 text-muted">
+                        <Sparkles size={13} className="text-[#FF6B4A]" /> Workflows:
+                      </span>
+                      <span className="text-main font-semibold">{plan.limits.workflows}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-1 border-b border-divider/60">
+                      <span className="flex items-center gap-1.5 text-muted">
+                        <Clock size={13} className="text-[#FF6B4A]" /> History:
+                      </span>
+                      <span className="text-main font-semibold">{plan.limits.history}</span>
+                    </div>
+                  </div>
 
-          {/* 2. Business Starter */}
-          <div className="rounded-2xl flex flex-col justify-between bg-card-bg border border-divider hover:border-white/20 p-7 space-y-6 shadow-xl transition-all">
-            <div className="space-y-4">
-              <div>
-                <span className="text-[11px] font-mono text-zinc-400 tracking-wider uppercase font-semibold">Small Agency & Studio</span>
-                <h3 className="text-2xl font-bold text-main mt-0.5">Business Starter</h3>
-                <p className="text-xs text-muted mt-1 leading-relaxed">Growing agile units, boutique consultancies, and multi-disciplinary teams.</p>
-              </div>
-
-              <div className="pt-2 pb-4 border-b border-divider">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-4xl font-extrabold font-mono text-main">
-                    ₹{landingBillingInterval === 'monthly' ? '399' : '3,990'}
-                  </span>
-                  <span className="text-xs font-mono text-muted">
-                    / {landingBillingInterval === 'monthly' ? 'month' : 'year'}
-                  </span>
+                  {/* Feature Checklist */}
+                  <div className="space-y-2 pt-2 text-xs text-muted">
+                    {plan.features.map((feat, idx) => (
+                      <div key={idx} className="flex items-start gap-2">
+                        <Check size={14} className="text-emerald-500 dark:text-emerald-400 shrink-0 mt-0.5" />
+                        <span>{feat}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-                {landingBillingInterval === 'yearly' && (
-                  <p className="text-[11px] font-mono text-emerald-400 mt-1">₹332/mo effective · 2 months free</p>
-                )}
-              </div>
 
-              <div className="space-y-2.5 text-xs font-mono">
-                <div className="flex justify-between py-1 border-b border-divider/50">
-                  <span className="text-muted">Team Members:</span>
-                  <span className="text-main font-semibold">Up to 5 Users</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-divider/50">
-                  <span className="text-muted">Invoices Quota:</span>
-                  <span className="text-main font-semibold">100 / month</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-divider/50">
-                  <span className="text-muted">Active Projects:</span>
-                  <span className="text-main font-semibold">25 Projects</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-divider/50">
-                  <span className="text-muted">Conferencing:</span>
-                  <span className="text-main font-semibold">100 / month + Recordings</span>
-                </div>
-              </div>
-
-              <div className="space-y-2 pt-2 text-xs text-muted">
-                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Role-based access control (RBAC)</span></div>
-                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Standard velocity telemetry</span></div>
-                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Priority ticketing & email support</span></div>
-              </div>
-            </div>
-
-            <Link
-              to={`/pricing?plan=starter&interval=${landingBillingInterval}`}
-              aria-label="Grow with Auvryn Starter Plan"
-              className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-white/10 hover:bg-white/15 text-main border border-divider text-center transition-all flex items-center justify-center gap-2"
-            >
-              <span>Grow with Auvryn →</span>
-            </Link>
-          </div>
-
-          {/* 3. Auvryn Pro (Featured) */}
-          <div className="relative rounded-2xl flex flex-col justify-between bg-card-bg border-2 border-[#FF6B4A] p-7 space-y-6 shadow-[0_0_35px_rgba(255,107,74,0.25)] transition-all">
-            <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 px-3 py-1 bg-[#FF6B4A] text-white text-[10px] font-mono font-bold tracking-wider rounded-full shadow-[0_0_12px_#FF6B4A]">
-              MOST POPULAR
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <span className="text-[11px] font-mono text-[#FF6B4A] tracking-wider uppercase font-semibold">Uncapped Velocity</span>
-                <h3 className="text-2xl font-bold text-main mt-0.5">Auvryn Pro</h3>
-                <p className="text-xs text-muted mt-1 leading-relaxed">Enterprise scaling with zero arbitrary seat limits and uncapped quotas.</p>
-              </div>
-
-              <div className="pt-2 pb-4 border-b border-divider">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-4xl font-extrabold font-mono text-main">
-                    ₹{landingBillingInterval === 'monthly' ? '499' : '4,990'}
-                  </span>
-                  <span className="text-xs font-mono text-muted">
-                    / {landingBillingInterval === 'monthly' ? 'month' : 'year'}
-                  </span>
-                </div>
-                {landingBillingInterval === 'yearly' && (
-                  <p className="text-[11px] font-mono text-emerald-400 mt-1">₹415/mo effective · 2 months free</p>
-                )}
-              </div>
-
-              <div className="space-y-2.5 text-xs font-mono">
-                <div className="flex justify-between py-1 border-b border-divider/50">
-                  <span className="text-muted">Team Members:</span>
-                  <span className="text-emerald-400 font-bold">Unlimited (No Cap)</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-divider/50">
-                  <span className="text-muted">Invoices Quota:</span>
-                  <span className="text-emerald-400 font-bold">Unlimited Invoices</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-divider/50">
-                  <span className="text-muted">Active Projects:</span>
-                  <span className="text-emerald-400 font-bold">Unlimited Projects</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-divider/50">
-                  <span className="text-muted">Conferencing:</span>
-                  <span className="text-emerald-400 font-bold">Unlimited Meetings</span>
+                {/* Call To Action Button */}
+                <div className="pt-2">
+                  {isFree ? (
+                    <Link
+                      to="/register?plan=business_free"
+                      aria-label="Start with Business Free Plan"
+                      className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-center transition-all flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle2 size={14} />
+                      <span>Start with Business Free →</span>
+                    </Link>
+                  ) : plan.isPopular ? (
+                    <Link
+                      to={`/pricing?plan=business_pro&interval=${landingBillingInterval}`}
+                      aria-label="Upgrade to Business Pro Plan"
+                      className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#FF6B4A] hover:bg-[#FF552B] text-white shadow-[0_0_20px_rgba(255,107,74,0.4)] text-center transition-all flex items-center justify-center gap-2"
+                    >
+                      <span>Upgrade to Business Pro →</span>
+                    </Link>
+                  ) : (
+                    <Link
+                      to={`/pricing?plan=business_starter&interval=${landingBillingInterval}`}
+                      aria-label="Upgrade to Business Starter Plan"
+                      className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#FF6B4A]/10 hover:bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30 text-center transition-all flex items-center justify-center gap-2"
+                    >
+                      <span>Upgrade to Business Starter →</span>
+                    </Link>
+                  )}
                 </div>
               </div>
-
-              <div className="space-y-2 pt-2 text-xs text-muted">
-                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Unlimited telemetry & deep audit trails</span></div>
-                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Multi-currency billing & custom payment rails</span></div>
-                <div className="flex items-center gap-2"><Check size={14} className="text-[#FF6B4A]" /><span>Dedicated 24/7 priority SLA support</span></div>
-              </div>
-            </div>
-
-            <Link
-              to={`/pricing?plan=pro&interval=${landingBillingInterval}`}
-              aria-label="Unlock Auvryn Pro Plan"
-              className="w-full py-3 px-4 rounded-xl text-xs font-semibold bg-[#FF6B4A] hover:bg-[#FF552B] text-white shadow-[0_0_20px_rgba(255,107,74,0.4)] text-center transition-all flex items-center justify-center gap-2"
-            >
-              <span>Unlock Auvryn Pro →</span>
-            </Link>
-          </div>
-
+            );
+          })}
         </div>
 
         {/* Link to Full Pricing & Comparison Matrix */}
