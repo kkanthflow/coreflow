@@ -162,4 +162,90 @@ export const causalityApi = {
     }
     return res.json();
   },
+
+  async createProjectInvite(payload: {
+    projectId: string;
+    clientId?: string;
+    email?: string;
+    name?: string;
+    canView?: boolean;
+    canApprove?: boolean;
+    canRequestChanges?: boolean;
+    canViewFinancials?: boolean;
+    canViewReceipts?: boolean;
+  }) {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE}/causality/invite-client`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to create client invitation');
+    }
+    return res.json();
+  },
+
+  async listProjectInvites(projectId: string) {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE}/causality/invites?projectId=${projectId}`, { headers });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to fetch project invites');
+    }
+    return res.json();
+  },
+
+  async getInviteDetails(token: string) {
+    const res = await fetch(`${API_BASE}/causality/invite-details?token=${encodeURIComponent(token)}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to fetch invitation details');
+    }
+    return res.json();
+  },
+
+  async acceptProjectInvite(token: string) {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE}/causality/accept-invite`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to accept invitation');
+    }
+    return res.json();
+  },
+
+  async resendProjectInvite(inviteId: string) {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE}/causality/resend-invite`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inviteId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to resend invitation');
+    }
+    return res.json();
+  },
+
+  async revokeProjectInvite(inviteId: string) {
+    const headers = await getAuthHeader();
+    const res = await fetch(`${API_BASE}/causality/revoke-invite`, {
+      method: 'POST',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ inviteId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || 'Failed to revoke invitation');
+    }
+    return res.json();
+  },
 };
+

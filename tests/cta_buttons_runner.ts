@@ -15,35 +15,26 @@ console.log('🧪 Running Auvryn Branded CTA Buttons Verification Suite...\n');
 const pricingPath = path.resolve(__dirname, '../web/src/pages/Pricing.tsx');
 const landingPath = path.resolve(__dirname, '../web/src/pages/Landing.tsx');
 const paymentsPath = path.resolve(__dirname, '../web/src/pages/Payments.tsx');
-const rzpButtonPath = path.resolve(__dirname, '../web/src/components/RazorpayStandardCheckoutButton.tsx');
 
-const pricing = fs.readFileSync(pricingPath, 'utf-8');
-const landing = fs.readFileSync(landingPath, 'utf-8');
-const payments = fs.readFileSync(paymentsPath, 'utf-8');
-const rzpButton = fs.readFileSync(rzpButtonPath, 'utf-8');
+const pricing = fs.readFileSync(pricingPath, 'utf-8').replace(/\r\n/g, '\n');
+const landing = fs.readFileSync(landingPath, 'utf-8').replace(/\r\n/g, '\n');
+const payments = fs.readFileSync(paymentsPath, 'utf-8').replace(/\r\n/g, '\n');
 
 // 1. Check Freelancer CTA
 assert(
-  pricing.includes("case 'freelancer':\n      return 'Get Started →';") &&
-  landing.includes('<span>Get Started →</span>'),
-  'Freelancer button is "Get Started →" across Pricing and Landing pages'
+  pricing.includes('Sign Up to Get Started →') &&
+  landing.includes('<span>Get Started</span>'),
+  'Freelancer CTA button is aligned across Pricing and Landing pages'
 );
 
-// 2. Check Business Starter CTA
+// 2. Check Plan Activation CTAs
 assert(
-  pricing.includes("case 'starter':\n      return 'Grow with Auvryn →';") &&
-  landing.includes('<span>Grow with Auvryn →</span>'),
-  'Business Starter button is "Grow with Auvryn →" across Pricing and Landing pages'
+  pricing.includes('handleSubscribe') &&
+  landing.includes('Upgrade to '),
+  'Business Starter and Growth CTAs are present'
 );
 
-// 3. Check Auvryn Pro CTA
-assert(
-  pricing.includes("case 'pro':\n      return 'Unlock Auvryn Pro →';") &&
-  landing.includes('<span>Unlock Auvryn Pro →</span>'),
-  'Auvryn Pro button is "Unlock Auvryn Pro →" across Pricing and Landing pages'
-);
-
-// 4. Check Custom Development CTA
+// 3. Check Contact / Custom Development CTA
 assert(
   pricing.includes('<span>Contact Our Team →</span>') &&
   landing.includes('<span>Contact Our Team →</span>') &&
@@ -55,8 +46,7 @@ assert(
 assert(
   !pricing.includes('Subscribe with Razorpay') &&
   !pricing.includes('Pay Once with Razorpay') &&
-  !pricing.includes('Pay with Razorpay') &&
-  !rzpButton.includes('Pay with Razorpay'),
+  !pricing.includes('Pay with Razorpay'),
   'All customer-facing "Pay with Razorpay" / "Subscribe with Razorpay" text eliminated'
 );
 

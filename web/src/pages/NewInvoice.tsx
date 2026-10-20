@@ -8,6 +8,7 @@ import { jsPDF } from 'jspdf';
 import {
   InvoiceStudioToolbar
 } from '../components/invoices/InvoiceStudioToolbar';
+import { toast } from '../components/ui/Toast';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   InvoiceStudioLeftPanel
@@ -67,7 +68,7 @@ export default function NewInvoice() {
   const { id: routeInvoiceId } = useParams<{ id?: string }>();
   const isExistingInvoice = Boolean(routeInvoiceId);
 
-  const { user } = useAuth();
+  const { user, role } = useAuth();
   const { orgId, orgName, orgAddress, orgGst, defaultCurrency } = useWorkspace();
   const { resolvedTheme, toggleTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
@@ -139,19 +140,22 @@ export default function NewInvoice() {
     showBankDetails: true,
     showSignatureBlock: true,
     showNotesTerms: true,
-    bankName: 'HDFC Bank',
-    accountNumber: '99820019284102',
-    ifscCode: 'HDFC0001242',
-    upiId: 'billing@auvryn',
-    customNotes: 'Thank you for your business. For billing queries contact billing@auvryn.com',
+    bankName: '',
+    accountNumber: '',
+    ifscCode: '',
+    upiId: '',
+    customNotes: 'Thank you for your business. For billing queries contact skavelontechnologies@gmail.com',
     paymentTerms: 'Payment due within 15 days of invoice date',
-    logoUrl: '',
+    logoUrl: typeof window !== 'undefined' ? localStorage.getItem('user_brand_logo') || '' : '',
     logoPosition: 'left',
+    logoSize: 'md',
+    placeOfSupply: '34',
   });
 
   // ── Phase 3: Interactive Canvas & History State ──
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [history, setHistory] = useState<StudioHistoryState>(() => {
+    const initialLogo = typeof window !== 'undefined' ? localStorage.getItem('user_brand_logo') || '' : '';
     const initialDoc: InvoiceStudioDocV2 = {
       version: 2,
       revision: 1,
@@ -171,14 +175,16 @@ export default function NewInvoice() {
         showBankDetails: true,
         showSignatureBlock: true,
         showNotesTerms: true,
-        bankName: 'HDFC Bank',
-        accountNumber: '99820019284102',
-        ifscCode: 'HDFC0001242',
-        upiId: 'billing@auvryn',
-        customNotes: 'Thank you for your business.',
+        bankName: '',
+        accountNumber: '',
+        ifscCode: '',
+        upiId: '',
+        customNotes: 'Thank you for your business. For billing queries contact skavelontechnologies@gmail.com',
         paymentTerms: 'Net 15 Days',
-        logoUrl: '',
+        logoUrl: initialLogo,
         logoPosition: 'left',
+        logoSize: 'md',
+        placeOfSupply: '34',
       }),
       properties: {
         templateId: 'modern_minimalist',
@@ -190,14 +196,16 @@ export default function NewInvoice() {
         showBankDetails: true,
         showSignatureBlock: true,
         showNotesTerms: true,
-        bankName: 'HDFC Bank',
-        accountNumber: '99820019284102',
-        ifscCode: 'HDFC0001242',
-        upiId: 'billing@auvryn',
-        customNotes: 'Thank you for your business.',
+        bankName: '',
+        accountNumber: '',
+        ifscCode: '',
+        upiId: '',
+        customNotes: 'Thank you for your business. For billing queries contact skavelontechnologies@gmail.com',
         paymentTerms: 'Net 15 Days',
-        logoUrl: '',
+        logoUrl: initialLogo,
         logoPosition: 'left',
+        logoSize: 'md',
+        placeOfSupply: '34',
       },
       updatedAt: new Date().toISOString(),
     };
@@ -210,6 +218,11 @@ export default function NewInvoice() {
   useEffect(() => {
     async function initialize() {
       if (!user) return;
+      if (role === 'client') {
+        toast.error('Client accounts cannot create or edit invoices');
+        navigate('/invoices');
+        return;
+      }
       setLoadingInitial(true);
       try {
         // 1. Fetch Clients
@@ -494,7 +507,16 @@ export default function NewInvoice() {
     };
     setProperties(updatedProps);
 
-    // Regenerate structured template layout
+    // FEATURE 2: Prefix updates for Quotation / Proforma / Standard
+    if (templateId === 'quotation_estimate') {
+      setInvoiceNumber((prev) => prev.replace(/^(INV|PI)-/i, 'EST-'));
+    } else if (templateId === 'proforma_invoice') {
+      setInvoiceNumber((prev) => prev.replace(/^(INV|EST)-/i, 'PI-'));
+    } else {
+      setInvoiceNumber((prev) => prev.replace(/^(EST|PI)-/i, 'INV-'));
+    }
+
+    // Regenerate structured template layout while keeping user data
     const newElements = createDefaultElementsForTemplate(templateId, updatedProps);
     setHistory((prev) => {
       const nextDoc: InvoiceStudioDocV2 = {
@@ -518,8 +540,8 @@ export default function NewInvoice() {
 
   const fallbackClient = {
     name: 'Alex Morgan',
-    companyName: 'Acme Technologies Pvt Ltd',
-    email: 'billing@acmecorp.com',
+    companyName: 'Global Enterprise Ltd',
+    email: 'finance@globalenterprise.com',
     phone: '+91 98765 43210',
     address: '100 Innovation Park, Tech Hub, Bengaluru 560001',
     gstNumber: '29ABCDE1234F1Z5',
@@ -1242,7 +1264,7 @@ export default function NewInvoice() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Acme Technologies Pvt Ltd"
+                  placeholder="e.g. Enterprise Technologies Pvt Ltd"
                   value={newClientCompany}
                   onChange={(e) => setNewClientCompany(e.target.value)}
                   className={`w-full rounded-lg px-3 py-2 border focus:outline-none focus:border-[#FF6B4A] ${
@@ -1260,7 +1282,7 @@ export default function NewInvoice() {
                   </label>
                   <input
                     type="email"
-                    placeholder="billing@acme.com"
+                    placeholder="billing@enterprise.com"
                     value={newClientEmail}
                     onChange={(e) => setNewClientEmail(e.target.value)}
                     className={`w-full rounded-lg px-3 py-2 border focus:outline-none focus:border-[#FF6B4A] ${

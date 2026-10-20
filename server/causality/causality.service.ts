@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import { supabaseAdmin as supabase } from '../_core/supabase';
 
 export class CausalityService {
@@ -863,11 +864,67 @@ export class CausalityService {
       // 3. Ensure profile in public.users
       await supabase.from('users').upsert({
         id: targetUserId,
-        email: email.trim(),
+        email: email.trim().toLowerCase(),
         full_name: fullName.trim(),
         role: 'client',
+        account_type: 'client',
+        account_setup_completed: true,
         created_at: new Date().toISOString(),
       });
+    }
+
+    // Resolve or create corresponding record in public.clients (never create duplicate)
+    const { data: projectData } = await supabase
+      .from('projects')
+      .select('id, org_id, owner_id')
+      .eq('id', projectId)
+      .single();
+
+    let resolvedClientId: string | null = (payload as any).clientId || null;
+    const normEmail = email.trim().toLowerCase();
+
+    if (resolvedClientId) {
+      await supabase
+        .from('clients')
+        .update({ user_id: targetUserId, updated_at: new Date().toISOString() })
+        .eq('id', resolvedClientId);
+    } else {
+      let clientMatchQuery = supabase
+        .from('clients')
+        .select('*')
+        .ilike('email', normEmail)
+        .eq('is_deleted', false);
+
+      if (projectData?.org_id) {
+        clientMatchQuery = clientMatchQuery.eq('organization_id', projectData.org_id);
+      } else if (projectData?.owner_id) {
+        clientMatchQuery = clientMatchQuery.eq('owner_id', projectData.owner_id);
+      }
+
+      const { data: matchedClients } = await clientMatchQuery;
+      if (matchedClients && matchedClients.length > 0) {
+        resolvedClientId = matchedClients[0].id;
+        await supabase
+          .from('clients')
+          .update({ user_id: targetUserId, updated_at: new Date().toISOString() })
+          .eq('id', resolvedClientId);
+      } else {
+        const { data: newClient } = await supabase
+          .from('clients')
+          .insert({
+            organization_id: projectData?.org_id || null,
+            owner_id: projectData?.owner_id || actorId,
+            name: fullName.trim() || normEmail.split('@')[0],
+            email: normEmail,
+            user_id: targetUserId,
+            created_by: actorId,
+          })
+          .select()
+          .single();
+        if (newClient) {
+          resolvedClientId = newClient.id;
+        }
+      }
     }
 
     // 4. Grant explicit client permissions in public.project_client_access
@@ -876,6 +933,7 @@ export class CausalityService {
       .upsert(
         {
           project_id: projectId,
+          client_id: resolvedClientId,
           user_id: targetUserId,
           can_view: true,
           can_approve: Boolean(canApprove),
@@ -884,6 +942,7 @@ export class CausalityService {
           status: 'active',
           invited_by: actorId,
           invited_at: new Date().toISOString(),
+          accepted_at: new Date().toISOString(),
         },
         { onConflict: 'project_id,user_id' }
       )
@@ -895,22 +954,346 @@ export class CausalityService {
     }
 
     // 5. Register activity event
-    await supabase.from('project_events').insert({
-      project_id: projectId,
-      event_type: 'CLIENT_ACCESS_GRANTED',
-      actor_id: actorId,
-      title: `Client Account Configured (${email})`,
-      description: `Client contact ${fullName} was granted direct project access.`,
-      visibility: 'CLIENT_VISIBLE',
-    });
+    try {
+      await supabase.from('activity_logs').insert({
+        org_id: projectData?.org_id || null,
+        actor_id: actorId,
+        action: 'CLIENT_ACCESS_GRANTED',
+        entity_type: 'project',
+        entity_id: projectId,
+        new_value: {
+          client_id: resolvedClientId,
+          email: normEmail,
+          fullName: fullName.trim(),
+          user_id: targetUserId,
+        },
+      });
+    } catch (e) {
+      // Activity logging error should not block provisioning
+    }
+
+
 
     return {
       success: true,
       userId: targetUserId,
-      email: email.trim(),
+      clientId: resolvedClientId,
+      email: normEmail,
       fullName: fullName.trim(),
       access: accessRecord,
     };
+  }
+
+  /**
+   * 15b. TOKENIZED PROJECT CLIENT INVITES (Cryptographic, Expirable, Atomic)
+   */
+  static async createProjectInvite(payload: {
+    projectId: string;
+    clientId?: string;
+    email?: string;
+    name?: string;
+    canView?: boolean;
+    canApprove?: boolean;
+    canRequestChanges?: boolean;
+    canViewFinancials?: boolean;
+    canViewReceipts?: boolean;
+  }, actorId: string) {
+    const {
+      projectId,
+      clientId,
+      email,
+      name,
+      canView = true,
+      canApprove = true,
+      canRequestChanges = true,
+      canViewFinancials = true,
+      canViewReceipts = true,
+    } = payload;
+
+    if (!projectId || (!clientId && !email)) {
+      throw new Error('Project ID and Client identifier (ID or Email) are required.');
+    }
+
+    // 1. Verify project exists and get ownership details
+    const { data: project, error: pErr } = await supabase
+      .from('projects')
+      .select('id, title, org_id, owner_id')
+      .eq('id', projectId)
+      .single();
+
+    if (pErr || !project) {
+      throw new Error('Project not found');
+    }
+
+    // 2. Resolve client record: never create duplicate clients
+    let resolvedClientId = clientId || null;
+    let targetEmail = email ? email.trim().toLowerCase() : '';
+
+    if (resolvedClientId) {
+      const { data: existingClient, error: cErr } = await supabase
+        .from('clients')
+        .select('*')
+        .eq('id', resolvedClientId)
+        .eq('is_deleted', false)
+        .single();
+
+      if (cErr || !existingClient) {
+        throw new Error('Specified client record was not found.');
+      }
+
+      // Security: Validate tenant boundary
+      if (project.org_id && existingClient.organization_id && project.org_id !== existingClient.organization_id) {
+        throw new Error('Tenant boundary violation: Client belongs to a different organization.');
+      }
+
+      if (!targetEmail && existingClient.email) {
+        targetEmail = existingClient.email.trim().toLowerCase();
+      }
+    } else if (targetEmail) {
+      // Find existing client in same organization / owner
+      let query = supabase
+        .from('clients')
+        .select('*')
+        .ilike('email', targetEmail)
+        .eq('is_deleted', false);
+
+      if (project.org_id) {
+        query = query.eq('organization_id', project.org_id);
+      } else {
+        query = query.eq('owner_id', project.owner_id);
+      }
+
+      const { data: matched } = await query;
+      if (matched && matched.length > 0) {
+        resolvedClientId = matched[0].id;
+      } else {
+        const { data: newClient, error: ncErr } = await supabase
+          .from('clients')
+          .insert({
+            organization_id: project.org_id || null,
+            owner_id: project.owner_id,
+            name: (name || targetEmail.split('@')[0] || 'Client Contact').trim(),
+            email: targetEmail,
+            created_by: actorId,
+          })
+          .select()
+          .single();
+
+        if (ncErr || !newClient) {
+          throw new Error('Failed to create client entity for invitation.');
+        }
+        resolvedClientId = newClient.id;
+      }
+    }
+
+    if (!targetEmail) {
+      throw new Error('Client must have a valid email address to receive an invitation.');
+    }
+
+    // 3. Generate single-use crypto token & 7-day expiration
+    const token = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Revoke any previous pending invite for this exact project and client
+    await supabase
+      .from('project_invites')
+      .update({ status: 'revoked', updated_at: new Date().toISOString() })
+      .eq('project_id', projectId)
+      .eq('client_id', resolvedClientId)
+      .eq('status', 'pending');
+
+    // 4. Insert invite record
+    const { data: invite, error: invErr } = await supabase
+      .from('project_invites')
+      .insert({
+        token,
+        email: targetEmail,
+        client_id: resolvedClientId,
+        project_id: projectId,
+        business_id: project.org_id || null,
+        owner_id: project.owner_id,
+        invited_by: actorId,
+        status: 'pending',
+        expires_at: expiresAt,
+        can_view: Boolean(canView),
+        can_approve: Boolean(canApprove),
+        can_request_changes: Boolean(canRequestChanges),
+        can_view_financials: Boolean(canViewFinancials),
+        can_view_receipts: Boolean(canViewReceipts),
+      })
+      .select('*, client:client_id(name, company_name, email), project:project_id(title)')
+      .single();
+
+    if (invErr || !invite) {
+      throw new Error(invErr?.message || 'Failed to generate invitation record.');
+    }
+
+    return {
+      success: true,
+      invite,
+      token,
+      expiresAt,
+    };
+  }
+
+  /**
+   * 15c. LIST PROJECT INVITES
+   */
+  static async listProjectInvites(projectId: string) {
+    const { data, error } = await supabase
+      .from('project_invites')
+      .select('*, client:client_id(id, name, company_name, email), project:project_id(id, title), accepted_user:accepted_by(id, full_name, email)')
+      .eq('project_id', projectId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return data || [];
+  }
+
+  /**
+   * 15d. GET INVITE DETAILS BY TOKEN (Public or Authenticated preview)
+   */
+  static async getInviteDetails(token: string) {
+    if (!token || !token.trim()) {
+      return {
+        valid: false,
+        reason: 'INVALID_TOKEN',
+        message: 'No token provided.',
+      };
+    }
+
+    const { data: invite, error } = await supabase
+      .from('project_invites')
+      .select(`
+        id,
+        token,
+        email,
+        status,
+        expires_at,
+        accepted_at,
+        can_view,
+        can_approve,
+        can_request_changes,
+        can_view_financials,
+        client:client_id (id, name, company_name, email),
+        project:project_id (id, title, description, cover_color, org_id, owner_id),
+        inviter:invited_by (id, full_name, email)
+      `)
+      .eq('token', token.trim())
+      .maybeSingle();
+
+    if (error || !invite) {
+      return {
+        valid: false,
+        reason: 'NOT_FOUND',
+        message: 'This invitation does not exist or has expired.',
+      };
+    }
+
+    const isExpired = new Date(invite.expires_at) < new Date();
+    if (invite.status === 'pending' && isExpired) {
+      await supabase
+        .from('project_invites')
+        .update({ status: 'expired', updated_at: new Date().toISOString() })
+        .eq('id', invite.id);
+      invite.status = 'expired';
+    }
+
+    return {
+      valid: invite.status === 'pending' && !isExpired,
+      status: invite.status,
+      isExpired,
+      invite,
+    };
+  }
+
+  /**
+   * 15e. ATOMIC ACCEPT INVITATION
+   */
+  static async acceptProjectInvite(token: string, userId: string, userEmail: string) {
+    if (!token || !userId) {
+      throw new Error('Token and user authentication are required.');
+    }
+
+    const { data, error } = await supabase.rpc('accept_project_client_invite', {
+      p_token: token.trim(),
+      p_user_id: userId,
+      p_user_email: userEmail.trim().toLowerCase(),
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Failed to accept invitation.');
+    }
+
+    return data;
+  }
+
+  /**
+   * 15f. RESEND PROJECT INVITE
+   */
+  static async resendProjectInvite(inviteId: string, actorId: string) {
+    const { data: existing, error } = await supabase
+      .from('project_invites')
+      .select('*, project:project_id(*)')
+      .eq('id', inviteId)
+      .single();
+
+    if (error || !existing) throw new Error('Invitation record not found.');
+
+    const newToken = crypto.randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Revoke old invite
+    await supabase
+      .from('project_invites')
+      .update({ status: 'revoked', updated_at: new Date().toISOString() })
+      .eq('id', inviteId);
+
+    // Insert new invite
+    const { data: newInvite, error: insErr } = await supabase
+      .from('project_invites')
+      .insert({
+        token: newToken,
+        email: existing.email,
+        client_id: existing.client_id,
+        project_id: existing.project_id,
+        business_id: existing.business_id,
+        owner_id: existing.owner_id,
+        invited_by: actorId,
+        status: 'pending',
+        expires_at: expiresAt,
+        can_view: existing.can_view,
+        can_approve: existing.can_approve,
+        can_request_changes: existing.can_request_changes,
+        can_view_financials: existing.can_view_financials,
+        can_view_receipts: existing.can_view_receipts,
+      })
+      .select('*, client:client_id(name, company_name, email), project:project_id(title)')
+      .single();
+
+    if (insErr || !newInvite) throw new Error(insErr?.message || 'Failed to resend invite.');
+
+    return {
+      success: true,
+      invite: newInvite,
+      token: newToken,
+      expiresAt,
+    };
+  }
+
+  /**
+   * 15g. REVOKE PROJECT INVITE
+   */
+  static async revokeProjectInvite(inviteId: string, actorId: string) {
+    const { data, error } = await supabase
+      .from('project_invites')
+      .update({ status: 'revoked', updated_at: new Date().toISOString() })
+      .eq('id', inviteId)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+    return { success: true, invite: data };
   }
 
   /**

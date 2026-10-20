@@ -105,6 +105,8 @@ const STATUS_MAP: Record<string, { label: string; dot: string; text: string; bg:
   completed:      { label: 'Completed',   dot: 'bg-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
   done:           { label: 'Done',        dot: 'bg-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
   paid:           { label: 'Paid',        dot: 'bg-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
+  partially_paid: { label: 'Partially Paid', dot: 'bg-amber-400', text: 'text-amber-300', bg: 'bg-amber-500/10 border-amber-500/20' },
+  unpaid:         { label: 'Unpaid',         dot: 'bg-blue-400',  text: 'text-blue-300',  bg: 'bg-blue-500/10 border-blue-500/20' },
   settled:        { label: 'Settled',     dot: 'bg-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
   on_hold:        { label: 'On Hold',     dot: 'bg-amber-400', text: 'text-amber-300', bg: 'bg-amber-500/10 border-amber-500/20' },
   pending:        { label: 'Pending',     dot: 'bg-amber-400', text: 'text-amber-300', bg: 'bg-amber-500/10 border-amber-500/20' },

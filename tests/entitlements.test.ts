@@ -25,6 +25,7 @@ describe('Auvryn Subscription Entitlements & Plan Enforcement (20 Test Cases)', 
       activeProjectsCount: 1,
       meetingsCount: 2,
       teamSeatsCount: 1,
+      workflowsCount: 0,
     });
     const check15 = await EntitlementsService.checkEntitlement({ userId: 'u_free', feature: 'invoices' });
     expect(check15.allowed).toBe(true);
@@ -37,6 +38,7 @@ describe('Auvryn Subscription Entitlements & Plan Enforcement (20 Test Cases)', 
       activeProjectsCount: 1,
       meetingsCount: 2,
       teamSeatsCount: 1,
+      workflowsCount: 0,
     });
     const check16 = await EntitlementsService.checkEntitlement({ userId: 'u_free', feature: 'invoices' });
     expect(check16.allowed).toBe(false);
@@ -61,6 +63,7 @@ describe('Auvryn Subscription Entitlements & Plan Enforcement (20 Test Cases)', 
       activeProjectsCount: 5,
       meetingsCount: 10,
       teamSeatsCount: 3,
+      workflowsCount: 0,
     });
     const check100 = await EntitlementsService.checkEntitlement({ userId: 'u_start', orgId: 'org_starter', feature: 'invoices' });
     expect(check100.allowed).toBe(true);
@@ -72,6 +75,7 @@ describe('Auvryn Subscription Entitlements & Plan Enforcement (20 Test Cases)', 
       activeProjectsCount: 5,
       meetingsCount: 10,
       teamSeatsCount: 3,
+      workflowsCount: 0,
     });
     const check101 = await EntitlementsService.checkEntitlement({ userId: 'u_start', orgId: 'org_starter', feature: 'invoices' });
     expect(check101.allowed).toBe(false);
@@ -94,6 +98,7 @@ describe('Auvryn Subscription Entitlements & Plan Enforcement (20 Test Cases)', 
       activeProjectsCount: 5,
       meetingsCount: 1,
       teamSeatsCount: 1,
+      workflowsCount: 0,
     });
 
     const check = await EntitlementsService.checkEntitlement({ userId: 'u_free', feature: 'projects' });
@@ -117,6 +122,7 @@ describe('Auvryn Subscription Entitlements & Plan Enforcement (20 Test Cases)', 
       activeProjectsCount: 25,
       meetingsCount: 5,
       teamSeatsCount: 4,
+      workflowsCount: 0,
     });
 
     const check = await EntitlementsService.checkEntitlement({ userId: 'u_start', orgId: 'org_starter', feature: 'projects' });
@@ -140,6 +146,7 @@ describe('Auvryn Subscription Entitlements & Plan Enforcement (20 Test Cases)', 
       activeProjectsCount: 1,
       meetingsCount: 20,
       teamSeatsCount: 1,
+      workflowsCount: 0,
     });
 
     const check = await EntitlementsService.checkEntitlement({ userId: 'u_free', feature: 'meetings' });
@@ -163,6 +170,7 @@ describe('Auvryn Subscription Entitlements & Plan Enforcement (20 Test Cases)', 
       activeProjectsCount: 5,
       meetingsCount: 100,
       teamSeatsCount: 4,
+      workflowsCount: 0,
     });
 
     const check = await EntitlementsService.checkEntitlement({ userId: 'u_start', orgId: 'org_starter', feature: 'meetings' });
@@ -185,7 +193,8 @@ describe('Auvryn Subscription Entitlements & Plan Enforcement (20 Test Cases)', 
       invoicesCount: 0,
       activeProjectsCount: 1,
       meetingsCount: 0,
-      teamSeatsCount: 1, // Already 1 member (the owner)
+      teamSeatsCount: 1,
+      workflowsCount: 0, // Already 1 member (the owner)
     });
 
     const check = await EntitlementsService.checkEntitlement({ userId: 'u_free', feature: 'seats' });
@@ -208,7 +217,8 @@ describe('Auvryn Subscription Entitlements & Plan Enforcement (20 Test Cases)', 
       invoicesCount: 5,
       activeProjectsCount: 2,
       meetingsCount: 1,
-      teamSeatsCount: 5, // All 5 seats filled
+      teamSeatsCount: 5,
+      workflowsCount: 0, // All 5 seats filled
     });
 
     const check = await EntitlementsService.checkEntitlement({ userId: 'u_start', orgId: 'org_starter', feature: 'seats' });

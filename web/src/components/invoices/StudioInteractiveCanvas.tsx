@@ -386,7 +386,7 @@ export const StudioInteractiveCanvas = forwardRef<HTMLDivElement, StudioInteract
           if (typeof ref === 'function') ref(node);
           else if (ref) ref.current = node;
         }}
-        id="auvryn-invoice-canvas"
+        id="invoice-studio-canvas"
         onPointerDown={(e) => {
           // Deselect when clicking on blank canvas
           if (e.target === canvasContainerRef.current) {
@@ -439,6 +439,9 @@ export const StudioInteractiveCanvas = forwardRef<HTMLDivElement, StudioInteract
           .sort((a, b) => a.zIndex - b.zIndex)
           .map((element) => {
             if (!element.isVisible) return null;
+            if (element.type === 'data-signature' && !properties.showSignatureBlock) return null;
+            if (element.type === 'data-remittance' && !properties.showBankDetails) return null;
+            if (element.type === 'data-notes-terms' && !properties.showNotesTerms) return null;
 
             const isSelected = selectedElementId === element.id;
             const isHovered = hoveredElementId === element.id;

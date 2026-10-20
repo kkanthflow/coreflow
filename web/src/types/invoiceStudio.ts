@@ -2,8 +2,16 @@ export type InvoiceTemplateId =
   | 'modern_minimalist'
   | 'enterprise_classic'
   | 'obsidian_dark'
-  | 'corporate_formal'
   | 'gst_tax_invoice'
+  | 'professional_services'
+  | 'freelancer_simple'
+  | 'bold_header_band'
+  | 'sidebar_layout'
+  | 'elegant_serif'
+  | 'compact_retail'
+  | 'proforma_invoice'
+  | 'quotation_estimate'
+  | 'corporate_formal'
   | 'creative_studio'
   | 'tech_developer'
   | 'executive_bold';
@@ -18,6 +26,7 @@ export interface TemplateDefinition {
   defaultAccent: string;
   defaultFont: 'sans' | 'serif' | 'mono';
   defaultPrintTheme: 'light' | 'dark';
+  layoutStyle?: 'standard' | 'sidebar' | 'banner' | 'thermal' | 'split';
 }
 
 export interface StudioLineItem {
@@ -48,6 +57,8 @@ export interface StudioDesignProperties {
   paymentTerms: string;
   logoUrl?: string;
   logoPosition: 'left' | 'center' | 'right';
+  logoSize?: 'sm' | 'md' | 'lg' | number;
+  placeOfSupply?: string;
 }
 
 export interface InvoiceStudioDocV1 {

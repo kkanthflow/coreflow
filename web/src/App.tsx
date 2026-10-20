@@ -19,6 +19,7 @@ import Landing from './pages/Landing';
 
 // Lazy loaded pages with auto-recovery on new deployment chunk changes
 const RegisterSetup   = lazyWithRetry(() => import('./pages/RegisterSetup'));
+const AcceptInvite    = lazyWithRetry(() => import('./pages/AcceptInvite'));
 const Dashboard       = lazyWithRetry(() => import('./pages/Dashboard'));
 const WorkflowDashboard = lazyWithRetry(() => import('./pages/workflows/WorkflowDashboard'));
 const WorkflowBuilder   = lazyWithRetry(() => import('./pages/workflows/WorkflowBuilder'));
@@ -79,9 +80,9 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  // Smart root: redirect authenticated users to dashboard or setup, else show landing
+  // Smart root: redirect authenticated users to dashboard, client portal, or setup, else show landing
   function RootRoute() {
-    const { session, loading, onboardingStatus } = useAuth();
+    const { session, loading, onboardingStatus, role } = useAuth();
     if (loading) {
       return (
         <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
@@ -90,7 +91,14 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         </div>
       );
     }
+    const pendingToken = getStoredInviteToken();
+    if (pendingToken) {
+      return <Navigate to={`/invite/client?token=${encodeURIComponent(pendingToken)}`} replace />;
+    }
     if (session?.user?.id) {
+      if (role === 'client') {
+        return <Navigate to="/projects" replace />;
+      }
       if (onboardingStatus === 'setup_required') {
         return <Navigate to="/register/setup" replace />;
       }
@@ -109,7 +117,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
         </div>
       );
     }
+    const pendingToken = getStoredInviteToken();
     if (session?.user?.id) {
+      if (pendingToken) {
+        return <Navigate to={`/invite/client?token=${encodeURIComponent(pendingToken)}`} replace />;
+      }
       if (onboardingStatus === 'setup_required') {
         return <Navigate to="/register/setup" replace />;
       }
@@ -120,6 +132,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
 import { ToastProvider } from './components/ui/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
+import { getStoredInviteToken } from './lib/inviteTokenStorage';
 
 function App() {
   const [queryClient] = useState(() => new QueryClient({
@@ -166,6 +179,8 @@ function App() {
 
                     <Route path="/register/setup" element={<Suspense fallback={<PageLoader />}><RegisterSetup /></Suspense>} />
                     <Route path="/onboarding" element={<Navigate to="/register/setup" replace />} />
+                    <Route path="/invite/client" element={<Suspense fallback={<PageLoader />}><AcceptInvite /></Suspense>} />
+                    <Route path="/accept-invite" element={<Suspense fallback={<PageLoader />}><AcceptInvite /></Suspense>} />
 
                     {/* ── All shell-wrapped protected routes ── */}
                     <Route element={<AuthGuard><AppShell /></AuthGuard>}>

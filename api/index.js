@@ -117,7 +117,7 @@ var require_main = __commonJS({
     var fs3 = require("fs");
     var path2 = require("path");
     var os2 = require("os");
-    var crypto15 = require("crypto");
+    var crypto18 = require("crypto");
     var packageJson = require_package();
     var version5 = packageJson.version;
     var LINE = /(?:^|^)\s*(?:export\s+)?([\w.-]+)(?:\s*=\s*?|:\s+?)(\s*'(?:\\'|[^'])*'|\s*"(?:\\"|[^"])*"|\s*`(?:\\`|[^`])*`|[^#\r\n]+)?\s*(?:#.*)?(?:$|$)/mg;
@@ -336,7 +336,7 @@ var require_main = __commonJS({
       const authTag = ciphertext.subarray(-16);
       ciphertext = ciphertext.subarray(12, -16);
       try {
-        const aesgcm = crypto15.createDecipheriv("aes-256-gcm", key, nonce);
+        const aesgcm = crypto18.createDecipheriv("aes-256-gcm", key, nonce);
         aesgcm.setAuthTag(authTag);
         return `${aesgcm.update(ciphertext)}${aesgcm.final()}`;
       } catch (error51) {
@@ -20371,14 +20371,14 @@ var require_etag = __commonJS({
   "node_modules/etag/index.js"(exports2, module2) {
     "use strict";
     module2.exports = etag;
-    var crypto15 = require("crypto");
+    var crypto18 = require("crypto");
     var Stats = require("fs").Stats;
     var toString3 = Object.prototype.toString;
     function entitytag(entity) {
       if (entity.length === 0) {
         return '"0-2jmj7l5rSw0yVb/vlWAYkK/YBwk"';
       }
-      var hash2 = crypto15.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
+      var hash2 = crypto18.createHash("sha1").update(entity, "utf8").digest("base64").substring(0, 27);
       var len = typeof entity === "string" ? Buffer.byteLength(entity, "utf8") : entity.length;
       return '"' + len.toString(16) + "-" + hash2 + '"';
     }
@@ -22255,7 +22255,7 @@ var require_application = __commonJS({
   "node_modules/express/lib/application.js"(exports2, module2) {
     "use strict";
     var finalhandler = require_finalhandler();
-    var Router8 = require_router();
+    var Router10 = require_router();
     var methods = require_methods();
     var middleware = require_init();
     var query2 = require_query();
@@ -22320,7 +22320,7 @@ var require_application = __commonJS({
     };
     app.lazyrouter = function lazyrouter() {
       if (!this._router) {
-        this._router = new Router8({
+        this._router = new Router10({
           caseSensitive: this.enabled("case sensitive routing"),
           strict: this.enabled("strict routing")
         });
@@ -23271,11 +23271,11 @@ var require_request = __commonJS({
 // node_modules/cookie-signature/index.js
 var require_cookie_signature = __commonJS({
   "node_modules/cookie-signature/index.js"(exports2) {
-    var crypto15 = require("crypto");
+    var crypto18 = require("crypto");
     exports2.sign = function(val, secret) {
       if ("string" !== typeof val) throw new TypeError("Cookie value must be provided as a string.");
       if (null == secret) throw new TypeError("Secret key must be provided.");
-      return val + "." + crypto15.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
+      return val + "." + crypto18.createHmac("sha256", secret).update(val).digest("base64").replace(/\=+$/, "");
     };
     exports2.unsign = function(val, secret) {
       if ("string" !== typeof val) throw new TypeError("Signed cookie string must be provided.");
@@ -23284,7 +23284,7 @@ var require_cookie_signature = __commonJS({
       return sha1(mac3) == sha1(val) ? str : false;
     };
     function sha1(str) {
-      return crypto15.createHash("sha1").update(str).digest("hex");
+      return crypto18.createHash("sha1").update(str).digest("hex");
     }
   }
 });
@@ -24184,7 +24184,7 @@ var require_express = __commonJS({
     var mixin = require_merge_descriptors();
     var proto = require_application();
     var Route = require_route();
-    var Router8 = require_router();
+    var Router10 = require_router();
     var req = require_request();
     var res = require_response();
     exports2 = module2.exports = createApplication;
@@ -24207,7 +24207,7 @@ var require_express = __commonJS({
     exports2.request = req;
     exports2.response = res;
     exports2.Route = Route;
-    exports2.Router = Router8;
+    exports2.Router = Router10;
     exports2.json = bodyParser.json;
     exports2.query = require_query();
     exports2.raw = bodyParser.raw;
@@ -25569,7 +25569,7 @@ var require_cert_signatures = __commonJS({
 var require_sasl = __commonJS({
   "node_modules/pg/lib/crypto/sasl.js"(exports2, module2) {
     "use strict";
-    var crypto15 = require_utils4();
+    var crypto18 = require_utils4();
     var { signatureAlgorithmHashFromCertificate } = require_cert_signatures();
     function saslprep(password) {
       const nonAsciiSpace = /[\u00A0\u1680\u2000-\u200B\u202F\u205F\u3000]/g;
@@ -25587,7 +25587,7 @@ var require_sasl = __commonJS({
       if (mechanism === "SCRAM-SHA-256-PLUS" && typeof stream4.getPeerCertificate !== "function") {
         throw new Error("SASL: Mechanism SCRAM-SHA-256-PLUS requires a certificate");
       }
-      const clientNonce = crypto15.randomBytes(18).toString("base64");
+      const clientNonce = crypto18.randomBytes(18).toString("base64");
       const gs2Header = mechanism === "SCRAM-SHA-256-PLUS" ? "p=tls-server-end-point" : stream4 ? "y" : "n";
       return {
         mechanism,
@@ -25629,20 +25629,20 @@ var require_sasl = __commonJS({
         const peerCert = stream4.getPeerCertificate().raw;
         let hashName = signatureAlgorithmHashFromCertificate(peerCert);
         if (hashName === "MD5" || hashName === "SHA-1") hashName = "SHA-256";
-        const certHash = await crypto15.hashByName(hashName, peerCert);
+        const certHash = await crypto18.hashByName(hashName, peerCert);
         const bindingData = Buffer.concat([Buffer.from("p=tls-server-end-point,,"), Buffer.from(certHash)]);
         channelBinding = bindingData.toString("base64");
       }
       const clientFinalMessageWithoutProof = "c=" + channelBinding + ",r=" + sv.nonce;
       const authMessage = clientFirstMessageBare + "," + serverFirstMessage + "," + clientFinalMessageWithoutProof;
       const saltBytes = Buffer.from(sv.salt, "base64");
-      const saltedPassword = await crypto15.deriveKey(saslprep(password), saltBytes, sv.iteration);
-      const clientKey = await crypto15.hmacSha256(saltedPassword, "Client Key");
-      const storedKey = await crypto15.sha256(clientKey);
-      const clientSignature = await crypto15.hmacSha256(storedKey, authMessage);
+      const saltedPassword = await crypto18.deriveKey(saslprep(password), saltBytes, sv.iteration);
+      const clientKey = await crypto18.hmacSha256(saltedPassword, "Client Key");
+      const storedKey = await crypto18.sha256(clientKey);
+      const clientSignature = await crypto18.hmacSha256(storedKey, authMessage);
       const clientProof = xorBuffers(Buffer.from(clientKey), Buffer.from(clientSignature)).toString("base64");
-      const serverKey = await crypto15.hmacSha256(saltedPassword, "Server Key");
-      const serverSignatureBytes = await crypto15.hmacSha256(serverKey, authMessage);
+      const serverKey = await crypto18.hmacSha256(saltedPassword, "Server Key");
+      const serverSignatureBytes = await crypto18.hmacSha256(serverKey, authMessage);
       session.message = "SASLResponse";
       session.serverSignature = Buffer.from(serverSignatureBytes).toString("base64");
       session.response = clientFinalMessageWithoutProof + ",p=" + clientProof;
@@ -27872,7 +27872,7 @@ var require_client = __commonJS({
     var Query3 = require_query2();
     var defaults3 = require_defaults();
     var Connection3 = require_connection();
-    var crypto15 = require_utils4();
+    var crypto18 = require_utils4();
     var activeQueryDeprecationNotice = nodeUtils.deprecate(
       () => {
       },
@@ -28123,7 +28123,7 @@ var require_client = __commonJS({
       _handleAuthMD5Password(msg) {
         this._getPassword(async () => {
           try {
-            const hashedPassword = await crypto15.postgresMd5PasswordHash(this.user, this.password, msg.salt);
+            const hashedPassword = await crypto18.postgresMd5PasswordHash(this.user, this.password, msg.salt);
             this.connection.password(hashedPassword);
           } catch (e2) {
             this.emit("error", e2);
@@ -29939,7 +29939,7 @@ var require_form_data = __commonJS({
     var parseUrl3 = require("url").parse;
     var fs3 = require("fs");
     var Stream7 = require("stream").Stream;
-    var crypto15 = require("crypto");
+    var crypto18 = require("crypto");
     var mime = require_mime_types();
     var asynckit = require_asynckit();
     var setToStringTag = require_es_set_tostringtag();
@@ -30148,7 +30148,7 @@ var require_form_data = __commonJS({
       return Buffer.concat([dataBuffer, Buffer.from(this._lastBoundary())]);
     };
     FormData5.prototype._generateBoundary = function() {
-      this._boundary = "--------------------------" + crypto15.randomBytes(12).toString("hex");
+      this._boundary = "--------------------------" + crypto18.randomBytes(12).toString("hex");
     };
     FormData5.prototype.getLengthSync = function() {
       var knownLength = this._overheadLength + this._valueLength;
@@ -67252,22 +67252,22 @@ var require_crypto2 = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.NodeCrypto = void 0;
-    var crypto15 = require("crypto");
+    var crypto18 = require("crypto");
     var NodeCrypto = class {
       async sha256DigestBase64(str) {
-        return crypto15.createHash("sha256").update(str).digest("base64");
+        return crypto18.createHash("sha256").update(str).digest("base64");
       }
       randomBytesBase64(count) {
-        return crypto15.randomBytes(count).toString("base64");
+        return crypto18.randomBytes(count).toString("base64");
       }
       async verify(pubkey, data, signature) {
-        const verifier = crypto15.createVerify("RSA-SHA256");
+        const verifier = crypto18.createVerify("RSA-SHA256");
         verifier.update(data);
         verifier.end();
         return verifier.verify(pubkey, signature, "base64");
       }
       async sign(privateKey, data) {
-        const signer = crypto15.createSign("RSA-SHA256");
+        const signer = crypto18.createSign("RSA-SHA256");
         signer.update(data);
         signer.end();
         return signer.sign(privateKey, "base64");
@@ -67285,7 +67285,7 @@ var require_crypto2 = __commonJS({
        *   string in hexadecimal encoding.
        */
       async sha256DigestHex(str) {
-        return crypto15.createHash("sha256").update(str).digest("hex");
+        return crypto18.createHash("sha256").update(str).digest("hex");
       }
       /**
        * Computes the HMAC hash of a message using the provided crypto key and the
@@ -67297,7 +67297,7 @@ var require_crypto2 = __commonJS({
        */
       async signWithHmacSha256(key, msg) {
         const cryptoKey = typeof key === "string" ? key : toBuffer(key);
-        return toArrayBuffer(crypto15.createHmac("sha256", cryptoKey).update(msg).digest());
+        return toArrayBuffer(crypto18.createHmac("sha256", cryptoKey).update(msg).digest());
       }
     };
     exports2.NodeCrypto = NodeCrypto;
@@ -68152,10 +68152,10 @@ var require_oauth2client = __commonJS({
        * https://github.com/googleapis/google-auth-library-nodejs/blob/main/samples/oauth2-codeVerifier.js
        */
       async generateCodeVerifierAsync() {
-        const crypto15 = (0, crypto_1.createCrypto)();
-        const randomString2 = crypto15.randomBytesBase64(96);
+        const crypto18 = (0, crypto_1.createCrypto)();
+        const randomString2 = crypto18.randomBytesBase64(96);
         const codeVerifier = randomString2.replace(/\+/g, "~").replace(/=/g, "_").replace(/\//g, "-");
-        const unencodedCodeChallenge = await crypto15.sha256DigestBase64(codeVerifier);
+        const unencodedCodeChallenge = await crypto18.sha256DigestBase64(codeVerifier);
         const codeChallenge = unencodedCodeChallenge.split("=")[0].replace(/\+/g, "-").replace(/\//g, "_");
         return { codeVerifier, codeChallenge };
       }
@@ -68596,7 +68596,7 @@ var require_oauth2client = __commonJS({
        * @return Returns a promise resolving to LoginTicket on verification.
        */
       async verifySignedJwtWithCertsAsync(jwt2, certs, requiredAudience, issuers, maxExpiry) {
-        const crypto15 = (0, crypto_1.createCrypto)();
+        const crypto18 = (0, crypto_1.createCrypto)();
         if (!maxExpiry) {
           maxExpiry = _OAuth2Client.DEFAULT_MAX_TOKEN_LIFETIME_SECS_;
         }
@@ -68609,7 +68609,7 @@ var require_oauth2client = __commonJS({
         let envelope;
         let payload;
         try {
-          envelope = JSON.parse(crypto15.decodeBase64StringUtf8(segments[0]));
+          envelope = JSON.parse(crypto18.decodeBase64StringUtf8(segments[0]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token envelope: ${segments[0]}': ${err.message}`;
@@ -68620,7 +68620,7 @@ var require_oauth2client = __commonJS({
           throw new Error("Can't parse token envelope: " + segments[0]);
         }
         try {
-          payload = JSON.parse(crypto15.decodeBase64StringUtf8(segments[1]));
+          payload = JSON.parse(crypto18.decodeBase64StringUtf8(segments[1]));
         } catch (err) {
           if (err instanceof Error) {
             err.message = `Can't parse token payload '${segments[0]}`;
@@ -68637,7 +68637,7 @@ var require_oauth2client = __commonJS({
         if (envelope.alg === "ES256") {
           signature = formatEcdsa.joseToDer(signature, "ES256").toString("base64");
         }
-        const verified = await crypto15.verify(cert2, signed, signature);
+        const verified = await crypto18.verify(cert2, signed, signature);
         if (!verified) {
           throw new Error("Invalid token signature: " + jwt2);
         }
@@ -69012,14 +69012,14 @@ var require_buffer_equal_constant_time = __commonJS({
 var require_jwa = __commonJS({
   "node_modules/jwa/index.js"(exports2, module2) {
     var Buffer7 = require_safe_buffer().Buffer;
-    var crypto15 = require("crypto");
+    var crypto18 = require("crypto");
     var formatEcdsa = require_ecdsa_sig_formatter();
     var util6 = require("util");
     var MSG_INVALID_ALGORITHM = '"%s" is not a valid algorithm.\n  Supported algorithms are:\n  "HS256", "HS384", "HS512", "RS256", "RS384", "RS512", "PS256", "PS384", "PS512", "ES256", "ES384", "ES512" and "none".';
     var MSG_INVALID_SECRET = "secret must be a string or buffer";
     var MSG_INVALID_VERIFIER_KEY = "key must be a string or a buffer";
     var MSG_INVALID_SIGNER_KEY = "key must be a string, a buffer or an object";
-    var supportsKeyObjects = typeof crypto15.createPublicKey === "function";
+    var supportsKeyObjects = typeof crypto18.createPublicKey === "function";
     if (supportsKeyObjects) {
       MSG_INVALID_VERIFIER_KEY += " or a KeyObject";
       MSG_INVALID_SECRET += "or a KeyObject";
@@ -69109,17 +69109,17 @@ var require_jwa = __commonJS({
       return function sign3(thing, secret) {
         checkIsSecretKey(secret);
         thing = normalizeInput(thing);
-        var hmac2 = crypto15.createHmac("sha" + bits, secret);
+        var hmac2 = crypto18.createHmac("sha" + bits, secret);
         var sig = (hmac2.update(thing), hmac2.digest("base64"));
         return fromBase64(sig);
       };
     }
     var bufferEqual;
-    var timingSafeEqual3 = "timingSafeEqual" in crypto15 ? function timingSafeEqual4(a, b2) {
+    var timingSafeEqual3 = "timingSafeEqual" in crypto18 ? function timingSafeEqual4(a, b2) {
       if (a.byteLength !== b2.byteLength) {
         return false;
       }
-      return crypto15.timingSafeEqual(a, b2);
+      return crypto18.timingSafeEqual(a, b2);
     } : function timingSafeEqual4(a, b2) {
       if (!bufferEqual) {
         bufferEqual = require_buffer_equal_constant_time();
@@ -69136,7 +69136,7 @@ var require_jwa = __commonJS({
       return function sign3(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto15.createSign("RSA-SHA" + bits);
+        var signer = crypto18.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign(privateKey, "base64"));
         return fromBase64(sig);
       };
@@ -69146,7 +69146,7 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto15.createVerify("RSA-SHA" + bits);
+        var verifier = crypto18.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify(publicKey, signature, "base64");
       };
@@ -69155,11 +69155,11 @@ var require_jwa = __commonJS({
       return function sign3(thing, privateKey) {
         checkIsPrivateKey(privateKey);
         thing = normalizeInput(thing);
-        var signer = crypto15.createSign("RSA-SHA" + bits);
+        var signer = crypto18.createSign("RSA-SHA" + bits);
         var sig = (signer.update(thing), signer.sign({
           key: privateKey,
-          padding: crypto15.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto15.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto18.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto18.constants.RSA_PSS_SALTLEN_DIGEST
         }, "base64"));
         return fromBase64(sig);
       };
@@ -69169,12 +69169,12 @@ var require_jwa = __commonJS({
         checkIsPublicKey(publicKey);
         thing = normalizeInput(thing);
         signature = toBase64(signature);
-        var verifier = crypto15.createVerify("RSA-SHA" + bits);
+        var verifier = crypto18.createVerify("RSA-SHA" + bits);
         verifier.update(thing);
         return verifier.verify({
           key: publicKey,
-          padding: crypto15.constants.RSA_PKCS1_PSS_PADDING,
-          saltLength: crypto15.constants.RSA_PSS_SALTLEN_DIGEST
+          padding: crypto18.constants.RSA_PKCS1_PSS_PADDING,
+          saltLength: crypto18.constants.RSA_PSS_SALTLEN_DIGEST
         }, signature, "base64");
       };
     }
@@ -71750,14 +71750,14 @@ var require_awsrequestsigner = __commonJS({
       }
     };
     exports2.AwsRequestSigner = AwsRequestSigner;
-    async function sign3(crypto15, key, msg) {
-      return await crypto15.signWithHmacSha256(key, msg);
+    async function sign3(crypto18, key, msg) {
+      return await crypto18.signWithHmacSha256(key, msg);
     }
-    async function getSigningKey(crypto15, key, dateStamp, region, serviceName) {
-      const kDate = await sign3(crypto15, `AWS4${key}`, dateStamp);
-      const kRegion = await sign3(crypto15, kDate, region);
-      const kService = await sign3(crypto15, kRegion, serviceName);
-      const kSigning = await sign3(crypto15, kService, "aws4_request");
+    async function getSigningKey(crypto18, key, dateStamp, region, serviceName) {
+      const kDate = await sign3(crypto18, `AWS4${key}`, dateStamp);
+      const kRegion = await sign3(crypto18, kDate, region);
+      const kService = await sign3(crypto18, kRegion, serviceName);
+      const kSigning = await sign3(crypto18, kService, "aws4_request");
       return kSigning;
     }
     async function generateAuthenticationHeaderMap(options) {
@@ -72723,7 +72723,7 @@ var require_gdchclient = __commonJS({
     "use strict";
     Object.defineProperty(exports2, "__esModule", { value: true });
     exports2.GdchClient = exports2.GDCH_SERVICE_ACCOUNT_TYPE = void 0;
-    var crypto15 = require("crypto");
+    var crypto18 = require("crypto");
     var fs3 = require("fs");
     var https4 = require("https");
     var oauth2client_1 = require_oauth2client();
@@ -72914,7 +72914,7 @@ var require_gdchclient = __commonJS({
         const encodedHeader = this.base64UrlEncode(JSON.stringify(header));
         const encodedPayload = this.base64UrlEncode(JSON.stringify(payload));
         const signingInput = `${encodedHeader}.${encodedPayload}`;
-        const signature = crypto15.sign("sha256", Buffer.from(signingInput), {
+        const signature = crypto18.sign("sha256", Buffer.from(signingInput), {
           key: this.privateKey,
           dsaEncoding: "ieee-p1363"
         });
@@ -73775,24 +73775,24 @@ var require_googleauth = __commonJS({
           const signed = await client.sign(data);
           return signed.signedBlob;
         }
-        const crypto15 = (0, crypto_1.createCrypto)();
+        const crypto18 = (0, crypto_1.createCrypto)();
         if (client instanceof jwtclient_1.JWT && client.key) {
-          const sign3 = await crypto15.sign(client.key, data);
+          const sign3 = await crypto18.sign(client.key, data);
           return sign3;
         }
         const creds = await this.getCredentials();
         if (!creds.client_email) {
           throw new Error("Cannot sign data without `client_email`.");
         }
-        return this.signBlob(crypto15, creds.client_email, data, endpoint);
+        return this.signBlob(crypto18, creds.client_email, data, endpoint);
       }
-      async signBlob(crypto15, emailOrUniqueId, data, endpoint) {
+      async signBlob(crypto18, emailOrUniqueId, data, endpoint) {
         const url3 = new URL(endpoint + `${emailOrUniqueId}:signBlob`);
         const res = await this.request({
           method: "POST",
           url: url3.href,
           data: {
-            payload: crypto15.encodeBase64StringUtf8(data)
+            payload: crypto18.encodeBase64StringUtf8(data)
           },
           retry: true,
           retryConfig: {
@@ -81350,7 +81350,7 @@ var require_axios = __commonJS({
   "node_modules/axios/dist/node/axios.cjs"(exports2, module2) {
     "use strict";
     var FormData$1 = require_form_data();
-    var crypto15 = require("crypto");
+    var crypto18 = require("crypto");
     var url3 = require("url");
     var HttpsProxyAgent2 = require_dist2();
     var http7 = require("http");
@@ -82829,7 +82829,7 @@ var require_axios = __commonJS({
         length
       } = alphabet;
       const randomValues = new Uint32Array(size2);
-      crypto15.randomFillSync(randomValues);
+      crypto18.randomFillSync(randomValues);
       for (let i2 = 0; i2 < size2; i2++) {
         str += alphabet[randomValues[i2] % length];
       }
@@ -86539,7 +86539,7 @@ var require_razorpay_utils = __commonJS({
         return o2 && "function" == typeof Symbol && o2.constructor === Symbol && o2 !== Symbol.prototype ? "symbol" : typeof o2;
       }, _typeof4(o);
     }
-    var crypto15 = require("crypto");
+    var crypto18 = require("crypto");
     function getDateInSecs(date6) {
       return +new Date(date6) / 1e3;
     }
@@ -86576,12 +86576,12 @@ var require_razorpay_utils = __commonJS({
       return new Error("\n".concat(summary, "\n") + "Expected(".concat(_typeof4(expectedVal), ")\n").concat(prettify(expectedVal), "\n\n") + "Got(".concat(_typeof4(gotVal), ")\n").concat(prettify(gotVal)));
     }
     function validateWebhookSignature(body, signature, secret) {
-      var crypto16 = require("crypto");
+      var crypto19 = require("crypto");
       if (!isDefined(body) || !isDefined(signature) || !isDefined(secret)) {
         throw Error("Invalid Parameters: Please give request body,signature sent in X-Razorpay-Signature header and webhook secret from dashboard as parameters");
       }
       body = body.toString();
-      var expectedSignature = crypto16.createHmac("sha256", secret).update(body).digest("hex");
+      var expectedSignature = crypto19.createHmac("sha256", secret).update(body).digest("hex");
       return expectedSignature === signature;
     }
     function validatePaymentVerification() {
@@ -86617,8 +86617,8 @@ var require_razorpay_utils = __commonJS({
     function encrypt2(dataToEncrypt, secret) {
       try {
         var keyBytes = Buffer.from(secret.slice(0, 16), "utf8");
-        var iv = crypto15.randomBytes(12);
-        var cipher = crypto15.createCipheriv("aes-128-gcm", keyBytes, iv);
+        var iv = crypto18.randomBytes(12);
+        var cipher = crypto18.createCipheriv("aes-128-gcm", keyBytes, iv);
         var encryptedData = cipher.update(dataToEncrypt, "utf8");
         encryptedData = Buffer.concat([encryptedData, cipher["final"]()]);
         var authTag = cipher.getAuthTag();
@@ -89628,7 +89628,7 @@ var import_http4 = require("http");
 var import_net2 = __toESM(require("net"));
 
 // server/_core/app.ts
-var import_express8 = __toESM(require_express2());
+var import_express10 = __toESM(require_express2());
 var import_path2 = __toESM(require("path"));
 
 // node_modules/@trpc/server/dist/utils-CLZnJdb_.mjs
@@ -116362,10 +116362,10 @@ function matchStringTarget(hostname3, target) {
   }
   return false;
 }
-function getDefaultPropagationTargets(supabaseUrl5) {
+function getDefaultPropagationTargets(supabaseUrl7) {
   const targets = [];
   try {
-    const url3 = new URL(supabaseUrl5);
+    const url3 = new URL(supabaseUrl7);
     targets.push(url3.hostname);
   } catch (error51) {
   }
@@ -116431,12 +116431,12 @@ var resolveFetch2 = (customFetch2) => {
 var resolveHeadersConstructor = () => {
   return Headers;
 };
-var fetchWithAuth = (supabaseKey, supabaseUrl5, getAccessToken, customFetch2, tracePropagationOptions) => {
+var fetchWithAuth = (supabaseKey, supabaseUrl7, getAccessToken, customFetch2, tracePropagationOptions) => {
   const fetch$1 = resolveFetch2(customFetch2);
   const HeadersConstructor = resolveHeadersConstructor();
   const traceEnabled = (tracePropagationOptions === null || tracePropagationOptions === void 0 ? void 0 : tracePropagationOptions.enabled) === true;
   const respectSampling = (tracePropagationOptions === null || tracePropagationOptions === void 0 ? void 0 : tracePropagationOptions.respectSamplingDecision) !== false;
-  const traceTargets = traceEnabled ? getDefaultPropagationTargets(supabaseUrl5) : null;
+  const traceTargets = traceEnabled ? getDefaultPropagationTargets(supabaseUrl7) : null;
   return async (input, init) => {
     var _await$getAccessToken;
     const accessToken = (_await$getAccessToken = await getAccessToken()) !== null && _await$getAccessToken !== void 0 ? _await$getAccessToken : supabaseKey;
@@ -116492,8 +116492,8 @@ function applySettingDefaults(options, defaults3) {
   else delete result.accessToken;
   return result;
 }
-function validateSupabaseUrl(supabaseUrl5) {
-  const trimmedUrl = supabaseUrl5 === null || supabaseUrl5 === void 0 ? void 0 : supabaseUrl5.trim();
+function validateSupabaseUrl(supabaseUrl7) {
+  const trimmedUrl = supabaseUrl7 === null || supabaseUrl7 === void 0 ? void 0 : supabaseUrl7.trim();
   if (!trimmedUrl) throw new Error("supabaseUrl is required.");
   if (!trimmedUrl.match(/^https?:\/\//i)) throw new Error("Invalid supabaseUrl: Must be a valid HTTP or HTTPS URL.");
   try {
@@ -116719,11 +116719,11 @@ var SupabaseClient = class {
   * })
   * ```
   */
-  constructor(supabaseUrl5, supabaseKey, options) {
+  constructor(supabaseUrl7, supabaseKey, options) {
     var _settings$auth$storag, _settings$global$head;
-    this.supabaseUrl = supabaseUrl5;
+    this.supabaseUrl = supabaseUrl7;
     this.supabaseKey = supabaseKey;
-    const baseUrl = validateSupabaseUrl(supabaseUrl5);
+    const baseUrl = validateSupabaseUrl(supabaseUrl7);
     if (!supabaseKey) throw new Error("supabaseKey is required.");
     this.realtimeUrl = new URL("realtime/v1", baseUrl);
     this.realtimeUrl.protocol = this.realtimeUrl.protocol.replace("http", "ws");
@@ -116751,7 +116751,7 @@ var SupabaseClient = class {
         throw new Error(`@supabase/supabase-js: Supabase Client is configured with the accessToken option, accessing supabase.auth.${String(prop)} is not possible`);
       } });
     }
-    this.fetch = fetchWithAuth(supabaseKey, supabaseUrl5, this._getAccessToken.bind(this), settings.global.fetch, settings.tracePropagation);
+    this.fetch = fetchWithAuth(supabaseKey, supabaseUrl7, this._getAccessToken.bind(this), settings.global.fetch, settings.tracePropagation);
     this.realtime = this._initRealtimeClient(_objectSpread23({
       headers: this.headers,
       accessToken: this._getAccessToken.bind(this),
@@ -116935,8 +116935,8 @@ var SupabaseClient = class {
     }
   }
 };
-var createClient = (supabaseUrl5, supabaseKey, options) => {
-  return new SupabaseClient(supabaseUrl5, supabaseKey, options);
+var createClient = (supabaseUrl7, supabaseKey, options) => {
+  return new SupabaseClient(supabaseUrl7, supabaseKey, options);
 };
 function shouldShowDeprecationWarning() {
   if (typeof window !== "undefined") return false;
@@ -132517,16 +132517,16 @@ var PushQueue = class {
 };
 var pushQueue = new PushQueue();
 async function dispatchFCMPush(data) {
-  const supabase4 = getSupabaseAdmin();
+  const supabase6 = getSupabaseAdmin();
   const app = getFirebaseApp();
   if (!app) {
     console.error("[FCM] Firebase app is not initialized. Cannot dispatch push.");
-    await supabase4.from("notifications").update({ delivery_status: "failed", delivery_error: "Firebase app not initialized" }).eq("id", data.id);
+    await supabase6.from("notifications").update({ delivery_status: "failed", delivery_error: "Firebase app not initialized" }).eq("id", data.id);
     return;
   }
   const messaging = getMessaging(app);
   try {
-    const { data: prefRows } = await supabase4.from("notification_preferences").select("chat_enabled, meetings_enabled, tasks_enabled, finance_enabled, announcements_enabled").eq("user_id", data.userId);
+    const { data: prefRows } = await supabase6.from("notification_preferences").select("chat_enabled, meetings_enabled, tasks_enabled, finance_enabled, announcements_enabled").eq("user_id", data.userId);
     if (prefRows && prefRows.length > 0) {
       const pref = prefRows[0];
       const isChatDisabled = data.type === "chat" && !pref.chat_enabled;
@@ -132536,13 +132536,13 @@ async function dispatchFCMPush(data) {
       const isAnnouncementDisabled = data.type === "announcements" && !pref.announcements_enabled;
       if (isChatDisabled || isMeetingDisabled || isTaskDisabled || isFinanceDisabled || isAnnouncementDisabled) {
         console.log(`[FCM] Notification skipped for user ${data.userId} due to preference settings.`);
-        await supabase4.from("notifications").update({ delivery_status: "failed", delivery_error: "Skipped by preferences" }).eq("id", data.id);
+        await supabase6.from("notifications").update({ delivery_status: "failed", delivery_error: "Skipped by preferences" }).eq("id", data.id);
         return;
       }
     }
-    let query2 = supabase4.from("user_push_tokens").select("token, device_id, platform").eq("user_id", data.userId).eq("is_enabled", true);
+    let query2 = supabase6.from("user_push_tokens").select("token, device_id, platform").eq("user_id", data.userId).eq("is_enabled", true);
     if (data.senderId && data.senderId !== data.userId) {
-      const { data: senderTokens } = await supabase4.from("user_push_tokens").select("token").eq("user_id", data.senderId);
+      const { data: senderTokens } = await supabase6.from("user_push_tokens").select("token").eq("user_id", data.senderId);
       if (senderTokens && senderTokens.length > 0) {
         const excludeTokens = senderTokens.map((t3) => t3.token);
         query2 = query2.not("token", "in", "(" + excludeTokens.join(",") + ")");
@@ -132552,12 +132552,12 @@ async function dispatchFCMPush(data) {
     const tokens = (deviceTokens || []).map((t3) => t3.token);
     if (!tokens || tokens.length === 0) {
       console.log(`[FCM] No devices found for user ${data.userId}`);
-      await supabase4.from("notifications").update({ delivery_status: "failed", delivery_error: "No active device tokens found" }).eq("id", data.id);
+      await supabase6.from("notifications").update({ delivery_status: "failed", delivery_error: "No active device tokens found" }).eq("id", data.id);
       return;
     }
-    const { data: nData } = await supabase4.from("notifications").select("delivery_attempts").eq("id", data.id).single();
+    const { data: nData } = await supabase6.from("notifications").select("delivery_attempts").eq("id", data.id).single();
     const attempts = (nData?.delivery_attempts || 0) + 1;
-    await supabase4.from("notifications").update({ delivery_status: "sending", delivery_attempts: attempts }).eq("id", data.id);
+    await supabase6.from("notifications").update({ delivery_status: "sending", delivery_attempts: attempts }).eq("id", data.id);
     console.log(`[FCM] Dispatching to ${tokens.length} device(s) for user ${data.userId}`);
     const multicastMessage = {
       tokens,
@@ -132604,17 +132604,17 @@ async function dispatchFCMPush(data) {
     });
     if (tokensToDelete.length > 0) {
       console.log(`[FCM] Deleting ${tokensToDelete.length} unregistered / invalid tokens.`);
-      await supabase4.from("user_push_tokens").delete().in("token", tokensToDelete);
+      await supabase6.from("user_push_tokens").delete().in("token", tokensToDelete);
     }
     const successCount = response.successCount;
     if (successCount > 0) {
-      await supabase4.from("notifications").update({ delivery_status: "delivered", delivery_error: null }).eq("id", data.id);
+      await supabase6.from("notifications").update({ delivery_status: "delivered", delivery_error: null }).eq("id", data.id);
     } else {
-      await supabase4.from("notifications").update({ delivery_status: "failed", delivery_error: "All token dispatches failed" }).eq("id", data.id);
+      await supabase6.from("notifications").update({ delivery_status: "failed", delivery_error: "All token dispatches failed" }).eq("id", data.id);
     }
   } catch (err) {
     console.error("[FCM] Critical push dispatch failure:", err);
-    await supabase4.from("notifications").update({ delivery_status: "failed", delivery_error: err.message || "Unknown error" }).eq("id", data.id);
+    await supabase6.from("notifications").update({ delivery_status: "failed", delivery_error: err.message || "Unknown error" }).eq("id", data.id);
   }
 }
 async function sendWithRetry(messaging, payload, attempt = 1) {
@@ -143519,6 +143519,7 @@ var meetings_routes_default = router2;
 var import_express2 = __toESM(require_express2());
 
 // server/causality/causality.service.ts
+var import_crypto7 = __toESM(require("crypto"));
 var CausalityService = class {
   /**
    * Helper: Ensure baseline commitment V1 exists for a project. If not, auto-seed from project properties.
@@ -144064,15 +144065,48 @@ var CausalityService = class {
       targetUserId = newUser.user.id;
       await supabaseAdmin.from("users").upsert({
         id: targetUserId,
-        email: email3.trim(),
+        email: email3.trim().toLowerCase(),
         full_name: fullName.trim(),
         role: "client",
+        account_type: "client",
+        account_setup_completed: true,
         created_at: (/* @__PURE__ */ new Date()).toISOString()
       });
+    }
+    const { data: projectData } = await supabaseAdmin.from("projects").select("id, org_id, owner_id").eq("id", projectId).single();
+    let resolvedClientId = payload.clientId || null;
+    const normEmail = email3.trim().toLowerCase();
+    if (resolvedClientId) {
+      await supabaseAdmin.from("clients").update({ user_id: targetUserId, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", resolvedClientId);
+    } else {
+      let clientMatchQuery = supabaseAdmin.from("clients").select("*").ilike("email", normEmail).eq("is_deleted", false);
+      if (projectData?.org_id) {
+        clientMatchQuery = clientMatchQuery.eq("organization_id", projectData.org_id);
+      } else if (projectData?.owner_id) {
+        clientMatchQuery = clientMatchQuery.eq("owner_id", projectData.owner_id);
+      }
+      const { data: matchedClients } = await clientMatchQuery;
+      if (matchedClients && matchedClients.length > 0) {
+        resolvedClientId = matchedClients[0].id;
+        await supabaseAdmin.from("clients").update({ user_id: targetUserId, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", resolvedClientId);
+      } else {
+        const { data: newClient } = await supabaseAdmin.from("clients").insert({
+          organization_id: projectData?.org_id || null,
+          owner_id: projectData?.owner_id || actorId,
+          name: fullName.trim() || normEmail.split("@")[0],
+          email: normEmail,
+          user_id: targetUserId,
+          created_by: actorId
+        }).select().single();
+        if (newClient) {
+          resolvedClientId = newClient.id;
+        }
+      }
     }
     const { data: accessRecord, error: accessErr } = await supabaseAdmin.from("project_client_access").upsert(
       {
         project_id: projectId,
+        client_id: resolvedClientId,
         user_id: targetUserId,
         can_view: true,
         can_approve: Boolean(canApprove),
@@ -144080,28 +144114,240 @@ var CausalityService = class {
         can_view_financials: Boolean(canViewFinancials),
         status: "active",
         invited_by: actorId,
-        invited_at: (/* @__PURE__ */ new Date()).toISOString()
+        invited_at: (/* @__PURE__ */ new Date()).toISOString(),
+        accepted_at: (/* @__PURE__ */ new Date()).toISOString()
       },
       { onConflict: "project_id,user_id" }
     ).select().single();
     if (accessErr) {
       throw new Error(accessErr.message || "Failed to grant project client access");
     }
-    await supabaseAdmin.from("project_events").insert({
-      project_id: projectId,
-      event_type: "CLIENT_ACCESS_GRANTED",
-      actor_id: actorId,
-      title: `Client Account Configured (${email3})`,
-      description: `Client contact ${fullName} was granted direct project access.`,
-      visibility: "CLIENT_VISIBLE"
-    });
+    try {
+      await supabaseAdmin.from("activity_logs").insert({
+        org_id: projectData?.org_id || null,
+        actor_id: actorId,
+        action: "CLIENT_ACCESS_GRANTED",
+        entity_type: "project",
+        entity_id: projectId,
+        new_value: {
+          client_id: resolvedClientId,
+          email: normEmail,
+          fullName: fullName.trim(),
+          user_id: targetUserId
+        }
+      });
+    } catch (e2) {
+    }
     return {
       success: true,
       userId: targetUserId,
-      email: email3.trim(),
+      clientId: resolvedClientId,
+      email: normEmail,
       fullName: fullName.trim(),
       access: accessRecord
     };
+  }
+  /**
+   * 15b. TOKENIZED PROJECT CLIENT INVITES (Cryptographic, Expirable, Atomic)
+   */
+  static async createProjectInvite(payload, actorId) {
+    const {
+      projectId,
+      clientId,
+      email: email3,
+      name,
+      canView = true,
+      canApprove = true,
+      canRequestChanges = true,
+      canViewFinancials = true,
+      canViewReceipts = true
+    } = payload;
+    if (!projectId || !clientId && !email3) {
+      throw new Error("Project ID and Client identifier (ID or Email) are required.");
+    }
+    const { data: project, error: pErr } = await supabaseAdmin.from("projects").select("id, title, org_id, owner_id").eq("id", projectId).single();
+    if (pErr || !project) {
+      throw new Error("Project not found");
+    }
+    let resolvedClientId = clientId || null;
+    let targetEmail = email3 ? email3.trim().toLowerCase() : "";
+    if (resolvedClientId) {
+      const { data: existingClient, error: cErr } = await supabaseAdmin.from("clients").select("*").eq("id", resolvedClientId).eq("is_deleted", false).single();
+      if (cErr || !existingClient) {
+        throw new Error("Specified client record was not found.");
+      }
+      if (project.org_id && existingClient.organization_id && project.org_id !== existingClient.organization_id) {
+        throw new Error("Tenant boundary violation: Client belongs to a different organization.");
+      }
+      if (!targetEmail && existingClient.email) {
+        targetEmail = existingClient.email.trim().toLowerCase();
+      }
+    } else if (targetEmail) {
+      let query2 = supabaseAdmin.from("clients").select("*").ilike("email", targetEmail).eq("is_deleted", false);
+      if (project.org_id) {
+        query2 = query2.eq("organization_id", project.org_id);
+      } else {
+        query2 = query2.eq("owner_id", project.owner_id);
+      }
+      const { data: matched } = await query2;
+      if (matched && matched.length > 0) {
+        resolvedClientId = matched[0].id;
+      } else {
+        const { data: newClient, error: ncErr } = await supabaseAdmin.from("clients").insert({
+          organization_id: project.org_id || null,
+          owner_id: project.owner_id,
+          name: (name || targetEmail.split("@")[0] || "Client Contact").trim(),
+          email: targetEmail,
+          created_by: actorId
+        }).select().single();
+        if (ncErr || !newClient) {
+          throw new Error("Failed to create client entity for invitation.");
+        }
+        resolvedClientId = newClient.id;
+      }
+    }
+    if (!targetEmail) {
+      throw new Error("Client must have a valid email address to receive an invitation.");
+    }
+    const token = import_crypto7.default.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1e3).toISOString();
+    await supabaseAdmin.from("project_invites").update({ status: "revoked", updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("project_id", projectId).eq("client_id", resolvedClientId).eq("status", "pending");
+    const { data: invite, error: invErr } = await supabaseAdmin.from("project_invites").insert({
+      token,
+      email: targetEmail,
+      client_id: resolvedClientId,
+      project_id: projectId,
+      business_id: project.org_id || null,
+      owner_id: project.owner_id,
+      invited_by: actorId,
+      status: "pending",
+      expires_at: expiresAt,
+      can_view: Boolean(canView),
+      can_approve: Boolean(canApprove),
+      can_request_changes: Boolean(canRequestChanges),
+      can_view_financials: Boolean(canViewFinancials),
+      can_view_receipts: Boolean(canViewReceipts)
+    }).select("*, client:client_id(name, company_name, email), project:project_id(title)").single();
+    if (invErr || !invite) {
+      throw new Error(invErr?.message || "Failed to generate invitation record.");
+    }
+    return {
+      success: true,
+      invite,
+      token,
+      expiresAt
+    };
+  }
+  /**
+   * 15c. LIST PROJECT INVITES
+   */
+  static async listProjectInvites(projectId) {
+    const { data, error: error51 } = await supabaseAdmin.from("project_invites").select("*, client:client_id(id, name, company_name, email), project:project_id(id, title), accepted_user:accepted_by(id, full_name, email)").eq("project_id", projectId).order("created_at", { ascending: false });
+    if (error51) throw new Error(error51.message);
+    return data || [];
+  }
+  /**
+   * 15d. GET INVITE DETAILS BY TOKEN (Public or Authenticated preview)
+   */
+  static async getInviteDetails(token) {
+    if (!token || !token.trim()) {
+      return {
+        valid: false,
+        reason: "INVALID_TOKEN",
+        message: "No token provided."
+      };
+    }
+    const { data: invite, error: error51 } = await supabaseAdmin.from("project_invites").select(`
+        id,
+        token,
+        email,
+        status,
+        expires_at,
+        accepted_at,
+        can_view,
+        can_approve,
+        can_request_changes,
+        can_view_financials,
+        client:client_id (id, name, company_name, email),
+        project:project_id (id, title, description, cover_color, org_id, owner_id),
+        inviter:invited_by (id, full_name, email)
+      `).eq("token", token.trim()).maybeSingle();
+    if (error51 || !invite) {
+      return {
+        valid: false,
+        reason: "NOT_FOUND",
+        message: "This invitation does not exist or has expired."
+      };
+    }
+    const isExpired = new Date(invite.expires_at) < /* @__PURE__ */ new Date();
+    if (invite.status === "pending" && isExpired) {
+      await supabaseAdmin.from("project_invites").update({ status: "expired", updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", invite.id);
+      invite.status = "expired";
+    }
+    return {
+      valid: invite.status === "pending" && !isExpired,
+      status: invite.status,
+      isExpired,
+      invite
+    };
+  }
+  /**
+   * 15e. ATOMIC ACCEPT INVITATION
+   */
+  static async acceptProjectInvite(token, userId, userEmail) {
+    if (!token || !userId) {
+      throw new Error("Token and user authentication are required.");
+    }
+    const { data, error: error51 } = await supabaseAdmin.rpc("accept_project_client_invite", {
+      p_token: token.trim(),
+      p_user_id: userId,
+      p_user_email: userEmail.trim().toLowerCase()
+    });
+    if (error51) {
+      throw new Error(error51.message || "Failed to accept invitation.");
+    }
+    return data;
+  }
+  /**
+   * 15f. RESEND PROJECT INVITE
+   */
+  static async resendProjectInvite(inviteId, actorId) {
+    const { data: existing, error: error51 } = await supabaseAdmin.from("project_invites").select("*, project:project_id(*)").eq("id", inviteId).single();
+    if (error51 || !existing) throw new Error("Invitation record not found.");
+    const newToken = import_crypto7.default.randomBytes(32).toString("hex");
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1e3).toISOString();
+    await supabaseAdmin.from("project_invites").update({ status: "revoked", updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", inviteId);
+    const { data: newInvite, error: insErr } = await supabaseAdmin.from("project_invites").insert({
+      token: newToken,
+      email: existing.email,
+      client_id: existing.client_id,
+      project_id: existing.project_id,
+      business_id: existing.business_id,
+      owner_id: existing.owner_id,
+      invited_by: actorId,
+      status: "pending",
+      expires_at: expiresAt,
+      can_view: existing.can_view,
+      can_approve: existing.can_approve,
+      can_request_changes: existing.can_request_changes,
+      can_view_financials: existing.can_view_financials,
+      can_view_receipts: existing.can_view_receipts
+    }).select("*, client:client_id(name, company_name, email), project:project_id(title)").single();
+    if (insErr || !newInvite) throw new Error(insErr?.message || "Failed to resend invite.");
+    return {
+      success: true,
+      invite: newInvite,
+      token: newToken,
+      expiresAt
+    };
+  }
+  /**
+   * 15g. REVOKE PROJECT INVITE
+   */
+  static async revokeProjectInvite(inviteId, actorId) {
+    const { data, error: error51 } = await supabaseAdmin.from("project_invites").update({ status: "revoked", updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", inviteId).select().single();
+    if (error51) throw new Error(error51.message);
+    return { success: true, invite: data };
   }
   /**
    * 16. INITIALIZE PROJECT (Backend Service Authority)
@@ -144312,6 +144558,60 @@ var CausalityController = class {
       res.status(500).json({ error: error51.message || "Failed to create client user account" });
     }
   }
+  static async createProjectInvite(req, res) {
+    try {
+      const data = await CausalityService.createProjectInvite(req.body, req.user.id);
+      res.json(data);
+    } catch (error51) {
+      res.status(400).json({ error: error51.message || "Failed to create project invitation" });
+    }
+  }
+  static async listProjectInvites(req, res) {
+    try {
+      const { projectId } = req.query;
+      if (!projectId) return res.status(400).json({ error: "projectId is required" });
+      const data = await CausalityService.listProjectInvites(projectId);
+      res.json(data);
+    } catch (error51) {
+      res.status(500).json({ error: error51.message || "Failed to fetch project invites" });
+    }
+  }
+  static async getInviteDetails(req, res) {
+    try {
+      const token = req.query.token;
+      const data = await CausalityService.getInviteDetails(token);
+      res.json(data);
+    } catch (error51) {
+      res.status(400).json({ error: error51.message || "Failed to fetch invitation details" });
+    }
+  }
+  static async acceptProjectInvite(req, res) {
+    try {
+      const { token } = req.body;
+      const data = await CausalityService.acceptProjectInvite(token, req.user.id, req.user.email);
+      res.json(data);
+    } catch (error51) {
+      res.status(400).json({ error: error51.message || "Failed to accept invitation" });
+    }
+  }
+  static async resendProjectInvite(req, res) {
+    try {
+      const { inviteId } = req.body;
+      const data = await CausalityService.resendProjectInvite(inviteId, req.user.id);
+      res.json(data);
+    } catch (error51) {
+      res.status(400).json({ error: error51.message || "Failed to resend invitation" });
+    }
+  }
+  static async revokeProjectInvite(req, res) {
+    try {
+      const { inviteId } = req.body;
+      const data = await CausalityService.revokeProjectInvite(inviteId, req.user.id);
+      res.json(data);
+    } catch (error51) {
+      res.status(400).json({ error: error51.message || "Failed to revoke invitation" });
+    }
+  }
   static async createProject(req, res) {
     try {
       const data = await CausalityService.createProject(req.body, req.user.id);
@@ -144366,6 +144666,12 @@ router3.post("/seal", requireAuth2, CausalityController.sealProject);
 router3.get("/playback", requireAuth2, CausalityController.getPlaybackState);
 router3.get("/compare", requireAuth2, CausalityController.compareStates);
 router3.post("/provision-client", requireAuth2, CausalityController.provisionClientUser);
+router3.post("/invite-client", requireAuth2, CausalityController.createProjectInvite);
+router3.get("/invites", requireAuth2, CausalityController.listProjectInvites);
+router3.get("/invite-details", CausalityController.getInviteDetails);
+router3.post("/accept-invite", requireAuth2, CausalityController.acceptProjectInvite);
+router3.post("/resend-invite", requireAuth2, CausalityController.resendProjectInvite);
+router3.post("/revoke-invite", requireAuth2, CausalityController.revokeProjectInvite);
 router3.post("/projects", requireAuth2, requireEntitlement("projects"), CausalityController.createProject);
 var causality_routes_default = router3;
 
@@ -144816,7 +145122,7 @@ webhookRouter.post("/razorpay", async (req, res) => {
 
 // server/contact/contact.routes.ts
 var import_express5 = __toESM(require_express2());
-var import_crypto7 = __toESM(require("crypto"));
+var import_crypto8 = __toESM(require("crypto"));
 var contactRouter = (0, import_express5.Router)();
 var fallbackInquiries = /* @__PURE__ */ new Map();
 var ipRateLimit = /* @__PURE__ */ new Map();
@@ -144877,7 +145183,7 @@ contactRouter.post("/custom-development", async (req, res) => {
         userId = payload.sub || payload.userId;
       }
     }
-    const inquiryId = import_crypto7.default.randomUUID();
+    const inquiryId = import_crypto8.default.randomUUID();
     const inquiryRecord = {
       id: inquiryId,
       user_id: userId,
@@ -144913,7 +145219,7 @@ contactRouter.post("/custom-development", async (req, res) => {
 
 // server/payments/razorpay-standard.routes.ts
 var import_express6 = __toESM(require_express2());
-var import_crypto8 = __toESM(require("crypto"));
+var import_crypto9 = __toESM(require("crypto"));
 var import_razorpay2 = __toESM(require_razorpay());
 var razorpayStandardRouter = (0, import_express6.Router)();
 function getRazorpayClient() {
@@ -144991,8 +145297,8 @@ razorpayStandardRouter.post("/verify-payment", (req, res) => {
     }
     const { keySecret } = getRazorpayClient();
     const payload = `${orderId}|${paymentId}`;
-    const generatedSignature = import_crypto8.default.createHmac("sha256", keySecret).update(payload).digest("hex");
-    const isMatch = import_crypto8.default.timingSafeEqual(
+    const generatedSignature = import_crypto9.default.createHmac("sha256", keySecret).update(payload).digest("hex");
+    const isMatch = import_crypto9.default.timingSafeEqual(
       Buffer.from(generatedSignature, "utf8"),
       Buffer.from(clientSignature, "utf8")
     );
@@ -145026,7 +145332,7 @@ razorpayStandardRouter.post("/verify-payment", (req, res) => {
 
 // server/workflows/workflows.routes.ts
 var import_express7 = __toESM(require_express2());
-var import_crypto10 = __toESM(require("crypto"));
+var import_crypto11 = __toESM(require("crypto"));
 
 // server/workflows/workflow.validator.ts
 var ALLOWED_CATEGORIES = [
@@ -145255,7 +145561,7 @@ var WorkflowValidator = class {
 };
 
 // server/workflows/workflow.engine.ts
-var import_crypto9 = __toESM(require("crypto"));
+var import_crypto10 = __toESM(require("crypto"));
 var WorkflowEngine = class {
   static MAX_EXECUTION_DEPTH = 5;
   /**
@@ -145345,7 +145651,7 @@ var WorkflowEngine = class {
           const status = cfg.status || "todo";
           const orgId = workflow.account_type === "organization" ? workflow.account_id : null;
           const { data: newTask, error: taskErr } = await supabaseAdmin.from("tasks").insert({
-            id: import_crypto9.default.randomUUID(),
+            id: import_crypto10.default.randomUUID(),
             title,
             description,
             project_id: projectId,
@@ -145379,7 +145685,7 @@ var WorkflowEngine = class {
           const { error: assignErr } = await supabaseAdmin.from("tasks").update({ assignee_id: assigneeId, updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", taskId);
           if (assignErr) throw assignErr;
           await supabaseAdmin.from("notifications").insert({
-            id: import_crypto9.default.randomUUID(),
+            id: import_crypto10.default.randomUUID(),
             user_id: assigneeId,
             title: "Task Assigned",
             message: `You have been assigned to task: ${context.task?.title || "New Task"}`,
@@ -145399,7 +145705,7 @@ var WorkflowEngine = class {
           for (const item of subtasks) {
             const itemTitle = this.interpolateString(item.title, context);
             const { data: st } = await supabaseAdmin.from("tasks").insert({
-              id: import_crypto9.default.randomUUID(),
+              id: import_crypto10.default.randomUUID(),
               title: itemTitle,
               description: `Subtask of ${parentTaskId || "parent"}: ${item.description || ""}`,
               project_id: projectId,
@@ -145417,7 +145723,7 @@ var WorkflowEngine = class {
           const orgId = workflow.account_type === "organization" ? workflow.account_id : null;
           const ownerId = cfg.ownerId || context.userId || workflow.created_by;
           const { data: newProj, error: pErr } = await supabaseAdmin.from("projects").insert({
-            id: import_crypto9.default.randomUUID(),
+            id: import_crypto10.default.randomUUID(),
             title,
             description,
             org_id: orgId,
@@ -145444,7 +145750,7 @@ var WorkflowEngine = class {
           if (!userId) throw new Error("Recipient userId missing for send_notification action");
           const title = this.interpolateString(cfg.title || "Workflow Notification", context);
           const message3 = this.interpolateString(cfg.message || "", context);
-          const notifId = import_crypto9.default.randomUUID();
+          const notifId = import_crypto10.default.randomUUID();
           const { error: notifErr } = await supabaseAdmin.from("notifications").insert({
             id: notifId,
             user_id: userId,
@@ -145476,7 +145782,7 @@ var WorkflowEngine = class {
           return { status: "completed", output: { to: toEmail, subject, bytesSent: body.length } };
         }
         case "create_approval_request": {
-          const approvalId = import_crypto9.default.randomUUID();
+          const approvalId = import_crypto10.default.randomUUID();
           const title = this.interpolateString(cfg.title || "Approval Request Required", context);
           const description = this.interpolateString(cfg.description || "", context);
           const approverId = cfg.approverId || null;
@@ -145512,7 +145818,7 @@ var WorkflowEngine = class {
             timestamp: (/* @__PURE__ */ new Date()).toISOString()
           };
           const bodyStr = JSON.stringify(payload);
-          const signature = import_crypto9.default.createHmac("sha256", workflow.webhook_secret || "auvryn_wh_secret").update(bodyStr).digest("hex");
+          const signature = import_crypto10.default.createHmac("sha256", workflow.webhook_secret || "auvryn_wh_secret").update(bodyStr).digest("hex");
           const controller = new AbortController();
           const timeout = setTimeout(() => controller.abort(), 1e4);
           try {
@@ -145558,7 +145864,7 @@ var WorkflowEngine = class {
    * Executes a workflow definition against an event.
    */
   static async executeWorkflow(workflow, event, resumeFromIndex = 0) {
-    const executionId = import_crypto9.default.randomUUID();
+    const executionId = import_crypto10.default.randomUUID();
     const startedAt = (/* @__PURE__ */ new Date()).toISOString();
     const depth = event.executionDepth || 0;
     if (depth >= this.MAX_EXECUTION_DEPTH) {
@@ -146280,7 +146586,7 @@ workflowsRouter.post("/", async (req, res) => {
       account_id: auth.accountId,
       account_type: auth.accountType,
       created_by: auth.userId,
-      webhook_secret: req.body.webhook_secret || import_crypto10.default.randomBytes(24).toString("hex")
+      webhook_secret: req.body.webhook_secret || import_crypto11.default.randomBytes(24).toString("hex")
     };
     const validation = WorkflowValidator.validate(payload);
     if (!validation.valid) {
@@ -146421,13 +146727,13 @@ workflowsRouter.post("/:id/test", async (req, res) => {
     }
     const testPayload = req.body.eventData || {
       task: {
-        id: import_crypto10.default.randomUUID(),
+        id: import_crypto11.default.randomUUID(),
         title: "Test Verification Task",
         priority: "urgent",
         status: "todo"
       },
       project: {
-        id: import_crypto10.default.randomUUID(),
+        id: import_crypto11.default.randomUUID(),
         title: "Test Verification Project",
         status: "active"
       },
@@ -146609,6 +146915,966 @@ workflowsRouter.post("/cron", async (req, res) => {
   }
 });
 
+// server/clients/client.routes.ts
+var import_express8 = __toESM(require_express2());
+
+// server/clients/client.service.ts
+var import_crypto12 = __toESM(require("crypto"));
+var ClientService = class {
+  /**
+   * Helper: Resolve caller's business scope and ensure they have permission to manage clients.
+   */
+  static async resolveCallerBusiness(actorId, orgIdHeader) {
+    const { data: userProfile, error: userErr } = await supabaseAdmin.from("users").select("id, role, account_type").eq("id", actorId).single();
+    if (userErr || !userProfile) {
+      throw new Error("Authenticated user profile not found");
+    }
+    if (userProfile.role === "client" || userProfile.account_type === "client") {
+      throw new Error("Clients are not authorized to perform client management operations");
+    }
+    if (orgIdHeader) {
+      const { data: membership, error: memErr } = await supabaseAdmin.from("user_organizations").select("org_id, role").eq("org_id", orgIdHeader).eq("user_id", actorId).single();
+      if (memErr || !membership) {
+        throw new Error("You are not an authorized member of this organization");
+      }
+      const allowedRoles = ["owner", "administrator", "director", "senior_manager", "manager", "hr"];
+      if (!allowedRoles.includes(membership.role) && !allowedRoles.includes(userProfile.role)) {
+        throw new Error("Forbidden: Your organization role lacks permission to manage clients");
+      }
+      return {
+        businessId: orgIdHeader,
+        organizationId: orgIdHeader,
+        ownerId: actorId,
+        isOrg: true
+      };
+    } else {
+      return {
+        businessId: actorId,
+        organizationId: null,
+        ownerId: actorId,
+        isOrg: false
+      };
+    }
+  }
+  /**
+   * Save (create or update) a client record, with optional portal user creation/linking
+   * in a single atomic flow with full rollback support.
+   */
+  static async saveClientWithPortal(actorId, orgIdHeader, payload) {
+    const business = await this.resolveCallerBusiness(actorId, orgIdHeader);
+    const normName = (payload.name || "").trim();
+    if (!normName) throw new Error("Client name is required");
+    const normEmail = payload.email ? payload.email.trim().toLowerCase() : null;
+    const normPhone = payload.phone ? payload.phone.trim() : null;
+    const normGst = payload.gstNumber ? payload.gstNumber.trim().toUpperCase() : null;
+    const normCompany = payload.companyName ? payload.companyName.trim() : null;
+    const normAddress = payload.address ? payload.address.trim() : null;
+    const normNotes = payload.notes ? payload.notes.trim() : null;
+    const enablePortal = Boolean(payload.enablePortal);
+    const selectedProjectIds = Array.isArray(payload.projectIds) ? payload.projectIds : [];
+    if (enablePortal && !normEmail) {
+      throw new Error("A valid email address is required to enable Client Portal access");
+    }
+    let existingClientId = payload.id || null;
+    let existingClient = null;
+    if (existingClientId) {
+      let q = supabaseAdmin.from("clients").select("*").eq("id", existingClientId).eq("is_deleted", false);
+      if (business.isOrg) {
+        q = q.eq("organization_id", business.organizationId);
+      } else {
+        q = q.is("organization_id", null).eq("owner_id", business.ownerId);
+      }
+      const { data: found } = await q.maybeSingle();
+      if (!found) throw new Error("Client not found or does not belong to this business");
+      existingClient = found;
+    } else if (normEmail) {
+      let q = supabaseAdmin.from("clients").select("*").eq("is_deleted", false).ilike("email", normEmail);
+      if (business.isOrg) {
+        q = q.eq("organization_id", business.organizationId);
+      } else {
+        q = q.is("organization_id", null).eq("owner_id", business.ownerId);
+      }
+      const { data: matched } = await q.maybeSingle();
+      if (matched) {
+        existingClient = matched;
+        existingClientId = matched.id;
+      }
+    }
+    if (!existingClient && (normPhone || normGst)) {
+      let q = supabaseAdmin.from("clients").select("*").eq("is_deleted", false);
+      if (business.isOrg) {
+        q = q.eq("organization_id", business.organizationId);
+      } else {
+        q = q.is("organization_id", null).eq("owner_id", business.ownerId);
+      }
+      if (normGst) {
+        const { data: gMatch } = await q.eq("gst_number", normGst).maybeSingle();
+        if (gMatch) {
+          existingClient = gMatch;
+          existingClientId = gMatch.id;
+        }
+      }
+    }
+    let newlyCreatedAuthUserId = null;
+    let targetUserId = existingClient?.user_id || null;
+    let generatedTempPassword = null;
+    let generatedSetupLink = null;
+    let newlyCreatedClientId = null;
+    try {
+      if (enablePortal && normEmail) {
+        const { data: listData } = await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 1e3 });
+        const matchedAuthUser = (listData?.users || []).find(
+          (u) => u.email?.trim().toLowerCase() === normEmail
+        );
+        if (matchedAuthUser) {
+          targetUserId = matchedAuthUser.id;
+          const { data: existingProf } = await supabaseAdmin.from("users").select("role").eq("id", targetUserId).single();
+          const staffRoles = ["owner", "administrator", "director", "senior_manager", "manager", "employee", "freelancer"];
+          const shouldPreserveRole = existingProf && staffRoles.includes(existingProf.role);
+          await supabaseAdmin.from("users").update({
+            role: shouldPreserveRole ? existingProf.role : "client",
+            account_type: shouldPreserveRole ? void 0 : "client",
+            account_setup_completed: true,
+            updated_at: (/* @__PURE__ */ new Date()).toISOString()
+          }).eq("id", targetUserId);
+          try {
+            const { data: linkRes } = await supabaseAdmin.auth.admin.generateLink({
+              type: "recovery",
+              email: normEmail
+            });
+            if (linkRes?.properties?.action_link) {
+              generatedSetupLink = linkRes.properties.action_link;
+            }
+          } catch (linkErr) {
+            console.warn("[ClientService] Could not generate recovery link:", linkErr);
+          }
+        } else {
+          const randomSuffix = import_crypto12.default.randomBytes(6).toString("hex");
+          generatedTempPassword = `Auvryn#${randomSuffix}!`;
+          const { data: createdAuth, error: createAuthErr } = await supabaseAdmin.auth.admin.createUser({
+            email: normEmail,
+            password: generatedTempPassword,
+            email_confirm: true,
+            user_metadata: {
+              full_name: normName,
+              account_type: "client",
+              role: "client",
+              must_change_password: true
+            }
+          });
+          if (createAuthErr || !createdAuth?.user) {
+            throw new Error(`Failed to create authentication user for client: ${createAuthErr?.message}`);
+          }
+          newlyCreatedAuthUserId = createdAuth.user.id;
+          targetUserId = createdAuth.user.id;
+          await supabaseAdmin.from("users").upsert({
+            id: targetUserId,
+            email: normEmail,
+            full_name: normName,
+            role: "client",
+            account_type: "client",
+            account_setup_completed: true,
+            created_at: (/* @__PURE__ */ new Date()).toISOString(),
+            updated_at: (/* @__PURE__ */ new Date()).toISOString()
+          }, { onConflict: "id" });
+          try {
+            const { data: linkRes } = await supabaseAdmin.auth.admin.generateLink({
+              type: "invite",
+              email: normEmail
+            });
+            if (linkRes?.properties?.action_link) {
+              generatedSetupLink = linkRes.properties.action_link;
+            }
+          } catch (linkErr) {
+            console.warn("[ClientService] Could not generate invite link:", linkErr);
+          }
+        }
+        if (business.isOrg && business.organizationId && targetUserId) {
+          await supabaseAdmin.from("user_organizations").upsert({
+            user_id: targetUserId,
+            org_id: business.organizationId,
+            role: "client",
+            updated_at: (/* @__PURE__ */ new Date()).toISOString()
+          }, { onConflict: "user_id,org_id" });
+        }
+      }
+      let finalClientId;
+      const targetPortalStatus = enablePortal ? existingClient?.portal_status === "active" ? "active" : "pending_login" : existingClient?.portal_status && existingClient.portal_status !== "no_access" ? "disabled" : "no_access";
+      if (existingClient) {
+        finalClientId = existingClient.id;
+        const updateData = {
+          name: normName,
+          company_name: normCompany,
+          email: normEmail,
+          phone: normPhone,
+          gst_number: normGst,
+          address: normAddress,
+          notes: normNotes,
+          portal_status: targetPortalStatus,
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        if (enablePortal && targetUserId) {
+          updateData.user_id = targetUserId;
+          if (!existingClient.portal_enabled_at) {
+            updateData.portal_enabled_at = (/* @__PURE__ */ new Date()).toISOString();
+          }
+        }
+        const { data: updatedClient, error: updateErr } = await supabaseAdmin.from("clients").update(updateData).eq("id", finalClientId).select().single();
+        if (updateErr) throw new Error(`Failed to update client: ${updateErr.message}`);
+      } else {
+        const insertData = {
+          organization_id: business.organizationId,
+          owner_id: business.ownerId,
+          name: normName,
+          company_name: normCompany,
+          email: normEmail,
+          phone: normPhone,
+          gst_number: normGst,
+          address: normAddress,
+          notes: normNotes,
+          created_by: actorId,
+          portal_status: targetPortalStatus,
+          portal_enabled_at: enablePortal ? (/* @__PURE__ */ new Date()).toISOString() : null,
+          user_id: enablePortal ? targetUserId : null,
+          is_deleted: false,
+          created_at: (/* @__PURE__ */ new Date()).toISOString(),
+          updated_at: (/* @__PURE__ */ new Date()).toISOString()
+        };
+        const { data: insertedClient, error: insertErr } = await supabaseAdmin.from("clients").insert(insertData).select().single();
+        if (insertErr || !insertedClient) {
+          throw new Error(`Failed to create client record: ${insertErr?.message}`);
+        }
+        finalClientId = insertedClient.id;
+        newlyCreatedClientId = insertedClient.id;
+      }
+      if (enablePortal && targetUserId && selectedProjectIds.length > 0) {
+        for (const projId of selectedProjectIds) {
+          let pQuery = supabaseAdmin.from("projects").select("id").eq("id", projId).is("deleted_at", null);
+          if (business.isOrg) {
+            pQuery = pQuery.eq("org_id", business.organizationId);
+          } else {
+            pQuery = pQuery.eq("owner_id", business.ownerId);
+          }
+          const { data: verifiedProj } = await pQuery.maybeSingle();
+          if (verifiedProj) {
+            await supabaseAdmin.from("project_client_access").upsert({
+              project_id: projId,
+              client_id: finalClientId,
+              user_id: targetUserId,
+              access_role: "viewer",
+              can_view: true,
+              can_approve: true,
+              can_request_changes: true,
+              can_view_financials: true,
+              can_view_receipts: true,
+              status: "active",
+              invited_by: actorId,
+              invited_at: (/* @__PURE__ */ new Date()).toISOString(),
+              accepted_at: (/* @__PURE__ */ new Date()).toISOString(),
+              updated_at: (/* @__PURE__ */ new Date()).toISOString()
+            }, { onConflict: "project_id,user_id" });
+          }
+        }
+      }
+      const { data: freshClient } = await supabaseAdmin.from("clients").select("*").eq("id", finalClientId).single();
+      const { data: linkedPcas } = await supabaseAdmin.from("project_client_access").select("project_id").eq("client_id", finalClientId);
+      return {
+        success: true,
+        client: freshClient,
+        portalEnabled: enablePortal,
+        portalStatus: targetPortalStatus,
+        tempPassword: generatedTempPassword,
+        setupLink: generatedSetupLink,
+        linkedProjectsCount: linkedPcas?.length || 0
+      };
+    } catch (err) {
+      console.error("[ClientService] Error during saveClientWithPortal, rolling back:", err);
+      if (newlyCreatedClientId) {
+        await supabaseAdmin.from("clients").delete().eq("id", newlyCreatedClientId);
+      }
+      if (newlyCreatedAuthUserId) {
+        try {
+          await supabaseAdmin.auth.admin.deleteUser(newlyCreatedAuthUserId);
+        } catch (delErr) {
+          console.warn("[ClientService] Rollback: Failed to delete auth user:", delErr);
+        }
+      }
+      throw err;
+    }
+  }
+  /**
+   * Toggle Portal Access (enable/disable) for an existing client
+   */
+  static async togglePortalAccess(actorId, orgIdHeader, clientId, enabled) {
+    const business = await this.resolveCallerBusiness(actorId, orgIdHeader);
+    let q = supabaseAdmin.from("clients").select("*").eq("id", clientId).eq("is_deleted", false);
+    if (business.isOrg) {
+      q = q.eq("organization_id", business.organizationId);
+    } else {
+      q = q.is("organization_id", null).eq("owner_id", business.ownerId);
+    }
+    const { data: client, error: cErr } = await q.single();
+    if (cErr || !client) throw new Error("Client record not found");
+    if (enabled) {
+      return this.saveClientWithPortal(actorId, orgIdHeader, {
+        id: client.id,
+        name: client.name,
+        companyName: client.company_name,
+        email: client.email,
+        phone: client.phone,
+        gstNumber: client.gst_number,
+        address: client.address,
+        notes: client.notes,
+        enablePortal: true
+      });
+    } else {
+      const { data: updated, error: uErr } = await supabaseAdmin.from("clients").update({
+        portal_status: "disabled",
+        updated_at: (/* @__PURE__ */ new Date()).toISOString()
+      }).eq("id", clientId).select().single();
+      if (uErr) throw new Error(`Failed to disable portal access: ${uErr.message}`);
+      if (client.user_id) {
+        await supabaseAdmin.from("project_client_access").update({ status: "revoked", updated_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("client_id", clientId).eq("user_id", client.user_id);
+      }
+      return {
+        success: true,
+        client: updated,
+        portalStatus: "disabled"
+      };
+    }
+  }
+  /**
+   * Resend access setup link
+   */
+  static async resendAccessLink(actorId, orgIdHeader, clientId) {
+    const business = await this.resolveCallerBusiness(actorId, orgIdHeader);
+    let q = supabaseAdmin.from("clients").select("*").eq("id", clientId).eq("is_deleted", false);
+    if (business.isOrg) {
+      q = q.eq("organization_id", business.organizationId);
+    } else {
+      q = q.is("organization_id", null).eq("owner_id", business.ownerId);
+    }
+    const { data: client } = await q.single();
+    if (!client) throw new Error("Client not found");
+    if (!client.email) throw new Error("Client has no email configured");
+    const normEmail = client.email.trim().toLowerCase();
+    const { data: linkRes, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+      type: "recovery",
+      email: normEmail
+    });
+    if (linkErr) throw new Error(`Failed to generate recovery link: ${linkErr.message}`);
+    await supabaseAdmin.from("clients").update({
+      portal_status: client.portal_status === "no_access" ? "pending_login" : client.portal_status,
+      updated_at: (/* @__PURE__ */ new Date()).toISOString()
+    }).eq("id", clientId);
+    return {
+      success: true,
+      email: normEmail,
+      setupLink: linkRes?.properties?.action_link || null,
+      message: "Access setup link generated successfully"
+    };
+  }
+  /**
+   * Trigger Password Reset
+   */
+  static async triggerPasswordReset(actorId, orgIdHeader, clientId) {
+    return this.resendAccessLink(actorId, orgIdHeader, clientId);
+  }
+  /**
+   * Synchronize linked projects for a client
+   */
+  static async syncProjects(actorId, orgIdHeader, clientId, projectIds) {
+    const business = await this.resolveCallerBusiness(actorId, orgIdHeader);
+    let q = supabaseAdmin.from("clients").select("*").eq("id", clientId).eq("is_deleted", false);
+    if (business.isOrg) {
+      q = q.eq("organization_id", business.organizationId);
+    } else {
+      q = q.is("organization_id", null).eq("owner_id", business.ownerId);
+    }
+    const { data: client } = await q.single();
+    if (!client) throw new Error("Client not found");
+    if (!client.user_id) throw new Error("Client has no linked portal account");
+    const cleanProjectIds = Array.isArray(projectIds) ? projectIds : [];
+    let pQuery = supabaseAdmin.from("projects").select("id").in("id", cleanProjectIds).is("deleted_at", null);
+    if (business.isOrg) {
+      pQuery = pQuery.eq("org_id", business.organizationId);
+    } else {
+      pQuery = pQuery.eq("owner_id", business.ownerId);
+    }
+    const { data: verifiedProjects } = await pQuery;
+    const validIds = new Set((verifiedProjects || []).map((p) => p.id));
+    const { data: currentAccess } = await supabaseAdmin.from("project_client_access").select("id, project_id").eq("client_id", clientId).eq("user_id", client.user_id);
+    const toRemove = (currentAccess || []).filter((ca) => !validIds.has(ca.project_id));
+    if (toRemove.length > 0) {
+      await supabaseAdmin.from("project_client_access").delete().in("id", toRemove.map((r2) => r2.id));
+    }
+    for (const pId of Array.from(validIds)) {
+      await supabaseAdmin.from("project_client_access").upsert({
+        project_id: pId,
+        client_id: clientId,
+        user_id: client.user_id,
+        access_role: "viewer",
+        can_view: true,
+        can_approve: true,
+        can_request_changes: true,
+        can_view_financials: true,
+        can_view_receipts: true,
+        status: "active",
+        invited_by: actorId,
+        updated_at: (/* @__PURE__ */ new Date()).toISOString()
+      }, { onConflict: "project_id,user_id" });
+    }
+    return {
+      success: true,
+      linkedProjectsCount: validIds.size
+    };
+  }
+  /**
+   * Get client portal account telemetry & associated projects
+   */
+  static async getClientDetails(actorId, orgIdHeader, clientId) {
+    const business = await this.resolveCallerBusiness(actorId, orgIdHeader);
+    let q = supabaseAdmin.from("clients").select("*").eq("id", clientId).eq("is_deleted", false);
+    if (business.isOrg) {
+      q = q.eq("organization_id", business.organizationId);
+    } else {
+      q = q.is("organization_id", null).eq("owner_id", business.ownerId);
+    }
+    const { data: client, error: error51 } = await q.single();
+    if (error51 || !client) throw new Error("Client record not found");
+    let linkedProjects = [];
+    if (client.user_id) {
+      const { data: pcas } = await supabaseAdmin.from("project_client_access").select("project_id, status, projects(id, title, status)").eq("client_id", clientId);
+      linkedProjects = (pcas || []).map((p) => p.projects).filter(Boolean);
+    }
+    return {
+      client,
+      linkedProjects
+    };
+  }
+};
+
+// server/clients/client.controller.ts
+var ClientController = class {
+  static async saveClientWithPortal(req, res) {
+    try {
+      const orgIdHeader = req.headers["x-organization-id"] || req.headers["organization-id"];
+      const result = await ClientService.saveClientWithPortal(req.user.id, orgIdHeader, req.body);
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("[ClientController.saveClientWithPortal] Error:", err);
+      const status = err.message?.includes("Forbidden") ? 403 : err.message?.includes("not found") ? 404 : 400;
+      res.status(status).json({
+        success: false,
+        error: err.message || "Failed to save client portal account"
+      });
+    }
+  }
+  static async togglePortalAccess(req, res) {
+    try {
+      const { id } = req.params;
+      const { enabled } = req.body;
+      const orgIdHeader = req.headers["x-organization-id"] || req.headers["organization-id"];
+      const result = await ClientService.togglePortalAccess(req.user.id, orgIdHeader, id, Boolean(enabled));
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("[ClientController.togglePortalAccess] Error:", err);
+      const status = err.message?.includes("Forbidden") ? 403 : err.message?.includes("not found") ? 404 : 400;
+      res.status(status).json({
+        success: false,
+        error: err.message || "Failed to toggle portal access"
+      });
+    }
+  }
+  static async resendAccessLink(req, res) {
+    try {
+      const { id } = req.params;
+      const orgIdHeader = req.headers["x-organization-id"] || req.headers["organization-id"];
+      const result = await ClientService.resendAccessLink(req.user.id, orgIdHeader, id);
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("[ClientController.resendAccessLink] Error:", err);
+      const status = err.message?.includes("Forbidden") ? 403 : err.message?.includes("not found") ? 404 : 400;
+      res.status(status).json({
+        success: false,
+        error: err.message || "Failed to resend access link"
+      });
+    }
+  }
+  static async resetPassword(req, res) {
+    try {
+      const { id } = req.params;
+      const orgIdHeader = req.headers["x-organization-id"] || req.headers["organization-id"];
+      const result = await ClientService.triggerPasswordReset(req.user.id, orgIdHeader, id);
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("[ClientController.resetPassword] Error:", err);
+      const status = err.message?.includes("Forbidden") ? 403 : err.message?.includes("not found") ? 404 : 400;
+      res.status(status).json({
+        success: false,
+        error: err.message || "Failed to trigger password reset"
+      });
+    }
+  }
+  static async syncProjects(req, res) {
+    try {
+      const { id } = req.params;
+      const { projectIds } = req.body;
+      const orgIdHeader = req.headers["x-organization-id"] || req.headers["organization-id"];
+      const result = await ClientService.syncProjects(req.user.id, orgIdHeader, id, projectIds || []);
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("[ClientController.syncProjects] Error:", err);
+      const status = err.message?.includes("Forbidden") ? 403 : err.message?.includes("not found") ? 404 : 400;
+      res.status(status).json({
+        success: false,
+        error: err.message || "Failed to sync client projects"
+      });
+    }
+  }
+  static async getClientDetails(req, res) {
+    try {
+      const { id } = req.params;
+      const orgIdHeader = req.headers["x-organization-id"] || req.headers["organization-id"];
+      const result = await ClientService.getClientDetails(req.user.id, orgIdHeader, id);
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("[ClientController.getClientDetails] Error:", err);
+      const status = err.message?.includes("Forbidden") ? 403 : err.message?.includes("not found") ? 404 : 400;
+      res.status(status).json({
+        success: false,
+        error: err.message || "Failed to fetch client details"
+      });
+    }
+  }
+};
+
+// server/clients/client.routes.ts
+var clientsRouter = (0, import_express8.Router)();
+var supabaseUrl5 = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || "";
+var supabaseAnonKey5 = process.env.SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
+var supabase4 = createClient(supabaseUrl5, supabaseAnonKey5, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false
+  },
+  realtime: {
+    transport: wrapper_default
+  }
+});
+var requireAuth4 = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    let token;
+    if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+      token = authHeader.slice("Bearer ".length).trim();
+    }
+    if (!token) throw new Error("No token provided");
+    const { data: { user }, error: error51 } = await supabase4.auth.getUser(token);
+    if (error51 || !user) throw new Error("Invalid token");
+    req.user = user;
+    next();
+  } catch (error51) {
+    res.status(401).json({ error: "Unauthorized" });
+  }
+};
+clientsRouter.post("/portal-account", requireAuth4, ClientController.saveClientWithPortal);
+clientsRouter.post("/:id/toggle-portal", requireAuth4, ClientController.togglePortalAccess);
+clientsRouter.post("/:id/resend-access", requireAuth4, ClientController.resendAccessLink);
+clientsRouter.post("/:id/reset-password", requireAuth4, ClientController.resetPassword);
+clientsRouter.post("/:id/sync-projects", requireAuth4, ClientController.syncProjects);
+clientsRouter.get("/:id/details", requireAuth4, ClientController.getClientDetails);
+
+// server/payments/payment-submission.routes.ts
+var import_express9 = __toESM(require_express2());
+
+// server/payments/payment-submission.service.ts
+var import_crypto13 = __toESM(require("crypto"));
+var PaymentSubmissionService = class {
+  /**
+   * Magic bytes header inspection to prevent spoofed file extensions
+   */
+  static validateMagicBytes(buf) {
+    if (!buf || buf.length < 4) return { valid: false, mime: "" };
+    if (buf[0] === 37 && buf[1] === 80 && buf[2] === 68 && buf[3] === 70) {
+      return { valid: true, mime: "application/pdf" };
+    }
+    if (buf[0] === 137 && buf[1] === 80 && buf[2] === 78 && buf[3] === 71 && buf.length >= 8 && buf[4] === 13 && buf[5] === 10 && buf[6] === 26 && buf[7] === 10) {
+      return { valid: true, mime: "image/png" };
+    }
+    if (buf[0] === 255 && buf[1] === 216 && buf[2] === 255) {
+      return { valid: true, mime: "image/jpeg" };
+    }
+    if (buf.length >= 12 && buf[0] === 82 && buf[1] === 73 && buf[2] === 70 && buf[3] === 70 && buf[8] === 87 && buf[9] === 69 && buf[10] === 66 && buf[11] === 80) {
+      return { valid: true, mime: "image/webp" };
+    }
+    return { valid: false, mime: "" };
+  }
+  /**
+   * Submit manual payment proof
+   */
+  static async submitProof(userId, payload) {
+    const {
+      invoice_id,
+      amount,
+      payment_method,
+      payment_date,
+      transaction_reference,
+      notes,
+      receipt_base64,
+      receipt_url: rawReceiptUrl,
+      filename = "receipt",
+      mime_type
+    } = payload;
+    if (!invoice_id) throw new Error("Invoice ID is required");
+    const parsedAmount = Number(amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      throw new Error("Settlement amount must be greater than zero");
+    }
+    if (!payment_method) throw new Error("Payment method is required");
+    if (!payment_date) throw new Error("Payment date is required");
+    if (["bank_transfer", "upi"].includes(payment_method) && !transaction_reference?.trim()) {
+      throw new Error(`Transaction reference / UTR is mandatory for ${payment_method === "upi" ? "UPI" : "Bank Transfer"}`);
+    }
+    const { data: invoice, error: invErr } = await supabaseAdmin.from("invoices").select("id, organization_id, owner_id, client_id, total_amount, paid_amount, balance_due, currency, status, is_deleted").eq("id", invoice_id).single();
+    if (invErr || !invoice || invoice.is_deleted) {
+      throw new Error("Invoice not found or no longer active");
+    }
+    if (["draft", "cancelled"].includes(invoice.status)) {
+      throw new Error("Payments cannot be submitted for draft or cancelled invoices");
+    }
+    const currentBal = Number(invoice.balance_due != null ? invoice.balance_due : Math.max(0, invoice.total_amount - (invoice.paid_amount || 0)));
+    if (currentBal <= 0) {
+      throw new Error("This invoice is already fully settled");
+    }
+    if (parsedAmount > currentBal + 0.01) {
+      throw new Error(`Submitted amount (${parsedAmount}) cannot exceed balance due (${currentBal})`);
+    }
+    const { data: clientObj } = await supabaseAdmin.from("clients").select("id, user_id, email, organization_id, owner_id").eq("id", invoice.client_id).single();
+    if (!clientObj) {
+      throw new Error("Associated client record not found");
+    }
+    if (transaction_reference?.trim()) {
+      const cleanRef = transaction_reference.trim().toLowerCase();
+      let dupQuery = supabaseAdmin.from("payment_submissions").select("id").neq("status", "rejected").ilike("transaction_reference", cleanRef);
+      if (invoice.organization_id) {
+        dupQuery = dupQuery.eq("organization_id", invoice.organization_id);
+      } else {
+        dupQuery = dupQuery.eq("owner_id", invoice.owner_id);
+      }
+      const { data: duplicates } = await dupQuery;
+      if (duplicates && duplicates.length > 0) {
+        throw new Error(`Transaction reference "${transaction_reference}" has already been submitted for this business`);
+      }
+    }
+    let finalReceiptUrl = rawReceiptUrl || "";
+    let storedFilename = filename;
+    let detectedMime = mime_type || "";
+    let fileSize = 0;
+    if (receipt_base64) {
+      const base64Data = receipt_base64.replace(/^data:[^;]+;base64,/, "");
+      const fileBuffer = Buffer.from(base64Data, "base64");
+      fileSize = fileBuffer.length;
+      const maxBytes = 5 * 1024 * 1024;
+      if (fileSize > maxBytes) {
+        throw new Error("Receipt file size exceeds maximum 5 MB limit");
+      }
+      const magicCheck = this.validateMagicBytes(fileBuffer);
+      if (!magicCheck.valid) {
+        throw new Error("Unsupported or corrupted receipt format. Accepted: JPG, PNG, WEBP, PDF");
+      }
+      detectedMime = magicCheck.mime;
+      const ext = detectedMime === "application/pdf" ? "pdf" : detectedMime.split("/")[1] || "bin";
+      const safeUUID = import_crypto13.default.randomUUID();
+      const storagePath = `${invoice.id}/${safeUUID}.${ext}`;
+      const { error: uploadErr } = await supabaseAdmin.storage.from("payment_receipts").upload(storagePath, fileBuffer, {
+        contentType: detectedMime,
+        upsert: true
+      });
+      if (uploadErr) {
+        console.error("[PaymentSubmission] Storage upload error:", uploadErr);
+        throw new Error("Failed to save receipt file to storage");
+      }
+      finalReceiptUrl = storagePath;
+      storedFilename = `${safeUUID}.${ext}`;
+    }
+    if (!finalReceiptUrl) {
+      throw new Error("Receipt proof file is required");
+    }
+    const { data: submission, error: subErr } = await supabaseAdmin.from("payment_submissions").insert({
+      invoice_id: invoice.id,
+      client_id: invoice.client_id,
+      submitted_by: userId,
+      organization_id: invoice.organization_id,
+      owner_id: invoice.owner_id,
+      amount: parsedAmount,
+      currency: invoice.currency || "USD",
+      payment_method,
+      payment_date,
+      transaction_reference: transaction_reference?.trim() || null,
+      notes: notes?.trim() || null,
+      receipt_url: finalReceiptUrl,
+      receipt_filename: storedFilename,
+      receipt_mime: detectedMime,
+      receipt_size_bytes: fileSize,
+      status: "pending"
+    }).select().single();
+    if (subErr) {
+      console.error("[PaymentSubmission] Insert error:", subErr);
+      throw subErr;
+    }
+    return {
+      success: true,
+      submission,
+      message: "Payment proof submitted. Our team will verify and reconcile your invoice."
+    };
+  }
+  /**
+   * List submissions for staff or client
+   */
+  static async listSubmissions(userId, orgId, query2) {
+    const { data: userProfile } = await supabaseAdmin.from("users").select("role").eq("id", userId).single();
+    const isClient = userProfile?.role === "client";
+    let q = supabaseAdmin.from("payment_submissions").select(`
+        *,
+        invoices:invoice_id (
+          id, invoice_number, total_amount, paid_amount, balance_due, currency, status
+        ),
+        clients:client_id (
+          id, name, company_name, email
+        ),
+        submitter:submitted_by (
+          id, full_name, email
+        ),
+        verifier:verified_by (
+          id, full_name, email
+        )
+      `).order("created_at", { ascending: false });
+    if (query2?.status) {
+      q = q.eq("status", query2.status);
+    }
+    if (query2?.invoice_id) {
+      q = q.eq("invoice_id", query2.invoice_id);
+    }
+    if (isClient) {
+      const { data: userClients } = await supabaseAdmin.from("clients").select("id").eq("user_id", userId);
+      const clientIds = (userClients || []).map((c) => c.id);
+      if (clientIds.length > 0) {
+        q = q.or(`submitted_by.eq.${userId},client_id.in.(${clientIds.join(",")})`);
+      } else {
+        q = q.eq("submitted_by", userId);
+      }
+    } else if (orgId) {
+      q = q.eq("organization_id", orgId);
+    } else {
+      q = q.eq("owner_id", userId);
+    }
+    const { data, error: error51 } = await q;
+    if (error51) throw error51;
+    return { success: true, submissions: data || [] };
+  }
+  /**
+   * Confirm submission atomically (Staff only)
+   */
+  static async confirmSubmission(staffId, submissionId) {
+    if (!submissionId) throw new Error("Submission ID is required");
+    const { data: userProfile } = await supabaseAdmin.from("users").select("role").eq("id", staffId).single();
+    if (userProfile?.role === "client") {
+      throw new Error("Forbidden: Clients cannot confirm their own payment submissions");
+    }
+    const { data, error: error51 } = await supabaseAdmin.rpc("confirm_payment_submission", {
+      p_submission_id: submissionId,
+      p_staff_id: staffId
+    });
+    if (error51) {
+      console.error("[PaymentSubmission.confirmSubmission] RPC error:", error51);
+      throw new Error(error51.message || "Failed to confirm payment submission");
+    }
+    return {
+      success: true,
+      result: data
+    };
+  }
+  /**
+   * Reject submission with reason (Staff only)
+   */
+  static async rejectSubmission(staffId, submissionId, reason) {
+    if (!submissionId) throw new Error("Submission ID is required");
+    if (!reason || !reason.trim()) throw new Error("Rejection reason is mandatory");
+    const { data: userProfile } = await supabaseAdmin.from("users").select("role").eq("id", staffId).single();
+    if (userProfile?.role === "client") {
+      throw new Error("Forbidden: Clients cannot reject payment submissions");
+    }
+    const { data, error: error51 } = await supabaseAdmin.rpc("reject_payment_submission", {
+      p_submission_id: submissionId,
+      p_staff_id: staffId,
+      p_reason: reason.trim()
+    });
+    if (error51) {
+      console.error("[PaymentSubmission.rejectSubmission] RPC error:", error51);
+      throw new Error(error51.message || "Failed to reject payment submission");
+    }
+    return {
+      success: true,
+      result: data
+    };
+  }
+  /**
+   * Generate temporary signed URL for receipt view/download
+   */
+  static async getReceiptSignedUrl(userId, submissionId) {
+    const { data: submission, error: error51 } = await supabaseAdmin.from("payment_submissions").select("id, receipt_url, organization_id, owner_id, submitted_by, client_id").eq("id", submissionId).single();
+    if (error51 || !submission) {
+      throw new Error("Submission not found");
+    }
+    const rawPath = submission.receipt_url;
+    if (!rawPath) throw new Error("Receipt file path missing");
+    const cleanPath = rawPath.replace(/^payment_receipts\//, "");
+    const { data: signedData, error: signErr } = await supabaseAdmin.storage.from("payment_receipts").createSignedUrl(cleanPath, 3600);
+    if (signErr || !signedData?.signedUrl) {
+      console.error("[PaymentSubmission] Failed to create signed URL:", signErr);
+      throw new Error("Failed to generate secure receipt access link");
+    }
+    return {
+      success: true,
+      signedUrl: signedData.signedUrl
+    };
+  }
+};
+
+// server/payments/payment-submission.controller.ts
+var PaymentSubmissionController = class {
+  static async submitProof(req, res) {
+    try {
+      const result = await PaymentSubmissionService.submitProof(req.user.id, req.body);
+      res.status(201).json(result);
+    } catch (err) {
+      console.error("[PaymentSubmissionController.submitProof] Error:", err);
+      const isForbidden = err.message?.includes("Forbidden") || err.message?.includes("cannot be submitted");
+      const isNotFound = err.message?.includes("not found");
+      const status = isForbidden ? 403 : isNotFound ? 404 : 400;
+      res.status(status).json({
+        success: false,
+        error: err.message || "Failed to submit payment proof"
+      });
+    }
+  }
+  static async listSubmissions(req, res) {
+    try {
+      const orgIdHeader = req.headers["x-organization-id"] || req.headers["organization-id"];
+      const { status, invoice_id } = req.query;
+      const result = await PaymentSubmissionService.listSubmissions(req.user.id, orgIdHeader, {
+        status,
+        invoice_id
+      });
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("[PaymentSubmissionController.listSubmissions] Error:", err);
+      res.status(500).json({
+        success: false,
+        error: err.message || "Failed to list payment submissions"
+      });
+    }
+  }
+  static async confirmSubmission(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await PaymentSubmissionService.confirmSubmission(req.user.id, id);
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("[PaymentSubmissionController.confirmSubmission] Error:", err);
+      const isForbidden = err.message?.includes("Forbidden");
+      res.status(isForbidden ? 403 : 400).json({
+        success: false,
+        error: err.message || "Failed to confirm payment submission"
+      });
+    }
+  }
+  static async rejectSubmission(req, res) {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+      const result = await PaymentSubmissionService.rejectSubmission(req.user.id, id, reason);
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("[PaymentSubmissionController.rejectSubmission] Error:", err);
+      const isForbidden = err.message?.includes("Forbidden");
+      res.status(isForbidden ? 403 : 400).json({
+        success: false,
+        error: err.message || "Failed to reject payment submission"
+      });
+    }
+  }
+  static async getReceiptUrl(req, res) {
+    try {
+      const { id } = req.params;
+      const result = await PaymentSubmissionService.getReceiptSignedUrl(req.user.id, id);
+      res.status(200).json(result);
+    } catch (err) {
+      console.error("[PaymentSubmissionController.getReceiptUrl] Error:", err);
+      res.status(404).json({
+        success: false,
+        error: err.message || "Failed to get receipt URL"
+      });
+    }
+  }
+};
+
+// server/payments/payment-submission.routes.ts
+var paymentSubmissionsRouter = (0, import_express9.Router)();
+var supabaseUrl6 = process.env.SUPABASE_URL || process.env.EXPO_PUBLIC_SUPABASE_URL || "";
+var supabaseAnonKey6 = process.env.SUPABASE_ANON_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || "";
+var supabase5 = createClient(supabaseUrl6, supabaseAnonKey6, {
+  auth: {
+    persistSession: false,
+    autoRefreshToken: false
+  },
+  realtime: {
+    transport: wrapper_default
+  }
+});
+var requireAuth5 = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization || req.headers.Authorization;
+    let token;
+    if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+      token = authHeader.slice("Bearer ".length).trim();
+    }
+    if (!token) throw new Error("No token provided");
+    const { data: { user }, error: error51 } = await supabase5.auth.getUser(token);
+    if (error51 || !user) throw new Error("Invalid token");
+    req.user = user;
+    next();
+  } catch (error51) {
+    res.status(401).json({ error: "Unauthorized" });
+  }
+};
+var userSubmissionTimestamps = /* @__PURE__ */ new Map();
+var submissionRateLimiter = (req, res, next) => {
+  const userId = req.user?.id;
+  if (!userId) return next();
+  const now = Date.now();
+  const windowMs = 60 * 60 * 1e3;
+  const maxSubmissions = 10;
+  const timestamps = userSubmissionTimestamps.get(userId) || [];
+  const validTimestamps = timestamps.filter((t3) => now - t3 < windowMs);
+  if (validTimestamps.length >= maxSubmissions) {
+    return res.status(429).json({
+      success: false,
+      error: "Rate limit exceeded: You have submitted too many payment proofs. Please try again later."
+    });
+  }
+  validTimestamps.push(now);
+  userSubmissionTimestamps.set(userId, validTimestamps);
+  next();
+};
+paymentSubmissionsRouter.use(requireAuth5);
+paymentSubmissionsRouter.post("/", submissionRateLimiter, PaymentSubmissionController.submitProof);
+paymentSubmissionsRouter.get("/", PaymentSubmissionController.listSubmissions);
+paymentSubmissionsRouter.post("/:id/confirm", PaymentSubmissionController.confirmSubmission);
+paymentSubmissionsRouter.post("/:id/reject", PaymentSubmissionController.rejectSubmission);
+paymentSubmissionsRouter.get("/:id/receipt-url", PaymentSubmissionController.getReceiptUrl);
+
 // server/_core/app.ts
 var { Client: Client2 } = esm_default;
 function createPgClient() {
@@ -146763,7 +148029,7 @@ function createExpressApp() {
   if (!process.env.BUILT_IN_FORGE_API_URL || !process.env.BUILT_IN_FORGE_API_KEY) {
     console.warn("[WARN] Optional AI features (voice transcription, image generation) are disabled: BUILT_IN_FORGE_API_URL or BUILT_IN_FORGE_API_KEY is missing.");
   }
-  const app = (0, import_express8.default)();
+  const app = (0, import_express10.default)();
   app.disable("x-powered-by");
   app.use((req, res, next) => {
     const origin2 = req.headers.origin;
@@ -146787,13 +148053,13 @@ function createExpressApp() {
     }
     next();
   });
-  app.use(import_express8.default.json({
+  app.use(import_express10.default.json({
     limit: "50mb",
     verify: (req, _res, buf) => {
       req.rawBody = buf;
     }
   }));
-  app.use(import_express8.default.urlencoded({ limit: "50mb", extended: true }));
+  app.use(import_express10.default.urlencoded({ limit: "50mb", extended: true }));
   app.use(sanitizationMiddleware);
   app.use(globalRateLimiter);
   registerStorageProxy(app);
@@ -146805,6 +148071,8 @@ function createExpressApp() {
   app.use("/api/webhooks", webhookRouter);
   app.use("/api/contact", contactRouter);
   app.use("/api/workflows", workflowsRouter);
+  app.use("/api/clients", clientsRouter);
+  app.use("/api/payment-submissions", paymentSubmissionsRouter);
   app.use("/api", razorpayStandardRouter);
   app.post("/api/notifications/send-push", async (req, res) => {
     const authHeader = req.headers.authorization;
@@ -146923,7 +148191,7 @@ function createExpressApp() {
   if (process.env.NODE_ENV === "production") {
     const distPath = import_path2.default.join(process.cwd(), "dist");
     if (require("fs").existsSync(import_path2.default.join(distPath, "index.html"))) {
-      app.use(import_express8.default.static(distPath));
+      app.use(import_express10.default.static(distPath));
       app.get("*", (req, res, next) => {
         if (req.path.startsWith("/api")) return next();
         res.sendFile(import_path2.default.join(distPath, "index.html"));

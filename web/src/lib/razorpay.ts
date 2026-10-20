@@ -125,6 +125,31 @@ export interface OpenRazorpayStandardCheckoutOptions {
   onError?: (error: any) => void;
 }
 
+export interface RazorpayVerifyResult {
+  success: boolean;
+  message?: string;
+  is_valid: boolean;
+  order_id: string;
+  payment_id: string;
+  verified_at?: string;
+  [key: string]: any;
+}
+
+export interface InitiateStandardCheckoutParams {
+  amountInPaise: number; // e.g. 50000 = ₹500.00
+  currency?: string;
+  receipt?: string;
+  name?: string;
+  description?: string;
+  userName?: string;
+  userEmail?: string;
+  userPhone?: string;
+  notes?: Record<string, any>;
+  onSuccess?: (verifyResult: RazorpayVerifyResult) => void;
+  onDismiss?: () => void;
+  onError?: (error: any) => void;
+}
+
 /**
  * STEP 2: FRONTEND - Checkout
  * Opens the official Razorpay Standard Checkout modal with order_id.
@@ -190,20 +215,7 @@ export async function openRazorpayStandardCheckout(options: OpenRazorpayStandard
  * 2. Opens Razorpay Standard Checkout modal with order_id
  * 3. On success: calls /api/verify-payment with order_id, payment_id, signature
  */
-export async function initiateStandardCheckoutAndVerify(params: {
-  amountInPaise: number; // e.g. 50000 = ₹500.00
-  currency?: string;
-  receipt?: string;
-  name?: string;
-  description?: string;
-  userName?: string;
-  userEmail?: string;
-  userPhone?: string;
-  notes?: Record<string, any>;
-  onSuccess?: (verifyResult: any) => void;
-  onDismiss?: () => void;
-  onError?: (error: any) => void;
-}): Promise<void> {
+export async function initiateStandardCheckoutAndVerify(params: InitiateStandardCheckoutParams): Promise<void> {
   const apiUrl = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
     ? '/api'
     : ((import.meta.env as any).VITE_API_URL || 'http://localhost:3000/api');
@@ -275,3 +287,4 @@ export async function initiateStandardCheckoutAndVerify(params: {
     }
   }
 }
+

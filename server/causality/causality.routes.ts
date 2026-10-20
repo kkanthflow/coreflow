@@ -70,7 +70,16 @@ router.get('/compare', requireAuth, CausalityController.compareStates);
 // Client Provisioning & Access Assignment
 router.post('/provision-client', requireAuth, CausalityController.provisionClientUser);
 
+// Tokenized Client Project Invitations & Access
+router.post('/invite-client', requireAuth, CausalityController.createProjectInvite);
+router.get('/invites', requireAuth, CausalityController.listProjectInvites);
+router.get('/invite-details', CausalityController.getInviteDetails); // Public inspection for invite screen
+router.post('/accept-invite', requireAuth, CausalityController.acceptProjectInvite);
+router.post('/resend-invite', requireAuth, CausalityController.resendProjectInvite);
+router.post('/revoke-invite', requireAuth, CausalityController.revokeProjectInvite);
+
 // Project Creation via Central Service
 router.post('/projects', requireAuth, requireEntitlement('projects'), CausalityController.createProject);
+
 
 export default router;

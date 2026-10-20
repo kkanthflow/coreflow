@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   Lock, 
@@ -12,14 +12,29 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import AuvrynLogo from '../components/AuvrynLogo';
+import { saveInviteToken, getStoredInviteToken } from '../lib/inviteTokenStorage';
 
 export default function Register() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
+  // Extract and save token from URL if present
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const token = searchParams.get('token') || searchParams.get('invite');
+    if (token) {
+      saveInviteToken(token);
+    }
+  }, []);
+
   // Redirect if already authenticated
   if (user) {
-    navigate('/', { replace: true });
+    const pendingToken = getStoredInviteToken();
+    if (pendingToken) {
+      navigate(`/invite/client?token=${encodeURIComponent(pendingToken)}`, { replace: true });
+    } else {
+      navigate('/', { replace: true });
+    }
     return null;
   }
 
@@ -113,6 +128,13 @@ export default function Register() {
 
       if (!userId) throw new Error('Failed to obtain user session after registration.');
 
+      // Check if user is signing up via a client invitation
+      const pendingToken = getStoredInviteToken();
+      if (pendingToken) {
+        navigate(`/invite/client?token=${encodeURIComponent(pendingToken)}`, { replace: true });
+        return;
+      }
+
       // Route directly to /register/setup for explicit user selection of operating architecture.
       // Do NOT pass any preselected account type.
       navigate('/register/setup', {
@@ -138,9 +160,13 @@ export default function Register() {
     try {
       setLoading(true);
       setError(null);
-      const redirectTo = window.location.hostname === 'localhost'
-        ? `${window.location.origin}/`
-        : 'https://auvrynplatform.vercel.app/';
+      const pendingToken = getStoredInviteToken();
+      const origin = window.location.hostname === 'localhost'
+        ? window.location.origin
+        : 'https://auvrynplatform.vercel.app';
+      const redirectTo = pendingToken
+        ? `${origin}/invite/client?token=${encodeURIComponent(pendingToken)}`
+        : `${origin}/`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',

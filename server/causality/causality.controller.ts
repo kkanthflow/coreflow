@@ -186,6 +186,66 @@ export class CausalityController {
     }
   }
 
+  static async createProjectInvite(req: any, res: Response) {
+    try {
+      const data = await CausalityService.createProjectInvite(req.body, req.user.id);
+      res.json(data);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || 'Failed to create project invitation' });
+    }
+  }
+
+  static async listProjectInvites(req: any, res: Response) {
+    try {
+      const { projectId } = req.query;
+      if (!projectId) return res.status(400).json({ error: 'projectId is required' });
+      const data = await CausalityService.listProjectInvites(projectId as string);
+      res.json(data);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message || 'Failed to fetch project invites' });
+    }
+  }
+
+  static async getInviteDetails(req: any, res: Response) {
+    try {
+      const token = req.query.token as string;
+      const data = await CausalityService.getInviteDetails(token);
+      res.json(data);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || 'Failed to fetch invitation details' });
+    }
+  }
+
+  static async acceptProjectInvite(req: any, res: Response) {
+    try {
+      const { token } = req.body;
+      const data = await CausalityService.acceptProjectInvite(token, req.user.id, req.user.email);
+      res.json(data);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || 'Failed to accept invitation' });
+    }
+  }
+
+  static async resendProjectInvite(req: any, res: Response) {
+    try {
+      const { inviteId } = req.body;
+      const data = await CausalityService.resendProjectInvite(inviteId, req.user.id);
+      res.json(data);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || 'Failed to resend invitation' });
+    }
+  }
+
+  static async revokeProjectInvite(req: any, res: Response) {
+    try {
+      const { inviteId } = req.body;
+      const data = await CausalityService.revokeProjectInvite(inviteId, req.user.id);
+      res.json(data);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message || 'Failed to revoke invitation' });
+    }
+  }
+
   static async createProject(req: any, res: Response) {
     try {
       const data = await CausalityService.createProject(req.body, req.user.id);
@@ -195,3 +255,4 @@ export class CausalityController {
     }
   }
 }
+

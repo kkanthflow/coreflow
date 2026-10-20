@@ -29,8 +29,18 @@ interface NavGroup {
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const { can } = useRole();
+  const { role, can } = useRole();
   const { orgName, orgId } = useWorkspace();
+
+  const CLIENT_NAV_GROUPS: NavGroup[] = [
+    {
+      label: 'Client Portal',
+      items: [
+        { name: 'My Projects', to: '/projects', icon: Briefcase, permission: 'view_projects', shortcut: '1' },
+        { name: 'My Invoices', to: '/invoices', icon: FileText, permission: 'view_invoices', shortcut: '2' },
+      ]
+    }
+  ];
 
   const NAV_GROUPS: NavGroup[] = [
     {
@@ -85,6 +95,8 @@ export default function Sidebar() {
     }
   ];
 
+  const activeNavGroups = role === 'client' ? CLIENT_NAV_GROUPS : NAV_GROUPS;
+
   return (
     <motion.aside 
       animate={{ width: collapsed ? 58 : 224 }}
@@ -126,7 +138,7 @@ export default function Sidebar() {
 
       {/* Navigation Groups */}
       <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-1.5 space-y-4">
-        {NAV_GROUPS.map(group => {
+        {activeNavGroups.map(group => {
           const visibleItems = group.items.filter(item => !item.permission || can(item.permission));
           if (visibleItems.length === 0) return null;
 

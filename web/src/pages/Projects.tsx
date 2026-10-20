@@ -48,7 +48,10 @@ export default function Projects() {
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
 
-      if (isIndie) {
+      if (role === 'client') {
+        // Supabase RLS enforces can_view_project(auth.uid(), id) via project_client_access
+        // Do not restrict by owner_id or org_id so invited projects load immediately
+      } else if (isIndie) {
         query = query.eq('owner_id', user.id);
       } else if (orgId) {
         query = query.eq('org_id', orgId);
@@ -72,7 +75,8 @@ export default function Projects() {
     } finally {
       setLoading(false);
     }
-  }, [user, orgId, isIndie]);
+  }, [user, orgId, isIndie, role]);
+
 
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
@@ -324,13 +328,14 @@ export default function Projects() {
                 <span>Client Project Room</span>
               </Link>
               <Link
-                to={`/projects/${inspectingProject.id}`}
+                to={role === 'client' ? `/projects/${inspectingProject.id}/client-room` : `/projects/${inspectingProject.id}`}
                 className="w-full sm:flex-1 py-2 px-3 bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold rounded text-center transition-colors"
               >
-                Open Project Center
+                {role === 'client' ? 'Enter Client Project Room' : 'Open Project Center'}
               </Link>
             </div>
           }
+
         >
           {/* Inspector Content */}
           <div className="space-y-4 text-xs">

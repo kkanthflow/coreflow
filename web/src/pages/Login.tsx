@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
@@ -6,6 +6,7 @@ import { useAuth } from '../hooks/useAuth';
 import { Lock, ArrowRight, Eye, EyeOff, Check, AlertCircle, Shield, Activity } from 'lucide-react';
 import { EASINGS } from '../lib/motionSystem';
 import AuvrynLogo from '../components/AuvrynLogo';
+import { saveInviteToken, getStoredInviteToken } from '../lib/inviteTokenStorage';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -23,8 +24,21 @@ export default function Login() {
 
   const from = location.state?.from?.pathname || '/dashboard';
 
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const token = searchParams.get('token') || searchParams.get('invite');
+    if (token) {
+      saveInviteToken(token);
+    }
+  }, []);
+
   if (user && !authSuccess) {
-    navigate(from, { replace: true });
+    const pendingToken = getStoredInviteToken();
+    if (pendingToken) {
+      navigate(`/invite/client?token=${encodeURIComponent(pendingToken)}`, { replace: true });
+    } else {
+      navigate(from, { replace: true });
+    }
     return null;
   }
 
@@ -34,9 +48,13 @@ export default function Login() {
     try {
       setLoading(true);
       setError('');
-      const redirectTo = window.location.hostname === 'localhost'
-        ? `${window.location.origin}/`
-        : 'https://auvrynplatform.vercel.app/';
+      const pendingToken = getStoredInviteToken();
+      const origin = window.location.hostname === 'localhost'
+        ? window.location.origin
+        : 'https://auvrynplatform.vercel.app';
+      const redirectTo = pendingToken
+        ? `${origin}/invite/client?token=${encodeURIComponent(pendingToken)}`
+        : `${origin}/`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -85,13 +103,20 @@ export default function Login() {
       // Check user account setup state
       const { data: userProfile } = await supabase
         .from('users')
-        .select('account_type, account_setup_completed')
+        .select('role, account_type, account_setup_completed')
         .eq('email', email)
         .maybeSingle();
 
-      const targetPath = (!userProfile?.account_setup_completed || !userProfile?.account_type)
-        ? '/register/setup'
-        : (from === '/' ? '/dashboard' : from);
+      const pendingToken = getStoredInviteToken();
+      let targetPath = from === '/' ? '/dashboard' : from;
+
+      if (pendingToken) {
+        targetPath = `/invite/client?token=${encodeURIComponent(pendingToken)}`;
+      } else if (userProfile?.role === 'client' || userProfile?.account_type === 'client') {
+        targetPath = '/projects';
+      } else if (!userProfile?.account_setup_completed || !userProfile?.account_type) {
+        targetPath = '/register/setup';
+      }
 
       // Hero transition sequence
       setAuthSuccess(true);

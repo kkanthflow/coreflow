@@ -25,25 +25,46 @@ export function createDefaultElementsForTemplate(
   let z = 1;
 
   // 1. Accent Header Shape or Decorative Banner
-  if (templateId === 'executive_bold') {
+  if (templateId === 'executive_bold' || templateId === 'bold_header_band') {
     elements.push({
       id: generateStableId('shape_header_banner'),
       type: 'shape',
-      name: 'Executive Banner',
-      x: 36,
-      y: 36,
-      width: 722,
-      height: 90,
+      name: 'Executive Accent Banner',
+      x: 0,
+      y: 0,
+      width: 794,
+      height: 120,
       rotation: 0,
       zIndex: z++,
       opacity: 1,
       isLocked: false,
       isVisible: true,
-      shapeType: 'rounded-rect',
+      shapeType: 'rectangle',
       fillColor: accent,
       borderColor: accent,
       borderWidth: 0,
-      borderRadius: 12,
+      borderRadius: 0,
+      borderStyle: 'solid',
+    });
+  } else if (templateId === 'sidebar_layout') {
+    elements.push({
+      id: generateStableId('shape_sidebar_band'),
+      type: 'shape',
+      name: 'Sidebar Accent Band',
+      x: 0,
+      y: 0,
+      width: 200,
+      height: 1123,
+      rotation: 0,
+      zIndex: z++,
+      opacity: 1,
+      isLocked: false,
+      isVisible: true,
+      shapeType: 'rectangle',
+      fillColor: accent,
+      borderColor: accent,
+      borderWidth: 0,
+      borderRadius: 0,
       borderStyle: 'solid',
     });
   } else if (templateId === 'creative_studio') {

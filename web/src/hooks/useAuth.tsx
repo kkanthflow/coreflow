@@ -7,7 +7,7 @@ type AuthContextType = {
   user: User | null;
   role: string | null;
   fullName: string | null;
-  accountType: 'freelancer' | 'organization' | null;
+  accountType: 'freelancer' | 'organization' | 'client' | null;
   accountSetupCompleted: boolean;
   onboardingStatus: 'completed' | 'setup_required' | null;
   loading: boolean;
@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<string | null>(null);
   const [fullName, setFullName] = useState<string | null>(null);
-  const [accountType, setAccountType] = useState<'freelancer' | 'organization' | null>(null);
+  const [accountType, setAccountType] = useState<'freelancer' | 'organization' | 'client' | null>(null);
   const [accountSetupCompleted, setAccountSetupCompleted] = useState<boolean>(false);
   const [onboardingStatus, setOnboardingStatus] = useState<'completed' | 'setup_required' | null>(null);
   const [loading, setLoading] = useState(true);
@@ -54,8 +54,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         
         // Strict Onboarding Resolution:
         // Must explicitly have account_setup_completed = true AND valid account_type
-        const isSetup = data.account_setup_completed === true && !!data.account_type;
+        // Or if role/account_type is 'client', onboarding is complete
+        const isClient = data.role === 'client' || data.account_type === 'client';
+        const isSetup = isClient || (data.account_setup_completed === true && !!data.account_type);
         setOnboardingStatus(isSetup ? 'completed' : 'setup_required');
+
       } else {
         // User profile missing in public.users - this account was purged/deleted!
         console.warn('[useAuth] User profile missing from database. Purging stale session...');

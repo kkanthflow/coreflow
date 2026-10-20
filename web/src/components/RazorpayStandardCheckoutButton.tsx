@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { CreditCard, CheckCircle2, AlertCircle } from 'lucide-react';
-import { initiateStandardCheckoutAndVerify } from '../lib/razorpay';
+import { initiateStandardCheckoutAndVerify, type RazorpayVerifyResult } from '../lib/razorpay';
 import { useAuth } from '../hooks/useAuth';
 
-interface RazorpayStandardCheckoutButtonProps {
+export interface RazorpayStandardCheckoutButtonProps {
   amountInRupees?: number; // e.g. 500 for ₹500.00
   amountInPaise?: number;  // or direct paise: 50000
   receiptId?: string;
   description?: string;
   buttonText?: string;
   className?: string;
-  onSuccess?: (verifyResult: any) => void;
+  onSuccess?: (verifyResult: RazorpayVerifyResult) => void;
   onError?: (error: any) => void;
 }
 
@@ -45,7 +45,7 @@ export default function RazorpayStandardCheckoutButton({
         description,
         userName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Auvryn Customer',
         userEmail: user?.email || '',
-        onSuccess: (verifyResult) => {
+        onSuccess: (verifyResult: RazorpayVerifyResult) => {
           setLoading(false);
           setStatusMessage({
             type: 'success',
@@ -56,16 +56,16 @@ export default function RazorpayStandardCheckoutButton({
         onDismiss: () => {
           setLoading(false);
         },
-        onError: (err) => {
+        onError: (err: any) => {
           setLoading(false);
-          const msg = err.message || err.description || 'Payment was unsuccessful or dismissed.';
+          const msg = err?.message || err?.description || 'Payment was unsuccessful or dismissed.';
           setStatusMessage({ type: 'error', text: msg });
           if (onError) onError(err);
         },
       });
     } catch (err: any) {
       setLoading(false);
-      const msg = err.message || 'Failed to initialize payment.';
+      const msg = err?.message || 'Failed to initialize payment.';
       setStatusMessage({ type: 'error', text: msg });
       if (onError) onError(err);
     }

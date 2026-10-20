@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   LayoutTemplate,
   FileText,
@@ -13,10 +13,12 @@ import {
   AlignLeft,
   Square,
   Circle,
-  Minus,
-  Edit3
+  Minus
 } from 'lucide-react';
 import { INVOICE_TEMPLATES } from './templateGalleryData';
+import { TemplateThumbnailPreview } from './TemplateThumbnailPreview';
+import { BrandLogoUploader } from './BrandLogoUploader';
+import { INDIAN_GST_STATES } from './gstStateCodes';
 import type {
   CanvasElement,
   InvoiceTemplateId,
@@ -76,13 +78,22 @@ export function InvoiceStudioLeftPanel({
   onAddItem,
   onRemoveItem,
   onUpdateItem,
-  subtotal,
-  totalTax,
-  totalAmount,
+  subtotal: _subtotal,
+  totalTax: _totalTax,
+  totalAmount: _totalAmount,
   onAddCanvasElement,
   isDark = true,
 }: InvoiceStudioLeftPanelProps) {
   const [templateCategoryFilter, setTemplateCategoryFilter] = useState<string>('All');
+  const tabButtonRefs = useRef<{ [key in LeftPanelTab]?: HTMLButtonElement | null }>({});
+
+  // Auto-scroll active tab into view when changed
+  useEffect(() => {
+    const activeBtn = tabButtonRefs.current[activeTab];
+    if (activeBtn) {
+      activeBtn.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+    }
+  }, [activeTab]);
 
   const filteredTemplates = INVOICE_TEMPLATES.filter(
     (t) => templateCategoryFilter === 'All' || t.category === templateCategoryFilter
@@ -102,8 +113,8 @@ export function InvoiceStudioLeftPanel({
     ? 'border-zinc-800 bg-[#12131A]'
     : 'border-zinc-200 bg-zinc-50/90';
   const inputBg = isDark
-    ? 'bg-[#0A0B10] border-zinc-800 text-[#F5F5F5] placeholder-zinc-500 focus:border-[#FF6B4A]'
-    : 'bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-[#FF6B4A] shadow-2xs';
+    ? 'bg-[#0A0B10] border-zinc-800 text-[#F5F5F5] placeholder-zinc-600/70 focus:border-[#FF6B4A]'
+    : 'bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400/70 focus:border-[#FF6B4A] shadow-2xs';
   const subtleBorder = isDark ? 'border-zinc-800/80' : 'border-zinc-200';
 
   // Helper to add custom text to canvas
@@ -172,105 +183,123 @@ export function InvoiceStudioLeftPanel({
         ? 'border-zinc-800 bg-[#0E0F15] text-[#F5F5F5]'
         : 'border-zinc-200 bg-white text-zinc-900 shadow-xs'
     }`}>
-      {/* Sidebar Icon Navigation Rail */}
-      <div className={`flex items-center justify-between border-b p-1.5 text-xs font-mono overflow-x-auto scrollbar-none ${
-        isDark ? 'border-zinc-800 bg-[#0A0B10]' : 'border-zinc-200 bg-zinc-50'
-      }`}>
-        <button
-          type="button"
-          onClick={() => onTabChange('templates')}
-          className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
-            activeTab === 'templates'
-              ? 'bg-[#FF6B4A] text-white shadow-sm'
-              : isDark
-              ? 'text-[#A1A1AA] hover:text-[#F5F5F5]'
-              : 'text-zinc-600 hover:text-zinc-900'
+      {/* ── UNCLIPPED HORIZONTALLY SCROLLABLE NAVIGATION RAIL WITH EDGE FADE ── */}
+      <div className="relative border-b shrink-0">
+        <div
+          className={`flex items-center gap-1 p-1.5 text-xs font-mono overflow-x-auto no-scrollbar scroll-smooth ${
+            isDark ? 'border-zinc-800 bg-[#0A0B10]' : 'border-zinc-200 bg-zinc-50'
           }`}
-          title="Browse 8 Original Template Designs"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
         >
-          <LayoutTemplate size={13} />
-          <span>Templates</span>
-        </button>
+          {/* Tab 1: Templates */}
+          <button
+            ref={(el) => { tabButtonRefs.current['templates'] = el; }}
+            type="button"
+            onClick={() => onTabChange('templates')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
+              activeTab === 'templates'
+                ? 'bg-[#FF6B4A] text-white shadow-xs'
+                : isDark
+                ? 'text-[#A1A1AA] hover:text-[#F5F5F5] hover:bg-zinc-800/40'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/50'
+            }`}
+            title="Browse Templates"
+          >
+            <LayoutTemplate size={13} />
+            <span>Templates</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onTabChange('text')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-bold transition-all shrink-0 ${
-            activeTab === 'text'
-              ? 'bg-[#FF6B4A] text-white shadow-sm'
-              : isDark
-              ? 'text-[#A1A1AA] hover:text-[#F5F5F5] hover:bg-zinc-800/50'
-              : 'text-zinc-700 hover:text-zinc-900 hover:bg-zinc-100'
-          }`}
-          title="Edit Invoice Content & Line Items"
-        >
-          <Edit3 size={13} />
-          <span>Edit Content</span>
-          <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-            activeTab === 'text' ? 'bg-white/20 text-white' : 'bg-[#FF6B4A]/20 text-[#FF6B4A]'
-          }`}>
-            {items.length}
-          </span>
-        </button>
+          {/* Tab 2: Text / Content */}
+          <button
+            ref={(el) => { tabButtonRefs.current['text'] = el; }}
+            type="button"
+            onClick={() => onTabChange('text')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
+              activeTab === 'text'
+                ? 'bg-[#FF6B4A] text-white shadow-xs'
+                : isDark
+                ? 'text-[#A1A1AA] hover:text-[#F5F5F5] hover:bg-zinc-800/40'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/50'
+            }`}
+            title="Edit Text & Content"
+          >
+            <FileText size={13} />
+            <span>Text</span>
+            <span className={`text-[9px] px-1 py-0.2 rounded-full font-bold ml-0.5 ${
+              activeTab === 'text' ? 'bg-white/20 text-white' : 'bg-[#FF6B4A]/20 text-[#FF6B4A]'
+            }`}>
+              {items.length}
+            </span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onTabChange('shapes')}
-          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
-            activeTab === 'shapes'
-              ? 'bg-[#FF6B4A] text-white shadow-sm'
-              : isDark
-              ? 'text-[#A1A1AA] hover:text-[#F5F5F5]'
-              : 'text-zinc-600 hover:text-zinc-900'
-          }`}
-          title="Shapes & Layout Accents"
-        >
-          <Shapes size={13} />
-          <span>Shapes</span>
-        </button>
+          {/* Tab 3: Shapes */}
+          <button
+            ref={(el) => { tabButtonRefs.current['shapes'] = el; }}
+            type="button"
+            onClick={() => onTabChange('shapes')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
+              activeTab === 'shapes'
+                ? 'bg-[#FF6B4A] text-white shadow-xs'
+                : isDark
+                ? 'text-[#A1A1AA] hover:text-[#F5F5F5] hover:bg-zinc-800/40'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/50'
+            }`}
+            title="Shapes & Layout Accents"
+          >
+            <Shapes size={13} />
+            <span>Shapes</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onTabChange('images')}
-          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
-            activeTab === 'images'
-              ? 'bg-[#FF6B4A] text-white shadow-sm'
-              : isDark
-              ? 'text-[#A1A1AA] hover:text-[#F5F5F5]'
-              : 'text-zinc-600 hover:text-zinc-900'
-          }`}
-          title="Logos, Stamps & Imagery"
-        >
-          <ImageIcon size={13} />
-          <span>Images</span>
-        </button>
+          {/* Tab 4: Images */}
+          <button
+            ref={(el) => { tabButtonRefs.current['images'] = el; }}
+            type="button"
+            onClick={() => onTabChange('images')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
+              activeTab === 'images'
+                ? 'bg-[#FF6B4A] text-white shadow-xs'
+                : isDark
+                ? 'text-[#A1A1AA] hover:text-[#F5F5F5] hover:bg-zinc-800/40'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/50'
+            }`}
+            title="Brand Logo & Images"
+          >
+            <ImageIcon size={13} />
+            <span>Images</span>
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onTabChange('elements')}
-          className={`flex items-center gap-1 px-2 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
-            activeTab === 'elements'
-              ? 'bg-[#FF6B4A] text-white shadow-sm'
-              : isDark
-              ? 'text-[#A1A1AA] hover:text-[#F5F5F5]'
-              : 'text-zinc-600 hover:text-zinc-900'
-          }`}
-          title="Functional Blocks & Layout Elements"
-        >
-          <Boxes size={13} />
-          <span>Elements</span>
-        </button>
+          {/* Tab 5: Elements */}
+          <button
+            ref={(el) => { tabButtonRefs.current['elements'] = el; }}
+            type="button"
+            onClick={() => onTabChange('elements')}
+            className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg font-semibold transition-all shrink-0 ${
+              activeTab === 'elements'
+                ? 'bg-[#FF6B4A] text-white shadow-xs'
+                : isDark
+                ? 'text-[#A1A1AA] hover:text-[#F5F5F5] hover:bg-zinc-800/40'
+                : 'text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/50'
+            }`}
+            title="Invoice Elements & Blocks"
+          >
+            <Boxes size={13} />
+            <span>Elements</span>
+          </button>
+        </div>
       </div>
 
       {/* Tab Panel Content Area */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
-        {/* ── TAB 1: TEMPLATE GALLERY (8 DESIGNS) ── */}
+        {/* ── TAB 1: TEMPLATE GALLERY (12+ DESIGNS WITH FILTER CATEGORIES) ── */}
         {activeTab === 'templates' && (
           <div className="space-y-4">
             <div>
               <h2 className={`text-sm font-bold ${textPrimary}`}>Template Gallery</h2>
               <p className={`text-xs leading-relaxed ${textSecondary}`}>
-                Choose from 8 original designs engineered for business velocity.
+                Choose from 12+ industry designs engineered for high-growth operations.
               </p>
             </div>
 
@@ -297,7 +326,7 @@ export function InvoiceStudioLeftPanel({
               })}
             </div>
 
-            {/* 8 Template Cards Grid */}
+            {/* Template Cards Grid with Real Thumbnail Previews */}
             <div className="grid grid-cols-1 gap-3 pt-1">
               {filteredTemplates.map((tmpl) => {
                 const isSelected = selectedTemplateId === tmpl.id;
@@ -312,10 +341,19 @@ export function InvoiceStudioLeftPanel({
                         : cardBg
                     }`}
                   >
-                    <div className="flex items-start justify-between gap-2 mb-2">
+                    {/* Visual Vector Thumbnail Preview */}
+                    <div className="mb-3">
+                      <TemplateThumbnailPreview
+                        templateId={tmpl.id}
+                        accentColor={tmpl.defaultAccent}
+                        isDark={isDark}
+                      />
+                    </div>
+
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
                       <div className="flex items-center gap-2">
                         <span
-                          className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm"
+                          className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
                           style={{ backgroundColor: tmpl.thumbnailColor }}
                         />
                         <h3 className={`font-bold text-xs ${textPrimary}`}>{tmpl.name}</h3>
@@ -368,7 +406,7 @@ export function InvoiceStudioLeftPanel({
 
             {/* Quick Add Text Elements to Canvas */}
             <div className={`space-y-1.5 p-3 rounded-lg border ${innerCardBg}`}>
-              <span className={`text-[10px] font-mono uppercase font-bold block mb-1 ${textMuted}`}>
+              <span className={`text-xs font-mono uppercase font-bold block mb-1 ${textMuted}`}>
                 Insert Text to Canvas
               </span>
               <div className="grid grid-cols-3 gap-1.5">
@@ -408,7 +446,7 @@ export function InvoiceStudioLeftPanel({
             {/* Client Account Picker */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className={`text-[10px] font-mono uppercase font-bold flex items-center gap-1 ${textMuted}`}>
+                <label className={`text-xs font-mono uppercase font-bold flex items-center gap-1 ${textMuted}`}>
                   <Building2 size={12} />
                   <span>Client Account</span>
                 </label>
@@ -416,7 +454,7 @@ export function InvoiceStudioLeftPanel({
                   <button
                     type="button"
                     onClick={onOpenCreateClientModal}
-                    className="text-[10px] font-bold text-[#FF6B4A] hover:underline flex items-center gap-0.5"
+                    className="text-xs font-bold text-[#FF6B4A] hover:underline flex items-center gap-0.5"
                   >
                     <Plus size={10} /> New Client
                   </button>
@@ -445,7 +483,7 @@ export function InvoiceStudioLeftPanel({
             {/* Dates & Currency Grid */}
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div>
-                <label className={`text-[10px] font-mono uppercase font-bold block mb-1 ${textMuted}`}>
+                <label className={`text-xs font-mono uppercase font-bold block mb-1 ${textMuted}`}>
                   Issue Date
                 </label>
                 <input
@@ -457,8 +495,8 @@ export function InvoiceStudioLeftPanel({
               </div>
 
               <div>
-                <label className={`text-[10px] font-mono uppercase font-bold block mb-1 ${textMuted}`}>
-                  Due Date
+                <label className={`text-xs font-mono uppercase font-bold block mb-1 ${textMuted}`}>
+                  {properties.templateId === 'quotation_estimate' ? 'Valid Until' : 'Due Date'}
                 </label>
                 <input
                   type="date"
@@ -469,91 +507,127 @@ export function InvoiceStudioLeftPanel({
               </div>
             </div>
 
-            <div>
-              <label className={`text-[10px] font-mono uppercase font-bold block mb-1 ${textMuted}`}>
-                Currency
-              </label>
-              <select
-                value={currency}
-                onChange={(e) => onCurrencyChange(e.target.value)}
-                className={`w-full rounded-lg px-2.5 py-1.5 text-xs border focus:outline-none ${inputBg}`}
-              >
-                <option value="USD">USD ($)</option>
-                <option value="INR">INR (₹)</option>
-                <option value="EUR">EUR (€)</option>
-                <option value="GBP">GBP (£)</option>
-                <option value="CAD">CAD ($)</option>
-                <option value="AUD">AUD ($)</option>
-              </select>
+            {/* Currency & Indian State Place of Supply */}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <label className={`text-xs font-mono uppercase font-bold block mb-1 ${textMuted}`}>
+                  Currency
+                </label>
+                <select
+                  value={currency}
+                  onChange={(e) => onCurrencyChange(e.target.value)}
+                  className={`w-full rounded-lg px-2 py-1.5 text-xs font-mono border focus:outline-none ${inputBg}`}
+                >
+                  <option value="INR">INR (₹)</option>
+                  <option value="USD">USD ($)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="GBP">GBP (£)</option>
+                  <option value="AED">AED (د.إ)</option>
+                  <option value="SGD">SGD (S$)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className={`text-xs font-mono uppercase font-bold block mb-1 ${textMuted}`}>
+                  Place of Supply
+                </label>
+                <select
+                  value={properties.placeOfSupply || '34'}
+                  onChange={(e) => onUpdateProperties({ placeOfSupply: e.target.value })}
+                  className={`w-full rounded-lg px-2 py-1.5 text-xs font-mono border focus:outline-none ${inputBg}`}
+                >
+                  {INDIAN_GST_STATES.map((s) => (
+                    <option key={s.code} value={s.code}>
+                      {s.code} - {s.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            {/* Line Items List */}
-            <div className={`space-y-2 pt-2 border-t ${subtleBorder}`}>
+            {/* Structured Line Items Table Editor */}
+            <div className="space-y-2 pt-2 border-t border-zinc-700/40">
               <div className="flex items-center justify-between">
-                <span className={`text-[11px] font-mono font-bold uppercase ${textPrimary}`}>
+                <span className={`text-xs font-mono font-bold uppercase block ${textPrimary}`}>
                   Line Items ({items.length})
                 </span>
                 <button
                   type="button"
                   onClick={onAddItem}
-                  className="flex items-center gap-1 text-[11px] font-bold text-[#FF6B4A] hover:underline"
+                  className="px-2 py-1 rounded bg-[#FF6B4A]/15 text-[#FF6B4A] hover:bg-[#FF6B4A]/25 text-[11px] font-bold flex items-center gap-1 transition-colors"
                 >
                   <Plus size={12} /> Add Item
                 </button>
               </div>
 
-              <div className="space-y-2.5">
-                {items.map((it) => (
-                  <div key={it.id} className={`p-2.5 rounded-lg border space-y-2 ${innerCardBg}`}>
-                    <div className="flex items-center gap-2">
+              <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                {items.map((item, index) => (
+                  <div
+                    key={item.id}
+                    className={`p-2.5 rounded-lg border space-y-2 text-xs ${innerCardBg}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className={`text-[10px] font-mono font-bold ${textMuted}`}>
+                        #{index + 1}
+                      </span>
                       <input
                         type="text"
-                        placeholder="Deliverable description..."
-                        value={it.description}
-                        onChange={(e) => onUpdateItem(it.id, 'description', e.target.value)}
-                        className={`w-full bg-transparent border-0 text-xs focus:outline-none ${textPrimary} ${
-                          isDark ? 'placeholder-zinc-500' : 'placeholder-zinc-400'
-                        }`}
+                        value={item.description}
+                        onChange={(e) => onUpdateItem(item.id, 'description', e.target.value)}
+                        placeholder="Description of service / product"
+                        className={`flex-1 rounded px-2 py-1 text-xs border focus:outline-none ${inputBg}`}
                       />
-                      <button
-                        type="button"
-                        onClick={() => onRemoveItem(it.id)}
-                        disabled={items.length <= 1}
-                        className="text-zinc-400 hover:text-red-400 disabled:opacity-20 transition-colors p-1"
-                        title="Delete line"
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      {items.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => onRemoveItem(item.id)}
+                          className="p-1 rounded text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-colors"
+                          title="Remove Line Item"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
                     </div>
 
-                    <div className="grid grid-cols-4 gap-1.5 text-xs font-mono">
+                    <div className="grid grid-cols-3 gap-2">
                       <div>
-                        <span className={`text-[9px] block ${textMuted}`}>Qty</span>
+                        <label className={`text-[9px] font-mono uppercase block mb-0.5 ${textMuted}`}>
+                          {properties.templateId === 'professional_services' ? 'Hours' : 'Quantity'}
+                        </label>
                         <input
                           type="number"
                           min="1"
-                          value={it.quantity}
-                          onChange={(e) => onUpdateItem(it.id, 'quantity', parseFloat(e.target.value) || 1)}
-                          className={`w-full rounded px-1.5 py-1 text-right text-xs border focus:outline-none ${inputBg}`}
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <span className={`text-[9px] block ${textMuted}`}>Rate</span>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={it.rate}
-                          onChange={(e) => onUpdateItem(it.id, 'rate', parseFloat(e.target.value) || 0)}
-                          className={`w-full rounded px-1.5 py-1 text-right text-xs border focus:outline-none ${inputBg}`}
+                          value={item.quantity}
+                          onChange={(e) =>
+                            onUpdateItem(item.id, 'quantity', parseFloat(e.target.value) || 1)
+                          }
+                          className={`w-full rounded px-2 py-1 text-xs font-mono border focus:outline-none ${inputBg}`}
                         />
                       </div>
                       <div>
-                        <span className={`text-[9px] block ${textMuted}`}>Tax%</span>
+                        <label className={`text-[9px] font-mono uppercase block mb-0.5 ${textMuted}`}>
+                          Rate ({currency})
+                        </label>
                         <input
                           type="number"
-                          value={it.tax_rate}
-                          onChange={(e) => onUpdateItem(it.id, 'tax_rate', parseFloat(e.target.value) || 0)}
-                          className={`w-full rounded px-1.5 py-1 text-right text-xs border focus:outline-none ${inputBg}`}
+                          min="0"
+                          value={item.rate}
+                          onChange={(e) =>
+                            onUpdateItem(item.id, 'rate', parseFloat(e.target.value) || 0)
+                          }
+                          className={`w-full rounded px-2 py-1 text-xs font-mono border focus:outline-none ${inputBg}`}
+                        />
+                      </div>
+                      <div>
+                        <label className={`text-[9px] font-mono uppercase block mb-0.5 ${textMuted}`}>
+                          HSN/SAC
+                        </label>
+                        <input
+                          type="text"
+                          value={item.hsn_code || ''}
+                          onChange={(e) => onUpdateItem(item.id, 'hsn_code', e.target.value)}
+                          placeholder="998314"
+                          className={`w-full rounded px-2 py-1 text-xs font-mono border focus:outline-none ${inputBg}`}
                         />
                       </div>
                     </div>
@@ -561,92 +635,48 @@ export function InvoiceStudioLeftPanel({
                 ))}
               </div>
             </div>
-
-            {/* Quick Financial Footprint */}
-            <div className={`p-3 rounded-lg border font-mono text-[11px] space-y-1 ${innerCardBg}`}>
-              <div className={`flex justify-between ${textSecondary}`}>
-                <span>Subtotal:</span>
-                <span>{currency} {subtotal.toFixed(2)}</span>
-              </div>
-              <div className={`flex justify-between ${textSecondary}`}>
-                <span>Tax:</span>
-                <span>{currency} {totalTax.toFixed(2)}</span>
-              </div>
-              <div className={`flex justify-between font-bold pt-1 border-t ${subtleBorder} ${textPrimary}`}>
-                <span>Total:</span>
-                <span className="text-[#FF6B4A]">{currency} {totalAmount.toFixed(2)}</span>
-              </div>
-            </div>
-
-            {/* Custom Notes & Terms Text Fields */}
-            <div className={`space-y-2 pt-2 border-t ${subtleBorder} text-xs`}>
-              <label className={`text-[10px] font-mono uppercase font-bold block ${textMuted}`}>
-                Invoice Notes & Instructions
-              </label>
-              <textarea
-                rows={2}
-                value={properties.customNotes}
-                onChange={(e) => onUpdateProperties({ customNotes: e.target.value })}
-                placeholder="Thank you for your business..."
-                className={`w-full rounded-lg p-2 text-xs border focus:outline-none resize-none ${inputBg}`}
-              />
-
-              <label className={`text-[10px] font-mono uppercase font-bold block pt-1 ${textMuted}`}>
-                Payment Terms Text
-              </label>
-              <input
-                type="text"
-                value={properties.paymentTerms}
-                onChange={(e) => onUpdateProperties({ paymentTerms: e.target.value })}
-                placeholder="Net 15 Days from date of invoice"
-                className={`w-full rounded-lg px-2.5 py-1.5 text-xs border focus:outline-none ${inputBg}`}
-              />
-            </div>
           </div>
         )}
 
-        {/* ── TAB 3: SHAPES & DESIGN ACCENTS ── */}
+        {/* ── TAB 3: SHAPES & CANVAS DECORATIONS ── */}
         {activeTab === 'shapes' && (
           <div className="space-y-4 text-xs">
             <div>
-              <h2 className={`text-sm font-bold ${textPrimary}`}>Insert Shapes</h2>
+              <h2 className={`text-sm font-bold ${textPrimary}`}>Geometric Shapes & Accents</h2>
               <p className={`text-xs leading-relaxed ${textSecondary}`}>
-                Click any shape to add an editable layer directly onto the canvas.
+                Add custom cards, lines, badges, or divider accents to the canvas.
               </p>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => handleAddShapeElement('rectangle')}
-                className={`p-3 rounded-lg border hover:border-[#FF6B4A] transition-all flex flex-col items-center justify-center gap-1.5 text-center ${innerCardBg}`}
+                onClick={() => handleAddShapeElement('rounded-rect')}
+                className={`p-3 rounded-lg border flex flex-col items-center justify-center gap-1.5 transition-colors ${
+                  isDark ? 'border-zinc-800 bg-[#12131A] hover:bg-zinc-800' : 'border-zinc-200 bg-white hover:bg-zinc-100 shadow-2xs'
+                }`}
               >
                 <Square size={22} className="text-[#FF6B4A]" />
-                <span className={`font-semibold text-xs ${textPrimary}`}>Rectangle</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleAddShapeElement('rounded-rect')}
-                className={`p-3 rounded-lg border hover:border-[#FF6B4A] transition-all flex flex-col items-center justify-center gap-1.5 text-center ${innerCardBg}`}
-              >
-                <div className="w-5 h-5 rounded-md border-2 border-[#FF6B4A]" />
-                <span className={`font-semibold text-xs ${textPrimary}`}>Rounded Box</span>
+                <span className={`font-semibold text-xs ${textPrimary}`}>Card Block</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleAddShapeElement('circle')}
-                className={`p-3 rounded-lg border hover:border-[#FF6B4A] transition-all flex flex-col items-center justify-center gap-1.5 text-center ${innerCardBg}`}
+                className={`p-3 rounded-lg border flex flex-col items-center justify-center gap-1.5 transition-colors ${
+                  isDark ? 'border-zinc-800 bg-[#12131A] hover:bg-zinc-800' : 'border-zinc-200 bg-white hover:bg-zinc-100 shadow-2xs'
+                }`}
               >
                 <Circle size={22} className="text-[#FF6B4A]" />
-                <span className={`font-semibold text-xs ${textPrimary}`}>Circle</span>
+                <span className={`font-semibold text-xs ${textPrimary}`}>Badge / Seal</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => handleAddShapeElement('line')}
-                className={`p-3 rounded-lg border hover:border-[#FF6B4A] transition-all flex flex-col items-center justify-center gap-1.5 text-center ${innerCardBg}`}
+                className={`col-span-2 p-3 rounded-lg border flex items-center justify-center gap-2 transition-colors ${
+                  isDark ? 'border-zinc-800 bg-[#12131A] hover:bg-zinc-800' : 'border-zinc-200 bg-white hover:bg-zinc-100 shadow-2xs'
+                }`}
               >
                 <Minus size={22} className="text-[#FF6B4A]" />
                 <span className={`font-semibold text-xs ${textPrimary}`}>Divider Line</span>
@@ -659,27 +689,25 @@ export function InvoiceStudioLeftPanel({
         {activeTab === 'images' && (
           <div className="space-y-4 text-xs">
             <div>
-              <h2 className={`text-sm font-bold ${textPrimary}`}>Brand Imagery & Logos</h2>
+              <h2 className={`text-sm font-bold ${textPrimary}`}>Brand Imagery & Logo</h2>
               <p className={`text-xs leading-relaxed ${textSecondary}`}>
-                Configure brand logo or insert freeform graphic elements.
+                Upload official company logo or insert graphic asset overlays.
               </p>
             </div>
 
-            {/* Logo URL Input */}
-            <div className="space-y-2">
-              <label className={`text-[10px] font-mono uppercase font-bold block ${textMuted}`}>
-                Company Brand Logo URL
-              </label>
-              <input
-                type="url"
-                value={properties.logoUrl || ''}
-                onChange={(e) => onUpdateProperties({ logoUrl: e.target.value })}
-                placeholder="https://example.com/logo.png"
-                className={`w-full rounded-lg px-2.5 py-1.5 text-xs border focus:outline-none ${inputBg}`}
-              />
-            </div>
+            {/* FEATURE 1: Brand Logo Uploader in Images tab */}
+            <BrandLogoUploader
+              logoUrl={properties.logoUrl}
+              logoPosition={properties.logoPosition}
+              logoSize={properties.logoSize}
+              onUpdateLogo={(url) => onUpdateProperties({ logoUrl: url })}
+              onUpdatePosition={(pos) => onUpdateProperties({ logoPosition: pos })}
+              onUpdateSize={(sz) => onUpdateProperties({ logoSize: sz })}
+              onRemoveLogo={() => onUpdateProperties({ logoUrl: '' })}
+              isDark={isDark}
+            />
 
-            {/* Insert Image Layer to Canvas */}
+            {/* Insert Custom Image Layer to Canvas */}
             <button
               type="button"
               onClick={() => {
@@ -716,13 +744,34 @@ export function InvoiceStudioLeftPanel({
         {activeTab === 'elements' && (
           <div className="space-y-4 text-xs">
             <div>
-              <h2 className={`text-sm font-bold ${textPrimary}`}>Modular Invoice Blocks</h2>
+              <h2 className={`text-sm font-bold ${textPrimary}`}>Modular Invoice Elements</h2>
               <p className={`text-xs leading-relaxed ${textSecondary}`}>
-                Toggle structured data components and remittance credentials.
+                Configure brand logo, structured data components, and bank remittance.
               </p>
             </div>
 
+            {/* FEATURE 1: Brand Logo in Elements Panel */}
             <div className="space-y-2">
+              <span className={`text-xs font-mono font-bold uppercase block ${textPrimary}`}>
+                Brand Logo
+              </span>
+              <BrandLogoUploader
+                logoUrl={properties.logoUrl}
+                logoPosition={properties.logoPosition}
+                logoSize={properties.logoSize}
+                onUpdateLogo={(url) => onUpdateProperties({ logoUrl: url })}
+                onUpdatePosition={(pos) => onUpdateProperties({ logoPosition: pos })}
+                onUpdateSize={(sz) => onUpdateProperties({ logoSize: sz })}
+                onRemoveLogo={() => onUpdateProperties({ logoUrl: '' })}
+                isDark={isDark}
+              />
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-zinc-700/40">
+              <span className={`text-xs font-mono font-bold uppercase block ${textPrimary}`}>
+                Display Controls
+              </span>
+
               <label className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer transition-colors ${innerCardBg} hover:border-[#FF6B4A]`}>
                 <div>
                   <span className={`font-semibold block ${textPrimary}`}>GST Tax Breakdown</span>
@@ -779,25 +828,25 @@ export function InvoiceStudioLeftPanel({
             {/* Bank Credentials Sub-Form if Bank Block is enabled */}
             {properties.showBankDetails && (
               <div className={`space-y-3 pt-3 border-t ${subtleBorder}`}>
-                <span className={`text-[11px] font-mono font-bold uppercase block ${textPrimary}`}>
+                <span className={`text-xs font-mono font-bold uppercase block ${textPrimary}`}>
                   Remittance Settings
                 </span>
 
                 <div className="space-y-1">
-                  <label className={`text-[10px] font-mono uppercase font-bold block ${textMuted}`}>
+                  <label className={`text-xs font-mono uppercase font-bold block ${textMuted}`}>
                     Bank Name
                   </label>
                   <input
                     type="text"
                     value={properties.bankName}
                     onChange={(e) => onUpdateProperties({ bankName: e.target.value })}
-                    placeholder="e.g. HDFC Bank, ICICI Bank"
+                    placeholder="e.g. State Bank of India, ICICI Bank"
                     className={`w-full rounded-lg px-2.5 py-1.5 text-xs border focus:outline-none ${inputBg}`}
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className={`text-[10px] font-mono uppercase font-bold block ${textMuted}`}>
+                  <label className={`text-xs font-mono uppercase font-bold block ${textMuted}`}>
                     Account Number
                   </label>
                   <input
@@ -811,26 +860,26 @@ export function InvoiceStudioLeftPanel({
 
                 <div className="grid grid-cols-2 gap-2">
                   <div className="space-y-1">
-                    <label className={`text-[10px] font-mono uppercase font-bold block ${textMuted}`}>
+                    <label className={`text-xs font-mono uppercase font-bold block ${textMuted}`}>
                       IFSC Code
                     </label>
                     <input
                       type="text"
                       value={properties.ifscCode}
                       onChange={(e) => onUpdateProperties({ ifscCode: e.target.value })}
-                      placeholder="HDFC0001242"
+                      placeholder="SBIN0001234"
                       className={`w-full rounded-lg px-2 py-1.5 text-xs font-mono uppercase border focus:outline-none ${inputBg}`}
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className={`text-[10px] font-mono uppercase font-bold block ${textMuted}`}>
+                    <label className={`text-xs font-mono uppercase font-bold block ${textMuted}`}>
                       UPI ID
                     </label>
                     <input
                       type="text"
                       value={properties.upiId}
                       onChange={(e) => onUpdateProperties({ upiId: e.target.value })}
-                      placeholder="billing@upi"
+                      placeholder="business@upi"
                       className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono border focus:outline-none ${inputBg}`}
                     />
                   </div>

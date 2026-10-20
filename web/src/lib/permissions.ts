@@ -57,6 +57,7 @@ export type UserRole =
   | 'employee'
   | 'intern'
   | 'freelancer'
+  | 'client'
   // Legacy roles (kept for backward compat during migration)
   | 'managing_director'
   | 'ceo'
@@ -180,6 +181,13 @@ const ROLE_PERMISSIONS: Record<string, AppPermission[]> = {
     'view_invoices', 'create_invoices', 'edit_invoices',
     'record_payments', 'manage_clients', 'manage_bill_references',
     'generate_invoice_pdfs',
+  ],
+
+  client: [
+    'view_projects',
+    'view_invoices',
+    'download_files',
+    'send_messages',
   ],
 
   managing_director: [],

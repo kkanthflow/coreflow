@@ -22,10 +22,13 @@ import {
   CreditCard,
   Plus,
   ArrowLeft,
-  Sparkles
+  Sparkles,
+  Image as ImageIcon
 } from 'lucide-react';
 import type { CanvasElement, StudioDesignProperties, StudioLineItem } from '../../types/invoiceStudio';
 import { ACCENT_PALETTES } from './templateGalleryData';
+import { BrandLogoUploader } from './BrandLogoUploader';
+import { INDIAN_GST_STATES } from './gstStateCodes';
 
 interface ClientAccount {
   id: string;
@@ -127,8 +130,8 @@ export function InvoiceStudioRightPanel({
     ? 'border-zinc-800 bg-[#12131A]'
     : 'border-zinc-200 bg-zinc-50/80';
   const inputClasses = isDark
-    ? 'bg-[#0A0B10] border-zinc-800 text-[#F5F5F5] placeholder-zinc-500 focus:border-[#FF6B4A]'
-    : 'bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400 focus:border-[#FF6B4A] shadow-2xs';
+    ? 'bg-[#0A0B10] border-zinc-800 text-[#F5F5F5] placeholder-zinc-600/70 focus:border-[#FF6B4A]'
+    : 'bg-white border-zinc-200 text-zinc-900 placeholder-zinc-400/70 focus:border-[#FF6B4A] shadow-2xs';
   const labelClasses = isDark ? 'text-[#A1A1AA]' : 'text-zinc-600';
   const subtleBorder = isDark ? 'border-zinc-800' : 'border-zinc-200';
 
@@ -597,6 +600,23 @@ export function InvoiceStudioRightPanel({
                     <option value="AUD">AUD ($ - Australian Dollar)</option>
                   </select>
                 </div>
+
+                <div>
+                  <label className={`text-[10px] font-mono uppercase font-bold block mb-1 ${labelClasses}`}>
+                    Place of Supply (GST State)
+                  </label>
+                  <select
+                    value={properties.placeOfSupply || '34'}
+                    onChange={(e) => onUpdateProperties({ placeOfSupply: e.target.value })}
+                    className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono border focus:outline-none ${inputClasses}`}
+                  >
+                    {INDIAN_GST_STATES.map((s) => (
+                      <option key={s.code} value={s.code}>
+                        {s.code} - {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </section>
             )}
 
@@ -607,6 +627,22 @@ export function InvoiceStudioRightPanel({
                   <FileText size={13} className="text-[#FF6B4A]" />
                   <span>Invoice Title & Organization</span>
                 </span>
+
+                <div>
+                  <label className={`text-[10px] font-mono uppercase font-bold block mb-1 ${labelClasses}`}>
+                    Brand Logo
+                  </label>
+                  <BrandLogoUploader
+                    logoUrl={properties.logoUrl}
+                    logoPosition={properties.logoPosition}
+                    logoSize={properties.logoSize}
+                    onUpdateLogo={(url) => onUpdateProperties({ logoUrl: url })}
+                    onUpdatePosition={(pos) => onUpdateProperties({ logoPosition: pos })}
+                    onUpdateSize={(sz) => onUpdateProperties({ logoSize: sz })}
+                    onRemoveLogo={() => onUpdateProperties({ logoUrl: '' })}
+                    isDark={isDark}
+                  />
+                </div>
 
                 <div>
                   <label className={`text-[10px] font-mono uppercase font-bold block mb-1 ${labelClasses}`}>
@@ -696,7 +732,7 @@ export function InvoiceStudioRightPanel({
                     type="text"
                     value={properties.bankName}
                     onChange={(e) => onUpdateProperties({ bankName: e.target.value })}
-                    placeholder="e.g. Silicon Valley Bank / HDFC Bank"
+                    placeholder="e.g. State Bank of India / ICICI Bank"
                     className={`w-full rounded-lg px-2.5 py-1.5 text-xs border focus:outline-none ${inputClasses}`}
                   />
                 </div>
@@ -723,7 +759,7 @@ export function InvoiceStudioRightPanel({
                       type="text"
                       value={properties.ifscCode}
                       onChange={(e) => onUpdateProperties({ ifscCode: e.target.value })}
-                      placeholder="HDFC0001234"
+                      placeholder="SBIN0001234"
                       className={`w-full rounded-lg px-2.5 py-1.5 text-xs font-mono uppercase border focus:outline-none ${inputClasses}`}
                     />
                   </div>
@@ -1322,8 +1358,26 @@ export function InvoiceStudioRightPanel({
             {/* SUB-TAB 2: CANVAS STYLE & THEME */}
             {globalTab === 'style' && (
               <div className="space-y-5">
-                {/* 1. COLOR & PALETTE SECTION */}
+                {/* 0. BRAND LOGO IN CANVAS PROPERTIES */}
                 <section className="space-y-3">
+                  <span className={`font-mono font-bold uppercase text-[11px] flex items-center gap-1.5 ${labelClasses}`}>
+                    <ImageIcon size={13} className="text-[#FF6B4A]" />
+                    <span>BRAND LOGO</span>
+                  </span>
+                  <BrandLogoUploader
+                    logoUrl={properties.logoUrl}
+                    logoPosition={properties.logoPosition}
+                    logoSize={properties.logoSize}
+                    onUpdateLogo={(url) => onUpdateProperties({ logoUrl: url })}
+                    onUpdatePosition={(pos) => onUpdateProperties({ logoPosition: pos })}
+                    onUpdateSize={(sz) => onUpdateProperties({ logoSize: sz })}
+                    onRemoveLogo={() => onUpdateProperties({ logoUrl: '' })}
+                    isDark={isDark}
+                  />
+                </section>
+
+                {/* 1. COLOR & PALETTE SECTION */}
+                <section className={`space-y-3 pt-4 border-t ${subtleBorder}`}>
                   <div className="flex items-center justify-between">
                     <span className={`font-mono font-bold uppercase text-[11px] flex items-center gap-1.5 ${labelClasses}`}>
                       <Palette size={13} className="text-[#FF6B4A]" />
