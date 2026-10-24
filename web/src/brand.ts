@@ -1,6 +1,8 @@
 export const BRAND = {
-  name: "AUVRYN",
+  productName: "Auvryn",
+  name: "Auvryn",
   tagline: "Unite. Evolve. Rise.",
   company: "Skavelon Technologies",
-  primaryColor: "#FF6B4A",
+  primaryColor: "#FF5A36",
+  accentColor: "#FF5A36",
 };

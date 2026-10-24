@@ -35,31 +35,31 @@ export default function AppShell() {
   return (
     <div 
       onPointerMove={handlePointerMove}
-      className="flex h-screen w-full bg-app overflow-hidden text-main selection:bg-[#FF6B4A]/30 selection:text-main font-sans antialiased relative"
+      className="flex h-screen w-full bg-bg overflow-hidden text-text selection:bg-accent/25 selection:text-text font-sans antialiased relative"
     >
-      {/* Living AUVRYN Atmospheric Background Canvas */}
+      {/* Living Atmospheric Background Canvas */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        {/* Cursor-responsive living AUVRYN atmospheric gradient aura */}
+        {/* Cursor-responsive restrained atmospheric gradient aura (< 4% opacity) */}
         <div 
           className="absolute inset-0 transition-opacity duration-700 ease-out"
           style={{
-            background: `radial-gradient(750px circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 107, 74, 0.09), transparent 75%)`,
+            background: `radial-gradient(750px circle at ${mousePos.x}% ${mousePos.y}%, rgba(255, 90, 54, 0.03), transparent 75%)`,
           }}
         />
 
         {currentModule === 'dashboard' && (
-          <div className="absolute -top-[10%] left-[25%] w-[650px] h-[650px] rounded-full bg-gradient-to-br from-[#FF6B4A]/[0.10] to-transparent blur-[120px] animate-pulse-glow" />
+          <div className="absolute -top-[10%] left-[25%] w-[650px] h-[650px] rounded-full bg-gradient-to-br from-[#ff5a36]/[0.035] to-transparent blur-[120px]" />
         )}
         {currentModule === 'meetings' && (
-          <div className="absolute inset-0 bg-radial from-transparent via-app/50 to-app" />
+          <div className="absolute inset-0 bg-radial from-transparent via-bg/50 to-bg" />
         )}
-        <div className="absolute bottom-[10%] right-[10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tl from-blue-600/[0.06] to-transparent blur-[100px]" />
+        <div className="absolute bottom-[10%] right-[10%] w-[500px] h-[500px] rounded-full bg-gradient-to-tl from-blue-600/[0.02] to-transparent blur-[100px]" />
         
-        {/* Subtle grid pattern */}
+        {/* Subtle grid pattern kept under 5% opacity */}
         <div 
-          className="absolute inset-0 opacity-100"
+          className="absolute inset-0 opacity-25 dark:opacity-15"
           style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, var(--border-app) 1px, transparent 0)`,
+            backgroundImage: `radial-gradient(circle at 1px 1px, var(--line) 1px, transparent 0)`,
             backgroundSize: '24px 24px'
           }}
         />

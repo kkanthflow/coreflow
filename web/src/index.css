@@ -10,30 +10,43 @@
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 11 100% 64.5%;
+    --primary: 11 100% 60%;
     --primary-foreground: 0 0% 100%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
+    --muted-hsl: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-    --accent: 11 100% 64.5%;
-    --accent-foreground: 0 0% 100%;
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 11 100% 64.5%;
-    --radius: 0.375rem;
+    --ring: 11 100% 60%;
+    --radius: 0.5rem;
 
-    /* Semantic Theme Variables */
-    --bg-app: #F4F4F5;
-    --bg-card: #FFFFFF;
-    --bg-hover: #E4E4E7;
-    --border-app: rgba(0, 0, 0, 0.08);
-    --text-main: #18181B;
-    --text-muted: #71717A;
+    /* Auvryn Design Tokens (Light Mode Default) */
+    --bg: #f8fafc;
+    --surface: #ffffff;
+    --surface-2: #f1f5f9;
+    --text: #0f172a;
+    --muted: #64748b;
+    --line: #e2e8f0;
+    --accent: #ff5a36;
+    --accent-soft: rgba(255, 90, 54, 0.12);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --focus-ring: rgba(255, 90, 54, 0.35);
+
+    /* Backward Compatible Aliases */
+    --bg-app: var(--bg);
+    --bg-card: var(--surface);
+    --bg-hover: var(--surface-2);
+    --border-app: var(--line);
+    --text-main: var(--text);
+    --text-muted: var(--muted);
   }
  
+  [data-theme="dark"],
   .dark {
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
@@ -41,27 +54,39 @@
     --card-foreground: 0 0% 98%;
     --popover: 240 10% 4.5%;
     --popover-foreground: 0 0% 98%;
-    --primary: 11 100% 64.5%;
+    --primary: 11 100% 60%;
     --primary-foreground: 0 0% 100%;
     --secondary: 240 4% 11%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 240 4% 11%;
+    --muted-hsl: 240 4% 11%;
     --muted-foreground: 240 5% 55%;
-    --accent: 11 100% 64.5%;
-    --accent-foreground: 0 0% 100%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
     --border: 240 4% 12%;
     --input: 240 4% 12%;
-    --ring: 11 100% 64.5%;
+    --ring: 11 100% 60%;
 
-    /* Semantic Theme Variables */
-    --bg-app: #07070B;
-    --bg-card: #0C0D12;
-    --bg-hover: #151822;
-    --border-app: rgba(255, 255, 255, 0.06);
-    --text-main: #FFFFFF;
-    --text-muted: #A1A1AA;
+    /* Auvryn Design Tokens (Dark Mode) */
+    --bg: #07070b;
+    --surface: #0c0d12;
+    --surface-2: #151822;
+    --text: #ffffff;
+    --muted: #a1a1aa;
+    --line: rgba(255, 255, 255, 0.08);
+    --accent: #ff5a36;
+    --accent-soft: rgba(255, 90, 54, 0.15);
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --focus-ring: rgba(255, 90, 54, 0.45);
+
+    /* Backward Compatible Aliases */
+    --bg-app: var(--bg);
+    --bg-card: var(--surface);
+    --bg-hover: var(--surface-2);
+    --border-app: var(--line);
+    --text-main: var(--text);
+    --text-muted: var(--muted);
   }
 }
  
@@ -103,10 +128,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--line);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--muted);
 }

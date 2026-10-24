@@ -1,32 +1,56 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('app-theme') || 'system';
+          var isDark = saved === 'dark' || (saved === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var doc = document.documentElement;
+          if (isDark) {
+            doc.classList.add('dark');
+            doc.setAttribute('data-theme', 'dark');
+          } else {
+            doc.classList.remove('dark');
+            doc.setAttribute('data-theme', 'light');
+          }
+        } catch (e) {}
+      })();
+    </script>
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="google-site-verification" content="googlea386bc9f3a7f7f04" />
-    <title>AUVRYN - Unite. Evolve. Rise.</title>
+    <title>Auvryn</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
+      :root {
+        --bg-init: #f8fafc;
+        --text-init: #0f172a;
+        --accent-init: #ff5a36;
+      }
+      [data-theme="dark"], html.dark {
+        --bg-init: #07070b;
+        --text-init: #ffffff;
+        --accent-init: #ff5a36;
+      }
       html, body {
-        background-color: #07070B;
-        color: #FFFFFF;
+        background-color: var(--bg-init);
+        color: var(--text-init);
         margin: 0;
         padding: 0;
         min-height: 100vh;
       }
+      @keyframes spin { to { transform: rotate(360deg); } }
     </style>
   </head>
-  <body class="bg-[#07070B] text-white min-h-screen">
+  <body class="bg-bg text-text min-h-screen">
     <div id="root">
-      <div style="display:flex;min-height:100vh;align-items:center;justify-content:center;background-color:#07070B;">
-        <div style="width:36px;height:36px;border:2px solid #FF6B4A;border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
+      <div style="display:flex;min-height:100vh;align-items:center;justify-content:center;background-color:var(--bg-init);">
+        <div style="width:36px;height:36px;border:2px solid var(--accent-init);border-top-color:transparent;border-radius:50%;animation:spin 0.8s linear infinite;"></div>
       </div>
-      <style>
-        @keyframes spin { to { transform: rotate(360deg); } }
-      </style>
     </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

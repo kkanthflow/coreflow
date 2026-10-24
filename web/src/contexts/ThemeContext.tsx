@@ -13,11 +13,12 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return 'system';
     const saved = localStorage.getItem('app-theme');
     if (saved === 'light' || saved === 'dark' || saved === 'system') {
       return saved as Theme;
     }
-    return 'dark';
+    return 'system';
   });
 
   const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
@@ -35,11 +36,16 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     
     const updateTheme = () => {
       const isDark = theme === 'dark' || (theme === 'system' && mediaQuery.matches);
-      setResolvedTheme(isDark ? 'dark' : 'light');
+      const resolved = isDark ? 'dark' : 'light';
+      setResolvedTheme(resolved);
+
+      const doc = document.documentElement;
       if (isDark) {
-        document.documentElement.classList.add('dark');
+        doc.classList.add('dark');
+        doc.setAttribute('data-theme', 'dark');
       } else {
-        document.documentElement.classList.remove('dark');
+        doc.classList.remove('dark');
+        doc.setAttribute('data-theme', 'light');
       }
     };
 

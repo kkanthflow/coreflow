@@ -7,6 +7,7 @@ import superjson from 'superjson';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { WorkspaceProvider } from './hooks/useWorkspace';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 import { trpc } from './lib/trpc';
 import { supabase } from './lib/supabase';
 import AppShell from './components/AppShell';
@@ -53,6 +54,7 @@ const Privacy         = lazyWithRetry(() => import('./pages/Privacy'));
 const Terms           = lazyWithRetry(() => import('./pages/Terms'));
 const Contact         = lazyWithRetry(() => import('./pages/Contact'));
 const Pricing         = lazyWithRetry(() => import('./pages/Pricing'));
+const Notifications   = lazyWithRetry(() => import('./pages/Notifications'));
 
 function PageLoader() {
   return (
@@ -160,10 +162,11 @@ function App() {
         <QueryClientProvider client={queryClient}>
           <ToastProvider>
             <ThemeProvider>
-              <div className="min-h-screen bg-app text-main antialiased">
+              <div className="min-h-screen bg-bg text-text antialiased">
                 <AuthProvider>
                   <WorkspaceProvider>
-                    <BrowserRouter>
+                    <SettingsProvider>
+                      <BrowserRouter>
                   <Routes>
                     <Route path="/" element={<RootRoute />} />
                     <Route path="/landing" element={<Landing />} />
@@ -238,6 +241,7 @@ function App() {
                       <Route path="/billing"   element={<Navigate to="/settings?tab=billing" replace />} />
                       <Route path="/subscription" element={<Navigate to="/settings?tab=billing" replace />} />
                       <Route path="/audit-logs" element={<Suspense fallback={<PageLoader />}><AuditLogs /></Suspense>} />
+                      <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><Notifications /></Suspense>} />
                     </Route>
 
                     {/* ── Standalone meeting routes (no shell, full-screen) ── */}
@@ -247,6 +251,7 @@ function App() {
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
                   </BrowserRouter>
+                    </SettingsProvider>
                 </WorkspaceProvider>
               </AuthProvider>
             </div>
