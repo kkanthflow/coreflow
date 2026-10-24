@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
 import SettingsNav from './SettingsNav';
+import SaveBar from './SaveBar';
 import { BRAND } from '../../brand';
 
 interface PageMeta {
@@ -97,6 +98,9 @@ export default function SettingsLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Floating SaveBar for dirty state across all settings subpages */}
+      <SaveBar />
     </div>
   );
 }
