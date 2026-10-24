@@ -26,13 +26,12 @@ export default function SettingsRow({
   const renderIcon = () => {
     if (!icon) return null;
     
-    // If it's a React component function/class
-    if (typeof icon === 'function' || (typeof icon === 'object' && '$$typeof' in (icon as any) && typeof (icon as any).type === 'function')) {
-      const IconComponent = icon as React.ComponentType<{ size?: number; className?: string }>;
-      return <IconComponent size={18} className={`text-accent ${iconClassName}`} />;
+    if (React.isValidElement(icon)) {
+      return icon;
     }
     
-    return icon;
+    const IconComponent = icon as React.ComponentType<{ size?: number; className?: string }>;
+    return <IconComponent size={18} className={`text-accent ${iconClassName}`} />;
   };
 
   return (

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { 
   Moon, 
   Smartphone, 
@@ -29,9 +29,13 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { useTheme } from '../contexts/ThemeContext';
 import { toast } from '../components/ui/Toast';
 import { SUPPORTED_CURRENCIES } from '../lib/currency';
+import { PageHeader, EmptyState } from '../components/ui/ObsidianPrimitives';
+import SettingsRow from '../components/settings/SettingsRow';
+import Toggle from '../components/settings/Toggle';
 
 export default function Settings() {
   const navigate = useNavigate();
+  const { tab: paramTab } = useParams();
   const [searchParams] = useSearchParams();
   const { user, role, accountType } = useAuth();
   const { orgId, orgName: wsOrgName, canManageBilling, refreshWorkspace } = useWorkspace();
@@ -39,16 +43,44 @@ export default function Settings() {
 
   // Active Screen / Sub-Screen View ('main' | 'privacy' | 'notifications' | 'freelancer' | 'media' | 'security' | 'billing')
   const [currentView, setCurrentView] = useState<'main' | 'privacy' | 'notifications' | 'freelancer' | 'media' | 'security' | 'billing'>(() => {
-    return searchParams.get('tab') === 'billing' ? 'billing' : 'main';
+    const tab = paramTab || searchParams.get('tab');
+    if (tab === 'billing') return 'billing';
+    if (tab === 'privacy') return 'privacy';
+    if (tab === 'notifications') return 'notifications';
+    if (tab === 'freelancer') return 'freelancer';
+    if (tab === 'media' || tab === 'audio-video') return 'media';
+    if (tab === 'security') return 'security';
+    return 'main';
   });
 
-  // Watch URL search param for tab changes
+  // Watch URL params / search param for tab changes
   useEffect(() => {
-    const tab = searchParams.get('tab');
+    const tab = paramTab || searchParams.get('tab');
     if (tab === 'billing') {
       setCurrentView('billing');
+    } else if (tab === 'privacy') {
+      setCurrentView('privacy');
+    } else if (tab === 'notifications') {
+      setCurrentView('notifications');
+    } else if (tab === 'freelancer') {
+      setCurrentView('freelancer');
+    } else if (tab === 'media' || tab === 'audio-video') {
+      setCurrentView('media');
+    } else if (tab === 'security') {
+      setCurrentView('security');
+    } else if (!tab) {
+      setCurrentView('main');
     }
-  }, [searchParams]);
+  }, [searchParams, paramTab]);
+
+  const navigateToView = (view: 'main' | 'privacy' | 'notifications' | 'freelancer' | 'media' | 'security' | 'billing') => {
+    setCurrentView(view);
+    if (view === 'main') {
+      navigate('/settings');
+    } else {
+      navigate(`/settings/${view}`);
+    }
+  };
 
   // Billing & Subscription Telemetry state
   const [subData, setSubData] = useState<any>(null);
@@ -568,440 +600,360 @@ export default function Settings() {
     }
   };
 
+  const getViewTitle = () => {
+    switch (currentView) {
+      case 'privacy': return 'Privacy Controls';
+      case 'notifications': return 'Notification Preferences';
+      case 'freelancer': return 'Freelancer Workspace Scope';
+      case 'media': return 'Audio & Video Routing';
+      case 'security': return 'Change Password & Security';
+      case 'billing': return 'Subscription & Plans';
+      default: return 'Settings';
+    }
+  };
+
+  const getViewDescription = () => {
+    switch (currentView) {
+      case 'privacy': return 'Manage real-time status visibility, read receipts, blocked members, and muted channels.';
+      case 'notifications': return 'Customize alert thresholds, meeting reminders, role updates, and weekly digest.';
+      case 'freelancer': return 'Select your active engagement mode, rate scoping, and client project assignments.';
+      case 'media': return 'Configure hardware microphones, capture camera devices, and E2EE parameters.';
+      case 'security': return 'Update master password credentials and inspect active session tokens.';
+      case 'billing': return 'Customer account plan, live quota entitlements, verified payer attribution, and transaction ledger.';
+      default: return 'Configure theme display, notification preferences, organization currency, and security credentials.';
+    }
+  };
+
   return (
-    <div className="flex-1 w-full max-w-4xl mx-auto space-y-6 pb-16 font-sans select-none text-muted">
+    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
       
-      {/* Settings Header with single '← Dashboard' button next to page title */}
-      <div className="pb-4 mb-6 border-b border-line">
-        <div className="flex items-center gap-3">
+      {/* ── Page Header Standard ── */}
+      <PageHeader
+        title={getViewTitle()}
+        description={getViewDescription()}
+        actions={
           <button
             type="button"
             onClick={() => {
               if (currentView !== 'main') {
-                setCurrentView('main');
+                navigateToView('main');
               } else {
                 navigate('/dashboard');
               }
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-[11px] font-mono border border-line transition-colors shrink-0 cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text border border-line text-xs font-medium transition-colors shrink-0 cursor-pointer shadow-2xs"
             title={currentView !== 'main' ? 'Return to Settings' : 'Return to Dashboard'}
           >
             <span>{currentView !== 'main' ? '← Settings' : '← Dashboard'}</span>
           </button>
-          <h1 className="text-xl sm:text-2xl font-bold text-text tracking-tight">
-            {currentView === 'main' && 'Settings'}
-            {currentView === 'privacy' && 'Privacy Controls'}
-            {currentView === 'notifications' && 'Notification Preferences'}
-            {currentView === 'freelancer' && 'Freelancer Workspace Scope'}
-            {currentView === 'media' && 'Audio & Video Routing'}
-            {currentView === 'security' && 'Change Password & Security'}
-            {currentView === 'billing' && 'Subscription & Plans'}
-          </h1>
-        </div>
-        <p className="text-xs text-muted mt-0.5 font-normal">
-          {currentView === 'main' && 'Configure theme display, notification preferences, organization currency, and security credentials.'}
-          {currentView === 'privacy' && 'Manage real-time status visibility, read receipts, blocked members, and muted channels.'}
-          {currentView === 'notifications' && 'Customize alert thresholds, meeting reminders, role updates, and weekly digest.'}
-          {currentView === 'freelancer' && 'Select your active engagement mode, rate scoping, and client project assignments.'}
-          {currentView === 'media' && 'Configure hardware microphones, capture camera devices, and E2EE parameters.'}
-          {currentView === 'security' && 'Update master password credentials and inspect active session tokens.'}
-          {currentView === 'billing' && 'Customer account plan, live quota entitlements, verified payer attribution, and transaction ledger.'}
-        </p>
-      </div>
+        }
+      />
 
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* ── VIEW 1: MAIN SETTINGS (EXACT REPLICA OF MOBILE APP) ── */}
-      {/* ────────────────────────────────────────────────────────── */}
+      {/* ── VIEW 1: MAIN SETTINGS ── */}
       {currentView === 'main' && (
-        <div>
+        <div className="space-y-6">
 
           {/* 1. Display */}
-          <div className="mt-7 first:mt-0 mb-2.5">
-            <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
               DISPLAY
             </span>
-          </div>
-          <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible">
-            <div className="flex items-center justify-between gap-3.5 py-4 px-[18px]">
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
-                  <Moon size={18} />
-                </div>
-                <div className="space-y-0.5 min-w-0">
-                  <div className="text-[14.5px] font-medium text-text leading-tight truncate">Dark Mode</div>
-                  <div className="text-[12.5px] text-muted leading-relaxed truncate">Use dark theme across the app</div>
-                </div>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={theme === 'dark'}
-                aria-label="Toggle dark mode"
-                tabIndex={0}
-                onClick={() => {
-                  const next = theme === 'dark' ? 'light' : 'dark';
-                  setTheme(next);
-                  handleUpdatePreference({ theme: next });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line overflow-visible">
+              <SettingsRow
+                icon={Moon}
+                title="Dark Mode"
+                description="Use dark theme across the app"
+              >
+                <Toggle
+                  checked={theme === 'dark'}
+                  onChange={() => {
                     const next = theme === 'dark' ? 'light' : 'dark';
                     setTheme(next);
                     handleUpdatePreference({ theme: next });
-                  }
-                }}
-                className={`w-[45px] h-[26px] rounded-full transition-colors relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring shrink-0 ${
-                  theme === 'dark' ? 'bg-accent' : 'bg-surface-2 border border-line'
-                }`}
-              >
-                <span
-                  className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-[2px] transition-transform duration-200 ease-out ${
-                    theme === 'dark' ? 'translate-x-[22px]' : 'translate-x-[3px]'
-                  }`}
+                  }}
+                  ariaLabel="Toggle dark mode"
                 />
-              </button>
+              </SettingsRow>
             </div>
           </div>
 
           {/* 2. Preferences */}
-          <div className="mt-7 first:mt-0 mb-2.5">
-            <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
               PREFERENCES
             </span>
-          </div>
-          <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible">
-            
-            {/* Haptic Feedback */}
-            <div className="flex items-center justify-between gap-3.5 py-4 px-[18px]">
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
-                  <Smartphone size={18} />
-                </div>
-                <div className="space-y-0.5 min-w-0">
-                  <div className="text-[14.5px] font-medium text-text leading-tight truncate">Haptic & Audio Feedback</div>
-                  <div className="text-[12.5px] text-muted leading-relaxed truncate">Feedback sound on interaction toggles and room alerts</div>
-                </div>
-              </div>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={hapticsEnabled}
-                aria-label="Toggle haptic and audio feedback"
-                tabIndex={0}
-                onClick={() => {
-                  const next = !hapticsEnabled;
-                  setHapticsEnabled(next);
-                  handleUpdatePreference({ hapticFeedback: next });
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === ' ' || e.key === 'Enter') {
-                    e.preventDefault();
-                    const next = !hapticsEnabled;
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line overflow-visible">
+              <SettingsRow
+                icon={Smartphone}
+                title="Haptic & Audio Feedback"
+                description="Feedback sound on interaction toggles and room alerts"
+              >
+                <Toggle
+                  checked={hapticsEnabled}
+                  onChange={(next) => {
                     setHapticsEnabled(next);
                     handleUpdatePreference({ hapticFeedback: next });
-                  }
-                }}
-                className={`w-[45px] h-[26px] rounded-full transition-colors relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring shrink-0 ${
-                  hapticsEnabled ? 'bg-accent' : 'bg-surface-2 border border-line'
-                }`}
-              >
-                <span
-                  className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-[2px] transition-transform duration-200 ease-out ${
-                    hapticsEnabled ? 'translate-x-[22px]' : 'translate-x-[3px]'
-                  }`}
+                  }}
+                  ariaLabel="Toggle haptic and audio feedback"
                 />
-              </button>
+              </SettingsRow>
+
+              <div 
+                onClick={() => navigateToView('notifications')}
+                className="cursor-pointer"
+              >
+                <SettingsRow
+                  icon={Bell}
+                  title="Notification Preferences"
+                  description="Push alerts, 15m meeting reminders & email digests"
+                >
+                  <ChevronRight size={15} className="text-muted shrink-0" />
+                </SettingsRow>
+              </div>
+
+              <div 
+                onClick={() => navigateToView('media')}
+                className="cursor-pointer"
+              >
+                <SettingsRow
+                  icon={Video}
+                  title="Audio & Video Routing"
+                  description="Default microphone, camera capture & WebRTC E2EE"
+                >
+                  <ChevronRight size={15} className="text-muted shrink-0" />
+                </SettingsRow>
+              </div>
             </div>
-
-            {/* Notification Preferences Row */}
-            <button 
-              onClick={() => setCurrentView('notifications')}
-              className="w-full flex items-center justify-between gap-3.5 py-4 px-[18px] hover:bg-surface-2/30 transition-colors text-left"
-            >
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
-                  <Bell size={18} />
-                </div>
-                <div className="space-y-0.5 min-w-0">
-                  <div className="text-[14.5px] font-medium text-text leading-tight truncate">Notification Preferences</div>
-                  <div className="text-[12.5px] text-muted leading-relaxed truncate">Push alerts, 15m meeting reminders & email digests</div>
-                </div>
-              </div>
-              <ChevronRight size={15} className="text-muted shrink-0" />
-            </button>
-
-            {/* Hardware / Media Routing Row */}
-            <button 
-              onClick={() => setCurrentView('media')}
-              className="w-full flex items-center justify-between gap-3.5 py-4 px-[18px] hover:bg-surface-2/30 transition-colors text-left"
-            >
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
-                  <Video size={18} />
-                </div>
-                <div className="space-y-0.5 min-w-0">
-                  <div className="text-[14.5px] font-medium text-text leading-tight truncate">Audio & Video Routing</div>
-                  <div className="text-[12.5px] text-muted leading-relaxed truncate">Default microphone, camera capture & WebRTC E2EE</div>
-                </div>
-              </div>
-              <ChevronRight size={15} className="text-muted shrink-0" />
-            </button>
-
           </div>
 
-          {/* Subscription & Billing Section */}
-          <div className="mt-7 first:mt-0 mb-2.5">
-            <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+          {/* 3. Subscription & Plans */}
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
               SUBSCRIPTION & PLANS
             </span>
-          </div>
-          <div className="bg-surface rounded-[13px] border border-line p-5 overflow-visible flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
-                <CreditCard size={18} />
-              </div>
-              <div className="min-w-0 space-y-0.5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[14.5px] font-medium text-text">{subData?.planName || 'Free Tier'}</span>
-                  <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-accent-soft text-accent border border-accent/20">
-                    {subData?.status ? subData.status.toUpperCase() : 'FREE'}
-                  </span>
-                  {subData?.customerType && (
-                    <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-surface-2 text-muted border border-line">
-                      {subData.customerType === 'organization' ? 'Organization' : 'Freelancer'}
+            <div className="bg-surface rounded-xl border border-line p-4 sm:p-5 overflow-visible flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                  <CreditCard size={18} />
+                </div>
+                <div className="min-w-0 space-y-0.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[14.5px] font-medium text-text leading-tight">{subData?.planName || 'Free Tier'}</span>
+                    <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-accent-soft text-accent border border-accent/20">
+                      {subData?.status ? subData.status.toUpperCase() : 'FREE'}
                     </span>
-                  )}
-                </div>
-                <div className="text-[12.5px] text-muted">
-                  {subData?.hasActiveSubscription 
-                    ? `Active monthly subscription. Payer tracked separately from account owner.`
-                    : `Baseline Free plan quota active. Upgrade anytime for higher project & workflow limits.`}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2 shrink-0 w-full lg:w-auto">
-              <button
-                type="button"
-                onClick={() => setCurrentView('billing')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-[11px] font-mono border border-line transition-colors cursor-pointer"
-              >
-                <CreditCard size={12} />
-                <span>Subscription Dashboard</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/pricing')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-accent hover:bg-accent/90 text-white text-[11px] font-semibold transition-colors cursor-pointer"
-              >
-                <span>Plans & Pricing →</span>
-              </button>
-            </div>
-          </div>
-
-          {/* 3. Freelancer Workspace Portal (for Freelancers) */}
-          {(role === 'freelancer' || isFreelancerRole) && (
-            <>
-              <div className="mt-7 first:mt-0 mb-2.5">
-                <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
-                  FREELANCER WORKSPACE
-                </span>
-              </div>
-              <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible">
-                <button 
-                  onClick={() => setCurrentView('freelancer')}
-                  className="w-full flex items-center justify-between gap-3.5 py-4 px-[18px] hover:bg-surface-2/30 transition-colors text-left"
-                >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
-                      <Briefcase size={18} />
-                    </div>
-                    <div className="space-y-0.5 min-w-0">
-                      <div className="text-[14.5px] font-medium text-text leading-tight truncate">Freelancer Engagement & Rates</div>
-                      <div className="text-[12.5px] text-muted leading-relaxed truncate">Contract scopes, independent invoicing & deliverables</div>
-                    </div>
+                    {subData?.customerType && (
+                      <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-surface-2 text-muted border border-line">
+                        {subData.customerType === 'organization' ? 'Organization' : 'Freelancer'}
+                      </span>
+                    )}
                   </div>
-                  <ChevronRight size={15} className="text-muted shrink-0" />
+                  <div className="text-[12.5px] text-muted leading-relaxed">
+                    {subData?.hasActiveSubscription 
+                      ? 'Active monthly subscription. Payer tracked separately from account owner.'
+                      : 'Baseline Free plan quota active. Upgrade anytime for higher project & workflow limits.'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0">
+                <button
+                  type="button"
+                  onClick={() => navigateToView('billing')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-xs font-medium border border-line transition-colors cursor-pointer shadow-2xs"
+                >
+                  <CreditCard size={13} />
+                  <span>Subscription Dashboard</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/pricing')}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-colors cursor-pointer shadow-sm"
+                >
+                  <span>Plans & Pricing →</span>
                 </button>
               </div>
-            </>
+            </div>
+          </div>
+
+          {/* 4. Freelancer Workspace Portal (for Freelancers) */}
+          {(role === 'freelancer' || isFreelancerRole) && (
+            <div>
+              <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+                FREELANCER WORKSPACE
+              </span>
+              <div 
+                onClick={() => navigateToView('freelancer')}
+                className="bg-surface rounded-xl border border-line overflow-visible cursor-pointer"
+              >
+                <SettingsRow
+                  icon={Briefcase}
+                  title="Freelancer Engagement & Rates"
+                  description="Contract scopes, independent invoicing & deliverables"
+                >
+                  <ChevronRight size={15} className="text-muted shrink-0" />
+                </SettingsRow>
+              </div>
+            </div>
           )}
 
-          {/* 4. Organization Settings for Owners & Admins */}
+          {/* 5. Organization Settings for Owners & Admins */}
           {isOwnerOrAdmin && (
             <>
               {/* Organization Currency */}
-              <div className="mt-7 first:mt-0 mb-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted">
+              <div>
+                <div className="flex items-center justify-between px-1 mb-2">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase">
                     ORGANIZATION CURRENCY
                   </span>
-                  <span className="text-[11px] font-mono font-medium tracking-[0.08em] text-accent">
+                  <span className="text-[10px] sm:text-[11px] font-mono font-medium tracking-[0.08em] text-accent">
                     Active: {SUPPORTED_CURRENCIES.find(c => c.code === defaultCurrency)?.name || defaultCurrency}
                   </span>
                 </div>
-              </div>
-              <div className="bg-surface rounded-[13px] border border-line p-4 overflow-visible">
-                <div 
-                  className="grid gap-[10px] w-full"
-                  style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}
-                >
-                  {SUPPORTED_CURRENCIES.map((curr) => {
-                    const isSelected = defaultCurrency === curr.code;
-                    return (
-                      <button
-                        key={curr.code}
-                        type="button"
-                        role="button"
-                        aria-pressed={isSelected}
-                        disabled={updatingCurrency}
-                        onClick={() => handleUpdateCurrency(curr.code)}
-                        className={`flex flex-col justify-between p-3 rounded-[10px] border text-left transition-all duration-150 cursor-pointer select-none h-full min-h-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50 ${
-                          isSelected 
-                            ? 'bg-accent border-accent text-white shadow-2xs' 
-                            : 'bg-surface border-line text-muted hover:text-text hover:bg-surface-2'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full mb-1">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <span className={`text-xs font-mono font-bold ${isSelected ? 'text-white' : 'text-text'}`}>
-                              {curr.symbol}
-                            </span>
-                            <span className={`font-mono font-bold text-xs tracking-wide truncate ${isSelected ? 'text-white' : 'text-text'}`}>
-                              {curr.code}
-                            </span>
+                <div className="bg-surface rounded-xl border border-line p-4 overflow-visible">
+                  <div 
+                    className="grid gap-[10px] w-full"
+                    style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}
+                  >
+                    {SUPPORTED_CURRENCIES.map((curr) => {
+                      const isSelected = defaultCurrency === curr.code;
+                      return (
+                        <button
+                          key={curr.code}
+                          type="button"
+                          role="radio"
+                          aria-checked={isSelected}
+                          disabled={updatingCurrency}
+                          onClick={() => handleUpdateCurrency(curr.code)}
+                          className={`flex flex-col justify-between p-3 rounded-[10px] border text-left transition-all duration-150 cursor-pointer select-none h-full min-h-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50 ${
+                            isSelected 
+                              ? 'bg-accent border-accent text-white shadow-2xs' 
+                              : 'bg-surface border-line text-muted hover:text-text hover:bg-surface-2'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full mb-1">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <span className={`text-xs font-mono font-bold ${isSelected ? 'text-white' : 'text-text'}`}>
+                                {curr.symbol}
+                              </span>
+                              <span className={`font-mono font-bold text-xs tracking-wide truncate ${isSelected ? 'text-white' : 'text-text'}`}>
+                                {curr.code}
+                              </span>
+                            </div>
+                            <div className="shrink-0 ml-1.5">
+                              {isSelected ? (
+                                <div className="w-4 h-4 rounded-full bg-white text-accent flex items-center justify-center">
+                                  <Check size={10} strokeWidth={3} />
+                                </div>
+                              ) : (
+                                <div className="w-4 h-4 rounded-full border border-line bg-surface-2" />
+                              )}
+                            </div>
                           </div>
-                          <div className="shrink-0 ml-1.5">
-                            {isSelected ? (
-                              <div className="w-4 h-4 rounded-full bg-white text-accent flex items-center justify-center">
-                                <Check size={10} strokeWidth={3} />
-                              </div>
-                            ) : (
-                              <div className="w-4 h-4 rounded-full border border-line bg-surface-2" />
-                            )}
-                          </div>
-                        </div>
-                        <span className={`text-[11px] truncate w-full leading-tight ${isSelected ? 'text-white/85' : 'text-muted'}`}>
-                          {curr.name.replace(/\s*\([^)]*\)/, '')}
-                        </span>
-                      </button>
-                    );
-                  })}
+                          <span className={`text-[11px] truncate w-full leading-tight ${isSelected ? 'text-white/85' : 'text-muted'}`}>
+                            {curr.name.replace(/\s*\([^)]*\)/, '')}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
 
               {/* Company Profile Action */}
-              <div className="mt-7 first:mt-0 mb-2.5">
-                <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+              <div>
+                <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
                   ORGANIZATION SETTINGS
                 </span>
-              </div>
-              <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible">
-                <button 
+                <div 
                   onClick={() => setIsCompanyModalVisible(true)}
-                  className="w-full flex items-center justify-between gap-3.5 py-4 px-[18px] hover:bg-surface-2/30 transition-colors text-left"
+                  className="bg-surface rounded-xl border border-line overflow-visible cursor-pointer"
                 >
-                  <div className="flex items-center gap-3.5 min-w-0">
-                    <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
-                      <Building2 size={18} />
-                    </div>
-                    <div className="space-y-0.5 min-w-0">
-                      <div className="text-[14.5px] font-medium text-text leading-tight truncate">Company Profile</div>
-                      <div className="text-[12.5px] text-muted leading-relaxed truncate">Billed-from details, tax GSTIN & registered office</div>
-                    </div>
-                  </div>
-                  <ChevronRight size={15} className="text-muted shrink-0" />
-                </button>
+                  <SettingsRow
+                    icon={Building2}
+                    title="Company Profile"
+                    description="Billed-from details, tax GSTIN & registered office"
+                  >
+                    <ChevronRight size={15} className="text-muted shrink-0" />
+                  </SettingsRow>
+                </div>
               </div>
             </>
           )}
 
-          {/* 5. Security & Privacy */}
-          <div className="mt-7 first:mt-0 mb-2.5">
-            <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+          {/* 6. Security & Privacy */}
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
               SECURITY & PRIVACY
             </span>
-          </div>
-          <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible">
-            
-            {/* Privacy Controls Row */}
-            <button 
-              onClick={() => setCurrentView('privacy')}
-              className="w-full flex items-center justify-between gap-3.5 py-4 px-[18px] hover:bg-surface-2/30 transition-colors text-left"
-            >
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
-                  <Shield size={18} />
-                </div>
-                <div className="space-y-0.5 min-w-0">
-                  <div className="text-[14.5px] font-medium text-text leading-tight truncate">Privacy Controls</div>
-                  <div className="text-[12.5px] text-muted leading-relaxed truncate">Online visibility, read receipts, blocked users & mute list</div>
-                </div>
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line overflow-visible">
+              <div 
+                onClick={() => navigateToView('privacy')}
+                className="cursor-pointer"
+              >
+                <SettingsRow
+                  icon={Shield}
+                  title="Privacy Controls"
+                  description="Online visibility, read receipts, blocked users & mute list"
+                >
+                  <ChevronRight size={15} className="text-muted shrink-0" />
+                </SettingsRow>
               </div>
-              <ChevronRight size={15} className="text-muted shrink-0" />
-            </button>
 
-            {/* Change Password Row */}
-            <button 
-              onClick={() => setCurrentView('security')}
-              className="w-full flex items-center justify-between gap-3.5 py-4 px-[18px] hover:bg-surface-2/30 transition-colors text-left"
-            >
-              <div className="flex items-center gap-3.5 min-w-0">
-                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
-                  <Lock size={18} />
-                </div>
-                <div className="space-y-0.5 min-w-0">
-                  <div className="text-[14.5px] font-medium text-text leading-tight truncate">Change Password</div>
-                  <div className="text-[12.5px] text-muted leading-relaxed truncate">Update master authentication credentials</div>
-                </div>
+              <div 
+                onClick={() => navigateToView('security')}
+                className="cursor-pointer"
+              >
+                <SettingsRow
+                  icon={Lock}
+                  title="Change Password"
+                  description="Update master authentication credentials"
+                >
+                  <ChevronRight size={15} className="text-muted shrink-0" />
+                </SettingsRow>
               </div>
-              <ChevronRight size={15} className="text-muted shrink-0" />
-            </button>
-
+            </div>
           </div>
 
-          {/* 6. About */}
-          <div className="mt-7 first:mt-0 mb-2.5">
-            <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+          {/* 7. About */}
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
               ABOUT
             </span>
-          </div>
-          <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible">
-            <div className="flex justify-between items-center py-3 sm:py-3.5 px-[18px]">
-              <span className="text-[13px] text-muted">App Version</span>
-              <span className="text-[13px] font-mono font-normal text-text">1.0.0 (Production)</span>
-            </div>
-            <div className="flex justify-between items-center py-3 sm:py-3.5 px-[18px]">
-              <span className="text-[13px] text-muted">Supabase Environment</span>
-              <span className="text-[13px] font-mono font-normal text-emerald-400">Connected</span>
-            </div>
-            <div className="flex justify-between items-center py-3 sm:py-3.5 px-[18px] min-w-0">
-              <span className="text-[13px] text-muted shrink-0 mr-3">Signed In As</span>
-              <span className="text-[13px] font-mono font-normal text-text truncate max-w-[260px] sm:max-w-none break-all" title={user?.email}>
-                {user?.email}
-              </span>
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line overflow-visible">
+              <div className="flex justify-between items-center py-3.5 px-[18px]">
+                <span className="text-xs text-muted">App Version</span>
+                <span className="text-xs font-mono font-medium text-text">1.0.0 (Production)</span>
+              </div>
+              <div className="flex justify-between items-center py-3.5 px-[18px]">
+                <span className="text-xs text-muted">Supabase Environment</span>
+                <span className="text-xs font-mono font-medium text-emerald-500">Connected</span>
+              </div>
+              <div className="flex justify-between items-center py-3.5 px-[18px] min-w-0">
+                <span className="text-xs text-muted shrink-0 mr-3">Signed In As</span>
+                <span className="text-xs font-mono font-medium text-text truncate max-w-[260px] sm:max-w-none" title={user?.email}>
+                  {user?.email}
+                </span>
+              </div>
             </div>
           </div>
 
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* ── VIEW 2: PRIVACY CONTROLS (EXACT REPLICA OF MOBILE APP) ── */}
-      {/* ────────────────────────────────────────────────────────── */}
+      {/* ── VIEW 2: PRIVACY CONTROLS ── */}
       {currentView === 'privacy' && (
         <div className="space-y-6">
-
           {/* Status Visibility */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Status Visibility</span>
-            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
-              
-              {/* Show Online */}
-              <div className="p-4.5 border-b border-divider">
-                <div className="text-base font-semibold text-main">Who can see my online status</div>
-                <div className="grid grid-cols-3 gap-2.5 mt-3">
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+              STATUS VISIBILITY
+            </span>
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line overflow-hidden">
+              <div className="py-4 px-[18px]">
+                <div className="text-[14.5px] font-medium text-text leading-tight">Who can see my online status</div>
+                <div className="text-[12.5px] text-muted leading-relaxed mt-0.5">Control whether workspace colleagues can see your real-time presence.</div>
+                <div className="grid grid-cols-3 gap-2 mt-3 max-w-sm">
                   {(['everyone', 'contacts', 'nobody'] as const).map((opt) => (
                     <button
                       key={opt}
@@ -1010,10 +962,10 @@ export default function Settings() {
                         setShowOnline(opt);
                         handleSavePrivacySetting('show_online', opt);
                       }}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-bold capitalize border transition-all ${
+                      className={`py-1.5 px-3 rounded text-xs font-medium capitalize border transition-colors cursor-pointer text-center ${
                         showOnline === opt 
-                          ? 'bg-[#FF6B4A] border-[#FF6B4A] text-main shadow-sm' 
-                          : 'bg-app border-divider text-muted hover:text-main'
+                          ? 'bg-accent border-accent text-white shadow-2xs' 
+                          : 'bg-surface-2 border-line text-muted hover:text-text'
                       }`}
                     >
                       {opt}
@@ -1022,10 +974,10 @@ export default function Settings() {
                 </div>
               </div>
 
-              {/* Show Last Seen */}
-              <div className="p-4.5">
-                <div className="text-base font-semibold text-main">Who can see my last seen status</div>
-                <div className="grid grid-cols-3 gap-2.5 mt-3">
+              <div className="py-4 px-[18px]">
+                <div className="text-[14.5px] font-medium text-text leading-tight">Who can see my last seen status</div>
+                <div className="text-[12.5px] text-muted leading-relaxed mt-0.5">Control visibility of your last recorded session activity.</div>
+                <div className="grid grid-cols-3 gap-2 mt-3 max-w-sm">
                   {(['everyone', 'contacts', 'nobody'] as const).map((opt) => (
                     <button
                       key={opt}
@@ -1034,10 +986,10 @@ export default function Settings() {
                         setShowLastSeen(opt);
                         handleSavePrivacySetting('show_last_seen', opt);
                       }}
-                      className={`py-2.5 px-3 rounded-xl text-xs font-bold capitalize border transition-all ${
+                      className={`py-1.5 px-3 rounded text-xs font-medium capitalize border transition-colors cursor-pointer text-center ${
                         showLastSeen === opt 
-                          ? 'bg-[#FF6B4A] border-[#FF6B4A] text-main shadow-sm' 
-                          : 'bg-app border-divider text-muted hover:text-main'
+                          ? 'bg-accent border-accent text-white shadow-2xs' 
+                          : 'bg-surface-2 border-line text-muted hover:text-text'
                       }`}
                     >
                       {opt}
@@ -1045,52 +997,51 @@ export default function Settings() {
                   ))}
                 </div>
               </div>
-
             </div>
           </div>
 
-          {/* Read Receipts */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Messaging</span>
-            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
-              <div className="flex items-center justify-between p-4.5">
-                <div className="mr-4">
-                  <div className="text-base font-semibold text-main">Read Receipts</div>
-                  <div className="text-xs text-muted">If turned off, you won't send or receive read receipts.</div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = !readReceipts;
+          {/* Messaging */}
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+              MESSAGING
+            </span>
+            <div className="bg-surface rounded-xl border border-line overflow-hidden">
+              <SettingsRow
+                title="Read Receipts"
+                description="If turned off, you won't send or receive read receipts."
+              >
+                <Toggle
+                  checked={readReceipts}
+                  onChange={(next) => {
                     setReadReceipts(next);
                     handleSavePrivacySetting('enable_read_receipts', next);
                   }}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${readReceipts ? 'bg-[#FF6B4A]' : 'bg-white/10'}`}
-                >
-                  <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${readReceipts ? 'right-1' : 'left-1'}`} />
-                </button>
-              </div>
+                  ariaLabel="Toggle read receipts"
+                />
+              </SettingsRow>
             </div>
           </div>
 
           {/* Blocked Users */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Blocked Users</span>
-            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+              BLOCKED USERS
+            </span>
+            <div className="bg-surface rounded-xl border border-line overflow-hidden divide-y divide-line">
               {blockedUsers.length === 0 ? (
-                <div className="p-5 text-center text-sm text-muted">
+                <div className="py-8 text-center text-xs text-muted">
                   No blocked users
                 </div>
               ) : (
                 blockedUsers.map((item) => (
-                  <div key={item.blocked_id} className="flex items-center justify-between p-4 border-b border-divider">
+                  <div key={item.blocked_id} className="py-3.5 px-[18px] flex items-center justify-between text-xs">
                     <div>
-                      <div className="text-base font-semibold text-main">{item.blocked?.full_name || 'User'}</div>
-                      <div className="text-xs text-muted">{item.blocked?.email || ''}</div>
+                      <div className="font-medium text-text text-xs">{item.blocked_user?.full_name || 'User'}</div>
+                      <div className="text-[11px] text-muted">{item.blocked_user?.email || ''}</div>
                     </div>
                     <button
                       onClick={() => handleUnblock(item.blocked_id)}
-                      className="py-1.5 px-3 rounded-lg bg-[#FF6B4A]/10 border border-[#FF6B4A]/20 text-xs font-bold text-[#FF6B4A] hover:bg-[#FF6B4A]/20 transition-colors"
+                      className="px-2.5 py-1 rounded bg-surface-2 hover:bg-danger/10 text-muted hover:text-danger border border-line text-[11px] font-medium transition-colors cursor-pointer"
                     >
                       Unblock
                     </button>
@@ -1101,23 +1052,25 @@ export default function Settings() {
           </div>
 
           {/* Muted Conversations */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Muted Conversations</span>
-            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+              MUTED CONVERSATIONS
+            </span>
+            <div className="bg-surface rounded-xl border border-line overflow-hidden divide-y divide-line">
               {mutedChannels.length === 0 ? (
-                <div className="p-5 text-center text-sm text-muted">
+                <div className="py-8 text-center text-xs text-muted">
                   No muted conversations
                 </div>
               ) : (
                 mutedChannels.map((item) => (
-                  <div key={item.channel_id} className="flex items-center justify-between p-4 border-b border-divider">
+                  <div key={item.channel_id} className="py-3.5 px-[18px] flex items-center justify-between text-xs">
                     <div>
-                      <div className="text-base font-semibold text-main">{item.channel?.name || 'Muted Channel'}</div>
-                      <div className="text-xs text-muted capitalize">{item.channel?.type || ''}</div>
+                      <div className="font-medium text-text text-xs">{item.channel?.name || 'Muted Channel'}</div>
+                      <div className="text-[11px] text-muted capitalize">{item.channel?.type || ''}</div>
                     </div>
                     <button
                       onClick={() => handleUnmute(item.channel_id)}
-                      className="py-1.5 px-3 rounded-lg bg-[#FF6B4A]/10 border border-[#FF6B4A]/20 text-xs font-bold text-[#FF6B4A] hover:bg-[#FF6B4A]/20 transition-colors"
+                      className="px-2.5 py-1 rounded bg-surface-2 hover:bg-danger/10 text-muted hover:text-danger border border-line text-[11px] font-medium transition-colors cursor-pointer"
                     >
                       Unmute
                     </button>
@@ -1126,164 +1079,126 @@ export default function Settings() {
               )}
             </div>
           </div>
-
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────────────────── */}
-      {/* ── VIEW 3: NOTIFICATIONS (EXACT REPLICA OF MOBILE APP) ────── */}
-      {/* ────────────────────────────────────────────────────────────── */}
+      {/* ── VIEW 3: NOTIFICATIONS ── */}
       {currentView === 'notifications' && (
         <div className="space-y-6">
-
           {/* Push Notifications Section */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Push Notifications</span>
-            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
-              
-              <div className="flex items-center justify-between p-4.5 border-b border-divider">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
-                    <Calendar size={18} />
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-main">Meeting Invitations</div>
-                    <div className="text-xs text-muted">Notify me of new meeting invites</div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMeetingInvites(!meetingInvites)}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${meetingInvites ? 'bg-[#FF6B4A]' : 'bg-white/10'}`}
-                >
-                  <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${meetingInvites ? 'right-1' : 'left-1'}`} />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between p-4.5 border-b border-divider">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
-                    <AlarmClock size={18} />
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-main">Meeting Reminders</div>
-                    <div className="text-xs text-muted">Send notifications 15m before meetings</div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setMeetingReminders(!meetingReminders)}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${meetingReminders ? 'bg-[#FF6B4A]' : 'bg-white/10'}`}
-                >
-                  <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${meetingReminders ? 'right-1' : 'left-1'}`} />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between p-4.5 border-b border-divider">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
-                    <ShieldAlert size={18} />
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-main">Role Updates</div>
-                    <div className="text-xs text-muted">Alert me when my role is updated</div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setRoleChanges(!roleChanges)}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${roleChanges ? 'bg-[#FF6B4A]' : 'bg-white/10'}`}
-                >
-                  <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${roleChanges ? 'right-1' : 'left-1'}`} />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between p-4.5">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
-                    <AlertCircle size={18} />
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-main">System Alerts</div>
-                    <div className="text-xs text-muted">Notify about downtime & server maintenance</div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setSystemAlerts(!systemAlerts)}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${systemAlerts ? 'bg-[#FF6B4A]' : 'bg-white/10'}`}
-                >
-                  <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${systemAlerts ? 'right-1' : 'left-1'}`} />
-                </button>
-              </div>
-
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+              PUSH NOTIFICATIONS
+            </span>
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line overflow-hidden">
+              <SettingsRow
+                icon={Calendar}
+                title="Meeting Invitations"
+                description="Notify me of new meeting invites"
+              >
+                <Toggle
+                  checked={meetingInvites}
+                  onChange={setMeetingInvites}
+                  ariaLabel="Toggle meeting invitations"
+                />
+              </SettingsRow>
+              <SettingsRow
+                icon={AlarmClock}
+                title="Meeting Reminders"
+                description="Send notifications 15m before meetings"
+              >
+                <Toggle
+                  checked={meetingReminders}
+                  onChange={setMeetingReminders}
+                  ariaLabel="Toggle meeting reminders"
+                />
+              </SettingsRow>
+              <SettingsRow
+                icon={ShieldAlert}
+                title="Role Updates"
+                description="Alert me when my role is updated"
+              >
+                <Toggle
+                  checked={roleChanges}
+                  onChange={setRoleChanges}
+                  ariaLabel="Toggle role updates"
+                />
+              </SettingsRow>
+              <SettingsRow
+                icon={AlertCircle}
+                title="System Alerts"
+                description="Notify about downtime & server maintenance"
+              >
+                <Toggle
+                  checked={systemAlerts}
+                  onChange={setSystemAlerts}
+                  ariaLabel="Toggle system alerts"
+                />
+              </SettingsRow>
             </div>
           </div>
 
-          {/* Email Digest Section */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Email Preferences</span>
-            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
-              <div className="flex items-center justify-between p-4.5">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
-                    <Mail size={18} />
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-main">Weekly Digest</div>
-                    <div className="text-xs text-muted">Get weekly summary of tasks & meetings</div>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setEmailDigest(!emailDigest)}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${emailDigest ? 'bg-[#FF6B4A]' : 'bg-white/10'}`}
-                >
-                  <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${emailDigest ? 'right-1' : 'left-1'}`} />
-                </button>
-              </div>
+          {/* Email Preferences Section */}
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+              EMAIL PREFERENCES
+            </span>
+            <div className="bg-surface rounded-xl border border-line divide-y divide-line overflow-hidden">
+              <SettingsRow
+                icon={Mail}
+                title="Weekly Digest"
+                description="Get weekly summary of tasks & meetings"
+              >
+                <Toggle
+                  checked={emailDigest}
+                  onChange={setEmailDigest}
+                  ariaLabel="Toggle weekly digest"
+                />
+              </SettingsRow>
             </div>
           </div>
 
           {/* Resend Diagnostic Test Workflow */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Resend Email Verification</span>
-            <div className="bg-card-bg rounded-2xl border border-divider p-4.5 space-y-3">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+              RESEND EMAIL VERIFICATION
+            </span>
+            <div className="bg-surface rounded-xl border border-line p-4 sm:p-5 space-y-3.5">
+              <div className="flex items-center gap-3.5">
+                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
                   <Mail size={18} />
                 </div>
                 <div>
-                  <div className="text-base font-semibold text-main">Send Diagnostic Email</div>
-                  <div className="text-xs text-muted">Verify runtime email delivery and inspect Resend delivery logs</div>
+                  <div className="text-[14.5px] font-medium text-text leading-tight">Send Diagnostic Email</div>
+                  <div className="text-[12.5px] text-muted leading-relaxed">Verify runtime email delivery and inspect Resend delivery logs</div>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+              <div className="flex flex-col sm:flex-row gap-2 pt-1 max-w-lg">
                 <input
                   type="email"
                   value={testEmailAddress}
                   onChange={(e) => setTestEmailAddress(e.target.value)}
                   placeholder="recipient@example.com"
-                  className="flex-1 px-3.5 py-2 rounded-xl bg-white/[0.04] border border-divider text-xs text-main placeholder-muted focus:outline-none focus:border-[#FF6B4A]/50 font-mono"
+                  className="flex-1 px-3 py-1.5 rounded bg-app border border-line text-xs text-text placeholder-muted focus:outline-none focus:border-accent/50 font-mono transition-colors"
                 />
                 <button
                   type="button"
                   onClick={handleSendTestEmail}
                   disabled={testEmailSending}
-                  className="px-4 py-2 rounded-xl bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-50 text-main font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                  className="px-3.5 py-1.5 rounded bg-accent hover:bg-accent/90 disabled:opacity-50 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                 >
-                  <RefreshCw size={13} className={testEmailSending ? 'animate-spin' : ''} />
+                  <RefreshCw size={12} className={testEmailSending ? 'animate-spin' : ''} />
                   <span>{testEmailSending ? 'Dispatching...' : 'Send Test Email'}</span>
                 </button>
               </div>
 
               {testEmailResult && (
                 <div
-                  className={`p-3 rounded-xl text-xs font-mono border ${
+                  className={`p-3 rounded-lg text-xs font-mono border max-w-lg ${
                     testEmailResult.success
-                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
-                      : 'bg-red-500/10 border-red-500/20 text-red-400'
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-500 dark:text-emerald-400'
+                      : 'bg-danger/10 border-danger/20 text-danger'
                   }`}
                 >
                   <div className="font-bold flex items-center gap-1.5 mb-0.5">
@@ -1292,7 +1207,7 @@ export default function Settings() {
                   </div>
                   <div>{testEmailResult.message}</div>
                   {testEmailResult.deliveryId && (
-                    <div className="text-[10px] text-zinc-500 mt-1">
+                    <div className="text-[10px] text-muted mt-1">
                       Delivery ID: {testEmailResult.deliveryId}
                     </div>
                   )}
@@ -1302,225 +1217,229 @@ export default function Settings() {
           </div>
 
           {/* Save Button */}
-          <div>
+          <div className="pt-2">
             <button
               type="button"
               onClick={handleSaveNotificationPreferences}
-              className="w-full py-3.5 rounded-2xl bg-[#FF6B4A] hover:bg-[#FF552B] text-main font-bold text-base transition-colors shadow-sm"
+              className="px-4 py-2 rounded bg-accent hover:bg-accent/90 text-white font-semibold text-xs transition-colors shadow-sm cursor-pointer"
             >
               Save Preferences
             </button>
           </div>
-
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* ── VIEW 4: FREELANCER ENGAGEMENT PORTAL ───────────────── */}
-      {/* ────────────────────────────────────────────────────────── */}
+      {/* ── VIEW 4: FREELANCER ENGAGEMENT PORTAL ── */}
       {currentView === 'freelancer' && (
         <div className="space-y-6">
-          
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Engagement Model</span>
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+              ENGAGEMENT MODEL
+            </span>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
               <div 
                 onClick={() => setFreelancerWorkType('independent')}
-                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                className={`p-4 rounded-xl border cursor-pointer transition-colors ${
                   freelancerWorkType === 'independent'
-                    ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]'
-                    : 'bg-card-bg border-divider hover:border-white/[0.1]'
+                    ? 'bg-accent-soft border-accent text-text'
+                    : 'bg-surface border-line hover:bg-surface-2 text-muted'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-base font-bold text-main">Independent Contractor</span>
-                  {freelancerWorkType === 'independent' && <Check size={16} className="text-[#FF6B4A]" />}
+                  <span className="text-[14.5px] font-medium text-text leading-tight">Independent Contractor</span>
+                  {freelancerWorkType === 'independent' && <Check size={16} className="text-accent" />}
                 </div>
-                <p className="text-xs text-muted leading-relaxed">Direct client contracts, personal invoicing, and independent project management.</p>
+                <p className="text-[12.5px] text-muted leading-relaxed">Direct client contracts, personal invoicing, and independent project management.</p>
               </div>
 
               <div 
                 onClick={() => setFreelancerWorkType('organization')}
-                className={`p-4 rounded-2xl border cursor-pointer transition-all ${
+                className={`p-4 rounded-xl border cursor-pointer transition-colors ${
                   freelancerWorkType === 'organization'
-                    ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]'
-                    : 'bg-card-bg border-divider hover:border-white/[0.1]'
+                    ? 'bg-accent-soft border-accent text-text'
+                    : 'bg-surface border-line hover:bg-surface-2 text-muted'
                 }`}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-base font-bold text-main">Agency / Org Assigned</span>
-                  {freelancerWorkType === 'organization' && <Check size={16} className="text-[#FF6B4A]" />}
+                  <span className="text-[14.5px] font-medium text-text leading-tight">Agency / Org Assigned</span>
+                  {freelancerWorkType === 'organization' && <Check size={16} className="text-accent" />}
                 </div>
-                <p className="text-xs text-muted leading-relaxed">Assigned into agency workspaces with strict deliverable-based permissions.</p>
+                <p className="text-[12.5px] text-muted leading-relaxed">Assigned into agency workspaces with strict deliverable-based permissions.</p>
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-3.5">
-            <div className="p-4 bg-card-bg border border-divider rounded-2xl">
-              <div className="text-xs font-mono uppercase text-muted font-bold">Active Projects</div>
-              <div className="text-2xl font-bold text-main mt-1.5">{freelancerStats.activeProjects}</div>
-            </div>
-            <div className="p-4 bg-card-bg border border-divider rounded-2xl">
-              <div className="text-xs font-mono uppercase text-muted font-bold">Open Tasks</div>
-              <div className="text-2xl font-bold text-main mt-1.5">{freelancerStats.openTasks}</div>
-            </div>
-            <div className="p-4 bg-card-bg border border-divider rounded-2xl">
-              <div className="text-xs font-mono uppercase text-muted font-bold">Invoices</div>
-              <div className="text-2xl font-bold text-main mt-1.5">{freelancerStats.invoicesCount}</div>
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+              DELIVERABLE TELEMETRY
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+              <div className="p-4 bg-surface border border-line rounded-xl">
+                <div className="text-[10px] font-mono uppercase text-muted font-bold tracking-wider">Active Projects</div>
+                <div className="text-xl sm:text-2xl font-bold text-text mt-1">{freelancerStats.activeProjects}</div>
+              </div>
+              <div className="p-4 bg-surface border border-line rounded-xl">
+                <div className="text-[10px] font-mono uppercase text-muted font-bold tracking-wider">Open Tasks</div>
+                <div className="text-xl sm:text-2xl font-bold text-text mt-1">{freelancerStats.openTasks}</div>
+              </div>
+              <div className="p-4 bg-surface border border-line rounded-xl">
+                <div className="text-[10px] font-mono uppercase text-muted font-bold tracking-wider">Invoices</div>
+                <div className="text-xl sm:text-2xl font-bold text-text mt-1">{freelancerStats.invoicesCount}</div>
+              </div>
             </div>
           </div>
 
-          <button
-            onClick={() => {
-              supabase.from('users').update({ freelancer_type: freelancerWorkType }).eq('id', user?.id).then();
-              toast.success('Freelancer preferences saved');
-              setCurrentView('main');
-            }}
-            className="w-full py-3.5 rounded-2xl bg-[#FF6B4A] hover:bg-[#FF552B] text-main font-bold text-base transition-colors shadow-sm"
-          >
-            Save Scope Settings
-          </button>
-
+          <div className="pt-2">
+            <button
+              onClick={() => {
+                supabase.from('users').update({ freelancer_type: freelancerWorkType }).eq('id', user?.id).then();
+                toast.success('Freelancer preferences saved');
+                navigateToView('main');
+              }}
+              className="px-4 py-2 rounded bg-accent hover:bg-accent/90 text-white font-semibold text-xs transition-colors shadow-sm cursor-pointer"
+            >
+              Save Scope Settings
+            </button>
+          </div>
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* ── VIEW 5: AUDIO & VIDEO ROUTING ──────────────────────── */}
-      {/* ────────────────────────────────────────────────────────── */}
+      {/* ── VIEW 5: AUDIO & VIDEO ROUTING ── */}
       {currentView === 'media' && (
         <div className="space-y-6">
-          <div className="bg-card-bg rounded-2xl border border-divider p-5 space-y-4">
-            <div>
-              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5">
-                Microphone Input Device
-              </label>
-              <select 
-                value={audioInput} 
-                onChange={(e) => setAudioInput(e.target.value)}
-                className="w-full bg-app border border-divider rounded-xl px-3.5 py-2.5 text-sm text-main focus:outline-none"
-              >
-                <option>Default System Microphone</option>
-                <option>Studio USB Condenser</option>
-                <option>Communications Headset</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5">
-                Camera Capture Device
-              </label>
-              <select 
-                value={videoInput} 
-                onChange={(e) => setVideoInput(e.target.value)}
-                className="w-full bg-app border border-divider rounded-xl px-3.5 py-2.5 text-sm text-main focus:outline-none"
-              >
-                <option>Integrated HD Webcam (1080p)</option>
-                <option>External 4K Capture Device</option>
-              </select>
-            </div>
-
-            <div className="flex items-center justify-between p-4 bg-app border border-divider rounded-xl">
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+              HARDWARE & CAPTURE DEVICES
+            </span>
+            <div className="bg-surface rounded-xl border border-line p-4 sm:p-5 space-y-4 max-w-lg">
               <div>
-                <div className="font-semibold text-sm text-main">End-to-End Encryption (E2EE)</div>
-                <div className="text-xs text-muted">LiveKit SFU and private chat mesh crypto.</div>
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1.5">
+                  Microphone Input Device
+                </label>
+                <select 
+                  value={audioInput} 
+                  onChange={(e) => setAudioInput(e.target.value)}
+                  className="w-full bg-app border border-line rounded px-3 py-1.5 text-xs text-text focus:outline-none focus:border-accent/50 transition-colors"
+                >
+                  <option>Default System Microphone</option>
+                  <option>Studio USB Condenser</option>
+                  <option>Communications Headset</option>
+                </select>
               </div>
-              <button
-                type="button"
-                onClick={() => setE2eeEnabled(!e2eeEnabled)}
-                className={`w-11 h-6 rounded-full transition-colors relative ${e2eeEnabled ? 'bg-[#FF6B4A]' : 'bg-white/10'}`}
-              >
-                <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${e2eeEnabled ? 'right-1' : 'left-1'}`} />
-              </button>
+
+              <div>
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1.5">
+                  Camera Capture Device
+                </label>
+                <select 
+                  value={videoInput} 
+                  onChange={(e) => setVideoInput(e.target.value)}
+                  className="w-full bg-app border border-line rounded px-3 py-1.5 text-xs text-text focus:outline-none focus:border-accent/50 transition-colors"
+                >
+                  <option>Integrated HD Webcam (1080p)</option>
+                  <option>External 4K Capture Device</option>
+                </select>
+              </div>
+
+              <div className="pt-2 border-t border-line">
+                <SettingsRow
+                  icon={Shield}
+                  title="End-to-End Encryption (E2EE)"
+                  description="LiveKit SFU and private chat mesh crypto."
+                  className="!px-0 !py-2 hover:!bg-transparent"
+                >
+                  <Toggle
+                    checked={e2eeEnabled}
+                    onChange={setE2eeEnabled}
+                    ariaLabel="Toggle End-to-End Encryption"
+                  />
+                </SettingsRow>
+              </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* ── VIEW 6: SECURITY / CHANGE PASSWORD ─────────────────── */}
-      {/* ────────────────────────────────────────────────────────── */}
+      {/* ── VIEW 6: SECURITY / CHANGE PASSWORD ── */}
       {currentView === 'security' && (
         <div className="space-y-6">
-          <div className="bg-card-bg rounded-2xl border border-divider p-6">
-            <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
-              <div>
-                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5">
-                  New Password
-                </label>
-                <input 
-                  type="password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded-xl px-3.5 py-2.5 text-sm text-main placeholder-zinc-500 focus:outline-none transition-colors"
-                />
-              </div>
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+              MASTER CREDENTIALS
+            </span>
+            <div className="bg-surface rounded-xl border border-line p-5 sm:p-6 max-w-lg">
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1.5">
+                    New Password
+                  </label>
+                  <input 
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full bg-app border border-line focus:border-accent/50 rounded px-3 py-1.5 text-xs text-text placeholder-zinc-500 focus:outline-none transition-colors"
+                  />
+                </div>
 
-              <div>
-                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5">
-                  Confirm New Password
-                </label>
-                <input 
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="••••••••••••"
-                  className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded-xl px-3.5 py-2.5 text-sm text-main placeholder-zinc-500 focus:outline-none transition-colors"
-                />
-              </div>
+                <div>
+                  <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1.5">
+                    Confirm New Password
+                  </label>
+                  <input 
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="••••••••••••"
+                    className="w-full bg-app border border-line focus:border-accent/50 rounded px-3 py-1.5 text-xs text-text placeholder-zinc-500 focus:outline-none transition-colors"
+                  />
+                </div>
 
-              <button 
-                type="submit"
-                disabled={passwordUpdating}
-                className="w-full py-3 rounded-xl bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-50 text-main font-bold text-sm transition-colors shadow-sm"
-              >
-                {passwordUpdating ? 'Updating Password...' : 'Save New Password'}
-              </button>
-            </form>
+                <div className="pt-2">
+                  <button 
+                    type="submit"
+                    disabled={passwordUpdating}
+                    className="px-4 py-2 rounded bg-accent hover:bg-accent/90 disabled:opacity-50 text-white font-semibold text-xs transition-colors shadow-sm cursor-pointer"
+                  >
+                    {passwordUpdating ? 'Updating Password...' : 'Save New Password'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* ── VIEW 7: CUSTOMER SUBSCRIPTION & BILLING TELEMETRY ───── */}
-      {/* ────────────────────────────────────────────────────────── */}
+      {/* ── VIEW 7: CUSTOMER SUBSCRIPTION & BILLING TELEMETRY ── */}
       {currentView === 'billing' && (
         <div className="space-y-6">
-          
           {/* Top Actions & Sync Bar */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider">Customer Subscription Details</span>
-              {loadingBilling && (
-                <div className="flex items-center gap-1.5 text-xs text-[#FF6B4A]">
-                  <RefreshCw size={12} className="animate-spin" />
-                  <span>Syncing ledger...</span>
-                </div>
-              )}
-            </div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1">
+              CUSTOMER SUBSCRIPTION DETAILS
+            </span>
             <button
               onClick={() => fetchBillingData()}
               disabled={loadingBilling}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-hover hover:bg-hover border border-divider text-xs font-medium text-muted hover:text-main transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 border border-line text-xs font-medium text-muted hover:text-text transition-colors cursor-pointer shadow-2xs"
             >
               <RefreshCw size={12} className={loadingBilling ? 'animate-spin' : ''} />
               <span>Refresh Telemetry</span>
             </button>
           </div>
 
-          {/* Member Restricted Billing Alert Banner (Section 7, 8, 10) */}
+          {/* Member Restricted Billing Alert Banner */}
           {(orgId || subData?.customerType === 'organization') && !canManageBilling && (
-            <div className="p-4.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3.5 text-amber-200">
-              <Lock size={18} className="text-amber-400 shrink-0 mt-0.5" />
+            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/25 flex items-start gap-3 text-amber-600 dark:text-amber-300 text-xs">
+              <Lock size={16} className="text-amber-500 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <div className="text-sm font-semibold text-amber-300">
+                <div className="text-xs font-semibold text-amber-600 dark:text-amber-300">
                   Billing & Subscription Management Restricted
                 </div>
-                <div className="text-xs text-amber-200/80 leading-relaxed">
+                <div className="text-[11px] text-amber-700/80 dark:text-amber-300/80 leading-relaxed">
                   Contact your organization owner or billing administrator to manage your subscription.
                 </div>
-                <div className="text-[11px] text-amber-300/70 pt-1">
+                <div className="text-[10px] text-amber-700/70 dark:text-amber-300/70 pt-0.5">
                   You are viewing read-only plan details for this organization workspace. Billing mutations, payments, and checkout actions require elevated billing privileges.
                 </div>
               </div>
@@ -1528,54 +1447,54 @@ export default function Settings() {
           )}
 
           {/* 1. Customer Account & Plan Overview Card */}
-          <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden p-6 space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-divider">
-              <div className="flex items-start sm:items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A] shrink-0">
-                  {subData?.customerType === 'organization' ? <Building2 size={24} /> : <User size={24} />}
+          <div className="bg-surface rounded-xl border border-line overflow-visible p-5 sm:p-6 space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-line">
+              <div className="flex items-start sm:items-center gap-3.5">
+                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                  {subData?.customerType === 'organization' ? <Building2 size={18} /> : <User size={18} />}
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="text-xl font-bold text-main">
+                    <h2 className="text-lg font-bold text-text">
                       {subData?.customerName || wsOrgName || user?.user_metadata?.full_name || 'Customer Account'}
                     </h2>
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30">
+                    <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-accent-soft text-accent border border-accent/20">
                       {subData?.planName || ((orgId || activeOrgId || accountType === 'organization') ? 'Business Free' : (accountType === 'freelancer' ? 'Freelancer Free' : 'Free Plan'))}
                     </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase ${
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase ${
                       subData?.status === 'active' 
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                        ? 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20'
                         : subData?.status === 'free'
-                        ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20'
-                        : 'bg-zinc-800 text-zinc-400 border border-zinc-700'
+                        ? 'bg-sky-500/10 text-sky-500 dark:text-sky-400 border border-sky-500/20'
+                        : 'bg-surface-2 text-muted border border-line'
                     }`}>
                       {subData?.status || 'FREE'}
                     </span>
                   </div>
                   <p className="text-xs text-muted mt-1">
-                    Customer Account: <span className="text-main font-medium capitalize">{subData?.customerType || ((orgId || activeOrgId || accountType === 'organization') ? 'Organization' : (accountType === 'freelancer' ? 'Freelancer' : 'Pending Selection'))}</span>
+                    Customer Account: <span className="text-text font-medium capitalize">{subData?.customerType || ((orgId || activeOrgId || accountType === 'organization') ? 'Organization' : (accountType === 'freelancer' ? 'Freelancer' : 'Pending Selection'))}</span>
                     {' · '}
-                    Billing Interval: <span className="text-main font-medium capitalize">{subData?.interval || 'monthly'}</span>
+                    Billing Interval: <span className="text-text font-medium capitalize">{subData?.interval || 'monthly'}</span>
                   </p>
                 </div>
               </div>
 
-              {/* Permitted Plan Upgrades or Downgrades (Section 10) */}
-              <div className="flex items-center gap-2.5">
+              {/* Permitted Plan Upgrades or Downgrades */}
+              <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto pt-1 sm:pt-0">
                 {(!orgId || canManageBilling) ? (
                   <>
                     <button
                       onClick={() => navigate('/pricing')}
-                      className="px-4 py-2.5 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded-xl transition-all shadow-[0_0_12px_rgba(255,107,74,0.3)] flex items-center gap-1.5"
+                      className="px-3.5 py-1.5 bg-accent hover:bg-accent/90 text-white text-xs font-semibold rounded transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
                     >
-                      <Sparkles size={14} />
+                      <Sparkles size={13} />
                       <span>Change Plan / Upgrade</span>
                     </button>
                     {subData?.hasActiveSubscription && subData?.tier && !subData.tier.includes('free') && (
                       <button
                         onClick={handleCancelSubscription}
                         disabled={cancellingSub}
-                        className="px-3 py-2.5 bg-hover hover:bg-red-500/10 border border-divider hover:border-red-500/30 text-muted hover:text-red-400 text-xs font-medium rounded-xl transition-all disabled:opacity-50"
+                        className="px-3 py-1.5 bg-surface hover:bg-danger/10 border border-line hover:border-danger/30 text-muted hover:text-danger text-xs font-medium rounded transition-colors cursor-pointer disabled:opacity-50"
                       >
                         {cancellingSub ? 'Cancelling...' : 'Cancel Subscription'}
                       </button>
@@ -1585,7 +1504,7 @@ export default function Settings() {
                   <button
                     disabled
                     title="Only organization owner or billing administrator can modify subscription"
-                    className="px-4 py-2.5 bg-zinc-800/80 text-zinc-500 cursor-not-allowed text-xs font-semibold rounded-xl border border-zinc-800 flex items-center gap-1.5"
+                    className="px-3.5 py-1.5 bg-surface-2 text-muted cursor-not-allowed text-xs font-semibold rounded border border-line flex items-center gap-1.5 opacity-60"
                   >
                     <Lock size={13} />
                     <span>Manage Plans (Restricted)</span>
@@ -1595,10 +1514,10 @@ export default function Settings() {
             </div>
 
             {/* Key Subscription Telemetry Metrics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="p-4 rounded-xl bg-app border border-divider">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-lg bg-surface border border-line">
                 <div className="text-[10px] font-mono uppercase text-muted font-bold tracking-wider">Current Recurring Rate</div>
-                <div className="text-xl font-bold text-main mt-1">
+                <div className="text-lg font-bold text-text mt-1">
                   {subData?.subscription?.last_payment_amount 
                     ? `₹${Math.round(subData.subscription.last_payment_amount / 100)}`
                     : subData?.tier === 'freelancer_starter' ? '₹299'
@@ -1608,75 +1527,75 @@ export default function Settings() {
                     : '₹0'}
                   <span className="text-xs font-normal text-muted"> / mo</span>
                 </div>
-                <div className="text-[11px] text-muted mt-1">Authoritative Server Rate</div>
+                <div className="text-[11px] text-muted mt-0.5">Authoritative Server Rate</div>
               </div>
 
-              <div className="p-4 rounded-xl bg-app border border-divider">
+              <div className="p-3.5 rounded-lg bg-surface border border-line">
                 <div className="text-[10px] font-mono uppercase text-muted font-bold tracking-wider">Account Entitlement Scope</div>
-                <div className="text-base font-bold text-main mt-1 capitalize">
+                <div className="text-base font-bold text-text mt-1 capitalize">
                   {subData?.customerType === 'organization' ? 'Organization-wide' : 'Individual Freelancer'}
                 </div>
-                <div className="text-[11px] text-muted mt-1">Applies to all workspace assets</div>
+                <div className="text-[11px] text-muted mt-0.5">Applies to all workspace assets</div>
               </div>
 
-              <div className="p-4 rounded-xl bg-app border border-divider">
+              <div className="p-3.5 rounded-lg bg-surface border border-line">
                 <div className="text-[10px] font-mono uppercase text-muted font-bold tracking-wider">Current Period Activated</div>
-                <div className="text-sm font-semibold text-main mt-1">
+                <div className="text-sm font-semibold text-text mt-1">
                   {subData?.currentPeriodStart ? new Date(subData.currentPeriodStart).toLocaleDateString() : 'Active Baseline'}
                 </div>
-                <div className="text-[11px] text-muted mt-1">Validated provider timestamp</div>
+                <div className="text-[11px] text-muted mt-0.5">Validated provider timestamp</div>
               </div>
 
-              <div className="p-4 rounded-xl bg-app border border-divider">
+              <div className="p-3.5 rounded-lg bg-surface border border-line">
                 <div className="text-[10px] font-mono uppercase text-muted font-bold tracking-wider">Next Billing / Expiry Date</div>
-                <div className="text-sm font-semibold text-main mt-1">
+                <div className="text-sm font-semibold text-text mt-1">
                   {subData?.currentPeriodEnd ? new Date(subData.currentPeriodEnd).toLocaleDateString() : 'Perpetual Free Tier'}
                 </div>
-                <div className="text-[11px] text-muted mt-1">
+                <div className="text-[11px] text-muted mt-0.5">
                   {subData?.cancelAtPeriodEnd ? 'Cancels at end of cycle' : 'Auto-renewing cycle'}
                 </div>
               </div>
             </div>
 
-            {/* Payer Attribution (Section 9: Distinguishing Customer Account vs. Actual Payer) */}
-            <div className="p-4 rounded-xl bg-hover border border-divider flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+            {/* Payer Attribution */}
+            <div className="p-3.5 rounded-lg bg-surface-2 border border-line flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
               <div className="space-y-0.5">
-                <div className="font-semibold text-main flex items-center gap-1.5">
-                  <Shield size={14} className="text-[#FF6B4A]" />
+                <div className="font-semibold text-text flex items-center gap-1.5">
+                  <Shield size={14} className="text-accent" />
                   <span>Audited Payer Tracking</span>
                 </div>
                 <div className="text-muted text-[11px]">
-                  The customer receiving entitlements is <strong className="text-main">{subData?.customerName || 'This Account'}</strong>.
+                  The customer receiving entitlements is <strong className="text-text">{subData?.customerName || 'This Account'}</strong>.
                   {' '}
                   Payer attribution records the authenticated user executing payment transactions.
                 </div>
               </div>
-              <div className="text-right shrink-0">
+              <div className="text-left sm:text-right shrink-0">
                 <div className="text-[11px] font-mono text-muted">Registered Payer:</div>
-                <div className="text-xs font-mono font-medium text-main">
+                <div className="text-xs font-mono font-medium text-text">
                   {subData?.payerUserId ? `User: ${subData.payerUserId}` : (subData?.hasActiveSubscription ? 'Verified Purchaser' : 'System Default Allocation')}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* 2. Usage Limits & Live Entitlements Grid (Section 10 & 12) */}
-          <div className="space-y-3">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Live Entitlements & Resource Quotas</span>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              
+          {/* 2. Usage Limits & Live Entitlements Grid */}
+          <div>
+            <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
+              LIVE ENTITLEMENTS & RESOURCE QUOTAS
+            </span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
               {/* Active Projects Quota */}
-              <div className="bg-card-bg rounded-2xl border border-divider p-5 space-y-3">
+              <div className="bg-surface rounded-xl border border-line p-4 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-muted uppercase tracking-wider">Active Projects</span>
-                  <span className="text-xs font-mono font-bold text-main">
+                  <span className="text-[11px] font-mono font-bold text-muted uppercase tracking-wider">Active Projects</span>
+                  <span className="text-xs font-mono font-bold text-text">
                     {usageData?.projects?.current ?? 0} / {usageData?.projects?.max === -1 ? '∞' : (usageData?.projects?.max ?? 3)}
                   </span>
                 </div>
-                <div className="w-full h-2 bg-app rounded-full overflow-hidden border border-divider">
+                <div className="w-full h-2 bg-surface-2 rounded-full overflow-hidden border border-line">
                   <div 
-                    className="h-full bg-[#FF6B4A] rounded-full transition-all duration-500"
+                    className="h-full bg-accent rounded-full transition-all duration-500"
                     style={{ 
                       width: usageData?.projects?.max === -1 
                         ? '100%' 
@@ -1691,14 +1610,14 @@ export default function Settings() {
               </div>
 
               {/* Workflows Quota */}
-              <div className="bg-card-bg rounded-2xl border border-divider p-5 space-y-3">
+              <div className="bg-surface rounded-xl border border-line p-4 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-muted uppercase tracking-wider">Active Workflows</span>
-                  <span className="text-xs font-mono font-bold text-main">
+                  <span className="text-[11px] font-mono font-bold text-muted uppercase tracking-wider">Active Workflows</span>
+                  <span className="text-xs font-mono font-bold text-text">
                     {usageData?.workflows?.current ?? 0} / {usageData?.workflows?.max === -1 ? '∞' : (usageData?.workflows?.max ?? 2)}
                   </span>
                 </div>
-                <div className="w-full h-2 bg-app rounded-full overflow-hidden border border-divider">
+                <div className="w-full h-2 bg-surface-2 rounded-full overflow-hidden border border-line">
                   <div 
                     className="h-full bg-emerald-500 rounded-full transition-all duration-500"
                     style={{ 
@@ -1714,17 +1633,17 @@ export default function Settings() {
                 </div>
               </div>
 
-              {/* Organization Seats Quota (Or User Limit for Freelancer) */}
-              <div className="bg-card-bg rounded-2xl border border-divider p-5 space-y-3">
+              {/* Organization Seats Quota */}
+              <div className="bg-surface rounded-xl border border-line p-4 space-y-2.5">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                  <span className="text-[11px] font-mono font-bold text-muted uppercase tracking-wider">
                     {subData?.customerType === 'organization' ? 'Team Members / Seats' : 'Licensed Seats'}
                   </span>
-                  <span className="text-xs font-mono font-bold text-main">
+                  <span className="text-xs font-mono font-bold text-text">
                     {usageData?.seats?.current ?? 1} / {usageData?.seats?.max === -1 ? '∞' : (usageData?.seats?.max ?? 1)}
                   </span>
                 </div>
-                <div className="w-full h-2 bg-app rounded-full overflow-hidden border border-divider">
+                <div className="w-full h-2 bg-surface-2 rounded-full overflow-hidden border border-line">
                   <div 
                     className="h-full bg-sky-500 rounded-full transition-all duration-500"
                     style={{ 
@@ -1739,67 +1658,66 @@ export default function Settings() {
                   <span className="font-mono">{usageData?.seats?.max === -1 ? 'Unlimited' : `${usageData?.seats?.max || 1} Max`}</span>
                 </div>
               </div>
-
             </div>
 
             {/* Additional Entitlements Summary */}
-            <div className="bg-card-bg rounded-2xl border border-divider p-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="bg-surface rounded-xl border border-line p-3.5 mt-3.5 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs text-muted">
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
-                <span>History: <strong className="text-main">{usageData?.historyDays === -1 ? 'Unlimited' : `${usageData?.historyDays || 7} Days`}</strong></span>
+                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                <span>History: <strong className="text-text">{usageData?.historyDays === -1 ? 'Unlimited' : `${usageData?.historyDays || 7} Days`}</strong></span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
-                <span>WebRTC HD Video: <strong className="text-main">Included</strong></span>
+                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                <span>WebRTC HD Video: <strong className="text-text">Included</strong></span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
-                <span>Invoicing & Claims: <strong className="text-main">Included</strong></span>
+                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                <span>Invoicing & Claims: <strong className="text-text">Included</strong></span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={15} className="text-emerald-400 shrink-0" />
-                <span>Telemetry Analytics: <strong className="text-main">Included</strong></span>
+                <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
+                <span>Telemetry Analytics: <strong className="text-text">Included</strong></span>
               </div>
             </div>
           </div>
 
-          {/* 3. Payment Transactions Ledger (Section 9 & 10) */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Payment Transactions & Audit Ledger</span>
-              <span className="text-[11px] text-muted font-mono">{paymentHistory.length} Settled Record(s)</span>
+          {/* 3. Payment Transactions Ledger */}
+          <div>
+            <div className="flex items-center justify-between px-1 mb-2">
+              <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase">
+                PAYMENT TRANSACTIONS & AUDIT LEDGER
+              </span>
+              <span className="text-[10px] sm:text-[11px] text-muted font-mono">{paymentHistory.length} Settled Record(s)</span>
             </div>
 
             {(!orgId || canManageBilling) ? (
               paymentHistory.length === 0 ? (
-                <div className="bg-card-bg rounded-2xl border border-divider p-8 text-center space-y-2">
-                  <CreditCard size={28} className="text-muted mx-auto" />
-                  <div className="text-sm font-semibold text-main">No payment transactions recorded</div>
-                  <div className="text-xs text-muted max-w-md mx-auto">
-                    This account is currently operating under baseline Free entitlements. Paid subscription upgrades through Razorpay will be automatically audited and receipted here.
-                  </div>
-                </div>
+                <EmptyState
+                  icon={CreditCard}
+                  title="No payment transactions recorded"
+                  description="This account is currently operating under baseline Free entitlements. Paid subscription upgrades through Razorpay will be automatically audited and receipted here."
+                />
               ) : (
-                <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
+                <div className="bg-surface rounded-xl border border-line overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs">
-                      <thead className="bg-app border-b border-divider text-muted uppercase font-mono text-[10px]">
+                      <thead className="bg-surface-2 border-b border-line text-muted uppercase font-mono text-[10px]">
                         <tr>
-                          <th className="py-3 px-4">Date</th>
-                          <th className="py-3 px-4">Amount</th>
-                          <th className="py-3 px-4">Provider Ref (Razorpay)</th>
-                          <th className="py-3 px-4">Order ID</th>
-                          <th className="py-3 px-4">Payer</th>
-                          <th className="py-3 px-4 text-right">Status</th>
+                          <th className="py-2.5 px-4 font-bold">Date</th>
+                          <th className="py-2.5 px-4 font-bold">Amount</th>
+                          <th className="py-2.5 px-4 font-bold">Provider Ref</th>
+                          <th className="py-2.5 px-4 font-bold">Order ID</th>
+                          <th className="py-2.5 px-4 font-bold">Payer</th>
+                          <th className="py-2.5 px-4 font-bold text-right">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-divider font-sans">
+                      <tbody className="divide-y divide-line font-sans">
                         {paymentHistory.map((p) => (
-                          <tr key={p.id} className="hover:bg-white/[0.015] transition-colors">
-                            <td className="py-3 px-4 text-main font-medium whitespace-nowrap">
-                              {p.created_at ? new Date(p.created_at).toLocaleString() : 'N/A'}
+                          <tr key={p.id} className="hover:bg-surface-2/30 transition-colors">
+                            <td className="py-3 px-4 text-text font-medium whitespace-nowrap">
+                              {p.created_at ? new Date(p.created_at).toLocaleDateString() : 'N/A'}
                             </td>
-                            <td className="py-3 px-4 font-mono font-bold text-main">
+                            <td className="py-3 px-4 font-mono font-bold text-text">
                               ₹{(p.amount || 0).toLocaleString('en-IN')}
                             </td>
                             <td className="py-3 px-4 font-mono text-muted">
@@ -1812,7 +1730,7 @@ export default function Settings() {
                               {p.payer_user_id ? `User:${p.payer_user_id.slice(0, 8)}...` : 'Authorized Payer'}
                             </td>
                             <td className="py-3 px-4 text-right">
-                              <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border border-emerald-500/20">
                                 {p.status || 'Verified'}
                               </span>
                             </td>
@@ -1824,32 +1742,31 @@ export default function Settings() {
                 </div>
               )
             ) : (
-              <div className="bg-card-bg rounded-2xl border border-divider p-6 text-center space-y-2">
-                <Lock size={24} className="text-amber-400 mx-auto" />
+              <div className="bg-surface rounded-xl border border-line p-6 text-center space-y-2">
+                <Lock size={20} className="text-amber-500 mx-auto" />
                 <div className="text-xs text-muted">
                   Transaction receipts and invoice clearing history are restricted to organization owners and billing administrators.
                 </div>
               </div>
             )}
           </div>
-
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────────────── */}
-      {/* ── COMPANY PROFILE MODAL (EXACT REPLICA OF MOBILE APP) ── */}
-      {/* ────────────────────────────────────────────────────────── */}
+      {/* ── COMPANY PROFILE MODAL ── */}
       {isCompanyModalVisible && (
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-card-bg border border-divider rounded-3xl p-6 sm:p-7 shadow-2xl space-y-5">
-            
-            <div className="flex items-center justify-between pb-3 border-b border-divider">
-              <h2 className="text-lg font-bold text-main">Edit Company Profile</h2>
+          <div className="w-full max-w-lg bg-surface border border-line rounded-xl p-5 sm:p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 border-b border-line">
+              <h2 className="text-sm font-bold text-text uppercase tracking-wider font-mono flex items-center gap-2">
+                <Building2 size={15} className="text-accent" />
+                <span>Edit Company Profile</span>
+              </h2>
               <button 
                 onClick={() => setIsCompanyModalVisible(false)}
-                className="w-8 h-8 rounded-full bg-hover hover:bg-hover flex items-center justify-center text-muted hover:text-main transition-colors"
+                className="text-muted hover:text-text p-1 cursor-pointer transition-colors"
               >
-                <X size={18} />
+                <X size={15} />
               </button>
             </div>
 
@@ -1857,35 +1774,35 @@ export default function Settings() {
               Update details for Billed From configurations. These will be automatically populated on all future invoices.
             </p>
 
-            <div className="space-y-4">
+            <div className="space-y-3.5">
               <div>
-                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5 ml-1">
-                  Company Name *
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
+                  Company Name <span className="text-accent">*</span>
                 </label>
                 <input
                   type="text"
                   placeholder="Acme Corporation"
                   value={orgName}
                   onChange={(e) => setOrgName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-divider bg-app text-sm text-main placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors"
+                  className="w-full bg-app border border-line focus:border-accent/50 rounded px-3 py-1.5 text-xs text-text placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5 ml-1">
-                  Company Address *
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
+                  Company Address <span className="text-accent">*</span>
                 </label>
                 <textarea
                   rows={2}
                   placeholder="Mumbai, Maharashtra, India"
                   value={orgAddress}
                   onChange={(e) => setOrgAddress(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-divider bg-app text-sm text-main placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors resize-none"
+                  className="w-full bg-app border border-line focus:border-accent/50 rounded px-3 py-1.5 text-xs text-text placeholder-zinc-500 focus:outline-none transition-colors resize-none"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-bold text-muted uppercase tracking-wider block mb-1.5 ml-1">
+                <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1">
                   GSTIN Tax Details
                 </label>
                 <input
@@ -1893,18 +1810,27 @@ export default function Settings() {
                   placeholder="27CFFLOW1234A1Z9"
                   value={orgGst}
                   onChange={(e) => setOrgGst(e.target.value)}
-                  className="w-full px-4 py-3 rounded-2xl border border-divider bg-app text-sm text-main placeholder-zinc-600 focus:outline-none focus:border-[#FF6B4A]/50 transition-colors"
+                  className="w-full bg-app border border-line focus:border-accent/50 rounded px-3 py-1.5 text-xs text-text placeholder-zinc-500 focus:outline-none transition-colors"
                 />
               </div>
             </div>
 
-            <button
-              onClick={handleSaveOrgDetails}
-              className="w-full p-4 rounded-2xl bg-[#FF6B4A] hover:bg-[#FF552B] text-main font-bold text-base transition-colors shadow-sm mt-2"
-            >
-              Save Details
-            </button>
-
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-line">
+              <button
+                type="button"
+                onClick={() => setIsCompanyModalVisible(false)}
+                className="px-3.5 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text border border-line text-xs font-medium transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveOrgDetails}
+                className="px-3.5 py-1.5 rounded bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
+              >
+                Save Details
+              </button>
+            </div>
           </div>
         </div>
       )}
