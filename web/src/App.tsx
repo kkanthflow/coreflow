@@ -46,7 +46,17 @@ const NewInvoice      = lazyWithRetry(() => import('./pages/NewInvoice'));
 const InvoiceDetail   = lazyWithRetry(() => import('./pages/InvoiceDetail'));
 const Payments        = lazyWithRetry(() => import('./pages/Payments'));
 const Analytics       = lazyWithRetry(() => import('./pages/Analytics'));
-const Settings        = lazyWithRetry(() => import('./pages/Settings'));
+const LegacySettings  = lazyWithRetry(() => import('./pages/Settings'));
+const SettingsLayout  = lazyWithRetry(() => import('./components/settings/SettingsLayout'));
+const ProfileSettings = lazyWithRetry(() => import('./pages/settings/ProfileSettings'));
+const AppearanceSettings = lazyWithRetry(() => import('./pages/settings/AppearanceSettings'));
+const NotificationSettings = lazyWithRetry(() => import('./pages/settings/NotificationSettings'));
+const AudioVideoSettings = lazyWithRetry(() => import('./pages/settings/AudioVideoSettings'));
+const SecuritySettings = lazyWithRetry(() => import('./pages/settings/SecuritySettings'));
+const OrganizationSettings = lazyWithRetry(() => import('./pages/settings/OrganizationSettings'));
+const BillingSettings = lazyWithRetry(() => import('./pages/settings/BillingSettings'));
+const MembersSettings = lazyWithRetry(() => import('./pages/settings/MembersSettings'));
+const IntegrationsSettings = lazyWithRetry(() => import('./pages/settings/IntegrationsSettings'));
 const PreJoin         = lazyWithRetry(() => import('./pages/PreJoin'));
 const MeetingRoom     = lazyWithRetry(() => import('./pages/MeetingRoom'));
 const AuditLogs       = lazyWithRetry(() => import('./pages/AuditLogs'));
@@ -237,9 +247,23 @@ function App() {
                       
                       {/* Analytics & Settings & Audit Logs & Billing */}
                       <Route path="/analytics" element={<Suspense fallback={<PageLoader />}><Analytics /></Suspense>} />
-                      <Route path="/settings"  element={<Suspense fallback={<PageLoader />}><Settings /></Suspense>} />
-                      <Route path="/billing"   element={<Navigate to="/settings?tab=billing" replace />} />
-                      <Route path="/subscription" element={<Navigate to="/settings?tab=billing" replace />} />
+                      
+                      {/* ── Settings Module (Nested & Deep-linkable) ── */}
+                      <Route path="/settings" element={<Suspense fallback={<PageLoader />}><SettingsLayout /></Suspense>}>
+                        <Route index element={<Navigate to="/settings/appearance" replace />} />
+                        <Route path="profile" element={<Suspense fallback={<PageLoader />}><ProfileSettings /></Suspense>} />
+                        <Route path="appearance" element={<Suspense fallback={<PageLoader />}><AppearanceSettings /></Suspense>} />
+                        <Route path="notifications" element={<Suspense fallback={<PageLoader />}><NotificationSettings /></Suspense>} />
+                        <Route path="audio-video" element={<Suspense fallback={<PageLoader />}><AudioVideoSettings /></Suspense>} />
+                        <Route path="security" element={<Suspense fallback={<PageLoader />}><SecuritySettings /></Suspense>} />
+                        <Route path="organization" element={<Suspense fallback={<PageLoader />}><OrganizationSettings /></Suspense>} />
+                        <Route path="billing" element={<Suspense fallback={<PageLoader />}><BillingSettings /></Suspense>} />
+                        <Route path="members" element={<Suspense fallback={<PageLoader />}><MembersSettings /></Suspense>} />
+                        <Route path="integrations" element={<Suspense fallback={<PageLoader />}><IntegrationsSettings /></Suspense>} />
+                      </Route>
+                      <Route path="/settings-legacy" element={<Suspense fallback={<PageLoader />}><LegacySettings /></Suspense>} />
+                      <Route path="/billing" element={<Navigate to="/settings/billing" replace />} />
+                      <Route path="/subscription" element={<Navigate to="/settings/billing" replace />} />
                       <Route path="/audit-logs" element={<Suspense fallback={<PageLoader />}><AuditLogs /></Suspense>} />
                       <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><Notifications /></Suspense>} />
                     </Route>

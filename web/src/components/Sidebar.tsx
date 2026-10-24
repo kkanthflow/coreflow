@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
+import { BRAND } from '../brand';
 import {
   LayoutDashboard, Briefcase, CheckSquare, Calendar, Video,
   MessageSquare, Users, Building2, Building, FileText,
@@ -31,6 +32,8 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const { role, can } = useRole();
   const { orgName, orgId } = useWorkspace();
+  const location = useLocation();
+  const isSettingsActive = location.pathname.startsWith('/settings');
 
   const CLIENT_NAV_GROUPS: NavGroup[] = [
     {
@@ -90,44 +93,45 @@ export default function Sidebar() {
         { name: 'Settlements', to: '/payments', icon: CreditCard, permission: 'record_payments' },
         { name: 'Telemetry', to: '/analytics', icon: BarChart3, permission: 'view_reports' },
         { name: 'Plans & Pricing', to: '/pricing', icon: Sparkles, permission: null },
-        { name: 'Subscription & Billing', to: '/settings?tab=billing', icon: CreditCard, permission: null },
+        { name: 'Subscription & Billing', to: '/settings/billing', icon: CreditCard, permission: null },
       ]
     }
   ];
 
   const activeNavGroups = role === 'client' ? CLIENT_NAV_GROUPS : NAV_GROUPS;
+  const currentWorkspaceName = orgName || BRAND.company;
 
   return (
     <motion.aside 
       animate={{ width: collapsed ? 58 : 224 }}
       transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-      className="relative flex flex-col h-full bg-card-bg border-r border-divider z-20 shrink-0 font-sans select-none overflow-hidden"
+      className="relative flex flex-col h-full bg-surface border-r border-line z-20 shrink-0 font-sans select-none overflow-hidden"
     >
       {/* Workspace Header */}
-      <div className="flex h-12 items-center px-3 border-b border-divider overflow-hidden">
+      <div className="flex h-12 items-center px-3 border-b border-line overflow-hidden shrink-0">
         {collapsed ? (
           <button 
             onClick={() => setCollapsed(false)}
-            className="w-7 h-7 rounded-md bg-card-bg border border-divider flex items-center justify-center text-main mx-auto hover:border-[#FF6B4A]/40 transition-colors"
+            className="w-7 h-7 rounded-md bg-surface border border-line flex items-center justify-center text-text mx-auto hover:border-accent/50 transition-colors"
             title="Expand Navigation"
           >
             <AuvrynLogo size={14} />
           </button>
         ) : (
           <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-5 h-5 rounded-md bg-hover border border-divider flex items-center justify-center shrink-0">
+            <div className="flex items-center gap-2 min-w-0" title={currentWorkspaceName}>
+              <div className="w-5 h-5 rounded-md bg-surface-2 border border-line flex items-center justify-center shrink-0">
                 <AuvrynLogo size={12} />
               </div>
               <div className="min-w-0">
-                <span className="text-main font-bold text-xs tracking-tight truncate block">
-                  {orgName || 'AUVRYN'}
+                <span className="text-text font-bold text-xs tracking-tight truncate block">
+                  {currentWorkspaceName}
                 </span>
               </div>
             </div>
             <button
               onClick={() => setCollapsed(true)}
-              className="p-1 text-muted hover:text-muted rounded hover:bg-white/[0.04] transition-colors"
+              className="p-1 text-muted hover:text-text rounded hover:bg-surface-2 transition-colors"
               title="Collapse Rail"
             >
               <ChevronLeft size={13} />
@@ -136,8 +140,8 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Navigation Groups */}
-      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-1.5 space-y-4">
+      {/* Navigation Groups - scrollable independently with min-h-0 */}
+      <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-3 px-1.5 space-y-4">
         {activeNavGroups.map(group => {
           const visibleItems = group.items.filter(item => !item.permission || can(item.permission));
           if (visibleItems.length === 0) return null;
@@ -145,7 +149,7 @@ export default function Sidebar() {
           return (
             <div key={group.label} className="space-y-0.5">
               {!collapsed && (
-                <div className="px-2.5 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-zinc-600">
+                <div className="px-2.5 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-muted">
                   {group.label}
                 </div>
               )}
@@ -158,8 +162,8 @@ export default function Sidebar() {
                     'relative flex items-center rounded-md transition-all duration-150 text-xs font-medium group',
                     collapsed ? 'h-9 w-9 mx-auto justify-center' : 'px-2.5 py-1.5 justify-between',
                     isActive
-                      ? 'bg-white/[0.06] text-main font-semibold'
-                      : 'text-muted hover:text-zinc-200 hover:bg-white/[0.025]'
+                      ? 'bg-surface-2 text-text font-semibold'
+                      : 'text-muted hover:text-text hover:bg-surface-2/60'
                   )}
                 >
                   {({ isActive }) => (
@@ -170,7 +174,7 @@ export default function Sidebar() {
                           layoutId="active-nav-indicator"
                           transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                           className={cn(
-                            "absolute bg-[#FF6B4A] rounded-full shadow-[0_0_14px_rgba(255,107,74,0.9),0_0_24px_rgba(255,107,74,0.5)]",
+                            "absolute bg-accent rounded-full shadow-[0_0_12px_rgba(255,90,54,0.6)]",
                             collapsed ? "-left-1 top-2 bottom-2 w-[3px]" : "left-0 top-1.5 bottom-1.5 w-[2.5px]"
                           )}
                         />
@@ -181,7 +185,7 @@ export default function Sidebar() {
                           size={15}
                           className={cn(
                             "shrink-0 transition-all duration-150 group-hover:translate-x-0.5",
-                            isActive ? "text-[#FF6B4A]" : "text-muted group-hover:text-zinc-200"
+                            isActive ? "text-accent" : "text-muted group-hover:text-text"
                           )}
                         />
                         {!collapsed && (
@@ -190,9 +194,12 @@ export default function Sidebar() {
                       </div>
 
                       {!collapsed && item.shortcut && (
-                        <span className="text-[9px] font-mono text-zinc-600 group-hover:text-muted">
+                        <kbd
+                          className="px-1.5 py-0.5 text-[9px] font-mono text-muted bg-surface-2 border border-line rounded shadow-2xs group-hover:text-text"
+                          title={`Keyboard shortcut: ${item.shortcut}`}
+                        >
                           {item.shortcut}
-                        </span>
+                        </kbd>
                       )}
                     </>
                   )}
@@ -203,35 +210,33 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* Footer Settings */}
-      <div className="p-1.5 border-t border-divider space-y-0.5">
+      {/* Pinned Footer Settings */}
+      <div className="p-1.5 border-t border-line bg-surface shrink-0 space-y-0.5">
         <NavLink
           to="/settings"
           title={collapsed ? "Settings" : undefined}
-          className={({ isActive }) => cn(
+          className={cn(
             'relative flex items-center rounded-md transition-all text-xs group',
             collapsed ? 'h-9 w-9 mx-auto justify-center' : 'px-2.5 py-1.5 justify-between',
-            isActive ? 'bg-white/[0.06] text-main' : 'text-muted hover:text-muted hover:bg-white/[0.025]'
+            isSettingsActive ? 'bg-surface-2 text-text font-semibold' : 'text-muted hover:text-text hover:bg-surface-2/60'
           )}
         >
-          {({ isActive }) => (
-            <>
-              {isActive && (
-                <motion.div 
-                  layoutId="active-nav-indicator"
-                  transition={{ type: 'spring', stiffness: 450, damping: 32 }}
-                  className={cn(
-                    "absolute bg-[#FF6B4A] rounded-full shadow-[0_0_10px_rgba(255,107,74,0.5)]",
-                    collapsed ? "-left-1 top-2 bottom-2 w-[3px]" : "left-0 top-1.5 bottom-1.5 w-[2.5px]"
-                  )} 
-                />
-              )}
-              <div className="flex items-center gap-2">
-                <Settings size={15} className={cn("transition-transform group-hover:translate-x-0.5", isActive ? "text-[#FF6B4A]" : "text-muted group-hover:text-muted")} />
-                {!collapsed && <span className="text-[12px] font-medium">Settings</span>}
-              </div>
-            </>
-          )}
+          <>
+            {isSettingsActive && (
+              <motion.div 
+                layoutId="active-nav-indicator"
+                transition={{ type: 'spring', stiffness: 450, damping: 32 }}
+                className={cn(
+                  "absolute bg-accent rounded-full shadow-[0_0_10px_rgba(255,90,54,0.5)]",
+                  collapsed ? "-left-1 top-2 bottom-2 w-[3px]" : "left-0 top-1.5 bottom-1.5 w-[2.5px]"
+                )} 
+              />
+            )}
+            <div className="flex items-center gap-2">
+              <Settings size={15} className={cn("transition-transform group-hover:translate-x-0.5", isSettingsActive ? "text-accent" : "text-muted group-hover:text-text")} />
+              {!collapsed && <span className="text-[12px] font-medium">Settings</span>}
+            </div>
+          </>
         </NavLink>
       </div>
     </motion.aside>
