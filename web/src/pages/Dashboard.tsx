@@ -4,6 +4,7 @@ import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useWorkspace } from '../hooks/useWorkspace';
+import { useSettings } from '../contexts/SettingsContext';
 import { formatCurrency } from '../lib/currency';
 import { hasPermission } from '../lib/permissions';
 import { MetricStrip } from '../components/ui/ObsidianPrimitives';
@@ -31,6 +32,7 @@ interface MetricItem {
 export default function Dashboard() {
   const { user, fullName, role } = useAuth();
   const { orgName, orgId, defaultCurrency } = useWorkspace();
+  const { formatMoney } = useSettings();
   const navigate = useNavigate();
   const location = useLocation();
   const isFromAuthUnlock = location.state?.fromAuthUnlock;
@@ -213,6 +215,36 @@ export default function Dashboard() {
 
   const firstName = fullName?.split(' ')[0] || user?.email?.split('@')[0] || 'User';
 
+  // Dynamic Workspace Health & Telemetry Calculation
+  const criticalBlockers = (stats.criticalTasks || 0) + (stats.overdueTasks || 0);
+
+  const { healthPercentage, healthStatus, healthColorClass, pulseGreenPct, pulseAmberPct, pulseNeutralPct } = useMemo(() => {
+    if (criticalBlockers === 0) {
+      return {
+        healthPercentage: 100,
+        healthStatus: 'Nominal',
+        healthColorClass: 'text-emerald-400',
+        pulseGreenPct: '88%',
+        pulseAmberPct: '0%',
+        pulseNeutralPct: '12%',
+      };
+    }
+    const calculated = Math.max(10, Math.round(100 - (criticalBlockers / Math.max(1, todoTasks.length + 1)) * 100));
+    const isCritical = criticalBlockers >= 3 || stats.overdueTasks >= 3;
+    const greenWidth = `${calculated}%`;
+    const amberWidth = `${Math.min(100 - calculated, 60)}%`;
+    const neutralWidth = `${Math.max(0, 100 - calculated - Math.min(100 - calculated, 60))}%`;
+
+    return {
+      healthPercentage: calculated,
+      healthStatus: isCritical ? 'Critical' : 'Attention Required',
+      healthColorClass: isCritical ? 'text-red-400' : 'text-amber-400',
+      pulseGreenPct: greenWidth,
+      pulseAmberPct: amberWidth,
+      pulseNeutralPct: neutralWidth,
+    };
+  }, [criticalBlockers, todoTasks.length, stats.overdueTasks]);
+
   const metrics: MetricItem[] = useMemo(() => {
     if (isIndie) {
       return [
@@ -220,7 +252,7 @@ export default function Dashboard() {
         { label: 'ACTIVE PROJECTS', value: stats.projectsCount },
         { label: 'DELIVERABLES', value: todoTasks.length },
         { label: 'UPCOMING SESSIONS', value: stats.upcoming, isOrange: stats.upcoming > 0 },
-        { label: 'OUTSTANDING', value: formatCurrency(stats.outstandingRevenue, defaultCurrency) },
+        { label: 'OUTSTANDING', value: formatMoney(stats.outstandingRevenue) },
         { label: 'INVOICES', value: stats.invoicesCount },
       ];
     }
@@ -229,10 +261,10 @@ export default function Dashboard() {
       { label: 'ACTIVE PROJECTS', value: stats.projectsCount < 10 ? `0${stats.projectsCount}` : stats.projectsCount },
       { label: 'CONFERENCES', value: stats.upcoming < 10 ? `0${stats.upcoming}` : stats.upcoming },
       { label: 'TEAM MEMBERS', value: stats.teamMembers < 10 ? `0${stats.teamMembers}` : stats.teamMembers },
-      { label: 'OUTSTANDING', value: formatCurrency(stats.outstandingRevenue, defaultCurrency) },
-      { label: 'SYS HEALTH', value: '98.4%', indicator: 'Stable' },
+      { label: 'OUTSTANDING', value: formatMoney(stats.outstandingRevenue) },
+      { label: 'SYS HEALTH', value: `${healthPercentage}%`, indicator: healthStatus },
     ];
-  }, [isIndie, stats, todoTasks, defaultCurrency]);
+  }, [isIndie, stats, todoTasks, formatMoney, healthPercentage, healthStatus]);
 
   // Operational Attention Items
   const attentionItems = useMemo(() => {
@@ -260,14 +292,14 @@ export default function Dashboard() {
     if (stats.outstandingRevenue > 0) {
       list.push({
         type: 'FINANCE',
-        title: `${formatCurrency(stats.outstandingRevenue, defaultCurrency)} Pending Invoice Receivables`,
+        title: `${formatMoney(stats.outstandingRevenue)} Pending Invoice Receivables`,
         subtitle: 'Settlements awaiting clearance',
         link: '/invoices',
         isGreen: true
       });
     }
     return list;
-  }, [stats, upcomingMeetings, defaultCurrency]);
+  }, [stats, upcomingMeetings, formatMoney]);
 
   const nextMeeting = upcomingMeetings[0];
 
@@ -369,53 +401,64 @@ export default function Dashboard() {
       )}
 
       {/* ── 3. Workspace Pulse Wave & Telemetry Trajectory (Command Center Activation) ── */}
-      <div className="bg-card-bg border border-divider rounded-lg p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-surface border border-line rounded-xl p-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex-1">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted flex items-center gap-1.5">
-              <Activity size={12} className="text-[#FF6B4A] animate-pulse" />
+              <Activity size={12} className="text-accent animate-pulse" />
               <span>Workspace Pulse Wave</span>
               {isFromAuthUnlock && (
-                <span className="text-[9px] font-mono text-[#FF6B4A] px-1.5 py-0.2 rounded bg-[#FF6B4A]/10 border border-[#FF6B4A]/20">
+                <span className="text-[9px] font-mono text-accent px-1.5 py-0.2 rounded bg-accent-soft border border-accent/20">
                   ONLINE
                 </span>
               )}
             </span>
-            <span className="text-xs font-mono font-bold text-main">92% · Stable</span>
+            <span className={`text-xs font-mono font-bold ${healthColorClass}`}>
+              {healthPercentage}% · {healthStatus}
+            </span>
           </div>
 
           {/* Precision Trajectory Line with Pulse Wave Travelling Node */}
-          <div className="w-full h-1.5 bg-hover rounded-full overflow-visible flex relative items-center">
+          <div className="w-full h-1.5 bg-surface-2 rounded-full overflow-visible flex relative items-center">
             <motion.div
               initial={{ width: '0%' }}
-              animate={{ width: pulseActivated ? '68%' : '0%' }}
+              animate={{ width: pulseActivated ? pulseGreenPct : '0%' }}
               transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-[#FF6B4A] h-full rounded-l-full relative shadow-[0_0_10px_rgba(255,107,74,0.6)]"
+              className="bg-emerald-500 h-full rounded-l-full relative shadow-[0_0_10px_rgba(16,185,129,0.5)]"
             >
               {/* Traveling Pulse Node */}
               <div 
                 className="absolute right-0 top-1/2 -translate-y-1/2 w-2.5 h-2.5 rounded-full bg-white shadow-sm z-10"
-                style={{ transform: 'translate(50%, -50%)', boxShadow: '0 0 8px #ffffff, 0 0 16px #FF6B4A' }}
+                style={{ transform: 'translate(50%, -50%)', boxShadow: '0 0 8px #ffffff, 0 0 16px #10b981' }}
               />
             </motion.div>
+            {criticalBlockers > 0 && (
+              <motion.div
+                initial={{ width: '0%' }}
+                animate={{ width: pulseActivated ? pulseAmberPct : '0%' }}
+                transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                className={`${criticalBlockers >= 3 ? 'bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.4)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.4)]'} h-full`}
+              />
+            )}
             <motion.div
               initial={{ width: '0%' }}
-              animate={{ width: pulseActivated ? '24%' : '0%' }}
-              transition={{ duration: 0.8, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-emerald-500 h-full shadow-[0_0_8px_rgba(16,185,129,0.4)]"
-            />
-            <motion.div
-              initial={{ width: '0%' }}
-              animate={{ width: pulseActivated ? '8%' : '0%' }}
+              animate={{ width: pulseActivated ? pulseNeutralPct : '0%' }}
               transition={{ duration: 0.8, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-              className="bg-zinc-700 h-full rounded-r-full"
+              className="bg-surface-2 h-full rounded-r-full"
             />
           </div>
 
-          <div className="flex items-center gap-4 mt-2 text-[10px] font-mono text-muted">
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-[#FF6B4A]" /> {projects.length} Active Workstreams</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {stats.upcoming} Upcoming Sessions</span>
-            <span className="flex items-center gap-1"><span className="w-1.5 h-1.5 rounded-full bg-zinc-600" /> 0 Critical Blockers</span>
+          <div className="flex items-center gap-4 mt-2 text-[10px] font-mono text-muted flex-wrap">
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent" /> {projects.length} Active Workstream{projects.length === 1 ? '' : 's'}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> {stats.upcoming} Upcoming Session{stats.upcoming === 1 ? '' : 's'}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className={`w-1.5 h-1.5 rounded-full ${criticalBlockers > 0 ? (criticalBlockers >= 3 ? 'bg-red-500' : 'bg-amber-500') : 'bg-muted/60'}`} />
+              <span>{criticalBlockers} Critical Blocker{criticalBlockers === 1 ? '' : 's'}</span>
+            </span>
           </div>
         </div>
       </div>
