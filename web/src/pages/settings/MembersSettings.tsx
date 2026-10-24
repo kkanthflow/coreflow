@@ -196,9 +196,9 @@ export default function MembersSettings() {
               <button
                 type="button"
                 onClick={() => setShowInviteModal(true)}
-                className="px-3 py-1.5 rounded-xl bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-2xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-accent hover:bg-accent/90 text-white text-[11px] font-semibold transition-colors cursor-pointer"
               >
-                <UserPlus size={13} />
+                <UserPlus size={12} />
                 <span>Invite Member</span>
               </button>
             )}

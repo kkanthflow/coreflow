@@ -323,7 +323,7 @@ export default function AudioVideoSettings() {
               <button
                 type="button"
                 onClick={toggleCameraPreview}
-                className="px-3 py-1 rounded-xl bg-surface-2 hover:bg-surface-2/80 text-text border border-line text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-[11px] font-mono border border-line transition-colors cursor-pointer"
               >
                 {cameraPreviewActive ? <VideoOff size={12} /> : <Video size={12} />}
                 <span>{cameraPreviewActive ? 'Stop Preview' : 'Test Camera'}</span>
@@ -363,7 +363,7 @@ export default function AudioVideoSettings() {
               <button
                 type="button"
                 onClick={toggleMicTest}
-                className="px-3 py-1 rounded-xl bg-surface-2 hover:bg-surface-2/80 text-text border border-line text-xs font-medium transition-colors cursor-pointer flex items-center gap-1.5"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-[11px] font-mono border border-line transition-colors cursor-pointer"
               >
                 {micTestActive ? <MicOff size={12} /> : <Mic size={12} />}
                 <span>{micTestActive ? 'Stop Test' : 'Test Microphone'}</span>

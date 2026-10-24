@@ -47,7 +47,7 @@ export default function AppShell() {
           }}
         />
 
-        {currentModule === 'dashboard' && (
+        {(currentModule === 'dashboard' || currentModule === 'settings') && (
           <div className="absolute -top-[10%] left-[25%] w-[650px] h-[650px] rounded-full bg-gradient-to-br from-[#ff5a36]/[0.035] to-transparent blur-[120px]" />
         )}
         {currentModule === 'meetings' && (

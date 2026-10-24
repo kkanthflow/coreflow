@@ -17,16 +17,22 @@ export default function SettingsSection({
   className = '',
   badge,
 }: SettingsSectionProps) {
+  const isBadgeActive = badge && (badge.toLowerCase().includes('active') || badge.toLowerCase().includes('inr') || badge.toLowerCase().includes('rupee'));
+
   return (
-    <section className={`space-y-2.5 ${className}`}>
-      {/* Section Header */}
-      <div className="flex items-center justify-between px-1">
-        <div className="flex items-center gap-2">
-          <h2 className="text-[10px] font-mono font-bold tracking-wider uppercase text-muted">
+    <section className={`mt-7 first:mt-0 ${className}`}>
+      {/* Section Header: 28px above (mt-7), 8-10px below (mb-2.5) */}
+      <div className="flex items-center justify-between px-1 mb-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          <h2 className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted">
             {label}
           </h2>
           {badge && (
-            <span className="px-1.5 py-0.5 text-[9px] font-mono font-semibold rounded bg-surface-2 border border-line text-muted">
+            <span
+              className={`text-[11px] font-mono tracking-[0.08em] font-medium ${
+                isBadgeActive ? 'text-accent' : 'text-muted'
+              }`}
+            >
               {badge}
             </span>
           )}
@@ -35,13 +41,13 @@ export default function SettingsSection({
       </div>
 
       {description && (
-        <p className="text-xs text-muted px-1 -mt-1 leading-relaxed">
+        <p className="text-xs text-muted px-1 -mt-1 mb-2.5 leading-relaxed">
           {description}
         </p>
       )}
 
-      {/* Card Container */}
-      <div className="bg-surface rounded-2xl border border-line shadow-2xs divide-y divide-line overflow-hidden transition-colors">
+      {/* Card Container: surface background, 1px border from line token, 12-14px radius, no heavy shadow, overflow-visible */}
+      <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible transition-colors">
         {children}
       </div>
     </section>

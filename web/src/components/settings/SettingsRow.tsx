@@ -29,7 +29,7 @@ export default function SettingsRow({
     // If it's a React component function/class
     if (typeof icon === 'function' || (typeof icon === 'object' && '$$typeof' in (icon as any) && typeof (icon as any).type === 'function')) {
       const IconComponent = icon as React.ComponentType<{ size?: number; className?: string }>;
-      return <IconComponent size={17} className={`text-text ${iconClassName}`} />;
+      return <IconComponent size={18} className={`text-accent ${iconClassName}`} />;
     }
     
     return icon;
@@ -38,33 +38,33 @@ export default function SettingsRow({
   return (
     <div
       className={`
-        p-4 sm:p-4.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-colors
+        py-4 px-[18px] flex flex-col sm:flex-row sm:items-center justify-between gap-3.5 transition-colors
         ${disabled ? 'opacity-55 pointer-events-none' : 'hover:bg-surface-2/30'}
         ${className}
       `}
     >
-      {/* Left side: Icon + Title & Description */}
-      <div className="flex items-start gap-3.5 min-w-0 flex-1">
+      {/* Left side: Icon + Title & Description (Gap 14px) */}
+      <div className="flex items-center gap-3.5 min-w-0 flex-1">
         {icon && (
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-surface-2 border border-line flex items-center justify-center shrink-0 mt-0.5 text-muted transition-colors">
+          <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft flex items-center justify-center shrink-0 text-accent transition-colors">
             {renderIcon()}
           </div>
         )}
 
-        <div className="min-w-0 flex-1">
+        <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-medium text-text text-xs sm:text-sm tracking-tight">
+            <span className="font-medium text-text text-[14.5px] leading-tight">
               {title}
             </span>
             {badge && (
-              <span className="px-1.5 py-0.5 text-[10px] font-mono font-semibold rounded bg-surface-2 border border-line text-muted">
+              <span className="px-2 py-0.5 text-[11px] font-mono font-medium rounded bg-surface-2 border border-line text-muted">
                 {badge}
               </span>
             )}
           </div>
 
           {description && (
-            <div className="text-[11px] sm:text-xs text-muted leading-relaxed mt-0.5 break-words">
+            <div className="text-[12.5px] text-muted leading-relaxed break-words">
               {description}
             </div>
           )}

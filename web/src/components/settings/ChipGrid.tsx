@@ -50,7 +50,10 @@ export default function ChipGrid<T = string>({
     <div
       role="radiogroup"
       aria-label={ariaLabel}
-      className={`grid ${getGridColsClass()} gap-2.5 w-full ${className}`}
+      className={`grid gap-[10px] w-full ${className}`}
+      style={{
+        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+      }}
     >
       {items.map((item) => {
         const isSelected = item.value === value;
@@ -62,16 +65,17 @@ export default function ChipGrid<T = string>({
             type="button"
             role="radio"
             aria-checked={isSelected}
+            aria-pressed={isSelected}
             disabled={isItemDisabled}
             onClick={() => !isItemDisabled && onChange(item.value)}
             title={isItemDisabled && disabledTooltip ? disabledTooltip : undefined}
             className={`
-              relative flex flex-col items-start p-3 rounded-xl border text-left transition-all duration-150 cursor-pointer select-none
+              relative flex flex-col justify-between p-3 rounded-[10px] border text-left transition-all duration-150 cursor-pointer select-none h-full min-h-[72px]
               focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring
               ${
                 isSelected
-                  ? 'border-accent bg-accent-soft text-text shadow-2xs'
-                  : 'border-line bg-surface hover:bg-surface-2/60 text-muted hover:text-text'
+                  ? 'border-accent bg-accent text-white shadow-2xs'
+                  : 'border-line bg-surface hover:bg-surface-2 text-muted hover:text-text'
               }
               ${isItemDisabled ? 'opacity-40 cursor-not-allowed' : ''}
             `}
@@ -80,18 +84,18 @@ export default function ChipGrid<T = string>({
             <div className="flex items-center justify-between w-full mb-1">
               <div className="flex items-center gap-1.5 min-w-0">
                 {item.symbol && (
-                  <span className={`text-xs font-mono font-bold ${isSelected ? 'text-accent' : 'text-text'}`}>
+                  <span className={`text-xs font-mono font-bold ${isSelected ? 'text-white' : 'text-text'}`}>
                     {item.symbol}
                   </span>
                 )}
-                <span className="font-mono font-bold text-xs tracking-wide text-text truncate">
+                <span className={`font-mono font-bold text-xs tracking-wide truncate ${isSelected ? 'text-white' : 'text-text'}`}>
                   {item.label}
                 </span>
               </div>
 
               <div className="shrink-0 ml-1.5">
                 {isSelected ? (
-                  <div className="w-4 h-4 rounded-full bg-accent text-white flex items-center justify-center">
+                  <div className="w-4 h-4 rounded-full bg-white text-accent flex items-center justify-center">
                     <Check size={10} strokeWidth={3} />
                   </div>
                 ) : isItemDisabled ? (
@@ -104,13 +108,13 @@ export default function ChipGrid<T = string>({
 
             {/* Sublabel / Full Name */}
             {item.sublabel && (
-              <span className="text-[11px] text-muted truncate w-full leading-tight">
+              <span className={`text-[11px] truncate w-full leading-tight ${isSelected ? 'text-white/85' : 'text-muted'}`}>
                 {item.sublabel}
               </span>
             )}
 
             {/* Optional badge */}
-            {item.badge && (
+            {item.badge && !isSelected && (
               <span className="mt-1.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-semibold bg-surface-2 border border-line text-muted">
                 {item.badge}
               </span>

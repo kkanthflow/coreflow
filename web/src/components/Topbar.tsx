@@ -26,20 +26,7 @@ export default function Topbar({ onOpenCommandPalette }: TopbarProps) {
   // Breadcrumb segment resolution (no hard-coded "main")
   let pageLabel = 'Dashboard';
   if (path.startsWith('/settings')) {
-    const sub = path.replace('/settings', '').replace(/^\//, '');
-    const subLabels: Record<string, string> = {
-      '': 'Settings',
-      'appearance': 'Settings / Appearance',
-      'profile': 'Settings / Profile',
-      'notifications': 'Settings / Notifications',
-      'audio-video': 'Settings / Audio & Video',
-      'security': 'Settings / Security',
-      'organization': 'Settings / Organization',
-      'billing': 'Settings / Billing & Plans',
-      'members': 'Settings / Members',
-      'integrations': 'Settings / Integrations',
-    };
-    pageLabel = subLabels[sub] || (sub ? `Settings / ${sub}` : 'Settings');
+    pageLabel = 'Settings';
   } else if (path.startsWith('/projects')) pageLabel = 'Projects';
   else if (path.startsWith('/tasks')) pageLabel = 'Tasks';
   else if (path.startsWith('/calendar')) pageLabel = 'Calendar';

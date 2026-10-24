@@ -67,7 +67,7 @@ export default function AppearanceSettings() {
     <div className="space-y-6">
       {/* ── Theme & Mode ── */}
       <SettingsSection
-        label="Theme & Display Mode"
+        label="DISPLAY"
         description="Configure display contrast, light/dark themes, and workspace ambiance."
       >
         <SettingsRow
@@ -99,7 +99,7 @@ export default function AppearanceSettings() {
 
       {/* ── Brand Accent Preset ── */}
       <SettingsSection
-        label="Accent Color Palette"
+        label="ACCENT PALETTE"
         description="Personalized primary accent tone for active indicators, focus highlights, and badges."
       >
         <div className="p-4 sm:p-5">
@@ -138,7 +138,7 @@ export default function AppearanceSettings() {
 
       {/* ── Accessibility & Interaction ── */}
       <SettingsSection
-        label="Accessibility & Feedback"
+        label="PREFERENCES"
         description="Motion smoothness and interactive sensory feedback preferences."
       >
         <SettingsRow

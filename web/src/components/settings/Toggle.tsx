@@ -23,11 +23,11 @@ export default function Toggle({
   className = '',
 }: ToggleProps) {
   const isSm = size === 'sm';
-  const trackWidth = isSm ? 'w-8 h-4.5' : 'w-10 h-5.5 sm:w-11 sm:h-6';
-  const knobSize = isSm ? 'w-3.5 h-3.5' : 'w-4 h-4 sm:w-4.5 sm:h-4.5';
+  const trackWidth = isSm ? 'w-[36px] h-[20px]' : 'w-[45px] h-[26px]';
+  const knobSize = isSm ? 'w-3.5 h-3.5' : 'w-5 h-5';
   const translateDistance = isSm
-    ? (checked ? 'translate-x-3.5' : 'translate-x-0.5')
-    : (checked ? 'translate-x-5 sm:translate-x-5.5' : 'translate-x-0.5 sm:translate-x-1');
+    ? (checked ? 'translate-x-[18px]' : 'translate-x-[2px]')
+    : (checked ? 'translate-x-[22px]' : 'translate-x-[3px]');
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault();

@@ -222,11 +222,11 @@ export default function OrganizationSettings() {
 
       {/* ── Primary Currency Selection (ChipGrid) ── */}
       <SettingsSection
-        label="Primary Workspace Currency"
+        label="ORGANIZATION CURRENCY"
         description="Governs money amounts across all invoices, dashboard telemetry, projects, and outstanding revenue. Razorpay checkout remain in standard INR."
-        badge={`Active: ${activeCurrency}`}
+        badge={`Active: ${getCurrencyDetails(activeCurrency).name}`}
       >
-        <div className="p-4 sm:p-5">
+        <div className="p-4">
           <ChipGrid<string>
             items={currencyChipItems}
             value={activeCurrency}
@@ -248,7 +248,7 @@ export default function OrganizationSettings() {
 
       {/* ── Organization Profile ── */}
       <SettingsSection
-        label="Company Profile & Billing Details"
+        label="ORGANIZATION SETTINGS"
         description="Legal identity and tax identifiers rendered on customer invoices and official agreements."
       >
         {/* Logo Upload */}
@@ -269,7 +269,7 @@ export default function OrganizationSettings() {
             </div>
 
             {canEditWorkspace && (
-              <label className="px-3 py-1.5 rounded-xl bg-surface-2 hover:bg-surface-2/80 text-text border border-line text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer">
+              <label className="px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-[11px] font-mono border border-line flex items-center gap-1.5 transition-colors cursor-pointer">
                 <Upload size={12} />
                 <span>{uploadingLogo ? 'Uploading...' : 'Upload'}</span>
                 <input
@@ -409,7 +409,7 @@ export default function OrganizationSettings() {
             type="button"
             onClick={handleDiscard}
             disabled={saving}
-            className="px-4 py-2 rounded-xl bg-surface-2 hover:bg-surface-2/80 text-muted hover:text-text border border-line text-xs font-semibold transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-[11px] font-mono border border-line transition-colors cursor-pointer"
           >
             Discard
           </button>
@@ -417,7 +417,7 @@ export default function OrganizationSettings() {
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="px-4 py-2 rounded-xl bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-accent hover:bg-accent/90 text-white text-[11px] font-semibold transition-colors cursor-pointer"
           >
             {saving ? 'Saving...' : 'Save Changes'}
           </button>

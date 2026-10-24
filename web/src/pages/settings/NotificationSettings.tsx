@@ -333,9 +333,9 @@ export default function NotificationSettings() {
               type="button"
               onClick={handleSendTestEmail}
               disabled={testEmailSending}
-              className="px-4 py-2 rounded-xl bg-accent hover:bg-accent/90 disabled:opacity-50 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-2xs shrink-0 cursor-pointer"
+              className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded bg-accent hover:bg-accent/90 disabled:opacity-50 text-white font-semibold text-[11px] transition-colors shrink-0 cursor-pointer"
             >
-              <RefreshCw size={13} className={testEmailSending ? 'animate-spin' : ''} />
+              <RefreshCw size={12} className={testEmailSending ? 'animate-spin' : ''} />
               <span>{testEmailSending ? 'Dispatching...' : 'Send Test Email'}</span>
             </button>
           </div>

@@ -159,7 +159,7 @@ export default function BillingSettings() {
     <div className="space-y-6">
       {/* ── Active Subscription Plan Card ── */}
       <SettingsSection
-        label="Active Subscription Plan"
+        label="SUBSCRIPTION & PLANS"
         description="Plan entitlements and renewal terms. Plan prices remain in standard INR."
         action={
           <button
@@ -173,75 +173,66 @@ export default function BillingSettings() {
           </button>
         }
       >
-        <div className="p-4 sm:p-5 space-y-4">
-          {/* Card Top: Plan badge & Status Pill */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-accent-soft border border-accent/20 flex items-center justify-center text-accent shrink-0">
-                <Sparkles size={20} />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-base font-bold text-text tracking-tight">{planName} Tier</h3>
-                  <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-mono font-bold uppercase tracking-wider ${
-                      planStatus === 'active'
-                        ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                        : planStatus === 'past_due'
-                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                    }`}
-                  >
-                    {planStatus}
-                  </span>
-                </div>
-                <div className="text-xs text-muted mt-0.5">
-                  Billed {subData?.billingCycle || 'Monthly'} · Renews{' '}
-                  {subData?.currentPeriodEnd
-                    ? new Date(subData.currentPeriodEnd).toLocaleDateString()
-                    : 'End of period'}
-                </div>
-              </div>
+        <div className="p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* Left side: Icon, title, badges, description */}
+          <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+            <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft border border-accent/20 flex items-center justify-center text-accent shrink-0 mt-0.5 sm:mt-0">
+              <Sparkles size={18} />
             </div>
-
-            {/* Price display in INR */}
-            <div className="text-left sm:text-right shrink-0">
-              <div className="text-lg font-bold font-mono text-text">
-                ₹{subData?.amount ? subData.amount.toLocaleString('en-IN') : '2,499'}
-                <span className="text-xs font-normal text-muted">/mo</span>
+            <div className="min-w-0 space-y-0.5">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-[14.5px] font-bold text-text tracking-tight">{planName} Tier</h3>
+                <span
+                  className={`px-2 py-0.5 rounded text-[11px] font-mono font-bold uppercase ${
+                    planStatus === 'active'
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : planStatus === 'past_due'
+                      ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                      : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                  }`}
+                >
+                  {planStatus}
+                </span>
+                <span className="text-[11px] font-mono font-semibold text-text">
+                  ₹{subData?.amount ? subData.amount.toLocaleString('en-IN') : '2,499'}/mo
+                </span>
+              </div>
+              <div className="text-[12.5px] text-muted">
+                Billed {subData?.billingCycle || 'Monthly'} · Renews{' '}
+                {subData?.currentPeriodEnd
+                  ? new Date(subData.currentPeriodEnd).toLocaleDateString()
+                  : 'End of period'}
               </div>
             </div>
           </div>
 
-          <div className="h-px bg-line" />
-
-          {/* Action Buttons: Responsive, flex-wrap to prevent button clipping on <420px */}
-          <div className="flex flex-wrap items-center gap-2.5 pt-1">
+          {/* Right side: Action Buttons (wraps below text under ~900px, outlined secondary, flat coral primary) */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => navigate('/pricing')}
-              className="flex-1 min-w-[120px] px-3.5 py-2 rounded-xl bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-2xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-accent hover:bg-accent/90 text-white text-[11px] font-semibold transition-colors cursor-pointer"
             >
-              <Sparkles size={13} />
-              <span className="truncate">Upgrade Plan</span>
+              <Sparkles size={12} />
+              <span>Upgrade Plan</span>
             </button>
 
             <button
               type="button"
               onClick={() => navigate('/pricing')}
-              className="flex-1 min-w-[120px] px-3.5 py-2 rounded-xl bg-surface-2 hover:bg-surface-2/80 text-text border border-line text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-[11px] font-mono border border-line transition-colors cursor-pointer"
             >
-              <ArrowUpRight size={13} />
-              <span className="truncate">Plans & Pricing</span>
+              <ArrowUpRight size={12} />
+              <span>Plans & Pricing</span>
             </button>
 
             <button
               type="button"
               onClick={() => navigate('/invoices')}
-              className="flex-1 min-w-[120px] px-3.5 py-2 rounded-xl bg-surface-2 hover:bg-surface-2/80 text-text border border-line text-xs font-medium transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-[11px] font-mono border border-line transition-colors cursor-pointer"
             >
-              <FileText size={13} />
-              <span className="truncate">Customer Invoices</span>
+              <FileText size={12} />
+              <span>Invoices</span>
             </button>
           </div>
         </div>

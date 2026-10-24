@@ -216,7 +216,7 @@ export default function Sidebar() {
           to="/settings"
           title={collapsed ? "Settings" : undefined}
           className={cn(
-            'relative flex items-center rounded-md transition-all text-xs group',
+            'relative flex items-center rounded-md transition-all duration-150 text-xs font-medium group',
             collapsed ? 'h-9 w-9 mx-auto justify-center' : 'px-2.5 py-1.5 justify-between',
             isSettingsActive ? 'bg-surface-2 text-text font-semibold' : 'text-muted hover:text-text hover:bg-surface-2/60'
           )}
@@ -227,14 +227,20 @@ export default function Sidebar() {
                 layoutId="active-nav-indicator"
                 transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                 className={cn(
-                  "absolute bg-accent rounded-full shadow-[0_0_10px_rgba(255,90,54,0.5)]",
+                  "absolute bg-accent rounded-full shadow-[0_0_12px_rgba(255,90,54,0.6)]",
                   collapsed ? "-left-1 top-2 bottom-2 w-[3px]" : "left-0 top-1.5 bottom-1.5 w-[2.5px]"
                 )} 
               />
             )}
-            <div className="flex items-center gap-2">
-              <Settings size={15} className={cn("transition-transform group-hover:translate-x-0.5", isSettingsActive ? "text-accent" : "text-muted group-hover:text-text")} />
-              {!collapsed && <span className="text-[12px] font-medium">Settings</span>}
+            <div className={cn('flex items-center gap-2.5 min-w-0', collapsed ? 'justify-center' : '')}>
+              <Settings 
+                size={15} 
+                className={cn(
+                  "shrink-0 transition-all duration-150 group-hover:translate-x-0.5", 
+                  isSettingsActive ? "text-accent" : "text-muted group-hover:text-text"
+                )} 
+              />
+              {!collapsed && <span className="truncate tracking-tight text-[12px]">Settings</span>}
             </div>
           </>
         </NavLink>

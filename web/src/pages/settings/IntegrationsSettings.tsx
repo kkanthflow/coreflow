@@ -13,6 +13,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { useSettings } from '../../contexts/SettingsContext';
+import { useAuth } from '../../hooks/useAuth';
 import {
   SettingsSection,
   SettingsRow,
@@ -55,6 +56,7 @@ const CONNECTED_SERVICES = [
 
 export default function IntegrationsSettings() {
   const { canEditWorkspace } = useSettings();
+  const { user } = useAuth();
 
   return (
     <div className="space-y-6">
@@ -153,6 +155,29 @@ export default function IntegrationsSettings() {
             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-surface-2 border border-line text-[10px] font-mono font-semibold text-muted">
               <Clock size={11} />
               <span>Event Engine Integration Pending</span>
+            </span>
+          </div>
+        </div>
+      </SettingsSection>
+
+      {/* ── About Card ── */}
+      <SettingsSection
+        label="ABOUT"
+        description="Core build version, real-time database state, and authenticated user identity."
+      >
+        <div className="divide-y divide-line">
+          <div className="flex justify-between items-center py-3 sm:py-3.5 px-[18px]">
+            <span className="text-[13px] text-muted">App Version</span>
+            <span className="text-[13px] font-mono font-normal text-text">1.0.0 (Production)</span>
+          </div>
+          <div className="flex justify-between items-center py-3 sm:py-3.5 px-[18px]">
+            <span className="text-[13px] text-muted">Supabase Environment</span>
+            <span className="text-[13px] font-mono font-normal text-emerald-400">Connected</span>
+          </div>
+          <div className="flex justify-between items-center py-3 sm:py-3.5 px-[18px] min-w-0">
+            <span className="text-[13px] text-muted shrink-0 mr-3">Signed In As</span>
+            <span className="text-[13px] font-mono font-normal text-text truncate max-w-[260px] sm:max-w-none break-all" title={user?.email}>
+              {user?.email}
             </span>
           </div>
         </div>

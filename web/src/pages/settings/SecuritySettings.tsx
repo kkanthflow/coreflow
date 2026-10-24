@@ -114,7 +114,7 @@ export default function SecuritySettings() {
     <div className="space-y-6">
       {/* ── Change Password ── */}
       <SettingsSection
-        label="Account Credentials"
+        label="SECURITY & PRIVACY"
         description="Update your account sign-in password managed by Supabase authentication."
       >
         <div className="p-4 sm:p-5">
@@ -172,7 +172,7 @@ export default function SecuritySettings() {
             <button
               type="submit"
               disabled={passwordUpdating || !newPassword || !confirmPassword}
-              className="px-4 py-2 rounded-xl bg-accent hover:bg-accent/90 disabled:opacity-50 text-white text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-accent hover:bg-accent/90 disabled:opacity-50 text-white text-[11px] font-semibold transition-colors cursor-pointer"
             >
               {passwordUpdating ? 'Updating Password...' : 'Save New Password'}
             </button>

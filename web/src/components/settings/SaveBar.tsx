@@ -70,7 +70,7 @@ export default function SaveBar({
               type="button"
               disabled={isSaving}
               onClick={onDiscard}
-              className="px-3 py-1.5 rounded-xl bg-surface-2 hover:bg-surface-2/80 text-muted hover:text-text border border-line text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-[11px] font-mono border border-line transition-colors cursor-pointer disabled:opacity-50"
             >
               Discard
             </button>
@@ -81,16 +81,16 @@ export default function SaveBar({
               onClick={async () => {
                 await onSave();
               }}
-              className="px-3.5 py-1.5 rounded-xl bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
+              className="px-3 py-1.5 rounded bg-accent hover:bg-accent/90 text-white text-[11px] font-semibold transition-colors flex items-center gap-1.5 cursor-pointer disabled:opacity-60"
             >
               {isSaving ? (
                 <>
-                  <Loader2 size={13} className="animate-spin" />
+                  <Loader2 size={12} className="animate-spin" />
                   <span>Saving...</span>
                 </>
               ) : (
                 <>
-                  <Check size={13} strokeWidth={2.5} />
+                  <Check size={12} strokeWidth={2.5} />
                   <span>Save Changes</span>
                 </>
               )}

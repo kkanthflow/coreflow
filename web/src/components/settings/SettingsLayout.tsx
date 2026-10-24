@@ -65,27 +65,24 @@ export default function SettingsLayout() {
 
   return (
     <div className="w-full max-w-[1100px] mx-auto py-2 sm:py-4 px-2 sm:px-4">
-      {/* Settings Top Header with Dashboard Link */}
-      <div className="flex items-center justify-between pb-4 mb-6 border-b border-line">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text">
-              {meta.title}
-            </h1>
-          </div>
-          <p className="text-xs text-muted mt-1 max-w-xl truncate">
-            {meta.description}
-          </p>
+      {/* Settings Header with single '← Dashboard' button next to page title */}
+      <div className="pb-4 mb-6 border-b border-line">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-[11px] font-mono border border-line transition-colors shrink-0"
+            title="Return to Dashboard"
+          >
+            <span>← Dashboard</span>
+          </button>
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-text">
+            {meta.title}
+          </h1>
         </div>
-
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface-2 hover:bg-surface-2/80 text-muted hover:text-text border border-line text-xs font-semibold transition-colors shrink-0"
-        >
-          <ArrowLeft size={13} />
-          <span>Dashboard</span>
-        </button>
+        <p className="text-xs text-muted mt-0.5 font-normal">
+          {meta.description}
+        </p>
       </div>
 
       {/* Main Settings 2-Column Responsive Layout */}

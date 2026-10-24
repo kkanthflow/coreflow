@@ -182,6 +182,11 @@ export default function Settings() {
   const [systemAlerts, setSystemAlerts] = useState(false);
   const [emailDigest, setEmailDigest] = useState(true);
 
+  // Resend Test Email State
+  const [testEmailAddress, setTestEmailAddress] = useState(user?.email || '');
+  const [testEmailSending, setTestEmailSending] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message: string; deliveryId?: string } | null>(null);
+
   // Freelancer Scope & Portal
   const isFreelancerRole = role === 'freelancer';
   const [freelancerWorkType, setFreelancerWorkType] = useState<'organization' | 'independent'>('independent');
@@ -504,6 +509,40 @@ export default function Settings() {
     }
   };
 
+  // Test Email Workflow
+  const handleSendTestEmail = async () => {
+    if (!testEmailAddress || !testEmailAddress.includes('@')) {
+      toast.error('Please enter a valid email address');
+      return;
+    }
+    setTestEmailSending(true);
+    setTestEmailResult(null);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      const apiUrl = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace(/\/api$/, '') : '';
+      const res = await fetch(`${apiUrl}/api/email/test`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token || ''}`,
+        },
+        body: JSON.stringify({ recipient: testEmailAddress.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || data.details || 'Failed to send test email');
+      }
+      setTestEmailResult({ success: true, message: data.message, deliveryId: data.deliveryId });
+      toast.success('Test email sent via Resend successfully!');
+    } catch (err: any) {
+      setTestEmailResult({ success: false, message: err.message });
+      toast.error(err.message || 'Error dispatching test email');
+    } finally {
+      setTestEmailSending(false);
+    }
+  };
+
   // Change Password
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -533,346 +572,416 @@ export default function Settings() {
   return (
     <div className="flex-1 w-full max-w-4xl mx-auto space-y-6 pb-16 font-sans select-none text-muted">
       
-      {/* ── Top Header Navigation ── */}
-      <div className="flex items-center justify-between pb-2 border-b border-divider">
+      {/* Settings Header with single '← Dashboard' button next to page title */}
+      <div className="pb-4 mb-6 border-b border-line">
         <div className="flex items-center gap-3">
-          {currentView !== 'main' && (
-            <button 
-              onClick={() => setCurrentView('main')}
-              className="w-10 h-10 rounded-full bg-hover border border-divider hover:bg-hover flex items-center justify-center text-main transition-colors"
-            >
-              <ArrowLeft size={18} />
-            </button>
-          )}
-          <div>
-            <h1 className="text-2xl font-bold text-main tracking-tight">
-              {currentView === 'main' && 'App Settings'}
-              {currentView === 'privacy' && 'Privacy Controls'}
-              {currentView === 'notifications' && 'Notification Preferences'}
-              {currentView === 'freelancer' && 'Freelancer Workspace Scope'}
-              {currentView === 'media' && 'Audio & Video Routing'}
-              {currentView === 'security' && 'Change Password & Security'}
-              {currentView === 'billing' && 'Customer Subscription & Billing Telemetry'}
-            </h1>
-            <p className="text-xs text-muted mt-0.5">
-              {currentView === 'main' && 'Configure theme display, notification channels, security policies, and organization billing.'}
-              {currentView === 'privacy' && 'Manage real-time status visibility, read receipts, blocked members, and muted channels.'}
-              {currentView === 'notifications' && 'Customize alert thresholds, meeting reminders, role updates, and weekly digest.'}
-              {currentView === 'freelancer' && 'Select your active engagement mode, rate scoping, and client project assignments.'}
-              {currentView === 'media' && 'Configure hardware microphones, capture camera devices, and E2EE parameters.'}
-              {currentView === 'security' && 'Update master password credentials and inspect active session tokens.'}
-              {currentView === 'billing' && 'Customer account plan, live quota entitlements, verified payer attribution, and transaction ledger.'}
-            </p>
-          </div>
-        </div>
-
-        {currentView === 'main' && (
           <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-hover hover:bg-hover text-muted hover:text-main border border-divider text-xs font-semibold transition-colors"
+            type="button"
+            onClick={() => {
+              if (currentView !== 'main') {
+                setCurrentView('main');
+              } else {
+                navigate('/dashboard');
+              }
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-[11px] font-mono border border-line transition-colors shrink-0 cursor-pointer"
+            title={currentView !== 'main' ? 'Return to Settings' : 'Return to Dashboard'}
           >
-            <ArrowLeft size={14} />
-            <span>Dashboard</span>
+            <span>{currentView !== 'main' ? '← Settings' : '← Dashboard'}</span>
           </button>
-        )}
+          <h1 className="text-xl sm:text-2xl font-bold text-text tracking-tight">
+            {currentView === 'main' && 'Settings'}
+            {currentView === 'privacy' && 'Privacy Controls'}
+            {currentView === 'notifications' && 'Notification Preferences'}
+            {currentView === 'freelancer' && 'Freelancer Workspace Scope'}
+            {currentView === 'media' && 'Audio & Video Routing'}
+            {currentView === 'security' && 'Change Password & Security'}
+            {currentView === 'billing' && 'Subscription & Plans'}
+          </h1>
+        </div>
+        <p className="text-xs text-muted mt-0.5 font-normal">
+          {currentView === 'main' && 'Configure theme display, notification preferences, organization currency, and security credentials.'}
+          {currentView === 'privacy' && 'Manage real-time status visibility, read receipts, blocked members, and muted channels.'}
+          {currentView === 'notifications' && 'Customize alert thresholds, meeting reminders, role updates, and weekly digest.'}
+          {currentView === 'freelancer' && 'Select your active engagement mode, rate scoping, and client project assignments.'}
+          {currentView === 'media' && 'Configure hardware microphones, capture camera devices, and E2EE parameters.'}
+          {currentView === 'security' && 'Update master password credentials and inspect active session tokens.'}
+          {currentView === 'billing' && 'Customer account plan, live quota entitlements, verified payer attribution, and transaction ledger.'}
+        </p>
       </div>
 
       {/* ────────────────────────────────────────────────────────── */}
       {/* ── VIEW 1: MAIN SETTINGS (EXACT REPLICA OF MOBILE APP) ── */}
       {/* ────────────────────────────────────────────────────────── */}
       {currentView === 'main' && (
-        <div className="space-y-6">
+        <div>
 
           {/* 1. Display */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Display</span>
-            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
-              <div className="flex items-center justify-between p-4.5 border-b border-divider">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
-                    <Moon size={18} />
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-main">Dark Mode</div>
-                    <div className="text-xs text-muted">Use dark theme across the app</div>
-                  </div>
+          <div className="mt-7 first:mt-0 mb-2.5">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+              DISPLAY
+            </span>
+          </div>
+          <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible">
+            <div className="flex items-center justify-between gap-3.5 py-4 px-[18px]">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                  <Moon size={18} />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
+                <div className="space-y-0.5 min-w-0">
+                  <div className="text-[14.5px] font-medium text-text leading-tight truncate">Dark Mode</div>
+                  <div className="text-[12.5px] text-muted leading-relaxed truncate">Use dark theme across the app</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={theme === 'dark'}
+                aria-label="Toggle dark mode"
+                tabIndex={0}
+                onClick={() => {
+                  const next = theme === 'dark' ? 'light' : 'dark';
+                  setTheme(next);
+                  handleUpdatePreference({ theme: next });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
                     const next = theme === 'dark' ? 'light' : 'dark';
                     setTheme(next);
                     handleUpdatePreference({ theme: next });
-                  }}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${theme === 'dark' ? 'bg-[#FF6B4A]' : 'bg-black/20'}`}
-                >
-                  <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${theme === 'dark' ? 'right-1' : 'left-1 shadow-sm'}`} />
-                </button>
-              </div>
+                  }
+                }}
+                className={`w-[45px] h-[26px] rounded-full transition-colors relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring shrink-0 ${
+                  theme === 'dark' ? 'bg-accent' : 'bg-surface-2 border border-line'
+                }`}
+              >
+                <span
+                  className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-[2px] transition-transform duration-200 ease-out ${
+                    theme === 'dark' ? 'translate-x-[22px]' : 'translate-x-[3px]'
+                  }`}
+                />
+              </button>
             </div>
           </div>
 
           {/* 2. Preferences */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Preferences</span>
-            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
-              
-              {/* Haptic Feedback */}
-              <div className="flex items-center justify-between p-4.5 border-b border-divider">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
-                    <Smartphone size={18} />
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-main">Haptic & Audio Feedback</div>
-                    <div className="text-xs text-muted">Feedback sound on interaction toggles and room alerts</div>
-                  </div>
+          <div className="mt-7 first:mt-0 mb-2.5">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+              PREFERENCES
+            </span>
+          </div>
+          <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible">
+            
+            {/* Haptic Feedback */}
+            <div className="flex items-center justify-between gap-3.5 py-4 px-[18px]">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                  <Smartphone size={18} />
                 </div>
-                <button
-                  type="button"
-                  onClick={() => {
+                <div className="space-y-0.5 min-w-0">
+                  <div className="text-[14.5px] font-medium text-text leading-tight truncate">Haptic & Audio Feedback</div>
+                  <div className="text-[12.5px] text-muted leading-relaxed truncate">Feedback sound on interaction toggles and room alerts</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={hapticsEnabled}
+                aria-label="Toggle haptic and audio feedback"
+                tabIndex={0}
+                onClick={() => {
+                  const next = !hapticsEnabled;
+                  setHapticsEnabled(next);
+                  handleUpdatePreference({ hapticFeedback: next });
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === ' ' || e.key === 'Enter') {
+                    e.preventDefault();
                     const next = !hapticsEnabled;
                     setHapticsEnabled(next);
                     handleUpdatePreference({ hapticFeedback: next });
-                  }}
-                  className={`w-11 h-6 rounded-full transition-colors relative ${hapticsEnabled ? 'bg-[#FF6B4A]' : 'bg-white/10'}`}
-                >
-                  <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${hapticsEnabled ? 'right-1' : 'left-1'}`} />
-                </button>
-              </div>
-
-              {/* Notification Preferences Row */}
-              <button 
-                onClick={() => setCurrentView('notifications')}
-                className="w-full flex items-center justify-between p-4.5 hover:bg-white/[0.02] transition-colors text-left border-b border-divider"
+                  }
+                }}
+                className={`w-[45px] h-[26px] rounded-full transition-colors relative cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring shrink-0 ${
+                  hapticsEnabled ? 'bg-accent' : 'bg-surface-2 border border-line'
+                }`}
               >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
-                    <Bell size={18} />
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-main">Notification Preferences</div>
-                    <div className="text-xs text-muted">Push alerts, 15m meeting reminders & email digests</div>
-                  </div>
-                </div>
-                <ChevronRight size={18} className="text-muted" />
+                <span
+                  className={`w-5 h-5 rounded-full bg-white shadow-xs absolute top-[2px] transition-transform duration-200 ease-out ${
+                    hapticsEnabled ? 'translate-x-[22px]' : 'translate-x-[3px]'
+                  }`}
+                />
               </button>
-
-              {/* Hardware / Media Routing Row */}
-              <button 
-                onClick={() => setCurrentView('media')}
-                className="w-full flex items-center justify-between p-4.5 hover:bg-white/[0.02] transition-colors text-left"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
-                    <Video size={18} />
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-main">Audio & Video Routing</div>
-                    <div className="text-xs text-muted">Default microphone, camera capture & WebRTC E2EE</div>
-                  </div>
-                </div>
-                <ChevronRight size={18} className="text-muted" />
-              </button>
-
             </div>
+
+            {/* Notification Preferences Row */}
+            <button 
+              onClick={() => setCurrentView('notifications')}
+              className="w-full flex items-center justify-between gap-3.5 py-4 px-[18px] hover:bg-surface-2/30 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                  <Bell size={18} />
+                </div>
+                <div className="space-y-0.5 min-w-0">
+                  <div className="text-[14.5px] font-medium text-text leading-tight truncate">Notification Preferences</div>
+                  <div className="text-[12.5px] text-muted leading-relaxed truncate">Push alerts, 15m meeting reminders & email digests</div>
+                </div>
+              </div>
+              <ChevronRight size={15} className="text-muted shrink-0" />
+            </button>
+
+            {/* Hardware / Media Routing Row */}
+            <button 
+              onClick={() => setCurrentView('media')}
+              className="w-full flex items-center justify-between gap-3.5 py-4 px-[18px] hover:bg-surface-2/30 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                  <Video size={18} />
+                </div>
+                <div className="space-y-0.5 min-w-0">
+                  <div className="text-[14.5px] font-medium text-text leading-tight truncate">Audio & Video Routing</div>
+                  <div className="text-[12.5px] text-muted leading-relaxed truncate">Default microphone, camera capture & WebRTC E2EE</div>
+                </div>
+              </div>
+              <ChevronRight size={15} className="text-muted shrink-0" />
+            </button>
+
           </div>
 
           {/* Subscription & Billing Section */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Subscription & Plans</span>
-            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-xl bg-[#FF6B4A]/10 border border-[#FF6B4A]/30 flex items-center justify-center text-[#FF6B4A] shrink-0">
-                  <CreditCard size={20} />
-                </div>
-                <div>
-                  <div className="text-base font-semibold text-main flex items-center gap-2">
-                    <span>{subData?.planName || 'Free Tier'}</span>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30">
-                      {subData?.status ? subData.status.toUpperCase() : 'FREE'}
+          <div className="mt-7 first:mt-0 mb-2.5">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+              SUBSCRIPTION & PLANS
+            </span>
+          </div>
+          <div className="bg-surface rounded-[13px] border border-line p-5 overflow-visible flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                <CreditCard size={18} />
+              </div>
+              <div className="min-w-0 space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-[14.5px] font-medium text-text">{subData?.planName || 'Free Tier'}</span>
+                  <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-accent-soft text-accent border border-accent/20">
+                    {subData?.status ? subData.status.toUpperCase() : 'FREE'}
+                  </span>
+                  {subData?.customerType && (
+                    <span className="px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-surface-2 text-muted border border-line">
+                      {subData.customerType === 'organization' ? 'Organization' : 'Freelancer'}
                     </span>
-                    {subData?.customerType && (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-sans font-medium bg-white/[0.06] text-muted border border-divider">
-                        {subData.customerType === 'organization' ? 'Organization' : 'Freelancer'}
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-xs text-muted mt-0.5">
-                    {subData?.hasActiveSubscription 
-                      ? `Active monthly subscription. Payer tracked separately from account owner.`
-                      : `Baseline Free plan quota active. Upgrade anytime for higher project & workflow limits.`}
-                  </div>
+                  )}
+                </div>
+                <div className="text-[12.5px] text-muted">
+                  {subData?.hasActiveSubscription 
+                    ? `Active monthly subscription. Payer tracked separately from account owner.`
+                    : `Baseline Free plan quota active. Upgrade anytime for higher project & workflow limits.`}
                 </div>
               </div>
+            </div>
 
-              <div className="flex items-center gap-2 w-full md:w-auto">
-                <button
-                  type="button"
-                  onClick={() => setCurrentView('billing')}
-                  className="flex-1 md:flex-none px-4 py-2 bg-hover hover:bg-hover border border-divider text-main text-xs font-semibold rounded-xl transition-all flex items-center justify-center gap-1.5"
-                >
-                  <CreditCard size={14} className="text-[#FF6B4A]" />
-                  <span>Subscription Dashboard</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => navigate('/pricing')}
-                  className="flex-1 md:flex-none px-4 py-2 bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold rounded-xl transition-all shadow-[0_0_12px_rgba(255,107,74,0.3)] shrink-0"
-                >
-                  Plans & Pricing →
-                </button>
-              </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0 w-full lg:w-auto">
+              <button
+                type="button"
+                onClick={() => setCurrentView('billing')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-surface-2 text-muted hover:text-text text-[11px] font-mono border border-line transition-colors cursor-pointer"
+              >
+                <CreditCard size={12} />
+                <span>Subscription Dashboard</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/pricing')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-accent hover:bg-accent/90 text-white text-[11px] font-semibold transition-colors cursor-pointer"
+              >
+                <span>Plans & Pricing →</span>
+              </button>
             </div>
           </div>
 
           {/* 3. Freelancer Workspace Portal (for Freelancers) */}
           {(role === 'freelancer' || isFreelancerRole) && (
-            <div className="space-y-2.5">
-              <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Freelancer Workspace</span>
-              <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
+            <>
+              <div className="mt-7 first:mt-0 mb-2.5">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+                  FREELANCER WORKSPACE
+                </span>
+              </div>
+              <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible">
                 <button 
                   onClick={() => setCurrentView('freelancer')}
-                  className="w-full flex items-center justify-between p-4.5 hover:bg-white/[0.02] transition-colors text-left"
+                  className="w-full flex items-center justify-between gap-3.5 py-4 px-[18px] hover:bg-surface-2/30 transition-colors text-left"
                 >
-                  <div className="flex items-center gap-3.5">
-                    <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
                       <Briefcase size={18} />
                     </div>
-                    <div>
-                      <div className="text-base font-semibold text-main">Freelancer Engagement & Rates</div>
-                      <div className="text-xs text-muted">Contract scopes, independent invoicing & deliverables</div>
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="text-[14.5px] font-medium text-text leading-tight truncate">Freelancer Engagement & Rates</div>
+                      <div className="text-[12.5px] text-muted leading-relaxed truncate">Contract scopes, independent invoicing & deliverables</div>
                     </div>
                   </div>
-                  <ChevronRight size={18} className="text-muted" />
+                  <ChevronRight size={15} className="text-muted shrink-0" />
                 </button>
               </div>
-            </div>
+            </>
           )}
 
           {/* 4. Organization Settings for Owners & Admins */}
           {isOwnerOrAdmin && (
             <>
               {/* Organization Currency */}
-              <div className="space-y-2.5">
-                <div className="flex items-center justify-between ml-1">
-                  <span className="text-xs font-bold text-muted uppercase tracking-wider">Organization Currency</span>
-                  <span className="text-xs font-mono font-medium text-[#FF6B4A]">
+              <div className="mt-7 first:mt-0 mb-2.5">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted">
+                    ORGANIZATION CURRENCY
+                  </span>
+                  <span className="text-[11px] font-mono font-medium tracking-[0.08em] text-accent">
                     Active: {SUPPORTED_CURRENCIES.find(c => c.code === defaultCurrency)?.name || defaultCurrency}
                   </span>
                 </div>
-                <div className="bg-card-bg rounded-2xl border border-divider p-4">
-                  <div className="flex flex-wrap gap-2.5">
-                    {SUPPORTED_CURRENCIES.map((curr) => {
-                      const isSelected = defaultCurrency === curr.code;
-                      return (
-                        <button
-                          key={curr.code}
-                          type="button"
-                          disabled={updatingCurrency}
-                          onClick={() => handleUpdateCurrency(curr.code)}
-                          className={`flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 ${
-                            isSelected 
-                              ? 'bg-[#FF6B4A] border-[#FF6B4A] text-main shadow-lg shadow-[#FF6B4A]/20 scale-[1.02]' 
-                              : 'bg-app border-divider text-muted hover:text-main hover:border-divider hover:bg-hover'
-                          }`}
-                        >
-                          <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs ${
-                            isSelected ? 'bg-white/20 text-main' : 'bg-white/[0.04] text-muted'
-                          }`}>
-                            {curr.symbol}
-                          </span>
-                          <span>{curr.name}</span>
-                          {isSelected && <Check size={14} className="ml-1 text-main" />}
-                        </button>
-                      );
-                    })}
-                  </div>
+              </div>
+              <div className="bg-surface rounded-[13px] border border-line p-4 overflow-visible">
+                <div 
+                  className="grid gap-[10px] w-full"
+                  style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))' }}
+                >
+                  {SUPPORTED_CURRENCIES.map((curr) => {
+                    const isSelected = defaultCurrency === curr.code;
+                    return (
+                      <button
+                        key={curr.code}
+                        type="button"
+                        role="button"
+                        aria-pressed={isSelected}
+                        disabled={updatingCurrency}
+                        onClick={() => handleUpdateCurrency(curr.code)}
+                        className={`flex flex-col justify-between p-3 rounded-[10px] border text-left transition-all duration-150 cursor-pointer select-none h-full min-h-[72px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring disabled:opacity-50 ${
+                          isSelected 
+                            ? 'bg-accent border-accent text-white shadow-2xs' 
+                            : 'bg-surface border-line text-muted hover:text-text hover:bg-surface-2'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full mb-1">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={`text-xs font-mono font-bold ${isSelected ? 'text-white' : 'text-text'}`}>
+                              {curr.symbol}
+                            </span>
+                            <span className={`font-mono font-bold text-xs tracking-wide truncate ${isSelected ? 'text-white' : 'text-text'}`}>
+                              {curr.code}
+                            </span>
+                          </div>
+                          <div className="shrink-0 ml-1.5">
+                            {isSelected ? (
+                              <div className="w-4 h-4 rounded-full bg-white text-accent flex items-center justify-center">
+                                <Check size={10} strokeWidth={3} />
+                              </div>
+                            ) : (
+                              <div className="w-4 h-4 rounded-full border border-line bg-surface-2" />
+                            )}
+                          </div>
+                        </div>
+                        <span className={`text-[11px] truncate w-full leading-tight ${isSelected ? 'text-white/85' : 'text-muted'}`}>
+                          {curr.name.replace(/\s*\([^)]*\)/, '')}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Company Profile Action */}
-              <div className="space-y-2.5">
-                <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Organization Settings</span>
-                <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
-                  <button 
-                    onClick={() => setIsCompanyModalVisible(true)}
-                    className="w-full flex items-center justify-between p-4.5 hover:bg-white/[0.02] transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-3.5">
-                      <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
-                        <Building2 size={18} />
-                      </div>
-                      <div>
-                        <div className="text-base font-semibold text-main">Company Profile</div>
-                        <div className="text-xs text-muted">Billed-from details, tax GSTIN & registered office</div>
-                      </div>
+              <div className="mt-7 first:mt-0 mb-2.5">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+                  ORGANIZATION SETTINGS
+                </span>
+              </div>
+              <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible">
+                <button 
+                  onClick={() => setIsCompanyModalVisible(true)}
+                  className="w-full flex items-center justify-between gap-3.5 py-4 px-[18px] hover:bg-surface-2/30 transition-colors text-left"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                      <Building2 size={18} />
                     </div>
-                    <ChevronRight size={18} className="text-muted" />
-                  </button>
-                </div>
+                    <div className="space-y-0.5 min-w-0">
+                      <div className="text-[14.5px] font-medium text-text leading-tight truncate">Company Profile</div>
+                      <div className="text-[12.5px] text-muted leading-relaxed truncate">Billed-from details, tax GSTIN & registered office</div>
+                    </div>
+                  </div>
+                  <ChevronRight size={15} className="text-muted shrink-0" />
+                </button>
               </div>
             </>
           )}
 
           {/* 5. Security & Privacy */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Security & Privacy</span>
-            <div className="bg-card-bg rounded-2xl border border-divider overflow-hidden">
-              
-              {/* Privacy Controls Row */}
-              <button 
-                onClick={() => setCurrentView('privacy')}
-                className="w-full flex items-center justify-between p-4.5 hover:bg-white/[0.02] transition-colors text-left border-b border-divider"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
-                    <Shield size={18} />
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-main">Privacy Controls</div>
-                    <div className="text-xs text-muted">Online visibility, read receipts, blocked users & mute list</div>
-                  </div>
+          <div className="mt-7 first:mt-0 mb-2.5">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+              SECURITY & PRIVACY
+            </span>
+          </div>
+          <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible">
+            
+            {/* Privacy Controls Row */}
+            <button 
+              onClick={() => setCurrentView('privacy')}
+              className="w-full flex items-center justify-between gap-3.5 py-4 px-[18px] hover:bg-surface-2/30 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                  <Shield size={18} />
                 </div>
-                <ChevronRight size={18} className="text-muted" />
-              </button>
-
-              {/* Change Password Row */}
-              <button 
-                onClick={() => setCurrentView('security')}
-                className="w-full flex items-center justify-between p-4.5 hover:bg-white/[0.02] transition-colors text-left"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-9 h-9 rounded-full bg-[#FF6B4A]/10 flex items-center justify-center text-[#FF6B4A]">
-                    <Lock size={18} />
-                  </div>
-                  <div>
-                    <div className="text-base font-semibold text-main">Change Password</div>
-                    <div className="text-xs text-muted">Update master authentication credentials</div>
-                  </div>
+                <div className="space-y-0.5 min-w-0">
+                  <div className="text-[14.5px] font-medium text-text leading-tight truncate">Privacy Controls</div>
+                  <div className="text-[12.5px] text-muted leading-relaxed truncate">Online visibility, read receipts, blocked users & mute list</div>
                 </div>
-                <ChevronRight size={18} className="text-muted" />
-              </button>
+              </div>
+              <ChevronRight size={15} className="text-muted shrink-0" />
+            </button>
 
-            </div>
+            {/* Change Password Row */}
+            <button 
+              onClick={() => setCurrentView('security')}
+              className="w-full flex items-center justify-between gap-3.5 py-4 px-[18px] hover:bg-surface-2/30 transition-colors text-left"
+            >
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-[38px] h-[38px] rounded-[10px] bg-accent-soft text-accent flex items-center justify-center shrink-0">
+                  <Lock size={18} />
+                </div>
+                <div className="space-y-0.5 min-w-0">
+                  <div className="text-[14.5px] font-medium text-text leading-tight truncate">Change Password</div>
+                  <div className="text-[12.5px] text-muted leading-relaxed truncate">Update master authentication credentials</div>
+                </div>
+              </div>
+              <ChevronRight size={15} className="text-muted shrink-0" />
+            </button>
+
           </div>
 
           {/* 6. About */}
-          <div className="space-y-2.5">
-            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">About</span>
-            <div className="p-5 rounded-2xl border border-divider bg-card-bg space-y-3">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted">App Version</span>
-                <span className="font-semibold text-main font-mono">1.0.0 (Production)</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted">Supabase Environment</span>
-                <span className="font-semibold text-emerald-400 font-mono">Connected</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-muted">Signed In As</span>
-                <span className="font-semibold text-main font-mono">{user?.email}</span>
-              </div>
+          <div className="mt-7 first:mt-0 mb-2.5">
+            <span className="text-[11px] font-mono font-bold uppercase tracking-[0.08em] text-muted block">
+              ABOUT
+            </span>
+          </div>
+          <div className="bg-surface rounded-[13px] border border-line divide-y divide-line overflow-visible">
+            <div className="flex justify-between items-center py-3 sm:py-3.5 px-[18px]">
+              <span className="text-[13px] text-muted">App Version</span>
+              <span className="text-[13px] font-mono font-normal text-text">1.0.0 (Production)</span>
+            </div>
+            <div className="flex justify-between items-center py-3 sm:py-3.5 px-[18px]">
+              <span className="text-[13px] text-muted">Supabase Environment</span>
+              <span className="text-[13px] font-mono font-normal text-emerald-400">Connected</span>
+            </div>
+            <div className="flex justify-between items-center py-3 sm:py-3.5 px-[18px] min-w-0">
+              <span className="text-[13px] text-muted shrink-0 mr-3">Signed In As</span>
+              <span className="text-[13px] font-mono font-normal text-text truncate max-w-[260px] sm:max-w-none break-all" title={user?.email}>
+                {user?.email}
+              </span>
             </div>
           </div>
 
@@ -1134,6 +1243,62 @@ export default function Settings() {
                   <span className={`w-4 h-4 rounded-full bg-white absolute top-1 transition-transform ${emailDigest ? 'right-1' : 'left-1'}`} />
                 </button>
               </div>
+            </div>
+          </div>
+
+          {/* Resend Diagnostic Test Workflow */}
+          <div className="space-y-2.5">
+            <span className="text-xs font-bold text-muted uppercase tracking-wider block ml-1">Resend Email Verification</span>
+            <div className="bg-card-bg rounded-2xl border border-divider p-4.5 space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+                  <Mail size={18} />
+                </div>
+                <div>
+                  <div className="text-base font-semibold text-main">Send Diagnostic Email</div>
+                  <div className="text-xs text-muted">Verify runtime email delivery and inspect Resend delivery logs</div>
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                <input
+                  type="email"
+                  value={testEmailAddress}
+                  onChange={(e) => setTestEmailAddress(e.target.value)}
+                  placeholder="recipient@example.com"
+                  className="flex-1 px-3.5 py-2 rounded-xl bg-white/[0.04] border border-divider text-xs text-main placeholder-muted focus:outline-none focus:border-[#FF6B4A]/50 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={handleSendTestEmail}
+                  disabled={testEmailSending}
+                  className="px-4 py-2 rounded-xl bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-50 text-main font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <RefreshCw size={13} className={testEmailSending ? 'animate-spin' : ''} />
+                  <span>{testEmailSending ? 'Dispatching...' : 'Send Test Email'}</span>
+                </button>
+              </div>
+
+              {testEmailResult && (
+                <div
+                  className={`p-3 rounded-xl text-xs font-mono border ${
+                    testEmailResult.success
+                      ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                      : 'bg-red-500/10 border-red-500/20 text-red-400'
+                  }`}
+                >
+                  <div className="font-bold flex items-center gap-1.5 mb-0.5">
+                    {testEmailResult.success ? <CheckCircle2 size={13} /> : <AlertCircle size={13} />}
+                    <span>{testEmailResult.success ? 'Resend Delivery Verified' : 'Delivery Error'}</span>
+                  </div>
+                  <div>{testEmailResult.message}</div>
+                  {testEmailResult.deliveryId && (
+                    <div className="text-[10px] text-zinc-500 mt-1">
+                      Delivery ID: {testEmailResult.deliveryId}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
