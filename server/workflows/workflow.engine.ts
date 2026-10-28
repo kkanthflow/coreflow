@@ -11,6 +11,7 @@ import {
 } from './workflow.types.js';
 import { WorkflowValidator } from './workflow.validator.js';
 import { dispatchFCMPush } from '../_core/notification.js';
+import { EmailService } from '../email/email.service';
 
 export class WorkflowEngine {
   private static MAX_EXECUTION_DEPTH = 5;
@@ -290,8 +291,26 @@ export class WorkflowEngine {
           const toEmail = this.interpolateString(cfg.to || context.user?.email || '', context);
           const subject = this.interpolateString(cfg.subject || 'Auvryn Notification', context);
           const body = this.interpolateString(cfg.body || '', context);
-          // Safe simulated delivery log or SMTP
-          return { status: 'completed', output: { to: toEmail, subject, bytesSent: body.length } };
+
+          if (!toEmail) {
+            return { status: 'failed', error: 'No recipient email specified for send_email action' };
+          }
+
+          const emailRes = await EmailService.sendEmail({
+            to: toEmail,
+            subject,
+            html: `<div style="font-family: -apple-system, sans-serif; font-size: 14px; line-height: 1.6; color: #222;">${body.replace(/\n/g, '<br/>')}</div>`,
+            text: body,
+            templateName: 'workflow_automation',
+            organizationId: workflow.account_type === 'organization' ? workflow.account_id : undefined,
+            userId: context.userId || workflow.created_by,
+            idempotencyKey: `wf_${executionId}_${action.id}`,
+          });
+
+          return {
+            status: emailRes.success ? 'completed' : 'failed',
+            output: { to: toEmail, subject, deliveryId: emailRes.id, error: emailRes.error }
+          };
         }
 
         case 'create_approval_request': {

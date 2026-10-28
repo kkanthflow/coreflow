@@ -107,15 +107,13 @@ export default function HierarchyScreen() {
     members.forEach(member => {
       const role = member.role;
 
-      if (role === 'owner' || role === 'administrator' || role === 'director'
-        || role === 'managing_director' || role === 'ceo' || role === 'cto') {
+      if (role === 'owner' || role === 'administrator') {
         groups['Leadership'].push(member);
-      } else if (role === 'senior_manager' || role === 'manager' || role === 'project_manager' || role === 'hr') {
+      } else if (role === 'manager') {
         groups['Management'].push(member);
       } else if (role === 'team_lead') {
         groups['Team Leads'].push(member);
-      } else if (role === 'senior_employee' || role === 'employee' || role === 'intern'
-        || role === 'developer' || role === 'general_member') {
+      } else if (role === 'team_member' || role === 'employee') {
         groups['Staff'].push(member);
       } else {
         groups['External'].push(member);

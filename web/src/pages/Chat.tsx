@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
+import { useWorkspace } from '../hooks/useWorkspace';
 import { decryptKeyWithSender, decryptMessagePayload } from '../lib/crypto';
 import {
   Search,
@@ -29,6 +30,7 @@ function timeAgo(dateStr: string) {
 export default function Chat() {
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { orgId } = useWorkspace();
 
   const [channels, setChannels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -175,51 +177,49 @@ export default function Chat() {
   useEffect(() => {
     if (!isComposeOpen || !user) return;
     const fetchEmps = async () => {
+      if (orgId) {
+        const { data: uoData } = await supabase
+          .from('user_organizations')
+          .select('role, users:user_id(id, full_name, email, avatar_url, role)')
+          .eq('org_id', orgId)
+          .neq('user_id', user.id);
+
+        if (uoData && uoData.length > 0) {
+          const emps = uoData.map((d: any) => ({
+            ...(Array.isArray(d.users) ? d.users[0] : d.users),
+            role: d.role || d.users?.role || 'employee',
+          })).filter((u: any) => !!u && !!u.id);
+          setEmployees(emps);
+          return;
+        }
+      }
+
+      // Fallback for standalone/solo workspaces
       const { data } = await supabase
         .from('users')
         .select('id, full_name, email, avatar_url, role')
         .neq('id', user.id)
-        .limit(30);
+        .limit(50);
       if (data) setEmployees(data);
     };
     fetchEmps();
-  }, [isComposeOpen, user]);
+  }, [isComposeOpen, user, orgId]);
 
   const handleStartDirectChat = async (targetUser: any) => {
     if (!user || creatingDm) return;
     setCreatingDm(true);
     try {
-      // Check existing DM
-      const existing = channels.find(ch => 
-        ch.type === 'direct' && ch.channel_members?.some((m: any) => m.user_id === targetUser.id)
-      );
-      if (existing) {
-        setIsComposeOpen(false);
-        navigate(`/chat/${existing.id}`);
-        return;
-      }
+      // Use atomic SECURITY DEFINER RPC to get or create direct message channel
+      const { data, error } = await supabase.rpc('get_or_create_direct_channel', {
+        p_target_user_id: targetUser.id,
+        p_org_id: orgId || null,
+      });
 
-      // Create new DM channel
-      const { data: newCh, error: chErr } = await supabase
-        .from('chat_channels')
-        .insert({
-          type: 'direct',
-          name: `${user.email}_${targetUser.email}`,
-          created_by: user.id,
-        })
-        .select()
-        .single();
-
-      if (chErr) throw chErr;
-
-      // Add members
-      await supabase.from('channel_members').insert([
-        { channel_id: newCh.id, user_id: user.id },
-        { channel_id: newCh.id, user_id: targetUser.id },
-      ]);
+      if (error) throw error;
+      if (!data?.channel_id) throw new Error('Failed to open direct conversation');
 
       setIsComposeOpen(false);
-      navigate(`/chat/${newCh.id}`);
+      navigate(`/chat/${data.channel_id}`);
     } catch (err) {
       console.error('Error starting DM:', err);
     } finally {

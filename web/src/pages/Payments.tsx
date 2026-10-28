@@ -355,7 +355,7 @@ export default function Payments() {
             />
           ) : (
             <div className="space-y-3">
-              {filteredSubmissions.map(sub => {
+              {filteredSubmissions.map((sub, idx) => {
                 const isPending = sub.status === 'pending';
                 const isConfirmed = sub.status === 'confirmed';
                 const isRejected = sub.status === 'rejected';
@@ -364,7 +364,7 @@ export default function Payments() {
                 return (
                   <div
                     key={sub.id}
-                    className="bg-card-bg border border-divider rounded-xl p-4 sm:p-5 space-y-4 hover:border-white/10 transition-colors"
+                    className={`bg-card-bg border border-divider rounded-xl p-4 sm:p-5 space-y-4 hover:border-white/10 transition-colors animate-fade-up stagger-${Math.min(idx + 1, 8)}`}
                   >
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-divider">
                       <div className="flex items-center gap-3">
@@ -570,8 +570,8 @@ export default function Payments() {
               </div>
 
               <div className="divide-y divide-white/[0.03]">
-                {filteredPayments.map(p => (
-                  <div key={p.id} className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors items-center text-xs font-mono">
+                {filteredPayments.map((p, idx) => (
+                  <div key={p.id} className={`grid grid-cols-12 gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors items-center text-xs font-mono animate-fade-up stagger-${Math.min(idx + 1, 8)}`}>
                     <div className="col-span-4 min-w-0 pr-2">
                       <Link
                         to={`/invoices/${p.invoices?.id}`}

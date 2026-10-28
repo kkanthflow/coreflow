@@ -162,14 +162,14 @@ export class ProjectAuthService {
       return { authorized: true, scope: 'owner', userRole: 'owner' };
     }
 
-    // ADMINISTRATOR / HIGH PRIVILEGE: Unrestricted authority across org projects
-    if (['administrator', 'managing_director', 'ceo', 'cto'].includes(orgRole)) {
+    // ADMINISTRATOR: Unrestricted authority across org projects
+    if (orgRole === 'administrator') {
       return { authorized: true, scope: 'admin', userRole: orgRole };
     }
 
-    // DEPARTMENT HEAD / MANAGER: Department-scoped authority
+    // MANAGER: Department-scoped authority
     if (
-      ['director', 'senior_manager', 'manager'].includes(orgRole) &&
+      orgRole === 'manager' &&
       project.department_id &&
       userOrg.department_id &&
       project.department_id === userOrg.department_id

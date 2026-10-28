@@ -275,14 +275,11 @@ export default function MenuScreen() {
     },
   ];
 
-  if (canManageRoles || canViewAuditLog) {
+  if (canViewAuditLog) {
     const adminItems: MenuItem[] = [];
-    if (canManageRoles)  adminItems.push({ id: 'roles', label: 'Manage Roles', icon: 'shield-checkmark-outline', color: C.error, onPress: () => router.push('/admin/roles' as any) });
-    if (canViewAuditLog) {
-      adminItems.push({ id: 'security', label: 'Security Center', icon: 'shield-outline', color: C.primary, onPress: () => router.push('/admin/security' as any) });
-      adminItems.push({ id: 'audit', label: 'Audit Log', icon: 'list-outline', color: C.warning, onPress: () => router.push('/admin/audit' as any) });
-      adminItems.push({ id: 'test-accounts', label: 'Test Accounts', icon: 'trash-bin-outline', color: C.error, onPress: () => router.push('/admin/test-accounts' as any) });
-    }
+    adminItems.push({ id: 'security', label: 'Security Center', icon: 'shield-outline', color: C.primary, onPress: () => router.push('/admin/security' as any) });
+    adminItems.push({ id: 'audit', label: 'Audit Log', icon: 'list-outline', color: C.warning, onPress: () => router.push('/admin/audit' as any) });
+    adminItems.push({ id: 'test-accounts', label: 'Test Accounts', icon: 'trash-bin-outline', color: C.error, onPress: () => router.push('/admin/test-accounts' as any) });
     sections.push({ title: 'Administration', items: adminItems });
   }
 

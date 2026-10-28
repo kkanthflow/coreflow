@@ -59,13 +59,43 @@ export class MeetingsController {
 
       const isHost = meeting.host_id === user.id;
 
-      // Validate Invitation for non-hosts
+      // Validate Invitation and Membership for non-hosts
       if (!isHost) {
         const invitation = await MeetingsService.getInvitation(meeting.id, user.id);
-        if (!invitation) {
-          return res.status(403).json({ error: 'You are not invited to this meeting' });
+        const { data: participantData } = await MeetingsService.getSupabase()
+          .from('meeting_participants')
+          .select('status, admission_status')
+          .eq('meeting_id', meeting.id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const isAdmittedOrInvited = participantData && (participantData.admission_status === 'admitted' || participantData.status === 'accepted');
+
+        if (!invitation && !isAdmittedOrInvited) {
+          // Check if user belongs to the meeting's organization or workspace
+          let isOrgMember = false;
+          if (meeting.workspace_id) {
+            const { data: ws } = await MeetingsService.getSupabase()
+              .from('workspaces')
+              .select('organization_id')
+              .eq('id', meeting.workspace_id)
+              .maybeSingle();
+            if (ws?.organization_id) {
+              const { data: uo } = await MeetingsService.getSupabase()
+                .from('user_organizations')
+                .select('id')
+                .eq('org_id', ws.organization_id)
+                .eq('user_id', user.id)
+                .maybeSingle();
+              if (uo) isOrgMember = true;
+            }
+          }
+
+          if (!isOrgMember) {
+            return res.status(403).json({ error: 'You are not invited to this meeting' });
+          }
         }
-        if (invitation.status !== 'accepted') {
+        if (invitation && invitation.status !== 'accepted' && !isAdmittedOrInvited) {
           return res.status(403).json({ error: 'You must accept the invitation before joining' });
         }
         // Check if locked

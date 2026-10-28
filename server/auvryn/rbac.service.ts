@@ -6,14 +6,12 @@ import { and, eq } from "drizzle-orm";
 export const ROLE_HIERARCHY = {
   owner: 100,
   administrator: 90,
-  director: 80,
-  senior_manager: 70,
-  manager: 60,
+  manager: 70,
   team_lead: 50,
-  senior_employee: 40,
-  employee: 30,
-  intern: 20,
-  freelancer: 10,
+  team_member: 30,
+  employee: 30, // legacy fallback alias
+  guest: 20,
+  client: 10,
 } as const;
 
 export type AuvrynRole = keyof typeof ROLE_HIERARCHY;

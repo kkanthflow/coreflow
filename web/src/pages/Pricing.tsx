@@ -479,13 +479,13 @@ export default function Pricing() {
 
         {/* Plan Cards Grid (Strictly separated per account type) */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto mb-16">
-          {displayedPlans.map((plan) => {
+          {displayedPlans.map((plan, idx) => {
             const isCurrent = activePlanTier === plan.tier;
 
             return (
               <div
                 key={plan.tier}
-                className={`rounded-2xl p-6 sm:p-8 border flex flex-col justify-between transition-all duration-300 relative ${
+                className={`rounded-2xl p-6 sm:p-8 border flex flex-col justify-between transition-all duration-300 relative animate-fade-up stagger-${idx + 1} ${
                   plan.isPopular
                     ? 'bg-card-bg border-[#FF6B4A] shadow-[0_4px_30px_rgba(255,107,74,0.15)] ring-1 ring-[#FF6B4A]/25'
                     : 'bg-card-bg border-divider hover:border-black/20 dark:hover:border-white/20 shadow-sm hover:shadow-md'

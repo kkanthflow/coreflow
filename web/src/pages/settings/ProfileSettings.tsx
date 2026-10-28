@@ -10,6 +10,8 @@ import {
   SettingsRow,
   Select,
 } from '../../components/settings';
+import { formatAccessRole } from '../../lib/jobTitles';
+import { JobTitleSelect } from '../../components/ui/JobTitleSelect';
 
 const LANGUAGE_OPTIONS = [
   { value: 'en-US', label: 'English (US)' },
@@ -125,6 +127,7 @@ export default function ProfileSettings() {
         .update({
           full_name: fullName.trim(),
           avatar_url: avatarUrl.trim(),
+          job_title: jobTitle.trim(),
           ...(role === 'freelancer' ? { freelancer_type: freelancerType } : {}),
         })
         .eq('id', user.id);
@@ -248,16 +251,16 @@ export default function ProfileSettings() {
           title="Job Title / Position"
           description="Your functional role within the team directory."
         >
-          <input
-            type="text"
-            value={jobTitle}
-            onChange={(e) => {
-              setJobTitle(e.target.value);
-              handleFieldChange('jobTitle', e.target.value);
-            }}
-            placeholder="e.g. Senior Product Designer"
-            className="w-full sm:w-64 px-3.5 py-1.5 rounded-xl bg-surface-2 border border-line text-xs sm:text-sm text-text placeholder-muted focus:outline-none focus:border-accent/60 font-sans"
-          />
+          <div className="w-full sm:w-64">
+            <JobTitleSelect
+              value={jobTitle}
+              onChange={(newTitle) => {
+                setJobTitle(newTitle);
+                handleFieldChange('jobTitle', newTitle);
+              }}
+              placeholder="Select professional job title..."
+            />
+          </div>
         </SettingsRow>
 
         {/* Role Badge */}
@@ -267,7 +270,7 @@ export default function ProfileSettings() {
           description="Governs permissions, workflow approvals, and financial views."
         >
           <span className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold uppercase tracking-wider bg-accent-soft text-accent border border-accent/20">
-            {role || 'Member'}
+            {formatAccessRole(role)}
           </span>
         </SettingsRow>
       </SettingsSection>

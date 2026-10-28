@@ -66,22 +66,42 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
       if (userOrg && userOrg.organizations) {
         const org: any = Array.isArray(userOrg.organizations) ? userOrg.organizations[0] : userOrg.organizations;
         const role = (userOrg.role || '').toLowerCase();
-        const rawName = org?.name || 'Skavelon Technologies';
-        const formattedName = rawName.replace(/SkavelonTEchnologies/i, 'Skavelon Technologies');
         setOrgId(userOrg.org_id);
-        setOrgName(formattedName);
-        setOrgAddress(org?.address || 'No. 9, Kamaraj St, Kosapalayam, Puducherry – 13');
+        setOrgName(org?.name || null);
+        setOrgAddress(org?.address || null);
         setOrgGst(org?.gst_number || null);
         setMembershipRole(userOrg.role || null);
         setIsOwner(role === 'owner');
-        setCanManageBilling(['owner', 'billing_admin'].includes(role));
+        setCanManageBilling(['owner', 'administrator', 'billing_admin'].includes(role));
         if (org?.default_currency) {
           setDefaultCurrency(org.default_currency);
         }
         return;
       }
 
-      // 2. Fallback: load user preferences for currency only
+      // 2. Try finding organization where user is direct owner
+      const { data: ownedOrg } = await supabase
+        .from('organizations')
+        .select('id, name, default_currency, address, gst_number')
+        .eq('owner_id', session.user.id)
+        .limit(1)
+        .maybeSingle();
+
+      if (ownedOrg) {
+        setOrgId(ownedOrg.id);
+        setOrgName(ownedOrg.name || null);
+        setOrgAddress(ownedOrg.address || null);
+        setOrgGst(ownedOrg.gst_number || null);
+        setMembershipRole('owner');
+        setIsOwner(true);
+        setCanManageBilling(true);
+        if (ownedOrg.default_currency) {
+          setDefaultCurrency(ownedOrg.default_currency);
+        }
+        return;
+      }
+
+      // 3. Fallback: Solo / Indie workspace - load user preferences for currency
       const { data: userData } = await supabase
         .from('users')
         .select('preferences')
@@ -94,6 +114,8 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
 
       setOrgId(null);
       setOrgName(null);
+      setOrgAddress(null);
+      setOrgGst(null);
       setMembershipRole(null);
       setCanManageBilling(false);
       setIsOwner(false);

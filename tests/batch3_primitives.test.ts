@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { SUPPORTED_CURRENCIES, getCurrencyDetails } from '../web/src/lib/currency.ts';
+import { SUPPORTED_CURRENCIES, getCurrencyDetails } from '../web/src/lib/currency';
 
 export function runBatch3PrimitivesTests() {
   console.log('--- Running Batch 3 Settings Shared Primitives Verification ---');

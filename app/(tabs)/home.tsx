@@ -72,10 +72,6 @@ const QUICK_ACTIONS = (perms: Record<string, boolean>, router: any, colors: any,
     id: 'invoices', label: 'Invoices', sub: 'Billing', icon: 'receipt' as const,
     color: colors.success, onPress: () => router.push('/invoices'),
   },
-  perms.roles && {
-    id: 'roles', label: 'Roles', sub: 'Access Ctrl', icon: 'shield-checkmark' as const,
-    color: colors.error, onPress: () => router.push('/admin/roles'),
-  },
 ].filter(Boolean) as any[];
 
 

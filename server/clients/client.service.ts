@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { supabaseAdmin as supabase } from '../_core/supabase';
+import { EmailService } from '../email/email.service';
 
 export interface SaveClientPayload {
   id?: string;
@@ -48,7 +49,7 @@ export class ClientService {
       }
 
       // Check role permissions in org
-      const allowedRoles = ['owner', 'administrator', 'director', 'senior_manager', 'manager', 'hr'];
+      const allowedRoles = ['owner', 'administrator', 'manager'];
       if (!allowedRoles.includes(membership.role) && !allowedRoles.includes(userProfile.role)) {
         throw new Error('Forbidden: Your organization role lacks permission to manage clients');
       }
@@ -175,7 +176,7 @@ export class ClientService {
             .eq('id', targetUserId)
             .single();
 
-          const staffRoles = ['owner', 'administrator', 'director', 'senior_manager', 'manager', 'employee', 'freelancer'];
+          const staffRoles = ['owner', 'administrator', 'manager', 'team_lead', 'team_member', 'employee'];
           const shouldPreserveRole = existingProf && staffRoles.includes(existingProf.role);
 
           await supabase
@@ -246,6 +247,15 @@ export class ClientService {
             });
             if (linkRes?.properties?.action_link) {
               generatedSetupLink = linkRes.properties.action_link;
+              EmailService.sendInvitation({
+                targetEmail: normEmail,
+                workspaceOrProjectName: 'Auvryn Client Portal',
+                role: 'Client Collaborator',
+                inviteUrl: generatedSetupLink,
+                isClient: true,
+                organizationId: business.organizationId || undefined,
+                userId: actorId,
+              }).catch((e: any) => console.warn('[ClientService] Auto-invite email note:', e.message));
             }
           } catch (linkErr) {
             console.warn('[ClientService] Could not generate invite link:', linkErr);
@@ -513,11 +523,25 @@ export class ClientService {
       })
       .eq('id', clientId);
 
+    const setupLink = linkRes?.properties?.action_link || null;
+
+    if (setupLink) {
+      await EmailService.sendInvitation({
+        targetEmail: normEmail,
+        workspaceOrProjectName: 'Auvryn Client Portal',
+        role: 'Client Collaborator',
+        inviteUrl: setupLink,
+        isClient: true,
+        organizationId: business.organizationId || undefined,
+        userId: actorId,
+      }).catch((e: any) => console.warn('[ClientService] Resend email note:', e.message));
+    }
+
     return {
       success: true,
       email: normEmail,
-      setupLink: linkRes?.properties?.action_link || null,
-      message: 'Access setup link generated successfully',
+      setupLink,
+      message: 'Access setup link generated and dispatched via email successfully',
     };
   }
 

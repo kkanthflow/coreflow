@@ -167,7 +167,7 @@ export default function AnalyticsScreen() {
     total: 0, done: 0, inProgress: 0, review: 0, todo: 0,
   });
 
-  const isManagement = ['owner', 'administrator', 'director', 'senior_manager', 'manager', 'managing_director', 'ceo'].includes(user?.role || '') || activeWorkspace?.type === 'independent';
+  const isManagement = ['owner', 'administrator', 'manager'].includes(user?.role || '') || activeWorkspace?.type === 'independent';
 
   useEffect(() => {
     Animated.parallel([

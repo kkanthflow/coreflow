@@ -43,7 +43,9 @@ app-example
 /android
 
 # IDE
-.vscode/
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
 .idea/
 *.swp
 *.swo
@@ -52,6 +54,9 @@ app-example
 # Logs
 logs
 *.log
+__pycache__/
+*.py[cod]
+.pytest_cache/
 
 # OS
 Thumbs.db
@@ -75,3 +80,16 @@ list_*.js
 trim_orgs.js
 check_*.js
 .env*
+/.env.test
+
+# Selenium test configuration and generated outputs
+!tests_ui/.env.test.example
+tests_ui/.env.test
+tests_ui/reports/*
+!tests_ui/reports/.gitkeep
+tests_ui/.browser-profile/
+.venv-ui/
+
+# Scratch and temporary scripts
+scratch/
+.agents/

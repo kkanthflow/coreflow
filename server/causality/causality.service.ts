@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { supabaseAdmin as supabase } from '../_core/supabase';
+import { EmailService } from '../email/email.service';
 
 export class CausalityService {
   /**
@@ -1128,6 +1129,20 @@ export class CausalityService {
       throw new Error(invErr?.message || 'Failed to generate invitation record.');
     }
 
+    const appUrl = process.env.VITE_APP_URL || process.env.EXPO_PUBLIC_OAUTH_SERVER_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
+    const inviteUrl = `${appUrl}/invite/client?token=${encodeURIComponent(token)}`;
+
+    EmailService.sendInvitation({
+      targetEmail: targetEmail,
+      workspaceOrProjectName: (invite.project as any)?.title || project.title || 'Client Project',
+      role: 'Project Collaborator',
+      inviteUrl,
+      expiresAt,
+      isClient: true,
+      organizationId: project.org_id,
+      userId: actorId,
+    }).catch((e: any) => console.warn('[CausalityService] Project invite email dispatch note:', e.message));
+
     return {
       success: true,
       invite,
@@ -1272,6 +1287,20 @@ export class CausalityService {
       .single();
 
     if (insErr || !newInvite) throw new Error(insErr?.message || 'Failed to resend invite.');
+
+    const appUrl = process.env.VITE_APP_URL || process.env.EXPO_PUBLIC_OAUTH_SERVER_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
+    const inviteUrl = `${appUrl}/invite/client?token=${encodeURIComponent(newToken)}`;
+
+    EmailService.sendInvitation({
+      targetEmail: existing.email,
+      workspaceOrProjectName: (newInvite.project as any)?.title || (existing.project as any)?.title || 'Client Project',
+      role: 'Project Collaborator',
+      inviteUrl,
+      expiresAt,
+      isClient: true,
+      organizationId: existing.business_id,
+      userId: actorId,
+    }).catch((e: any) => console.warn('[CausalityService] Resend project invite email note:', e.message));
 
     return {
       success: true,

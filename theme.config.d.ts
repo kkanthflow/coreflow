@@ -23,21 +23,12 @@ export const themeColors: {
   hover: { light: string; dark: string };
   role_owner: { light: string; dark: string };
   role_administrator: { light: string; dark: string };
-  role_director: { light: string; dark: string };
-  role_senior_manager: { light: string; dark: string };
   role_manager: { light: string; dark: string };
   role_team_lead: { light: string; dark: string };
-  role_senior_employee: { light: string; dark: string };
+  role_team_member: { light: string; dark: string };
   role_employee: { light: string; dark: string };
-  role_intern: { light: string; dark: string };
-  role_freelancer: { light: string; dark: string };
-  role_md: { light: string; dark: string };
-  role_ceo: { light: string; dark: string };
-  role_cto: { light: string; dark: string };
-  role_pm: { light: string; dark: string };
-  role_hr: { light: string; dark: string };
-  role_dev: { light: string; dark: string };
-  role_member: { light: string; dark: string };
+  role_guest: { light: string; dark: string };
+  role_client: { light: string; dark: string };
 };
 
 declare const themeConfig: {

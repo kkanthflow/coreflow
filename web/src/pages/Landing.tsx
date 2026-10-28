@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, useReducedMotion } from 'motion/react';
 import gsap from 'gsap';
@@ -8,7 +8,6 @@ import {
   ArrowRight,
   Activity,
   CheckCircle2,
-  Lock,
   FolderKanban,
   CheckSquare,
   MessageSquare,
@@ -29,9 +28,33 @@ import {
   User
 } from 'lucide-react';
 import AuvrynLogo from '../components/AuvrynLogo';
+import ThemeToggle from '../components/ThemeToggle';
+import AuvrynHeroArtwork from '../components/motion/AuvrynHeroArtwork';
+import AuvrynSignatureRibbon from '../components/motion/AuvrynSignatureRibbon';
+import { formatCurrency } from '../lib/currency';
 import { ORGANIZATION_PLANS, FREELANCER_PLANS } from '../lib/plans';
 
 gsap.registerPlugin(ScrollTrigger);
+
+// Helper for smooth Catmull-Rom to Cubic Bezier curve paths
+function getCurvedPath(pts: { x: number; y: number }[]): string {
+  if (pts.length < 2) return '';
+  let d = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = i > 0 ? pts[i - 1] : pts[i];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = i < pts.length - 2 ? pts[i + 2] : p2;
+
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+
+    d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+  return d;
+}
 
 export default function Landing() {
   const { session, user } = useAuth();
@@ -46,23 +69,36 @@ export default function Landing() {
   const chatMeetingPinRef = useRef<HTMLDivElement>(null);
   const financePinRef = useRef<HTMLDivElement>(null);
   const analyticsPinRef = useRef<HTMLDivElement>(null);
+  const velocityCurveRef = useRef<SVGPathElement>(null);
   const finalRevealRef = useRef<HTMLDivElement>(null);
+  const pricingSectionRef = useRef<HTMLDivElement>(null);
 
   // Dynamic interactive states
   const [mousePos, setMousePos] = useState({ x: 50, y: 50 });
-  const [analyticsHoverIndex, setAnalyticsHoverIndex] = useState<number | null>(4);
+  const [analyticsHoverIndex, setAnalyticsHoverIndex] = useState<number | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [landingBillingInterval, setLandingBillingInterval] = useState<'monthly' | 'yearly'>('monthly');
   const [landingPlanCategory, setLandingPlanCategory] = useState<'organization' | 'freelancer'>('organization');
 
-  // Projects live state during scroll
+  // Animation Refs
+  const activeTimeoutsRef = useRef<number[]>([]);
+  const activeGsapTweensRef = useRef<gsap.core.Tween[]>([]);
+  const hasAnimatedRef = useRef({
+    projects: false,
+    tasks: false,
+    chat: false,
+    finance: false,
+    analytics: false,
+  });
+
+  // Projects live state
   const [projectProgress, setProjectProgress] = useState(14);
   const [activeMilestone, setActiveMilestone] = useState(0);
 
   // Task column positions
   const [taskACol, setTaskACol] = useState<'todo' | 'inprogress' | 'review' | 'done'>('todo');
   const [taskBCol, setTaskBCol] = useState<'todo' | 'inprogress' | 'review' | 'done'>('inprogress');
-  const [taskCCol, setTaskCCol] = useState<'todo' | 'inprogress' | 'review' | 'done'>('review');
+  const [taskCCol, setTaskCCol] = useState<'todo' | 'inprogress' | 'review' | 'done'>('done');
 
   // Chat message & meeting transformation
   const [chatStep, setChatStep] = useState(0); // 0: typed, 1: sent/encrypt, 2: received, 3: expand meeting, 4: screen share
@@ -78,156 +114,224 @@ export default function Landing() {
     setMousePos({ x, y });
   };
 
+  // ── 1. Projects Trajectory Animation ──
+  const playProjectsSequence = useCallback((): Promise<void> => {
+    hasAnimatedRef.current.projects = true;
+    return new Promise((resolve) => {
+      const projObj = { p: 14 };
+      const tween = gsap.to(projObj, {
+        p: 88,
+        duration: 2.0,
+        ease: 'power2.out',
+        onUpdate: () => {
+          const p = Math.round(projObj.p);
+          setProjectProgress(p);
+          if (p < 30) setActiveMilestone(0);
+          else if (p < 60) setActiveMilestone(1);
+          else if (p < 85) setActiveMilestone(2);
+          else setActiveMilestone(3);
+        },
+        onComplete: () => resolve()
+      });
+      activeGsapTweensRef.current.push(tween);
+    });
+  }, []);
+
+  // ── 2. Tasks Kanban Migration Animation ──
+  const playTasksSequence = useCallback((): Promise<void> => {
+    hasAnimatedRef.current.tasks = true;
+    return new Promise((resolve) => {
+      const t1 = window.setTimeout(() => {
+        setTaskACol('inprogress');
+        setTaskBCol('done');
+      }, 500);
+      const t2 = window.setTimeout(() => {
+        setTaskACol('done');
+        resolve();
+      }, 1300);
+      activeTimeoutsRef.current.push(t1, t2);
+    });
+  }, []);
+
+  // ── 3. Chat to LiveKit Transformation Animation ──
+  const playChatSequence = useCallback((): Promise<void> => {
+    hasAnimatedRef.current.chat = true;
+    return new Promise((resolve) => {
+      const t1 = window.setTimeout(() => setChatStep(1), 600);
+      const t2 = window.setTimeout(() => {
+        setChatStep(3);
+        resolve();
+      }, 1800);
+      activeTimeoutsRef.current.push(t1, t2);
+    });
+  }, []);
+
+  // ── 4. Finance Ledger Settlement Animation ──
+  const playFinanceSequence = useCallback((): Promise<void> => {
+    hasAnimatedRef.current.finance = true;
+    return new Promise((resolve) => {
+      const finObj = { val: 0 };
+      const tween = gsap.to(finObj, {
+        val: 48300,
+        duration: 2.0,
+        ease: 'power2.out',
+        onUpdate: () => {
+          const val = Math.round(finObj.val);
+          setInvoiceAmount(val);
+          if (val < 16000) setInvoiceState('Draft');
+          else if (val < 38000) setInvoiceState('Sent');
+          else setInvoiceState('Paid');
+        },
+        onComplete: () => resolve()
+      });
+      activeGsapTweensRef.current.push(tween);
+    });
+  }, []);
+
+  // ── 5. Analytics Velocity Curve Animation ──
+  const playAnalyticsSequence = useCallback((): Promise<void> => {
+    hasAnimatedRef.current.analytics = true;
+    return new Promise((resolve) => {
+      if (velocityCurveRef.current && typeof velocityCurveRef.current.getTotalLength === 'function') {
+        const length = velocityCurveRef.current.getTotalLength() || 800;
+        const tween = gsap.fromTo(
+          velocityCurveRef.current,
+          { strokeDasharray: length, strokeDashoffset: length },
+          { strokeDashoffset: 0, duration: 1.4, ease: 'power2.out', onComplete: () => resolve() }
+        );
+        activeGsapTweensRef.current.push(tween);
+      } else {
+        resolve();
+      }
+    });
+  }, []);
+
+  // ── Intersection Observer for Manual Scrolling ──
   useEffect(() => {
     if (shouldReduceMotion) return;
 
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const target = entry.target as HTMLElement;
+          if (target.id === 'projects' && !hasAnimatedRef.current.projects) {
+            playProjectsSequence();
+          } else if (target.id === 'tasks' && !hasAnimatedRef.current.tasks) {
+            playTasksSequence();
+          } else if (target.id === 'chat' && !hasAnimatedRef.current.chat) {
+            playChatSequence();
+          } else if (target.id === 'finance' && !hasAnimatedRef.current.finance) {
+            playFinanceSequence();
+          } else if (target.id === 'analytics' && !hasAnimatedRef.current.analytics) {
+            playAnalyticsSequence();
+          }
+        });
+      },
+      { threshold: 0.25 }
+    );
+
+    const sections = [
+      projectsPinRef.current,
+      tasksPinRef.current,
+      chatMeetingPinRef.current,
+      financePinRef.current,
+      analyticsPinRef.current,
+    ].filter(Boolean) as HTMLElement[];
+
+    sections.forEach((sec) => observer.observe(sec));
+
+    return () => observer.disconnect();
+  }, [shouldReduceMotion, playProjectsSequence, playTasksSequence, playChatSequence, playFinanceSequence, playAnalyticsSequence]);
+
+  // ── Page Load Hero Animation (Natural Navigation, Zero Auto-Scroll) ──
+  useEffect(() => {
+    if (shouldReduceMotion) {
+      setProjectProgress(88);
+      setActiveMilestone(3);
+      setTaskACol('done');
+      setTaskBCol('done');
+      setTaskCCol('done');
+      setChatStep(3);
+      setInvoiceAmount(48300);
+      setInvoiceState('Paid');
+      setAnalyticsHoverIndex(4);
+      return;
+    }
+
     const ctx = gsap.context(() => {
-      // ── 1. HERO ENTRANCE SEQUENCE (Immediate 0–1500ms) ──
+      // Hero Entrance Timeline
       const heroTl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
       heroTl
-        .fromTo('.hero-core-node', { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.45 })
-        .fromTo('.hero-flow-line', { scaleX: 0 }, { scaleX: 1, duration: 0.6, transformOrigin: 'center' }, '-=0.2')
-        .fromTo('.hero-badge', { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 }, '-=0.3')
-        .fromTo('.hero-headline-word-1', { x: -35, opacity: 0 }, { x: 0, opacity: 1, duration: 0.55 }, '-=0.2')
-        .fromTo('.hero-headline-word-2', { x: 35, opacity: 0 }, { x: 0, opacity: 1, duration: 0.55 }, '-=0.45')
-        .fromTo('.hero-subtext', { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 }, '-=0.3')
-        .fromTo('.hero-cta-group', { y: 15, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 }, '-=0.3')
-        .fromTo('.hero-ui-sidebar', { x: -40, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6 }, '-=0.2')
-        .fromTo('.hero-ui-header', { y: -20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 }, '-=0.5')
-        .fromTo('.hero-ui-pulse', { scaleX: 0 }, { scaleX: 1, duration: 0.7, transformOrigin: 'left' }, '-=0.4')
-        .fromTo('.hero-ui-cards', { y: 30, opacity: 0, stagger: 0.08 }, { y: 0, opacity: 1, duration: 0.6 }, '-=0.5');
+        .fromTo('.nav-logo', { y: -8, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45 })
+        .fromTo('.nav-link', { y: -6, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.04, duration: 0.35 }, '-=0.3')
+        .fromTo('.nav-action', { y: -6, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.05, duration: 0.35 }, '-=0.25')
+        .fromTo('.hero-eyebrow', { y: 14, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 }, '-=0.2')
+        .fromTo('.hero-subtext', { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.5 }, '-=0.2')
+        .fromTo('.hero-cta-group', { y: 14, scale: 0.98, opacity: 0 }, { y: 0, scale: 1, opacity: 1, duration: 0.45 }, '-=0.3')
+        .fromTo('.hero-trust-badge-item', { y: 12, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.08, duration: 0.4 }, '-=0.25')
+        .fromTo('.hero-ui-shell', { y: 24, opacity: 0 }, { y: 0, opacity: 1, duration: 0.65 }, '-=0.2')
+        .fromTo('.hero-ui-sidebar', { x: -25, opacity: 0 }, { x: 0, opacity: 1, duration: 0.55 }, '-=0.35')
+        .fromTo('.hero-ui-header', { y: -12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.45 }, '-=0.5')
+        .fromTo('.hero-ui-pulse', { scaleX: 0 }, { scaleX: 1, duration: 0.65, transformOrigin: 'left' }, '-=0.35')
+        .fromTo('.hero-ui-cards', { y: 20, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.09, duration: 0.55 }, '-=0.4');
 
-      // ── 2. PROJECTS SCROLLTRIGGER PIN & TRAJECTORY ACCELERATION ──
-      if (projectsPinRef.current) {
-        ScrollTrigger.create({
-          trigger: projectsPinRef.current,
-          start: 'top top',
-          end: '+=130%',
-          pin: true,
-          scrub: 0.6,
-          onUpdate: (self) => {
-            const p = Math.round(self.progress * 100);
-            setProjectProgress(Math.max(14, p));
-            if (p < 30) setActiveMilestone(0);
-            else if (p < 60) setActiveMilestone(1);
-            else if (p < 85) setActiveMilestone(2);
-            else setActiveMilestone(3);
-          }
-        });
-      }
-
-      // ── 3. TASKS KANBAN PHYSICAL CARD MIGRATION ──
-      if (tasksPinRef.current) {
-        ScrollTrigger.create({
-          trigger: tasksPinRef.current,
-          start: 'top top',
-          end: '+=140%',
-          pin: true,
-          scrub: 0.5,
-          onUpdate: (self) => {
-            const p = self.progress;
-            if (p < 0.33) {
-              setTaskACol('todo');
-              setTaskBCol('inprogress');
-              setTaskCCol('review');
-            } else if (p < 0.66) {
-              setTaskACol('inprogress');
-              setTaskBCol('review');
-              setTaskCCol('done');
-            } else {
-              setTaskACol('done');
-              setTaskBCol('done');
-              setTaskCCol('done');
-            }
-          }
-        });
-      }
-
-      // ── 4. CHAT → ENCRYPTED STREAM → WEBRTC MEETING CONVERSION ──
-      if (chatMeetingPinRef.current) {
-        ScrollTrigger.create({
-          trigger: chatMeetingPinRef.current,
-          start: 'top top',
-          end: '+=160%',
-          pin: true,
-          scrub: 0.6,
-          onUpdate: (self) => {
-            const p = self.progress;
-            if (p < 0.25) setChatStep(0);
-            else if (p < 0.5) setChatStep(1);
-            else if (p < 0.75) setChatStep(2);
-            else if (p < 0.9) setChatStep(3);
-            else setChatStep(4);
-          }
-        });
-      }
-
-      // ── 5. FINANCE INVOICE REVENUE & LEDGER CONSTRUCTION ──
-      if (financePinRef.current) {
-        ScrollTrigger.create({
-          trigger: financePinRef.current,
-          start: 'top top',
-          end: '+=130%',
-          pin: true,
-          scrub: 0.5,
-          onUpdate: (self) => {
-            const p = self.progress;
-            const targetAmt = Math.round(p * 48300);
-            setInvoiceAmount(targetAmt);
-            if (p < 0.35) setInvoiceState('Draft');
-            else if (p < 0.75) setInvoiceState('Sent');
-            else setInvoiceState('Paid');
-          }
-        });
-      }
-
-      // ── 6. ANALYTICS MORPHING VELOCITY GRAPH ──
-      if (analyticsPinRef.current) {
-        ScrollTrigger.create({
-          trigger: analyticsPinRef.current,
-          start: 'top top',
-          end: '+=120%',
-          pin: true,
-          scrub: 0.6,
-        });
-      }
-
-      // ── 7. FINAL ECOSYSTEM CONVERGENCE ──
-      if (finalRevealRef.current) {
-        const nodes = finalRevealRef.current.querySelectorAll('.ecosystem-node');
-        if (nodes && nodes.length > 0) {
-          gsap.fromTo(
-            nodes,
-            { scale: 0.7, opacity: 0 },
-            {
-              scale: 1,
-              opacity: 1,
-              stagger: 0.08,
-              ease: 'power2.out',
-              scrollTrigger: {
-                trigger: finalRevealRef.current,
-                start: 'top 80%',
-                end: 'bottom bottom',
-                scrub: 1,
-              }
-            }
-          );
-        }
-      }
-
+      // Section Entrance Targets
+      gsap.fromTo(
+        '.section-entrance-target',
+        { y: 16, opacity: 0 },
+        { y: 0, opacity: 1, duration: 0.5, stagger: 0.08, delay: 0.2, ease: 'power2.out' }
+      );
     }, landingRef);
 
-    return () => ctx.revert();
+    return () => {
+      activeTimeoutsRef.current.forEach((t) => clearTimeout(t));
+      activeGsapTweensRef.current.forEach((tw) => tw.kill());
+      ctx.revert();
+    };
   }, [shouldReduceMotion]);
 
-  const analyticsPoints = [
-    { label: 'Jan', val: 12000, h: '25%' },
-    { label: 'Feb', val: 19500, h: '40%' },
-    { label: 'Mar', val: 28400, h: '58%' },
-    { label: 'Apr', val: 36200, h: '72%' },
-    { label: 'May', val: 48300, h: '94%' },
+  const analyticsData = [
+    { label: 'Jan', val: 12000 },
+    { label: 'Feb', val: 19500 },
+    { label: 'Mar', val: 28400 },
+    { label: 'Apr', val: 36200 },
+    { label: 'May', val: 48300 },
   ];
+
+  // Velocity Analytics Curve calculations
+  const rawMax = Math.max(...analyticsData.map((d) => d.val), 0);
+  const maxVal = rawMax > 0 ? rawMax : 1;
+  const svgWidth = 640;
+  const svgHeight = 220;
+  const pad = { top: 25, bottom: 35, left: 65, right: 35 };
+  const plotWidth = svgWidth - pad.left - pad.right;
+  const plotHeight = svgHeight - pad.top - pad.bottom;
+  const baselineY = pad.top + plotHeight;
+
+  const chartPoints = analyticsData.map((d, i) => {
+    const x = pad.left + (analyticsData.length > 1 ? (i / (analyticsData.length - 1)) * plotWidth : plotWidth / 2);
+    const ratio = maxVal > 0 ? Math.max(0, Math.min(1, d.val / maxVal)) : 0;
+    const y = pad.top + (1 - ratio) * plotHeight;
+    return { ...d, x, y, index: i };
+  });
+
+  const curvePath = getCurvedPath(chartPoints);
+  const areaPath = chartPoints.length > 1
+    ? `${curvePath} L ${chartPoints[chartPoints.length - 1].x.toFixed(1)} ${baselineY} L ${chartPoints[0].x.toFixed(1)} ${baselineY} Z`
+    : '';
+
+  const gridLevels = [0, 0.33, 0.66, 1];
+  const gridLines = gridLevels.map((lvl) => {
+    const y = pad.top + (1 - lvl) * plotHeight;
+    const val = Math.round(lvl * rawMax);
+    return { y, val };
+  });
+
+  const activePoint = analyticsHoverIndex !== null
+    ? chartPoints[analyticsHoverIndex] ?? chartPoints[chartPoints.length - 1]
+    : chartPoints[chartPoints.length - 1];
 
   return (
     <div
@@ -256,53 +360,71 @@ export default function Landing() {
         />
       </div>
 
-      {/* ── FLOATING TOPBAR NAVIGATION ── */}
-      <header className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-full max-w-5xl px-4 sm:px-6">
-        <nav className="bg-card-bg/95 backdrop-blur-xl border border-divider rounded-full px-5 sm:px-7 py-3 flex items-center justify-between shadow-2xl">
-          <div className="flex items-center gap-3 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
-            <div className="w-7 h-7 rounded-lg bg-hover border border-[#FF6B4A]/40 flex items-center justify-center text-[#FF6B4A] shadow-[0_0_10px_rgba(255,107,74,0.3)]">
-              <AuvrynLogo size={15} />
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-bold text-xs tracking-wider uppercase font-mono text-main">AUVRYN</span>
-              <span className="text-[10px] font-mono text-muted hidden sm:inline">OS</span>
-            </div>
+      {/* ── TOPBAR NAVIGATION MATCHING IMAGE 2 ── */}
+      <header className="sticky top-0 z-50 w-full bg-[#FAF7F2]/90 dark:bg-[#07070b]/90 backdrop-blur-md border-b border-orange-100/60 dark:border-white/5 transition-all">
+        <nav className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-3.5 sm:py-4 flex items-center justify-between">
+          
+          {/* Left: Auvryn Logo ("A" emblem + "Auvryn" bold wordmark) */}
+          <div
+            className="nav-logo flex items-center gap-2.5 cursor-pointer select-none"
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          >
+            <AuvrynLogo size={28} color="#FF5A36" />
+            <span className="font-extrabold text-2xl tracking-tight text-slate-900 dark:text-white font-sans">
+              Auvryn
+            </span>
           </div>
 
-          <div className="hidden md:flex items-center gap-7 text-xs font-mono text-muted">
-            <a href="#projects" className="hover:text-main transition-colors">Projects</a>
-            <a href="#tasks" className="hover:text-main transition-colors">Tasks</a>
-            <a href="#chat" className="hover:text-main transition-colors">Conferencing</a>
-            <a href="#finance" className="hover:text-main transition-colors">Ledger & Billing</a>
-            <a href="#analytics" className="hover:text-main transition-colors">Telemetry</a>
-            <a href="#pricing" className="text-[#FF6B4A] hover:text-[#FF552B] font-bold transition-colors">Pricing</a>
+          {/* Center: Navigation Links */}
+          <div className="hidden md:flex items-center gap-8 text-sm font-medium">
+            <a
+              href="#"
+              onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="nav-link relative text-[#FF5A36] pb-1 border-b-2 border-[#FF5A36] font-semibold transition-colors"
+            >
+              Home
+            </a>
+            <a href="#projects" className="nav-link text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
+              Features
+            </a>
+            <a href="#pricing" className="nav-link text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
+              Pricing
+            </a>
+            <a href="#tasks" className="nav-link text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
+              About
+            </a>
+            <a href="#chat" className="nav-link text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white transition-colors">
+              Contact
+            </a>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          {/* Right: Actions */}
+          <div className="flex items-center gap-3">
+            <ThemeToggle size="sm" className="nav-action hidden sm:inline-flex" />
+
             {isAuthenticated ? (
               <Link
                 to="/dashboard"
-                className="text-xs font-semibold px-4 py-1.5 rounded-full bg-[#FF6B4A] hover:bg-[#FF552B] text-main transition-all shadow-[0_0_14px_rgba(255,107,74,0.35)] flex items-center gap-1.5"
+                className="nav-action text-sm font-semibold px-5 py-2.5 rounded-full bg-[#FF5A36] hover:bg-[#E84E2C] text-white transition-all shadow-md shadow-[#FF5A36]/25 flex items-center gap-1.5"
               >
-                <LayoutDashboard size={13} />
-                <span className="hidden sm:inline">Go to</span>
+                <LayoutDashboard size={14} />
                 <span>Dashboard</span>
-                <ArrowRight size={13} />
+                <ArrowRight size={14} />
               </Link>
             ) : (
               <>
                 <Link
                   to="/login"
-                  className="text-xs text-muted hover:text-main px-3 py-1.5 rounded-full hover:bg-white/[0.05] transition-all font-mono hidden sm:inline"
+                  className="nav-action text-sm font-medium text-slate-700 hover:text-slate-900 dark:text-slate-200 dark:hover:text-white px-5 py-2 rounded-full border border-slate-200/90 dark:border-white/10 bg-white/70 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10 transition-all shadow-sm hidden sm:inline-block"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/register"
-                  className="text-xs font-semibold px-3.5 sm:px-4 py-1.5 rounded-full bg-[#FF6B4A] hover:bg-[#FF552B] text-main transition-all shadow-[0_0_14px_rgba(255,107,74,0.35)] flex items-center gap-1.5"
+                  className="nav-action text-sm font-semibold px-5 py-2.5 rounded-full bg-[#FF5A36] hover:bg-[#E84E2C] text-white transition-all shadow-md shadow-[#FF5A36]/25 flex items-center gap-1.5 group"
                 >
                   <span>Get Started</span>
-                  <ArrowRight size={13} />
+                  <ArrowRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
                 </Link>
               </>
             )}
@@ -310,31 +432,38 @@ export default function Landing() {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-1.5 rounded-full text-muted hover:text-main hover:bg-white/[0.08] transition-colors"
+              className="nav-action md:hidden p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
               title="Toggle Menu"
             >
-              {mobileMenuOpen ? <X size={16} /> : <Menu size={16} />}
+              {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </nav>
 
         {/* Mobile Dropdown Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden mt-2 bg-card-bg/95 backdrop-blur-2xl border border-divider rounded-2xl p-4 shadow-2xl space-y-2 text-xs font-mono text-muted animate-in fade-in slide-in-from-top-2 duration-150">
-            <a href="#projects" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-main transition-colors">Projects</a>
-            <a href="#tasks" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-main transition-colors">Tasks Kanban</a>
-            <a href="#chat" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-main transition-colors">Conferencing & Meetings</a>
-            <a href="#finance" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-main transition-colors">Ledger & Billing</a>
-            <a href="#analytics" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 hover:text-main transition-colors">Telemetry</a>
-            <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="block py-2 text-[#FF6B4A] font-bold border-t border-divider">
-              Plans & Pricing (₹299 - ₹499)
-            </a>
-            <Link to="/pricing" onClick={() => setMobileMenuOpen(false)} className="block py-1 text-white underline underline-offset-4">
-              Open Full Pricing Matrix →
-            </Link>
-            {!isAuthenticated && (
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="block py-1.5 text-zinc-300 border-t border-divider pt-2">
-                Sign In to Account
+          <div className="md:hidden border-t border-orange-100/60 dark:border-white/10 bg-[#FAF7F2]/98 dark:bg-[#07070b]/98 px-6 py-4 shadow-xl space-y-3 text-sm font-medium text-slate-700 dark:text-slate-300 animate-in fade-in slide-in-from-top-2 duration-150">
+            <a href="#" onClick={() => { setMobileMenuOpen(false); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="block py-1 text-[#FF5A36] font-bold">Home</a>
+            <a href="#projects" onClick={() => setMobileMenuOpen(false)} className="block py-1 hover:text-[#FF5A36] transition-colors">Features</a>
+            <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="block py-1 hover:text-[#FF5A36] transition-colors">Pricing</a>
+            <a href="#tasks" onClick={() => setMobileMenuOpen(false)} className="block py-1 hover:text-[#FF5A36] transition-colors">About</a>
+            <a href="#chat" onClick={() => setMobileMenuOpen(false)} className="block py-1 hover:text-[#FF5A36] transition-colors">Contact</a>
+            <div className="pt-2 border-t border-orange-100/80 dark:border-white/10 flex items-center justify-between">
+              <span className="text-xs text-slate-500">Theme</span>
+              <ThemeToggle size="sm" />
+            </div>
+            {!isAuthenticated ? (
+              <div className="pt-2 space-y-2">
+                <Link to="/login" onClick={() => setMobileMenuOpen(false)} className="block text-center py-2 rounded-full border border-slate-200 dark:border-white/10 text-sm">
+                  Sign In
+                </Link>
+                <Link to="/register" onClick={() => setMobileMenuOpen(false)} className="block text-center py-2.5 rounded-full bg-[#FF5A36] text-white text-sm font-semibold">
+                  Get Started →
+                </Link>
+              </div>
+            ) : (
+              <Link to="/dashboard" onClick={() => setMobileMenuOpen(false)} className="block text-center py-2.5 rounded-full bg-[#FF5A36] text-white text-sm font-semibold">
+                Go to Dashboard →
               </Link>
             )}
           </div>
@@ -342,78 +471,112 @@ export default function Landing() {
       </header>
 
       {/* ──────────────────────────────────────────────────────────── */}
-      {/* ── SECTION 1: HERO ASSEMBLY & AUVRYN ACTIVATION ────────── */}
+      {/* ── SECTION 1: HERO SECTION MATCHING IMAGE 2 ─────────────── */}
       {/* ──────────────────────────────────────────────────────────── */}
-      <section className="relative z-10 min-h-screen pt-32 pb-20 px-4 sm:px-6 max-w-6xl mx-auto flex flex-col items-center justify-center text-center">
+      <section className="relative z-10 w-full overflow-hidden bg-gradient-to-br from-[#FEF5EE] via-[#FAF7F2] to-[#FEEDE0] dark:from-[#0a0a0f] dark:via-[#07070b] dark:to-[#120f0e] pt-8 sm:pt-14 pb-20 sm:pb-28">
         
-        {/* Core Signal & Drawing Beam */}
-        <div className="relative mb-6 flex flex-col items-center">
-          <div className="hero-core-node w-3 h-3 rounded-full bg-white shadow-[0_0_12px_#ffffff,0_0_24px_#FF6B4A]" />
-          <div className="hero-flow-line w-48 h-[2px] bg-gradient-to-r from-transparent via-[#FF6B4A] to-transparent mt-2 shadow-[0_0_10px_rgba(255,107,74,0.8)]" />
-        </div>
+        {/* Soft peach atmospheric radial ambient glow */}
+        <div className="absolute top-0 right-0 w-[800px] h-[550px] bg-gradient-to-bl from-orange-200/35 via-rose-100/20 to-transparent dark:from-[#FF5A36]/10 dark:via-transparent blur-3xl pointer-events-none" />
+        <div className="absolute top-1/4 left-0 w-[500px] h-[400px] bg-gradient-to-tr from-amber-100/30 via-orange-100/15 to-transparent dark:from-[#FF5A36]/5 dark:via-transparent blur-3xl pointer-events-none" />
 
-        {/* Operating System Badge */}
-        <div className="hero-badge inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-card-bg border border-divider text-[11px] font-mono text-muted mb-6 shadow-sm">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#FF6B4A] animate-pulse" />
-          <span className="text-main font-bold tracking-wider uppercase">Executive Command</span>
-          <span className="text-zinc-600">/</span>
-          <span>Delivery Governance</span>
-        </div>
+        {/* Auvryn Signature Ribbon & The Auvryn Reveal */}
+        <AuvrynSignatureRibbon />
 
-        {/* Physical Headline Assembly */}
-        <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold tracking-tight leading-[1.08] max-w-4xl text-main mb-6">
-          <span className="hero-headline-word-1 inline-block mr-3">Unite.</span>
-          <span className="hero-headline-word-2 inline-block text-transparent bg-clip-text bg-gradient-to-r from-[#FF6B4A] via-[#FF8E75] to-white">
-            Evolve. Rise.
-          </span>
-        </h1>
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 lg:px-12">
+          {/* ── Top Hero 2-Column Split: Typography/CTAs (Left) + Approved Mascot Art (Right) ── */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
+            
+            {/* Left Column: Eyebrow, Big Goals Headline, Subtitle, Pill Buttons, 4 Trust Badges */}
+            <div className="lg:col-span-6 text-left space-y-6 sm:space-y-7 z-10">
+              
+              {/* Eyebrow */}
+              <div className="hero-eyebrow">
+                <p className="text-xs sm:text-sm font-bold tracking-[0.18em] text-[#FF5A36] uppercase font-sans">
+                  YOUR BUSINESS. YOUR MOMENTUM.
+                </p>
+              </div>
 
-        <p className="hero-subtext text-xs sm:text-sm md:text-base text-muted max-w-2xl leading-relaxed mb-8">
-          AUVRYN is a secure workspace platform for organizations, teams, freelancers and clients to manage projects, tasks, files, meetings, communication and business workflows from one unified workspace.
-        </p>
+              {/* Physical Headline Assembly with Coordinated Fade-in */}
+              <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-[62px] font-extrabold tracking-tight leading-[1.08] text-slate-900 dark:text-white font-sans">
+                <motion.span
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.05 }}
+                  className="hero-headline-word-1 block"
+                >
+                  Big goals.
+                </motion.span>
+                <motion.span
+                  initial={shouldReduceMotion ? false : { opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1], delay: 0.18 }}
+                  className="hero-headline-word-2 block text-[#FF5A36] mt-1 sm:mt-1.5"
+                >
+                  Brighter possibilities.
+                </motion.span>
+              </h1>
 
-        {/* Primary Action Group */}
-        <div className="hero-cta-group flex flex-col sm:flex-row items-center gap-4 mb-16">
-          {isAuthenticated ? (
-            <>
-              <Link
-                to="/dashboard"
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#FF6B4A] hover:bg-[#FF552B] text-main font-semibold text-xs transition-all shadow-[0_0_20px_rgba(255,107,74,0.4)] flex items-center justify-center gap-2 group"
-              >
-                <LayoutDashboard size={15} />
-                <span>Go to Dashboard</span>
-                <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link
-                to="/projects"
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-card-bg hover:bg-hover border border-divider text-muted hover:text-main font-mono text-xs transition-colors flex items-center justify-center gap-2"
-              >
-                <FolderKanban size={14} className="text-[#FF6B4A]" />
-                <span>View Projects</span>
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                to="/register"
-                className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#FF6B4A] hover:bg-[#FF552B] text-main font-semibold text-xs transition-all shadow-[0_0_20px_rgba(255,107,74,0.4)] flex items-center justify-center gap-2 group"
-              >
-                <span>Enter Workspace</span>
-                <ArrowRight size={15} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-              <Link
-                to="/login"
-                className="w-full sm:w-auto px-6 py-3.5 rounded-xl bg-card-bg hover:bg-hover border border-divider text-muted hover:text-main font-mono text-xs transition-colors flex items-center justify-center gap-2"
-              >
-                <Lock size={14} className="text-[#FF6B4A]" />
-                <span>Interactive Demo Console</span>
-              </Link>
-            </>
-          )}
-        </div>
+              {/* Supporting Text */}
+              <p className="hero-subtext text-base sm:text-lg md:text-xl text-slate-600 dark:text-slate-300 max-w-xl leading-relaxed">
+                Everything your business needs to plan, collaborate, and grow — all in one place.
+              </p>
 
-        {/* ── HERO PRODUCT INTERFACE ASSEMBLY (Layers Self-Constructing) ── */}
-        <div ref={heroUiRef} className="w-full max-w-5xl bg-card-bg/95 border border-divider rounded-2xl p-4 sm:p-6 shadow-2xl backdrop-blur-xl relative overflow-hidden text-left">
+              {/* Primary & Secondary Pill Buttons */}
+              <div className="hero-cta-group flex flex-wrap items-center gap-3.5 sm:gap-4 pt-1">
+                <Link
+                  to={isAuthenticated ? "/dashboard" : "/register"}
+                  className="px-7 sm:px-8 py-3.5 sm:py-4 rounded-full bg-[#FF5A36] hover:bg-[#E84E2C] text-white font-semibold text-sm sm:text-base transition-all shadow-[0_4px_18px_rgba(255,90,54,0.35)] hover:shadow-[0_6px_24px_rgba(255,90,54,0.45)] flex items-center gap-2 group"
+                >
+                  <span>Get Started</span>
+                  <ArrowRight size={17} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
+
+                <a
+                  href="#projects"
+                  className="px-7 sm:px-8 py-3.5 sm:py-4 rounded-full bg-white dark:bg-white/10 hover:bg-slate-50 dark:hover:bg-white/15 border border-slate-200/90 dark:border-white/15 text-slate-800 dark:text-slate-100 font-semibold text-sm sm:text-base transition-all shadow-sm hover:shadow"
+                >
+                  Explore Features
+                </a>
+              </div>
+
+              {/* 4 Trust Badges matching Image 2 */}
+              <div className="hero-trust-badges pt-4 sm:pt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-300">
+                <div className="hero-trust-badge-item flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[#FF5A36]/15 text-[#FF5A36] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Manage Projects</span>
+                </div>
+                <div className="hero-trust-badge-item flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[#FF5A36]/15 text-[#FF5A36] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Track Progress</span>
+                </div>
+                <div className="hero-trust-badge-item flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[#FF5A36]/15 text-[#FF5A36] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Work Together</span>
+                </div>
+                <div className="hero-trust-badge-item flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[#FF5A36]/15 text-[#FF5A36] flex items-center justify-center shrink-0">
+                    <Check size={12} strokeWidth={3} />
+                  </span>
+                  <span>Grow Faster</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column: Main Landing-Page Hero Artwork (Image 1: Auvryn_ Plans to Progress Dashboard) */}
+            <div className="lg:col-span-6 relative flex items-center justify-center lg:justify-end mt-40 sm:mt-44 lg:mt-0">
+              <AuvrynHeroArtwork />
+            </div>
+
+          </div>
+
+          {/* ── HERO PRODUCT INTERFACE ASSEMBLY (Layers Self-Constructing) ── */}
+          <div ref={heroUiRef} className="hero-ui-shell mt-36 sm:mt-48 w-full max-w-5xl mx-auto bg-card-bg/95 border border-divider rounded-2xl p-4 sm:p-6 shadow-2xl backdrop-blur-xl relative overflow-hidden text-left">
           
           {/* Top Shell Bar */}
           <div className="hero-ui-header flex items-center justify-between pb-3 mb-4 border-b border-divider text-xs font-mono text-muted">
@@ -469,19 +632,19 @@ export default function Landing() {
                 </div>
               </div>
 
-              {/* Modular Cards */}
+              {/* Modular Cards (Stable, Restrained Presentation) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                <div className="hero-ui-cards p-3 bg-app border border-divider rounded-xl space-y-1">
+                <div className="hero-ui-cards p-3 bg-app border border-divider rounded-xl space-y-1 shadow-sm transition-all duration-200 hover:border-[#FF6B4A]/30">
                   <div className="text-[10px] font-mono text-muted uppercase">ACTIVE WORKSTREAMS</div>
                   <div className="text-base font-bold text-main">12 Projects</div>
                   <div className="text-[10px] text-emerald-400 font-mono">+3 on track</div>
                 </div>
-                <div className="hero-ui-cards p-3 bg-app border border-divider rounded-xl space-y-1">
+                <div className="hero-ui-cards p-3 bg-app border border-divider rounded-xl space-y-1 shadow-sm transition-all duration-200 hover:border-[#FF6B4A]/30">
                   <div className="text-[10px] font-mono text-muted uppercase">SFU CONFERENCING</div>
                   <div className="text-base font-bold text-main">Sub-second</div>
                   <div className="text-[10px] text-[#FF6B4A] font-mono">E2EE NIST P-256</div>
                 </div>
-                <div className="hero-ui-cards p-3 bg-app border border-divider rounded-xl space-y-1">
+                <div className="hero-ui-cards p-3 bg-app border border-divider rounded-xl space-y-1 shadow-sm transition-all duration-200 hover:border-[#FF6B4A]/30">
                   <div className="text-[10px] font-mono text-muted uppercase">SETTLED INVOICES</div>
                   <div className="text-base font-bold text-main">₹48,300.00</div>
                   <div className="text-[10px] text-emerald-400 font-mono">Active Currency (₹)</div>
@@ -492,6 +655,7 @@ export default function Landing() {
           </div>
         </div>
 
+        </div>
       </section>
 
       {/* ──────────────────────────────────────────────────────────── */}
@@ -516,19 +680,50 @@ export default function Landing() {
               Watch milestones advance and project trajectories accelerate as your distributed team pushes tasks across delivery boundaries.
             </p>
 
-            <div className="space-y-2 pt-2 text-xs font-mono text-muted">
-              <div className={`p-2.5 rounded border transition-colors ${activeMilestone >= 0 ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]/30 text-main' : 'border-divider'}`}>
-                Phase 1: Architecture Inception (100%)
-              </div>
-              <div className={`p-2.5 rounded border transition-colors ${activeMilestone >= 1 ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]/30 text-main' : 'border-divider'}`}>
-                Phase 2: Full-Stack Microservices (100%)
-              </div>
-              <div className={`p-2.5 rounded border transition-colors ${activeMilestone >= 2 ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]/30 text-main' : 'border-divider'}`}>
-                Phase 3: LiveKit WebRTC Grid Integration (100%)
-              </div>
-              <div className={`p-2.5 rounded border transition-colors ${activeMilestone >= 3 ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-bold' : 'border-divider'}`}>
-                Phase 4: Production Release & Telemetry
-              </div>
+            <div className="relative pl-6 space-y-2.5 pt-2 text-xs font-mono">
+              {/* Continuous vertical timeline connector line */}
+              <div className="absolute left-[11px] top-3.5 bottom-3.5 w-[2px] bg-divider" />
+              <div
+                className="absolute left-[11px] top-3.5 w-[2px] bg-[#FF6B4A] transition-all duration-500 ease-out"
+                style={{
+                  height: `${(Math.min(activeMilestone, 3) / 3) * 100}%`,
+                }}
+              />
+
+              {[
+                { label: 'Phase 1: Architecture Inception (100%)', step: 0 },
+                { label: 'Phase 2: Full-Stack Microservices (100%)', step: 1 },
+                { label: 'Phase 3: LiveKit WebRTC Grid Integration (100%)', step: 2 },
+                { label: 'Phase 4: Production Release & Telemetry', step: 3 },
+              ].map((phase, idx) => {
+                const isActive = activeMilestone >= phase.step;
+                const isFinal = phase.step === 3 && activeMilestone >= 3;
+                return (
+                  <div key={idx} className="relative flex items-center">
+                    {/* Milestone node anchor point */}
+                    <div
+                      className={`absolute -left-6 w-3 h-3 rounded-full border-2 transition-colors duration-300 z-10 ${
+                        isFinal
+                          ? 'bg-emerald-500 border-emerald-300 shadow-sm'
+                          : isActive
+                          ? 'bg-[#FF6B4A] border-white dark:border-[#0c0d12] shadow-sm'
+                          : 'bg-app border-divider'
+                      }`}
+                    />
+                    <div
+                      className={`w-full p-2.5 rounded border transition-colors duration-300 ${
+                        isFinal
+                          ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 font-bold'
+                          : isActive
+                          ? 'bg-[#FF6B4A]/10 border-[#FF6B4A]/30 text-main'
+                          : 'border-divider text-muted'
+                      }`}
+                    >
+                      {phase.label}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -542,23 +737,17 @@ export default function Landing() {
               <span className="text-xl font-mono font-extrabold text-[#FF6B4A]">{projectProgress}%</span>
             </div>
 
-            {/* Moving AUVRYN Flow Line Trajectory */}
+            {/* AUVRYN Flow Line Trajectory (Clean, Single-Pass Progress) */}
             <div className="space-y-2">
               <div className="flex justify-between text-[11px] font-mono text-muted">
                 <span>Trajectory Velocity</span>
                 <span>{projectProgress === 100 ? 'Released to Production' : 'Active Flow'}</span>
               </div>
-              <div className="w-full h-3 bg-hover rounded-full overflow-visible relative flex items-center">
+              <div className="w-full h-2.5 bg-hover rounded-full overflow-hidden relative flex items-center">
                 <div
-                  className="h-full bg-gradient-to-r from-[#FF6B4A] to-[#FF8E75] rounded-full relative transition-all duration-75 shadow-[0_0_12px_rgba(255,107,74,0.7)]"
+                  className="h-full bg-gradient-to-r from-[#FF6B4A] to-[#FF8E75] rounded-full relative"
                   style={{ width: `${projectProgress}%` }}
-                >
-                  {/* Flow Node at trajectory tip */}
-                  <div
-                    className="absolute right-0 top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-white shadow-lg"
-                    style={{ transform: 'translate(50%, -50%)', boxShadow: '0 0 10px #ffffff, 0 0 16px #FF6B4A' }}
-                  />
-                </div>
+                />
               </div>
             </div>
 
@@ -817,12 +1006,20 @@ export default function Landing() {
               Real-time line items assemble into professional tax-compliant receivables with automated Indian Rupee (₹) ledger synchronization.
             </p>
 
-            <div className="flex items-center gap-2 text-xs font-mono">
-              <span className={`px-2.5 py-1 rounded border transition-all ${invoiceState === 'Draft' ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-[#FF6B4A] font-bold' : 'border-divider text-muted'}`}>Draft</span>
-              <span className="text-zinc-600">→</span>
-              <span className={`px-2.5 py-1 rounded border transition-all ${invoiceState === 'Sent' ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-[#FF6B4A] font-bold' : 'border-divider text-muted'}`}>Sent</span>
-              <span className="text-zinc-600">→</span>
-              <span className={`px-2.5 py-1 rounded border transition-all ${invoiceState === 'Paid' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 font-bold' : 'border-divider text-muted'}`}>Paid</span>
+            <div className="flex items-center gap-1.5 text-xs font-mono pt-1">
+              <span className={`px-2.5 py-1 rounded border transition-colors duration-300 ${invoiceState === 'Draft' ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-[#FF6B4A] font-bold' : 'border-divider text-muted'}`}>Draft</span>
+              <div className="w-5 h-[2px] bg-divider relative overflow-hidden shrink-0">
+                <div
+                  className={`h-full transition-all duration-300 ${invoiceState === 'Sent' || invoiceState === 'Paid' ? 'w-full bg-[#FF6B4A]' : 'w-0'}`}
+                />
+              </div>
+              <span className={`px-2.5 py-1 rounded border transition-colors duration-300 ${invoiceState === 'Sent' ? 'bg-[#FF6B4A]/10 border-[#FF6B4A] text-[#FF6B4A] font-bold' : invoiceState === 'Paid' ? 'bg-app border-divider text-muted' : 'border-divider text-muted'}`}>Sent</span>
+              <div className="w-5 h-[2px] bg-divider relative overflow-hidden shrink-0">
+                <div
+                  className={`h-full transition-all duration-300 ${invoiceState === 'Paid' ? 'w-full bg-emerald-500' : 'w-0'}`}
+                />
+              </div>
+              <span className={`px-2.5 py-1 rounded border transition-colors duration-300 ${invoiceState === 'Paid' ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 font-bold' : 'border-divider text-muted'}`}>Paid</span>
             </div>
           </div>
 
@@ -884,36 +1081,218 @@ export default function Landing() {
             </p>
           </div>
 
-          {/* Interactive Bar/Trajectory Chart */}
-          <div className="bg-card-bg border border-divider rounded-2xl p-6 sm:p-8 shadow-2xl max-w-3xl mx-auto">
-            <div className="flex justify-between items-center pb-4 mb-6 border-b border-divider text-xs font-mono">
-              <span className="text-muted">Monthly Revenue Velocity Curve</span>
-              <span className="text-[#FF6B4A] font-bold">
-                {analyticsHoverIndex !== null ? `₹${analyticsPoints[analyticsHoverIndex].val.toLocaleString()} in ${analyticsPoints[analyticsHoverIndex].label}` : 'Hover Points'}
-              </span>
+          {/* Interactive Velocity Revenue Curve Chart */}
+          <div
+            className="bg-card-bg border border-divider rounded-2xl p-5 sm:p-7 shadow-lg max-w-3xl mx-auto w-full transition-shadow duration-300"
+            onMouseLeave={() => setAnalyticsHoverIndex(null)}
+          >
+            {/* Header: Title and Live Hover/Active Value */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-divider gap-2 text-left sm:text-right">
+              <div>
+                <span className="text-xs sm:text-sm font-mono text-muted font-medium">
+                  Monthly Revenue Velocity Curve
+                </span>
+              </div>
+              <div
+                aria-live="polite"
+                className="text-[#FF5A36] font-bold font-mono text-xs sm:text-sm tracking-tight"
+              >
+                {activePoint
+                  ? `${formatCurrency(activePoint.val, 'INR')} in ${activePoint.label}`
+                  : 'Hover Points'}
+              </div>
             </div>
 
-            <div className="h-48 flex items-end justify-between gap-4 pt-8 px-4 relative">
-              {analyticsPoints.map((pt, idx) => (
-                <div
-                  key={idx}
-                  onMouseEnter={() => setAnalyticsHoverIndex(idx)}
-                  className="flex-1 flex flex-col items-center gap-2 group cursor-pointer"
+            {/* Empty State Guard */}
+            {analyticsData.length === 0 ? (
+              <div className="h-56 sm:h-64 flex flex-col items-center justify-center text-muted font-mono text-xs sm:text-sm gap-2">
+                <TrendingUp size={20} className="text-muted/60" />
+                <span>No revenue data yet</span>
+              </div>
+            ) : (
+              /* Plot Area with Explicit Responsive Aspect Ratio */
+              <div className="relative w-full h-[220px] sm:h-[250px] aspect-[16/7] min-h-[200px]">
+                <svg
+                  viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+                  preserveAspectRatio="xMidYMid meet"
+                  className="w-full h-full overflow-visible select-none"
+                  aria-label="Monthly Revenue Velocity chart showing growth from January to May"
+                  role="img"
                 >
-                  <div className="w-full bg-hover group-hover:bg-[#FF6B4A]/30 rounded-t-lg transition-all relative flex flex-col justify-end" style={{ height: pt.h }}>
-                    <div
-                      className={`w-full rounded-t-lg transition-all ${
-                        analyticsHoverIndex === idx ? 'bg-[#FF6B4A] shadow-[0_0_12px_#FF6B4A]' : 'bg-[#FF6B4A]/60'
-                      }`}
-                      style={{ height: '100%' }}
+                  <defs>
+                    <linearGradient id="revenueVelocityGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#FF5A36" stopOpacity="0.16" />
+                      <stop offset="95%" stopColor="#FF5A36" stopOpacity="0.01" />
+                    </linearGradient>
+                  </defs>
+
+                  {/* 1. Horizontal Gridlines & Y-Axis Value Labels */}
+                  {gridLines.map((grid, idx) => (
+                    <g key={idx}>
+                      <line
+                        x1={pad.left}
+                        y1={grid.y}
+                        x2={pad.left + plotWidth}
+                        y2={grid.y}
+                        stroke="currentColor"
+                        className="text-line/40 dark:text-line/30"
+                        strokeDasharray="4 4"
+                        strokeWidth="1"
+                      />
+                      <text
+                        x={pad.left - 10}
+                        y={grid.y + 3.5}
+                        textAnchor="end"
+                        className="text-[10px] sm:text-[11px] font-mono fill-muted select-none"
+                      >
+                        {formatCurrency(grid.val, 'INR').replace('.00', '')}
+                      </text>
+                    </g>
+                  ))}
+
+                  {/* 2. Soft Gradient Area Underneath the Curve */}
+                  {areaPath && (
+                    <path
+                      d={areaPath}
+                      fill="url(#revenueVelocityGradient)"
+                      className="transition-opacity duration-300 pointer-events-none"
                     />
-                  </div>
-                  <span className={`text-[10px] font-mono transition-colors ${analyticsHoverIndex === idx ? 'text-main font-bold' : 'text-muted'}`}>
-                    {pt.label}
-                  </span>
-                </div>
-              ))}
-            </div>
+                  )}
+
+                  {/* 3. Highlight Vertical Guide Line for Active/Hovered Month */}
+                  {activePoint && (
+                    <line
+                      x1={activePoint.x}
+                      y1={pad.top}
+                      x2={activePoint.x}
+                      y2={baselineY}
+                      stroke="#FF5A36"
+                      strokeDasharray="3 3"
+                      strokeWidth="1.5"
+                      strokeOpacity="0.45"
+                      className="pointer-events-none transition-all duration-150"
+                    />
+                  )}
+
+                  {/* 4. Smooth Catmull-Rom Velocity Curve Line (Restrained, Controlled Transition) */}
+                  {curvePath && (
+                    <path
+                      ref={velocityCurveRef}
+                      d={curvePath}
+                      fill="none"
+                      stroke="#FF5A36"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      className="drop-shadow-sm"
+                    />
+                  )}
+
+                  {/* 5. Month Labels along X-Axis */}
+                  {chartPoints.map((pt) => {
+                    const isActive = activePoint?.index === pt.index;
+                    return (
+                      <text
+                        key={`label-${pt.label}`}
+                        x={pt.x}
+                        y={baselineY + 22}
+                        textAnchor="middle"
+                        className={`text-[11px] sm:text-xs font-mono transition-colors select-none ${
+                          isActive
+                            ? 'fill-main font-bold dark:fill-white'
+                            : 'fill-muted'
+                        }`}
+                      >
+                        {pt.label}
+                      </text>
+                    );
+                  })}
+
+                  {/* 6. Milestone Dots and Interactive Target Overlays */}
+                  {chartPoints.map((pt) => {
+                    const isActive = activePoint?.index === pt.index;
+                    return (
+                      <g
+                        key={`point-${pt.label}`}
+                        tabIndex={0}
+                        role="button"
+                        aria-label={`${pt.label}: ${formatCurrency(pt.val, 'INR')}`}
+                        onMouseEnter={() => setAnalyticsHoverIndex(pt.index)}
+                        onFocus={() => setAnalyticsHoverIndex(pt.index)}
+                        onBlur={() => setAnalyticsHoverIndex(null)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'ArrowRight' && pt.index < chartPoints.length - 1) {
+                            setAnalyticsHoverIndex(pt.index + 1);
+                          } else if (e.key === 'ArrowLeft' && pt.index > 0) {
+                            setAnalyticsHoverIndex(pt.index - 1);
+                          }
+                        }}
+                        className="cursor-pointer focus:outline-none"
+                      >
+                        {/* Generous touch / hit target */}
+                        <circle
+                          cx={pt.x}
+                          cy={pt.y}
+                          r="22"
+                          fill="transparent"
+                          className="cursor-pointer"
+                          onTouchStart={() => setAnalyticsHoverIndex(pt.index)}
+                        />
+
+                        {/* Pulsing Aura Halo for Active / Current Month */}
+                        {isActive && (
+                          <circle
+                            cx={pt.x}
+                            cy={pt.y}
+                            r="13"
+                            fill="#FF5A36"
+                            fillOpacity="0.18"
+                            className="animate-pulse"
+                          />
+                        )}
+
+                        {/* Solid Milestone Dot */}
+                        <circle
+                          cx={pt.x}
+                          cy={pt.y}
+                          r={isActive ? 6 : 4}
+                          fill="#FF5A36"
+                          stroke="#ffffff"
+                          strokeWidth={isActive ? 2.5 : 1.5}
+                          className="dark:stroke-surface-2 transition-all duration-150 shadow-sm"
+                        />
+                      </g>
+                    );
+                  })}
+
+                  {/* 7. Active Month Floating Tooltip */}
+                  {activePoint && (
+                    <g
+                      transform={`translate(${Math.max(pad.left + 50, Math.min(svgWidth - pad.right - 50, activePoint.x))}, ${Math.max(pad.top + 14, activePoint.y - 12)})`}
+                      className="pointer-events-none transition-transform duration-150 ease-out"
+                    >
+                      <rect
+                        x="-56"
+                        y="-26"
+                        width="112"
+                        height="26"
+                        rx="6"
+                        className="fill-surface stroke-line shadow-md dark:fill-surface-2 dark:stroke-line"
+                        strokeWidth="1"
+                      />
+                      <text
+                        x="0"
+                        y="-9"
+                        textAnchor="middle"
+                        className="text-[11px] font-mono font-bold fill-text select-none"
+                      >
+                        {activePoint.label}: {formatCurrency(activePoint.val, 'INR').replace('.00', '')}
+                      </text>
+                    </g>
+                  )}
+                </svg>
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -921,7 +1300,7 @@ export default function Landing() {
       {/* ──────────────────────────────────────────────────────────── */}
       {/* ── SECTION 6.5: PLANS & PRICING ARCHITECTURE ─────────────── */}
       {/* ──────────────────────────────────────────────────────────── */}
-      <section id="pricing" className="relative z-10 py-28 px-4 sm:px-6 border-t border-divider max-w-7xl mx-auto">
+      <section id="pricing" ref={pricingSectionRef} className="relative z-10 py-28 px-4 sm:px-6 border-t border-divider max-w-7xl mx-auto">
         <div className="text-center space-y-4 max-w-3xl mx-auto mb-16">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-card-bg border border-divider text-[11px] font-mono text-muted shadow-sm">
             <Sparkles size={12} className="text-[#FF6B4A]" />

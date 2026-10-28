@@ -13,6 +13,7 @@ import { hashPassword } from '@/lib/crypto';
 import AnimatedPressable from '@/components/ui/animated-pressable';
 import * as WebBrowser from 'expo-web-browser';
 import * as Linking from 'expo-linking';
+import { ASSIGNABLE_ACCESS_ROLES } from '@/lib/jobTitles';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -29,7 +30,8 @@ export default function RegisterScreen() {
   const [freelancerWorkType, setFreelancerWorkType] = useState<'organization' | 'independent'>('organization');
   
   const [organization, setOrganization] = useState('');
-  const [role, setRole] = useState('general_member'); // Default for joining
+  const [role, setRole] = useState('team_member'); // Default for joining
+  const [jobTitle, setJobTitle] = useState('Software Engineer');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   
   const [loading, setLoading] = useState(false);
@@ -166,9 +168,7 @@ export default function RegisterScreen() {
 
       // 2. Sign up the user or use active OAuth session
       let userId = null;
-      const metaRole = accountType === 'freelancer'
-        ? 'freelancer'
-        : (accountType === 'create' ? 'owner' : role);
+      const metaRole = accountType === 'create' ? 'owner' : 'team_member';
 
       const finalFullName = isAuthenticated && user ? (user.fullName || fullName) : fullName;
 
@@ -300,17 +300,18 @@ export default function RegisterScreen() {
       } else {
         if (accountType === 'join' && existingOrg) {
           orgId = existingOrg.id;
-          const assignedRole = role || 'employee';
+          const assignedRole = role || 'team_member';
+          const assignedJobTitle = jobTitle.trim() || 'Team Member';
           
           const { error: linkError } = await supabase
             .from('user_organizations')
-            .insert({ user_id: userId, org_id: orgId, role: assignedRole });
+            .insert({ user_id: userId, org_id: orgId, role: assignedRole, job_title: assignedJobTitle });
           if (linkError) {
             await supabase.auth.signOut();
             throw linkError;
           }
 
-          const { error: updateError } = await supabase.from('users').update({ role: assignedRole }).eq('id', userId);
+          const { error: updateError } = await supabase.from('users').update({ role: assignedRole, job_title: assignedJobTitle }).eq('id', userId);
           if (updateError) {
             await supabase.auth.signOut();
             throw updateError;
@@ -332,16 +333,17 @@ export default function RegisterScreen() {
             throw createOrgError;
           }
           orgId = newOrg.id;
+          const ownerJobTitle = jobTitle.trim() || 'Founder';
           
           const { error: linkError } = await supabase
             .from('user_organizations')
-            .insert({ user_id: userId, org_id: orgId, role: 'owner' });
+            .insert({ user_id: userId, org_id: orgId, role: 'owner', job_title: ownerJobTitle });
           if (linkError) {
             await supabase.auth.signOut();
             throw linkError;
           }
 
-          const { error: updateError } = await supabase.from('users').update({ role: 'owner' }).eq('id', userId);
+          const { error: updateError } = await supabase.from('users').update({ role: 'owner', job_title: ownerJobTitle }).eq('id', userId);
           if (updateError) {
             await supabase.auth.signOut();
             throw updateError;
@@ -560,41 +562,49 @@ export default function RegisterScreen() {
             )}
 
                 {accountType === 'join' && (
-                  <View className="mb-4">
-                    <Text className="text-sm font-bold text-foreground mb-2 ml-1">Select Your Role</Text>
-                    <View className="border border-border rounded-xl overflow-hidden bg-surface">
-                      {[
-                        { value: 'administrator',   label: 'Administrator',   desc: 'Org-wide management' },
-                        { value: 'director',        label: 'Director',        desc: 'Senior leadership' },
-                        { value: 'senior_manager',  label: 'Senior Manager',  desc: 'Cross-team leadership' },
-                        { value: 'manager',         label: 'Manager',         desc: 'Team management' },
-                        { value: 'team_lead',       label: 'Team Lead',       desc: 'Frontline leadership' },
-                        { value: 'senior_employee', label: 'Senior Employee', desc: 'Experienced contributor' },
-                        { value: 'employee',        label: 'Employee',        desc: 'Team member' },
-                        { value: 'intern',          label: 'Intern',          desc: 'Entry level' },
-                        { value: 'freelancer',      label: 'Freelancer',      desc: 'External contractor' },
-                      ].map((r, idx, arr) => (
-                        <Pressable
-                          key={r.value}
-                          className={`p-3 flex-row items-center justify-between ${role === r.value ? 'bg-primary/10' : ''}`}
-                          style={{ borderBottomWidth: idx < arr.length - 1 ? 1 : 0, borderBottomColor: '#E2E8F0' }}
-                          onPress={() => setRole(r.value)}
-                        >
-                          <View>
-                            <Text className="text-sm font-semibold text-foreground">{r.label}</Text>
-                            <Text className="text-xs text-muted">{r.desc}</Text>
-                          </View>
-                          {role === r.value && <Ionicons name="checkmark-circle" size={20} color="#1F6FEB" />}
-                        </Pressable>
-                      ))}
+                  <>
+                    <PremiumInput
+                      label="Your Professional Job Title"
+                      placeholder="e.g. Software Engineer, Operations Executive"
+                      value={jobTitle}
+                      onChangeText={setJobTitle}
+                      editable={!loading}
+                    />
+
+                    <View className="mb-4">
+                      <Text className="text-sm font-bold text-foreground mb-2 ml-1">Access Role & Permissions</Text>
+                      <View className="border border-border rounded-xl overflow-hidden bg-surface">
+                        {ASSIGNABLE_ACCESS_ROLES.map((r, idx, arr) => (
+                          <Pressable
+                            key={r.value}
+                            className={`p-3 flex-row items-center justify-between ${role === r.value ? 'bg-primary/10' : ''}`}
+                            style={{ borderBottomWidth: idx < arr.length - 1 ? 1 : 0, borderBottomColor: '#E2E8F0' }}
+                            onPress={() => setRole(r.value)}
+                          >
+                            <View className="flex-1 mr-2">
+                              <Text className="text-sm font-semibold text-foreground">{r.label}</Text>
+                              <Text className="text-xs text-muted">{r.description}</Text>
+                            </View>
+                            {role === r.value && <Ionicons name="checkmark-circle" size={20} color="#1F6FEB" />}
+                          </Pressable>
+                        ))}
+                      </View>
                     </View>
-                  </View>
+                  </>
                 )}
 
                 {accountType === 'create' && (
                   <>
+                    <PremiumInput
+                      label="Executive Job Title"
+                      placeholder="e.g. Founder, CEO, CTO"
+                      value={jobTitle}
+                      onChangeText={setJobTitle}
+                      editable={!loading}
+                    />
+
                     <View className="mb-4 p-4 rounded-xl bg-primary/10 border border-primary/20">
-                      <Text className="text-sm text-primary font-bold mb-1">🏛️ Role: Owner</Text>
+                      <Text className="text-sm text-primary font-bold mb-1">🏛️ Access Role: Organisation Owner</Text>
                       <Text className="text-xs text-muted">As the founder of this organization, you receive the Owner role — full access to all modules, billing, roles, audit logs, and analytics.</Text>
                     </View>
 

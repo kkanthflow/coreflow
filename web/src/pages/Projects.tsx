@@ -130,7 +130,7 @@ export default function Projects() {
             {canCreate && (
               <button
                 onClick={() => navigate('/projects/new')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all shadow-sm shadow-accent/20"
               >
                 <Plus size={14} />
                 <span>New Project</span>
@@ -144,7 +144,7 @@ export default function Projects() {
       <MetricStrip metrics={metrics} />
 
       {/* ── Filter Bar & Search ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-card-bg border border-divider rounded-lg p-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-card-bg border border-divider rounded-xl shadow-sm p-3">
         <div className="flex items-center gap-3 flex-1 min-w-[240px] max-w-sm">
           <div className="relative w-full">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -153,10 +153,10 @@ export default function Projects() {
               placeholder="Search initiatives, scopes, or owners..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 bg-app border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+              className="w-full pl-8 pr-7 py-1.5 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-text placeholder-muted/60 focus:outline-none transition-colors"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
+              <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-text">
                 <X size={12} />
               </button>
             )}
@@ -165,15 +165,15 @@ export default function Projects() {
 
         <div className="flex items-center gap-2">
           {/* Status Filter Tabs */}
-          <div className="flex bg-app border border-divider rounded p-0.5">
+          <div className="flex bg-surface-2 border border-line rounded-lg p-0.5">
             {STATUS_FILTERS.map(f => (
               <button
                 key={f.key}
                 onClick={() => setFilter(f.key)}
-                className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors ${
+                className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors ${
                   filter === f.key
-                    ? 'bg-hover text-main font-semibold'
-                    : 'text-muted hover:text-zinc-200'
+                    ? 'bg-card-bg text-text font-semibold shadow-xs'
+                    : 'text-muted hover:text-text'
                 }`}
               >
                 {f.label}
@@ -182,11 +182,11 @@ export default function Projects() {
           </div>
 
           {/* View Mode Toggle */}
-          <div className="flex bg-app border border-divider rounded p-0.5">
+          <div className="flex bg-surface-2 border border-line rounded-lg p-0.5">
             <button
               onClick={() => setViewMode('table')}
-              className={`p-1 rounded text-xs transition-colors ${
-                viewMode === 'table' ? 'bg-hover text-main' : 'text-muted hover:text-muted'
+              className={`p-1.5 rounded-md text-xs transition-colors ${
+                viewMode === 'table' ? 'bg-card-bg text-text shadow-xs' : 'text-muted hover:text-text'
               }`}
               title="Table view"
             >
@@ -194,8 +194,8 @@ export default function Projects() {
             </button>
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1 rounded text-xs transition-colors ${
-                viewMode === 'grid' ? 'bg-hover text-main' : 'text-muted hover:text-muted'
+              className={`p-1.5 rounded-md text-xs transition-colors ${
+                viewMode === 'grid' ? 'bg-card-bg text-text shadow-xs' : 'text-muted hover:text-text'
               }`}
               title="Grid cards"
             >
@@ -216,8 +216,8 @@ export default function Projects() {
           action={canCreate && !search ? { label: "Create First Project", onClick: () => navigate('/projects/new') } : undefined}
         />
       ) : viewMode === 'table' ? (
-        <div className="bg-card-bg border border-divider rounded-lg overflow-hidden">
-          <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-card-bg">
+        <div className="bg-card-bg border border-divider rounded-xl shadow-sm overflow-hidden">
+          <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-surface-2/50">
             <div className="col-span-4">Project & Scope</div>
             <div className="col-span-2">Department</div>
             <div className="col-span-2">Stage Status</div>
@@ -225,7 +225,7 @@ export default function Projects() {
             <div className="col-span-1 text-right">Target</div>
           </div>
 
-          <div className="divide-y divide-white/[0.03]">
+          <div className="divide-y divide-divider">
             {filtered.map((project, idx) => {
               const progress = Math.round(project.progress);
               return (
@@ -235,12 +235,12 @@ export default function Projects() {
                   transition={{ duration: 0.25, delay: idx * 0.04, ease: [0.16, 1, 0.3, 1] }}
                   key={project.id}
                   onClick={() => setInspectingProject(project)}
-                  className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-white/[0.025] transition-colors items-center text-xs cursor-pointer group"
+                  className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-hover/60 transition-colors items-center text-xs cursor-pointer group"
                 >
                   <div className="col-span-4 min-w-0 pr-3">
                     <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-[2px] shrink-0" style={{ backgroundColor: project.cover_color || '#FF6B4A' }} />
-                      <span className="font-semibold text-main group-hover:text-[#FF6B4A] transition-colors truncate">
+                      <span className="w-2 h-2 rounded-[2px] shrink-0" style={{ backgroundColor: project.cover_color || '#ff5a36' }} />
+                      <span className="font-semibold text-main group-hover:text-accent transition-colors truncate">
                         {project.title}
                       </span>
                     </div>
@@ -250,7 +250,9 @@ export default function Projects() {
                   </div>
 
                   <div className="col-span-2 text-muted truncate">
-                    {project.department?.name || 'Workspace Core'}
+                    <span className="px-2 py-0.5 bg-surface-2 border border-line rounded text-[11px] font-medium text-text">
+                      {project.department?.name || 'Workspace Core'}
+                    </span>
                   </div>
 
                   <div className="col-span-2">
@@ -275,13 +277,16 @@ export default function Projects() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filtered.map(project => {
+          {filtered.map((project, idx) => {
             const progress = Math.round(project.progress);
             return (
-              <div
+              <motion.div
                 key={project.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.24, delay: Math.min(idx * 0.04, 0.4), ease: [0.16, 1, 0.3, 1] }}
                 onClick={() => setInspectingProject(project)}
-                className="bg-card-bg border border-divider hover:border-white/[0.12] rounded-lg p-4 transition-all cursor-pointer flex flex-col justify-between group"
+                className="bg-card-bg border border-divider hover:border-accent/40 rounded-xl shadow-sm hover:shadow-md p-4 transition-all cursor-pointer flex flex-col justify-between group"
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
@@ -291,7 +296,7 @@ export default function Projects() {
                     </span>
                   </div>
 
-                  <h3 className="text-sm font-bold text-main group-hover:text-[#FF6B4A] transition-colors truncate mb-1">
+                  <h3 className="text-sm font-bold text-main group-hover:text-accent transition-colors truncate mb-1">
                     {project.title}
                   </h3>
                   <p className="text-xs text-muted line-clamp-2 min-h-[32px] font-normal leading-relaxed">
@@ -304,9 +309,9 @@ export default function Projects() {
                     <span className="text-muted">{project.doneTasks}/{project.totalTasks} Deliverables</span>
                     <span className="text-main font-bold">{progress}%</span>
                   </div>
-                  <TrajectoryProgress value={progress} color={project.cover_color || '#FF6B4A'} />
+                  <TrajectoryProgress value={progress} color={project.cover_color || '#ff5a36'} />
                 </div>
-              </div>
+              </motion.div>
             );
           })}
         </div>
@@ -323,13 +328,13 @@ export default function Projects() {
             <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
               <Link
                 to={`/projects/${inspectingProject.id}/client-room`}
-                className="w-full sm:flex-1 py-2 px-3 bg-[#FF6B4A]/10 hover:bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30 text-xs font-bold rounded text-center transition-colors flex items-center justify-center gap-1.5"
+                className="w-full sm:flex-1 py-2 px-3 bg-accent-soft hover:bg-accent/15 text-accent border border-accent/25 text-xs font-bold rounded-lg text-center transition-colors flex items-center justify-center gap-1.5"
               >
                 <span>Client Project Room</span>
               </Link>
               <Link
                 to={role === 'client' ? `/projects/${inspectingProject.id}/client-room` : `/projects/${inspectingProject.id}`}
-                className="w-full sm:flex-1 py-2 px-3 bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold rounded text-center transition-colors"
+                className="w-full sm:flex-1 py-2 px-3 bg-accent hover:bg-accent/90 text-white text-xs font-semibold rounded-lg text-center shadow-sm shadow-accent/20 transition-all"
               >
                 {role === 'client' ? 'Enter Client Project Room' : 'Open Project Center'}
               </Link>

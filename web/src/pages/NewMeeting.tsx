@@ -29,17 +29,34 @@ export default function NewMeeting() {
 
   useEffect(() => {
     async function loadMembers() {
-      if (!orgId) return;
+      if (!user) return;
+      if (orgId) {
+        const { data } = await supabase
+          .from('user_organizations')
+          .select('users:user_id(id, full_name, email)')
+          .eq('org_id', orgId);
+        if (data && data.length > 0) {
+          const list = data.map((d: any) => {
+            const u = Array.isArray(d.users) ? d.users[0] : d.users;
+            return u;
+          }).filter((u: any) => !!u && !!u.id && u.id !== user.id);
+          setMembers(list);
+          return;
+        }
+      }
+
+      // Fallback
       const { data } = await supabase
-        .from('user_organizations')
-        .select('users:user_id(id, full_name, email)')
-        .eq('org_id', orgId);
+        .from('users')
+        .select('id, full_name, email')
+        .neq('id', user.id)
+        .limit(30);
       if (data) {
-        setMembers(data.map((d: any) => d.users).filter(Boolean));
+        setMembers(data);
       }
     }
     loadMembers();
-  }, [orgId]);
+  }, [orgId, user]);
 
   const toggleInvite = (userId: string) => {
     setSelectedInvited(prev =>
@@ -127,8 +144,8 @@ export default function NewMeeting() {
             meeting_id: meeting.id,
             user_id: uid,
             role: 'participant',
-            status: 'invited',
-            admission_status: 'waiting',
+            status: 'accepted',
+            admission_status: 'admitted',
           }))
         ];
         await supabase.from('meeting_participants').insert(participants);
@@ -142,7 +159,7 @@ export default function NewMeeting() {
           const invites = selectedInvited.map(uid => ({
             meeting_id: meeting.id,
             user_id: uid,
-            status: uid === user.id ? 'accepted' : 'pending',
+            status: 'accepted',
           }));
           await supabase.from('meeting_invitations').insert(invites);
         } catch (iErr) {

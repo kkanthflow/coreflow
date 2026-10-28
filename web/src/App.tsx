@@ -12,6 +12,8 @@ import { trpc } from './lib/trpc';
 import { supabase } from './lib/supabase';
 import AppShell from './components/AppShell';
 import { lazyWithRetry } from './utils/lazyWithRetry';
+import AuvrynFoxLoader from './components/motion/AuvrynFoxLoader';
+import FoxProductTour from './components/onboarding/FoxProductTour';
 
 // Eagerly loaded
 import Login from './pages/Login';
@@ -56,12 +58,12 @@ const Terms           = lazyWithRetry(() => import('./pages/Terms'));
 const Contact         = lazyWithRetry(() => import('./pages/Contact'));
 const Pricing         = lazyWithRetry(() => import('./pages/Pricing'));
 const Notifications   = lazyWithRetry(() => import('./pages/Notifications'));
+const RolesPermissions = lazyWithRetry(() => import('./pages/RolesPermissions'));
 
 function PageLoader() {
   return (
     <div className="min-h-[60vh] w-full flex flex-col items-center justify-center text-main">
-      <div className="w-10 h-10 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin mb-3" />
-      <span className="text-xs font-mono text-muted tracking-wider">LOADING MODULE...</span>
+      <AuvrynFoxLoader size="md" text="LOADING MODULE..." />
     </div>
   );
 }
@@ -71,8 +73,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
   if (loading) {
     return (
       <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
-        <div className="w-10 h-10 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin mb-4" />
-        <p className="text-muted text-sm">Authenticating session...</p>
+        <AuvrynFoxLoader size="lg" text="Authenticating session..." />
       </div>
     );
   }
@@ -89,8 +90,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (loading) {
       return (
         <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
-          <div className="w-10 h-10 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin mb-4" />
-          <p className="text-muted text-sm">Loading...</p>
+          <AuvrynFoxLoader size="lg" text="Loading..." />
         </div>
       );
     }
@@ -116,7 +116,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     if (loading) {
       return (
         <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
-          <div className="w-8 h-8 border-2 border-[#FF6B4A] border-t-transparent rounded-full animate-spin" />
+          <AuvrynFoxLoader size="md" />
         </div>
       );
     }
@@ -229,6 +229,11 @@ function App() {
                       <Route path="/departments" element={<Suspense fallback={<PageLoader />}><Departments /></Suspense>} />
                       <Route path="/clients"   element={<Suspense fallback={<PageLoader />}><Clients /></Suspense>} />
                       
+                      {/* Roles & RBAC */}
+                      <Route path="/roles-permissions" element={<Suspense fallback={<PageLoader />}><RolesPermissions /></Suspense>} />
+                      <Route path="/roles" element={<Navigate to="/roles-permissions" replace />} />
+                      <Route path="/rbac" element={<Navigate to="/roles-permissions" replace />} />
+                      
                       {/* Invoices & Payments */}
                       <Route path="/invoices"  element={<Suspense fallback={<PageLoader />}><Invoices /></Suspense>} />
                       <Route path="/invoices/new" element={<Suspense fallback={<PageLoader />}><NewInvoice /></Suspense>} />
@@ -254,6 +259,7 @@ function App() {
 
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Routes>
+                  <FoxProductTour />
                   </BrowserRouter>
                     </SettingsProvider>
                 </WorkspaceProvider>

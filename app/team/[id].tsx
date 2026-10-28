@@ -307,24 +307,6 @@ export default function MemberProfileScreen() {
           </View>
         </View>
 
-        {/* Admin Actions */}
-        {canManageRoles && user?.id !== member.id && (
-          <View className="px-6 pb-12">
-            <Text className="text-lg font-bold text-error mb-4">Admin Actions</Text>
-            <View className="p-4 rounded-2xl border border-error/30" style={{ backgroundColor: `${colors.error}10` }}>
-              <Text className="text-sm text-foreground mb-4">
-                You have permission to manage this user&apos;s role and access level within the organization.
-              </Text>
-              <Pressable 
-                onPress={() => router.push(`/admin/roles?userId=${member.id}` as any)}
-                className="flex-row items-center justify-center py-3 rounded-xl bg-error"
-              >
-                <Ionicons name="shield" size={18} color="#fff" className="mr-2" />
-                <Text className="text-white font-bold text-base">Manage Role</Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
       </ScrollView>
 
       {/* Online Status Modal */}

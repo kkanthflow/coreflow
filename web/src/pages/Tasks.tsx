@@ -293,7 +293,7 @@ export default function Tasks() {
             {canManage && (
               <button
                 onClick={() => setIsCreateModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all shadow-sm shadow-accent/20"
               >
                 <Plus size={14} />
                 <span>New Task</span>
@@ -307,7 +307,7 @@ export default function Tasks() {
       <MetricStrip metrics={metrics} />
 
       {/* ── Toolbar & Filters ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-card-bg border border-divider rounded-lg p-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-card-bg border border-divider rounded-xl shadow-sm p-3">
         <div className="flex items-center gap-3 flex-1 min-w-[240px] max-w-sm">
           <div className="relative w-full">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -316,10 +316,10 @@ export default function Tasks() {
               placeholder="Search deliverables, scopes, or assignees..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-8 pr-7 py-1.5 bg-app border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+              className="w-full pl-8 pr-7 py-1.5 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-text placeholder-muted/60 focus:outline-none transition-colors"
             />
             {search && (
-              <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
+              <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-text">
                 <X size={12} />
               </button>
             )}
@@ -331,7 +331,7 @@ export default function Tasks() {
           <select
             value={projectFilter}
             onChange={e => setProjectFilter(e.target.value)}
-            className="bg-app border border-divider text-[11px] font-medium text-muted rounded px-2.5 py-1.5 focus:outline-none"
+            className="bg-surface-2 border border-line text-[11px] font-medium text-text rounded-lg px-2.5 py-1.5 focus:outline-none"
           >
             <option value="all">All Projects</option>
             {projects.map(p => (
@@ -343,7 +343,7 @@ export default function Tasks() {
           <select
             value={priorityFilter}
             onChange={e => setPriorityFilter(e.target.value)}
-            className="bg-app border border-divider text-[11px] font-medium text-muted rounded px-2.5 py-1.5 focus:outline-none"
+            className="bg-surface-2 border border-line text-[11px] font-medium text-text rounded-lg px-2.5 py-1.5 focus:outline-none"
           >
             <option value="all">All Priorities</option>
             <option value="low">Low</option>
@@ -353,11 +353,11 @@ export default function Tasks() {
           </select>
 
           {/* View Switcher */}
-          <div className="flex bg-app border border-divider rounded p-0.5">
+          <div className="flex bg-surface-2 border border-line rounded-lg p-0.5">
             <button
               onClick={() => setViewMode('board')}
-              className={`p-1 rounded text-xs transition-colors ${
-                viewMode === 'board' ? 'bg-hover text-main' : 'text-muted hover:text-muted'
+              className={`p-1.5 rounded-md text-xs transition-colors ${
+                viewMode === 'board' ? 'bg-card-bg text-text shadow-xs' : 'text-muted hover:text-text'
               }`}
               title="Kanban board"
             >
@@ -365,8 +365,8 @@ export default function Tasks() {
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1 rounded text-xs transition-colors ${
-                viewMode === 'list' ? 'bg-hover text-main' : 'text-muted hover:text-muted'
+              className={`p-1.5 rounded-md text-xs transition-colors ${
+                viewMode === 'list' ? 'bg-card-bg text-text shadow-xs' : 'text-muted hover:text-text'
               }`}
               title="Table view"
             >
@@ -393,22 +393,22 @@ export default function Tasks() {
             return (
               <div
                 key={col.key}
-                className="bg-card-bg border border-divider rounded-lg p-3 flex flex-col min-h-[460px]"
+                className="bg-card-bg border border-divider rounded-xl shadow-sm p-3.5 flex flex-col min-h-[460px]"
               >
                 {/* Column Header */}
                 <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-divider px-1">
                   <div className="flex items-center gap-2">
-                    <span className={`w-1.5 h-1.5 rounded-full ${col.dot}`} />
+                    <span className={`w-2 h-2 rounded-full ${col.dot}`} />
                     <span className="text-[11px] font-mono font-bold uppercase tracking-wider text-main">{col.label}</span>
                   </div>
-                  <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-white/[0.03] text-muted">
+                  <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-full bg-surface-2 border border-line text-muted">
                     {colTasks.length}
                   </span>
                 </div>
 
                 {/* Task Cards */}
-                <div className="space-y-2 flex-1 overflow-y-auto pr-0.5">
-                  {colTasks.map(task => {
+                <div className="space-y-2.5 flex-1 overflow-y-auto pr-0.5">
+                  {colTasks.map((task, tIdx) => {
                     const isCrit = task.priority === 'critical';
                     const isHigh = task.priority === 'high';
 
@@ -417,20 +417,23 @@ export default function Tasks() {
                         layout
                         layoutId={`task-${task.id}`}
                         key={task.id}
+                        initial={{ opacity: 0, y: 8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.22, delay: Math.min(tIdx * 0.03, 0.3), ease: [0.16, 1, 0.3, 1] }}
                         whileHover={{ y: -2, transition: { duration: 0.15 } }}
                         whileTap={{ scale: 0.98 }}
                         onClick={() => handleSelectTask(task)}
-                        className={`p-3 bg-card-bg hover:bg-hover border rounded transition-all cursor-pointer group space-y-2 ${
-                          isCrit ? 'border-red-500/30 hover:border-red-500/60' :
-                          isHigh ? 'border-[#FF6B4A]/30 hover:border-[#FF6B4A]/60' :
-                          'border-divider hover:border-white/[0.12]'
+                        className={`p-3.5 bg-surface-2/40 hover:bg-surface-2 border rounded-xl shadow-xs transition-all cursor-pointer group space-y-2.5 ${
+                          isCrit ? 'border-red-500/40 hover:border-red-500/70' :
+                          isHigh ? 'border-accent/40 hover:border-accent/70' :
+                          'border-line hover:border-accent/30'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-2">
-                          <span className={`text-[9px] font-mono font-bold uppercase px-1.5 py-0.5 rounded ${
-                            isCrit ? 'bg-red-500/10 text-red-400 border border-red-500/20' :
-                            isHigh ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] border border-[#FF6B4A]/20' :
-                            'bg-white/[0.03] text-muted border border-divider'
+                          <span className={`text-[9px] font-mono font-semibold uppercase px-2 py-0.5 rounded-md ${
+                            isCrit ? 'bg-red-500/10 text-red-500 dark:text-red-400 border border-red-500/20' :
+                            isHigh ? 'bg-accent-soft text-accent border border-accent/20' :
+                            'bg-surface-2 text-muted border border-line'
                           }`}>
                             {task.priority}
                           </span>
@@ -441,7 +444,7 @@ export default function Tasks() {
                           )}
                         </div>
 
-                        <h4 className="text-xs font-semibold text-main group-hover:text-[#FF6B4A] transition-colors leading-snug">
+                        <h4 className="text-xs font-semibold text-main group-hover:text-accent transition-colors leading-snug">
                           {task.title}
                         </h4>
 
@@ -453,14 +456,14 @@ export default function Tasks() {
 
                         <div className="flex items-center justify-between pt-2 border-t border-divider text-[10px] font-mono text-muted">
                           <span>{task.due_date ? new Date(task.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'No deadline'}</span>
-                          <span className="text-muted">{task.assignee?.full_name?.split(' ')[0] || 'Unassigned'}</span>
+                          <span className="text-main font-medium">{task.assignee?.full_name?.split(' ')[0] || 'Unassigned'}</span>
                         </div>
                       </motion.div>
                     );
                   })}
 
                   {colTasks.length === 0 && (
-                    <div className="h-24 flex items-center justify-center border border-dashed border-divider rounded text-[11px] text-zinc-600">
+                    <div className="h-24 flex items-center justify-center border border-dashed border-divider rounded-xl text-[11px] text-muted/60">
                       Empty column
                     </div>
                   )}
@@ -470,8 +473,8 @@ export default function Tasks() {
           })}
         </div>
       ) : (
-        <div className="bg-card-bg border border-divider rounded-lg overflow-hidden">
-          <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-card-bg">
+        <div className="bg-card-bg border border-divider rounded-xl shadow-sm overflow-hidden">
+          <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-surface-2/50">
             <div className="col-span-5">Task Deliverable</div>
             <div className="col-span-2">Project Scope</div>
             <div className="col-span-2">Stage Status</div>
@@ -479,15 +482,18 @@ export default function Tasks() {
             <div className="col-span-2 text-right">Assignee & Due</div>
           </div>
 
-          <div className="divide-y divide-white/[0.03]">
-            {filteredTasks.map(t => (
-              <div
+          <div className="divide-y divide-divider">
+            {filteredTasks.map((t, idx) => (
+              <motion.div
                 key={t.id}
+                initial={{ opacity: 0, x: -6 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.2, delay: Math.min(idx * 0.03, 0.3), ease: [0.16, 1, 0.3, 1] }}
                 onClick={() => handleSelectTask(t)}
-                className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors cursor-pointer items-center text-xs group"
+                className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-hover/60 transition-colors cursor-pointer items-center text-xs group"
               >
                 <div className="col-span-5 min-w-0 pr-3">
-                  <div className="font-semibold text-main group-hover:text-[#FF6B4A] transition-colors truncate">
+                  <div className="font-semibold text-main group-hover:text-accent transition-colors truncate">
                     {t.title}
                   </div>
                   {t.description && <div className="text-muted text-[11px] truncate mt-0.5">{t.description}</div>}
@@ -513,7 +519,7 @@ export default function Tasks() {
                     {t.due_date ? new Date(t.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : '—'}
                   </span>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -534,12 +540,12 @@ export default function Tasks() {
                 value={newComment}
                 onChange={e => setNewComment(e.target.value)}
                 onKeyDown={e => { if (e.key === 'Enter') handleAddComment(); }}
-                className="flex-1 bg-card-bg border border-divider rounded px-3 py-1.5 text-xs text-main placeholder-zinc-500 focus:outline-none focus:border-[#FF6B4A]/50"
+                className="flex-1 bg-surface-2 border border-line rounded-lg px-3 py-1.5 text-xs text-text placeholder-muted/60 focus:outline-none focus:border-accent/50"
               />
               <button
                 onClick={handleAddComment}
                 disabled={!newComment.trim()}
-                className="p-2 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main rounded transition-colors"
+                className="p-2 bg-accent hover:bg-accent/90 disabled:opacity-40 text-white rounded-lg transition-all shadow-xs"
               >
                 <Send size={13} />
               </button>
@@ -745,7 +751,7 @@ export default function Tasks() {
                 <button
                   type="submit"
                   disabled={creating || !newTitle.trim()}
-                  className="px-4 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors"
+                  className="px-4 py-1.5 bg-accent hover:bg-accent/90 disabled:opacity-40 text-white font-semibold text-xs rounded-lg transition-all shadow-sm shadow-accent/20"
                 >
                   {creating ? 'Saving...' : 'Create Task'}
                 </button>

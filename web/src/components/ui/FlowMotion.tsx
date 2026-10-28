@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { motion, useReducedMotion } from 'motion/react';
+import { Check } from 'lucide-react';
 import { EASINGS } from '../../lib/motionSystem';
 
 // ── 1. Flow Line & Flow Node (AUVRYN Signature) ──────────────────────────
@@ -27,7 +28,7 @@ export function FlowLine({
 
   return (
     <div
-      className={`w-full bg-white/[0.1] rounded-full overflow-visible relative flex items-center ${className}`}
+      className={`w-full bg-divider rounded-full overflow-visible relative flex items-center ${className}`}
       style={{ height: `${height}px` }}
     >
       {/* Active Trajectory Fill */}
@@ -92,14 +93,15 @@ export function FlowStepper({
   const progressPercent = steps.length > 1 ? (safeIdx / (steps.length - 1)) * 100 : 0;
 
   return (
-    <div className={`w-full py-2 relative ${className}`}>
-      {/* Background Track */}
-      <div className="absolute top-[17px] left-3 right-3 h-[2px] bg-white/[0.08] -translate-y-1/2" />
+    <div className={`w-full relative py-1 ${className}`}>
+      {/* Precision Track: precisely aligned with 28px (w-7 h-7) circle centers at 14px */}
+      <div className="absolute top-1 left-[14px] right-[14px] h-7 flex items-center pointer-events-none">
+        {/* Background Inactive Track */}
+        <div className="w-full h-[2px] bg-divider rounded-full" />
 
-      {/* Dynamic Traveling Flow Line */}
-      <div className="absolute top-[17px] left-3 right-3 h-[2px] -translate-y-1/2 overflow-visible pointer-events-none">
+        {/* Dynamic Trajectory Fill */}
         <motion.div
-          className="h-full relative rounded-full"
+          className="absolute left-0 h-[2px] rounded-full shadow-[0_0_8px_rgba(255,107,74,0.4)]"
           style={{ backgroundColor: color }}
           initial={shouldReduceMotion ? { width: `${progressPercent}%` } : { width: '0%' }}
           animate={{ width: `${progressPercent}%` }}
@@ -107,25 +109,15 @@ export function FlowStepper({
             duration: shouldReduceMotion ? 0 : 0.45,
             ease: EASINGS.precision,
           }}
-        >
-          {/* Active Flow Node traveling */}
-          <div
-            className="absolute right-0 top-1/2 rounded-full bg-white shadow-sm"
-            style={{
-              width: '7px',
-              height: '7px',
-              transform: 'translate(50%, -50%)',
-              boxShadow: `0 0 8px ${color}, 0 0 14px ${color}99`,
-            }}
-          />
-        </motion.div>
+        />
       </div>
 
       {/* Nodes & Labels */}
       <div className="relative z-10 flex items-start justify-between">
         {steps.map((step, idx) => {
-          const isPassed = idx <= safeIdx;
+          const isPassed = idx < safeIdx;
           const isCurrent = idx === safeIdx;
+          const isCompletedFinal = isCurrent && idx === steps.length - 1;
 
           return (
             <div
@@ -135,41 +127,37 @@ export function FlowStepper({
                 onStepClick ? 'cursor-pointer' : ''
               }`}
             >
-              {/* Step Node Dot */}
+              {/* Step Node Circle (28px x 28px) */}
               <div
-                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 ${
+                className={`w-7 h-7 rounded-full flex items-center justify-center transition-all duration-200 select-none ${
                   isCurrent
-                    ? 'bg-app border-2 border-[#FF6B4A] text-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.35)] scale-105'
+                    ? 'bg-card-bg border-2 border-[#FF6B4A] text-[#FF6B4A] shadow-[0_0_12px_rgba(255,107,74,0.35)] scale-105'
                     : isPassed
-                    ? 'bg-card-bg border border-[#FF6B4A]/60 text-main'
-                    : 'bg-app border border-white/[0.1] text-zinc-600'
+                    ? 'bg-card-bg border-2 border-[#FF6B4A] text-[#FF6B4A]'
+                    : 'bg-card-bg border-2 border-divider text-muted'
                 }`}
               >
-                <div
-                  className={`w-2 h-2 rounded-full transition-colors ${
-                    isCurrent
-                      ? 'bg-[#FF6B4A]'
-                      : isPassed
-                      ? 'bg-[#FF6B4A]/80'
-                      : 'bg-zinc-600'
-                  }`}
-                />
+                {isPassed || isCompletedFinal ? (
+                  <Check size={12} className="stroke-[2.5]" />
+                ) : isCurrent ? (
+                  <div className="w-2.5 h-2.5 rounded-full bg-[#FF6B4A]" />
+                ) : (
+                  <div className="w-1.5 h-1.5 rounded-full bg-divider" />
+                )}
               </div>
 
               {/* Step Label */}
               <span
-                className={`text-[10px] font-mono font-semibold tracking-wider uppercase mt-1.5 transition-colors ${
-                  isCurrent
+                className={`text-[10px] font-mono font-semibold tracking-wider uppercase mt-2 text-center transition-colors ${
+                  isCurrent || isPassed
                     ? 'text-main'
-                    : isPassed
-                    ? 'text-muted'
-                    : 'text-zinc-600'
+                    : 'text-muted'
                 }`}
               >
                 {step.label}
               </span>
               {step.subtitle && (
-                <span className="text-[9px] text-muted font-mono mt-0.5">
+                <span className="text-[9px] text-muted font-mono mt-0.5 text-center">
                   {step.subtitle}
                 </span>
               )}

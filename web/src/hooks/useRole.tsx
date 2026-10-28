@@ -15,11 +15,8 @@ export const useRole = () => {
 
   const isAtLeast = useCallback((requiredRole: string) => {
     const HIERARCHY: Record<string, number> = {
-      owner: 9, administrator: 8, director: 7, senior_manager: 6,
-      manager: 5, team_lead: 4, senior_employee: 3, employee: 2,
-      intern: 1, freelancer: 0,
-      managing_director: 9, ceo: 9, cto: 9,
-      project_manager: 5, hr: 8, developer: 2, general_member: 2,
+      owner: 7, administrator: 6, manager: 5, team_lead: 4,
+      team_member: 3, employee: 3, guest: 2, client: 1
     };
     return (HIERARCHY[role || ''] ?? 0) >= (HIERARCHY[requiredRole] ?? 0);
   }, [role]);

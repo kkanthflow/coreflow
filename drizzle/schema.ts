@@ -22,7 +22,7 @@ export const lostFoundStatusEnum = pgEnum("lost_found_status", ["lost", "found",
 // ==========================================
 // AUVRYN ENUMS
 // ==========================================
-export const auvrynRoleEnum = pgEnum('auvryn_role', ['administrator','director','senior_manager','manager','team_lead','senior_employee','employee','intern','freelancer','owner']);
+export const auvrynRoleEnum = pgEnum('auvryn_role', ['owner', 'administrator', 'manager', 'team_lead', 'team_member', 'employee', 'guest', 'client']);
 export const orgJoinStatusEnum = pgEnum('org_join_status', ['pending','under_review','approved','rejected','cancelled']);
 export const fileVisibilityEnum = pgEnum('file_visibility', ['internal','client_shared','private']);
 export const fileStatusEnum = pgEnum('file_status', ['draft','in_review','approved','released','superseded']);

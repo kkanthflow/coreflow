@@ -13,14 +13,19 @@ interface PageHeaderProps {
 
 export function PageHeader({ title, description, badge, actions, breadcrumbs }: PageHeaderProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 border-b border-divider pb-4 select-none">
+    <motion.div 
+      initial={{ opacity: 0, y: -6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
+      className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4 border-b border-divider pb-4 select-none"
+    >
       <div>
         {breadcrumbs && breadcrumbs.length > 0 && (
-          <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted uppercase tracking-wider mb-1">
+          <div className="flex items-center gap-1.5 text-[10px] font-mono text-muted uppercase tracking-wider mb-1 animate-fade-in">
             {breadcrumbs.map((b, i) => (
               <React.Fragment key={i}>
                 {i > 0 && <span>/</span>}
-                <span className={i === breadcrumbs.length - 1 ? 'text-muted font-semibold' : 'text-zinc-600'}>
+                <span className={i === breadcrumbs.length - 1 ? 'text-muted font-semibold' : 'text-muted/60'}>
                   {b.label}
                 </span>
               </React.Fragment>
@@ -28,24 +33,24 @@ export function PageHeader({ title, description, badge, actions, breadcrumbs }: 
           </div>
         )}
         <div className="flex items-center gap-2.5">
-          <h1 className="text-xl sm:text-2xl font-bold text-main tracking-tight">{title}</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-main tracking-tight animate-fade-up">{title}</h1>
           {badge && (
-            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-white/[0.04] border border-divider text-muted">
+            <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-surface-2 border border-divider text-muted animate-scale-in">
               {badge}
             </span>
           )}
         </div>
         {description && (
-          <p className="text-xs text-muted mt-0.5 font-normal">{description}</p>
+          <p className="text-xs text-muted mt-0.5 font-normal animate-fade-in stagger-1">{description}</p>
         )}
       </div>
 
       {actions && (
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 animate-fade-in stagger-2">
           {actions}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -60,14 +65,14 @@ export interface MetricItem {
 
 export function MetricStrip({ metrics }: { metrics: MetricItem[] }) {
   return (
-    <div className="bg-card-bg border border-divider rounded-lg grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-white/[0.05] select-none">
+    <div className="bg-card-bg border border-divider rounded-xl shadow-sm grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-divider select-none overflow-hidden">
       {metrics.map((m, idx) => (
         <motion.div
           key={m.label}
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.28, delay: idx * 0.04, ease: [0.16, 1, 0.3, 1] }}
-          className="p-3.5 sm:p-4 flex flex-col justify-between"
+          className="p-3.5 sm:p-4 flex flex-col justify-between hover:bg-hover/40 transition-colors"
         >
           <span className="text-[10px] font-mono font-semibold tracking-wider text-muted uppercase">{m.label}</span>
           <div className="mt-2">
@@ -76,15 +81,15 @@ export function MetricStrip({ metrics }: { metrics: MetricItem[] }) {
               initial={{ opacity: 0.8, y: 2 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className={`text-xl sm:text-2xl font-bold tracking-tight tabular-nums ${m.isOrange ? 'text-[#FF6B4A]' : 'text-main'}`}
+              className={`text-xl sm:text-2xl font-bold tracking-tight tabular-nums ${m.isOrange ? 'text-accent' : 'text-main'}`}
             >
               {m.value}
             </motion.div>
             {m.indicator && (
-              <span className="text-[9px] font-mono text-emerald-400 mt-0.5 block">{m.indicator}</span>
+              <span className="text-[9px] font-mono text-emerald-600 dark:text-emerald-400 mt-0.5 block font-semibold">{m.indicator}</span>
             )}
             {m.trend && (
-              <span className="text-[9px] font-mono text-muted mt-0.5 block">{m.trend}</span>
+              <span className="text-[9px] font-mono text-muted mt-0.5 block font-medium">{m.trend}</span>
             )}
           </div>
         </motion.div>
@@ -97,23 +102,23 @@ export function MetricStrip({ metrics }: { metrics: MetricItem[] }) {
 export type StatusType = 'active' | 'planning' | 'review' | 'completed' | 'on_hold' | 'critical' | 'paid' | 'pending' | 'overdue' | 'cancelled' | 'draft';
 
 const STATUS_MAP: Record<string, { label: string; dot: string; text: string; bg: string }> = {
-  active:         { label: 'Active',      dot: 'bg-[#FF6B4A]', text: 'text-[#FF6B4A]', bg: 'bg-[#FF6B4A]/10 border-[#FF6B4A]/20' },
-  in_progress:    { label: 'In Progress', dot: 'bg-blue-400',  text: 'text-blue-400', bg: 'bg-blue-500/10 border-blue-500/20' },
-  planning:       { label: 'Planning',    dot: 'bg-zinc-400',  text: 'text-muted', bg: 'bg-white/[0.03] border-divider' },
-  todo:           { label: 'To Do',       dot: 'bg-zinc-400',  text: 'text-muted', bg: 'bg-white/[0.03] border-divider' },
-  review:         { label: 'In Review',   dot: 'bg-purple-400',text: 'text-purple-300', bg: 'bg-purple-500/10 border-purple-500/20' },
-  completed:      { label: 'Completed',   dot: 'bg-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-  done:           { label: 'Done',        dot: 'bg-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-  paid:           { label: 'Paid',        dot: 'bg-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-  partially_paid: { label: 'Partially Paid', dot: 'bg-amber-400', text: 'text-amber-300', bg: 'bg-amber-500/10 border-amber-500/20' },
-  unpaid:         { label: 'Unpaid',         dot: 'bg-blue-400',  text: 'text-blue-300',  bg: 'bg-blue-500/10 border-blue-500/20' },
-  settled:        { label: 'Settled',     dot: 'bg-emerald-400', text: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
-  on_hold:        { label: 'On Hold',     dot: 'bg-amber-400', text: 'text-amber-300', bg: 'bg-amber-500/10 border-amber-500/20' },
-  pending:        { label: 'Pending',     dot: 'bg-amber-400', text: 'text-amber-300', bg: 'bg-amber-500/10 border-amber-500/20' },
-  critical:       { label: 'Critical',    dot: 'bg-red-400',   text: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
-  overdue:        { label: 'Overdue',     dot: 'bg-red-400',   text: 'text-red-400', bg: 'bg-red-500/10 border-red-500/20' },
-  cancelled:      { label: 'Cancelled',   dot: 'bg-zinc-600',  text: 'text-muted', bg: 'bg-zinc-900 border-divider' },
-  draft:          { label: 'Draft',       dot: 'bg-zinc-500',  text: 'text-muted', bg: 'bg-white/[0.03] border-divider' },
+  active:         { label: 'Active',      dot: 'bg-[#FF6B4A]', text: 'text-[#FF6B4A]', bg: 'bg-[#FF6B4A]/10 border-[#FF6B4A]/25' },
+  in_progress:    { label: 'In Progress', dot: 'bg-blue-500',  text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10 border-blue-500/25' },
+  planning:       { label: 'Planning',    dot: 'bg-zinc-400',  text: 'text-muted', bg: 'bg-hover border-divider' },
+  todo:           { label: 'To Do',       dot: 'bg-zinc-400',  text: 'text-muted', bg: 'bg-hover border-divider' },
+  review:         { label: 'In Review',   dot: 'bg-purple-500',text: 'text-purple-600 dark:text-purple-300', bg: 'bg-purple-500/10 border-purple-500/25' },
+  completed:      { label: 'Completed',   dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/25' },
+  done:           { label: 'Done',        dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/25' },
+  paid:           { label: 'Paid',        dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/25' },
+  partially_paid: { label: 'Partially Paid', dot: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-300', bg: 'bg-amber-500/10 border-amber-500/25' },
+  unpaid:         { label: 'Unpaid',         dot: 'bg-blue-500',  text: 'text-blue-600 dark:text-blue-300',  bg: 'bg-blue-500/10 border-blue-500/25' },
+  settled:        { label: 'Settled',     dot: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/25' },
+  on_hold:        { label: 'On Hold',     dot: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-300', bg: 'bg-amber-500/10 border-amber-500/25' },
+  pending:        { label: 'Pending',     dot: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-300', bg: 'bg-amber-500/10 border-amber-500/25' },
+  critical:       { label: 'Critical',    dot: 'bg-red-500',   text: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10 border-red-500/25' },
+  overdue:        { label: 'Overdue',     dot: 'bg-red-500',   text: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10 border-red-500/25' },
+  cancelled:      { label: 'Cancelled',   dot: 'bg-zinc-500',  text: 'text-muted', bg: 'bg-hover border-divider' },
+  draft:          { label: 'Draft',       dot: 'bg-zinc-400',  text: 'text-muted', bg: 'bg-hover border-divider' },
 };
 
 export function StatusSignal({ status, label }: { status: string; label?: string }) {
@@ -211,20 +216,36 @@ interface EmptyStateProps {
     label: string;
     onClick: () => void;
   };
+  showFox?: boolean;
 }
 
-export function EmptyState({ icon: Icon, title, description, action }: EmptyStateProps) {
+export function EmptyState({ icon: Icon, title, description, action, showFox = true }: EmptyStateProps) {
   return (
-    <div className="py-16 px-4 text-center select-none">
-      <div className="w-10 h-10 rounded-lg bg-card-bg border border-divider flex items-center justify-center mx-auto text-muted mb-3">
-        <Icon size={18} className="text-[#FF6B4A]" />
-      </div>
+    <div className="py-14 px-4 text-center select-none relative animate-fade-in">
+      {showFox ? (
+        <div className="relative inline-flex items-center justify-center mb-3">
+          <div className="w-14 h-14 rounded-2xl bg-surface-2/80 border border-[#FF5A36]/25 shadow-sm flex items-center justify-center overflow-hidden p-1">
+            <img
+              src="/auvryn-hero-mascot.png"
+              alt="Auvryn Companion"
+              className="w-full h-full object-contain pointer-events-none drop-shadow-xs"
+            />
+          </div>
+          <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-lg bg-surface border border-line shadow-xs flex items-center justify-center text-accent">
+            <Icon size={12} />
+          </div>
+        </div>
+      ) : (
+        <div className="w-12 h-12 rounded-xl bg-card-bg border border-divider shadow-2xs flex items-center justify-center mx-auto text-muted mb-3.5">
+          <Icon size={20} className="text-accent" />
+        </div>
+      )}
       <h3 className="text-sm font-semibold text-main tracking-tight">{title}</h3>
       <p className="text-xs text-muted mt-1 max-w-sm mx-auto leading-relaxed">{description}</p>
       {action && (
         <button
           onClick={action.onClick}
-          className="mt-4 px-3.5 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold transition-colors shadow-sm"
+          className="mt-4 px-4 py-2 rounded-xl bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all shadow-sm shadow-accent/20 hover:shadow-md cursor-pointer"
         >
           {action.label}
         </button>
@@ -238,7 +259,7 @@ export function SkeletonRow({ count = 4 }: { count?: number }) {
   return (
     <div className="space-y-2 py-2">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="h-10 bg-white/[0.02] rounded border border-divider animate-pulse" />
+        <div key={i} className="h-10 bg-surface-2/70 rounded-lg border border-line animate-pulse" />
       ))}
     </div>
   );

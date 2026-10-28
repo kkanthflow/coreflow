@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
-import { SUPPORTED_CURRENCIES, formatCurrency, getCurrencyDetails } from '../web/src/lib/currency.ts';
-import { BRAND } from '../web/src/brand.ts';
+import { SUPPORTED_CURRENCIES, formatCurrency, getCurrencyDetails } from '../web/src/lib/currency';
+import { BRAND } from '../web/src/brand';
 
 export function runBatch6E2ETests() {
   console.log('--- Running Batch 6 End-to-End Verification ---');
@@ -67,7 +67,7 @@ export function runBatch6E2ETests() {
   // 4. Non-Admin Permissions Gating
   const WORKSPACE_ADMIN_ROUTES = ['organization', 'billing', 'members', 'integrations'];
   function canEditWorkspaceSetting(userRole: string): boolean {
-    return ['owner', 'administrator', 'director', 'ceo', 'managing_director'].includes(userRole);
+    return ['owner', 'administrator'].includes(userRole);
   }
 
   assert.equal(canEditWorkspaceSetting('owner'), true, 'Owner has admin edit privileges');

@@ -101,7 +101,7 @@ export default function PreJoin() {
       try {
         const { data: meeting, error: meetingError } = await supabase
           .from('meetings')
-          .select('id, host_id, status, end_time, title, description, start_time')
+          .select('id, host_id, workspace_id, status, end_time, title, description, start_time')
           .eq('id', id)
           .single();
 
@@ -124,19 +124,61 @@ export default function PreJoin() {
           return;
         }
 
-        const { data: inv, error: invError } = await supabase
+        // 1. Check meeting_participants first
+        const { data: part } = await supabase
+          .from('meeting_participants')
+          .select('status, admission_status')
+          .eq('meeting_id', id)
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (part && (part.admission_status === 'admitted' || part.status === 'accepted' || part.status === 'joined')) {
+          if (isMounted) setMeetingState('accepted');
+          return;
+        }
+
+        // 2. Check meeting_invitations
+        const { data: inv } = await supabase
           .from('meeting_invitations')
           .select('status')
           .eq('meeting_id', id)
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (invError || !inv) {
-          if (isMounted) setMeetingState('not_invited');
+        if (inv) {
+          if (isMounted) setMeetingState(inv.status as any);
           return;
         }
 
-        if (isMounted) setMeetingState(inv.status as any);
+        if (part) {
+          if (isMounted) setMeetingState('pending');
+          return;
+        }
+
+        // 3. Check if user is a member of the organization hosting the meeting
+        if (meeting.workspace_id) {
+          const { data: wsData } = await supabase
+            .from('workspaces')
+            .select('organization_id')
+            .eq('id', meeting.workspace_id)
+            .maybeSingle();
+
+          if (wsData?.organization_id) {
+            const { data: uo } = await supabase
+              .from('user_organizations')
+              .select('id')
+              .eq('org_id', wsData.organization_id)
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+            if (uo) {
+              if (isMounted) setMeetingState('accepted');
+              return;
+            }
+          }
+        }
+
+        if (isMounted) setMeetingState('not_invited');
 
       } catch (err) {
         console.error('Error checking access:', err);
@@ -167,11 +209,10 @@ export default function PreJoin() {
     if (!id || !user) return;
     try {
       setMeetingState('accepted');
-      await supabase
-        .from('meeting_invitations')
-        .update({ status: 'accepted' })
-        .eq('meeting_id', id)
-        .eq('user_id', user.id);
+      await supabase.rpc('respond_to_meeting_invitation', {
+        p_meeting_id: id,
+        p_status: 'accepted',
+      });
 
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
       const sessionRes = await supabase.auth.getSession();
@@ -195,11 +236,10 @@ export default function PreJoin() {
     if (!id || !user) return;
     try {
       setMeetingState('declined');
-      await supabase
-        .from('meeting_invitations')
-        .update({ status: 'declined' })
-        .eq('meeting_id', id)
-        .eq('user_id', user.id);
+      await supabase.rpc('respond_to_meeting_invitation', {
+        p_meeting_id: id,
+        p_status: 'declined',
+      });
 
       const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app';
       const sessionRes = await supabase.auth.getSession();

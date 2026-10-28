@@ -301,9 +301,9 @@ export default function Settings() {
           .eq('org_id', currentOrgId)
           .maybeSingle();
 
-        if (userOrg && (userOrg.role === 'owner' || userOrg.role === 'administrator' || userOrg.role === 'director')) {
+        if (userOrg && (userOrg.role === 'owner' || userOrg.role === 'administrator')) {
           setIsOwnerOrAdmin(true);
-        } else if (['owner', 'administrator', 'director', 'ceo', 'managing_director'].includes(role || '')) {
+        } else if (['owner', 'administrator'].includes(role || '')) {
           setIsOwnerOrAdmin(true);
         }
 
@@ -651,10 +651,10 @@ export default function Settings() {
 
       {/* ── VIEW 1: MAIN SETTINGS ── */}
       {currentView === 'main' && (
-        <div className="space-y-6">
+        <div className="space-y-6 animate-fade-in">
 
           {/* 1. Display */}
-          <div>
+          <div className="animate-fade-up stagger-1">
             <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
               DISPLAY
             </span>
@@ -678,7 +678,7 @@ export default function Settings() {
           </div>
 
           {/* 2. Preferences */}
-          <div>
+          <div className="animate-fade-up stagger-2">
             <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
               PREFERENCES
             </span>
@@ -860,22 +860,24 @@ export default function Settings() {
                 </div>
               </div>
 
-              {/* Company Profile Action */}
+              {/* Organization Settings */}
               <div>
                 <span className="text-[10px] sm:text-[11px] font-mono font-bold tracking-[0.08em] text-muted uppercase block px-1 mb-2">
                   ORGANIZATION SETTINGS
                 </span>
-                <div 
-                  onClick={() => setIsCompanyModalVisible(true)}
-                  className="bg-surface rounded-xl border border-line overflow-visible cursor-pointer"
-                >
-                  <SettingsRow
-                    icon={Building2}
-                    title="Company Profile"
-                    description="Billed-from details, tax GSTIN & registered office"
+                <div className="bg-surface rounded-xl border border-line divide-y divide-line overflow-visible">
+                  <div 
+                    onClick={() => setIsCompanyModalVisible(true)}
+                    className="cursor-pointer"
                   >
-                    <ChevronRight size={15} className="text-muted shrink-0" />
-                  </SettingsRow>
+                    <SettingsRow
+                      icon={Building2}
+                      title="Company Profile"
+                      description="Billed-from details, tax GSTIN & registered office"
+                    >
+                      <ChevronRight size={15} className="text-muted shrink-0" />
+                    </SettingsRow>
+                  </div>
                 </div>
               </div>
             </>

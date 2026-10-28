@@ -84,25 +84,14 @@ export const Fonts = Platform.select({
 // Enterprise role → theme color token mapping
 // ─────────────────────────────────────────────────────────────────────
 export const roleColorMap = {
-  // New enterprise roles
-  owner:            'role_owner',
-  administrator:    'role_administrator',
-  director:         'role_director',
-  senior_manager:   'role_senior_manager',
-  manager:          'role_manager',
-  team_lead:        'role_team_lead',
-  senior_employee:  'role_senior_employee',
-  employee:         'role_employee',
-  intern:           'role_intern',
-  freelancer:       'role_freelancer',
-  // Legacy aliases (backward compat)
-  managing_director: 'role_owner',
-  ceo:              'role_owner',
-  cto:              'role_owner',
-  project_manager:  'role_manager',
-  hr:               'role_administrator',
-  developer:        'role_employee',
-  general_member:   'role_member',
+  owner:         'role_owner',
+  administrator: 'role_administrator',
+  manager:       'role_manager',
+  team_lead:     'role_team_lead',
+  team_member:   'role_team_member',
+  employee:      'role_employee',
+  guest:         'role_guest',
+  client:        'role_client',
 } as const;
 
 export type UserRole = keyof typeof roleColorMap;

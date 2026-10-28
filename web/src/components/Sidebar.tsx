@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Briefcase, CheckSquare, Calendar, Video,
   MessageSquare, Users, Building2, Building, FileText,
   CreditCard, BarChart3, Settings, ChevronLeft, ShieldCheck, Sparkles, Zap,
-  Inbox, History
+  Inbox, History, Shield
 } from 'lucide-react';
 import { useRole } from '../hooks/useRole';
 import { useWorkspace } from '../hooks/useWorkspace';
@@ -76,6 +76,7 @@ export default function Sidebar() {
         items: [
           { name: 'Employees', to: '/employees', icon: Users, permission: 'view_team_directory' },
           { name: 'Departments', to: '/departments', icon: Building2, permission: 'manage_departments' },
+          { name: 'Roles & RBAC', to: '/roles-permissions', icon: Shield, permission: null },
           { name: 'Audit Logs', to: '/audit-logs', icon: ShieldCheck, permission: 'view_audit_logs' },
         ]
       }
@@ -112,16 +113,16 @@ export default function Sidebar() {
         {collapsed ? (
           <button 
             onClick={() => setCollapsed(false)}
-            className="w-7 h-7 rounded-md bg-surface border border-line flex items-center justify-center text-text mx-auto hover:border-accent/50 transition-colors"
+            className="w-7 h-7 rounded-lg bg-surface-2 border border-line flex items-center justify-center text-text mx-auto hover:border-accent/50 hover:bg-surface transition-all shadow-xs"
             title="Expand Navigation"
           >
             <AuvrynLogo size={14} />
           </button>
         ) : (
           <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-2 min-w-0" title={currentWorkspaceName}>
-              <div className="w-5 h-5 rounded-md bg-surface-2 border border-line flex items-center justify-center shrink-0">
-                <AuvrynLogo size={12} />
+            <div className="flex items-center gap-2.5 min-w-0" title={currentWorkspaceName}>
+              <div className="w-6 h-6 rounded-lg bg-surface-2 border border-line flex items-center justify-center shrink-0 shadow-xs">
+                <AuvrynLogo size={13} />
               </div>
               <div className="min-w-0">
                 <span className="text-text font-bold text-xs tracking-tight truncate block">
@@ -131,7 +132,7 @@ export default function Sidebar() {
             </div>
             <button
               onClick={() => setCollapsed(true)}
-              className="p-1 text-muted hover:text-text rounded hover:bg-surface-2 transition-colors"
+              className="p-1.5 text-muted hover:text-text rounded-md hover:bg-surface-2 transition-colors"
               title="Collapse Rail"
             >
               <ChevronLeft size={13} />
@@ -141,15 +142,15 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation Groups - scrollable independently with min-h-0 */}
-      <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-3 px-1.5 space-y-4">
-        {activeNavGroups.map(group => {
+      <nav className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-4">
+        {activeNavGroups.map((group, gIdx) => {
           const visibleItems = group.items.filter(item => !item.permission || can(item.permission));
           if (visibleItems.length === 0) return null;
 
           return (
-            <div key={group.label} className="space-y-0.5">
+            <div key={group.label} className="space-y-0.5 animate-fade-in" style={{ animationDelay: `${gIdx * 0.04}s` }}>
               {!collapsed && (
-                <div className="px-2.5 py-1 text-[9px] font-mono font-bold uppercase tracking-wider text-muted">
+                <div className="px-2.5 py-1 text-[10px] font-mono font-bold uppercase tracking-wider text-muted/70">
                   {group.label}
                 </div>
               )}
@@ -159,10 +160,10 @@ export default function Sidebar() {
                   to={item.to}
                   title={collapsed ? item.name : undefined}
                   className={({ isActive }) => cn(
-                    'relative flex items-center rounded-md transition-all duration-150 text-xs font-medium group',
+                    'relative flex items-center rounded-lg transition-all duration-150 text-xs font-medium group',
                     collapsed ? 'h-9 w-9 mx-auto justify-center' : 'px-2.5 py-1.5 justify-between',
                     isActive
-                      ? 'bg-surface-2 text-text font-semibold'
+                      ? 'bg-surface-2 text-text font-semibold shadow-xs'
                       : 'text-muted hover:text-text hover:bg-surface-2/60'
                   )}
                 >
@@ -174,8 +175,8 @@ export default function Sidebar() {
                           layoutId="active-nav-indicator"
                           transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                           className={cn(
-                            "absolute bg-accent rounded-full shadow-[0_0_12px_rgba(255,90,54,0.6)]",
-                            collapsed ? "-left-1 top-2 bottom-2 w-[3px]" : "left-0 top-1.5 bottom-1.5 w-[2.5px]"
+                            "absolute bg-accent rounded-full shadow-[0_0_10px_var(--accent)]",
+                            collapsed ? "-left-1 top-2 bottom-2 w-[3px]" : "left-0 top-1.5 bottom-1.5 w-[3px]"
                           )}
                         />
                       )}
@@ -195,7 +196,7 @@ export default function Sidebar() {
 
                       {!collapsed && item.shortcut && (
                         <kbd
-                          className="px-1.5 py-0.5 text-[9px] font-mono text-muted bg-surface-2 border border-line rounded shadow-2xs group-hover:text-text"
+                          className="px-1.5 py-0.5 text-[9px] font-mono text-muted bg-surface-2/80 border border-line rounded shadow-xs group-hover:text-text"
                           title={`Keyboard shortcut: ${item.shortcut}`}
                         >
                           {item.shortcut}
@@ -211,14 +212,14 @@ export default function Sidebar() {
       </nav>
 
       {/* Pinned Footer Settings */}
-      <div className="p-1.5 border-t border-line bg-surface shrink-0 space-y-0.5">
+      <div className="p-2 border-t border-line bg-surface shrink-0 space-y-0.5">
         <NavLink
           to="/settings"
           title={collapsed ? "Settings" : undefined}
           className={cn(
-            'relative flex items-center rounded-md transition-all duration-150 text-xs font-medium group',
+            'relative flex items-center rounded-lg transition-all duration-150 text-xs font-medium group',
             collapsed ? 'h-9 w-9 mx-auto justify-center' : 'px-2.5 py-1.5 justify-between',
-            isSettingsActive ? 'bg-surface-2 text-text font-semibold' : 'text-muted hover:text-text hover:bg-surface-2/60'
+            isSettingsActive ? 'bg-surface-2 text-text font-semibold shadow-xs' : 'text-muted hover:text-text hover:bg-surface-2/60'
           )}
         >
           <>
@@ -227,8 +228,8 @@ export default function Sidebar() {
                 layoutId="active-nav-indicator"
                 transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                 className={cn(
-                  "absolute bg-accent rounded-full shadow-[0_0_12px_rgba(255,90,54,0.6)]",
-                  collapsed ? "-left-1 top-2 bottom-2 w-[3px]" : "left-0 top-1.5 bottom-1.5 w-[2.5px]"
+                  "absolute bg-accent rounded-full shadow-[0_0_10px_var(--accent)]",
+                  collapsed ? "-left-1 top-2 bottom-2 w-[3px]" : "left-0 top-1.5 bottom-1.5 w-[3px]"
                 )} 
               />
             )}

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../_core/supabase';
 import crypto from 'crypto';
+import { EmailService } from '../email/email.service';
 
 export interface PaymentSubmissionPayload {
   invoice_id: string;
@@ -317,6 +318,52 @@ export class PaymentSubmissionService {
       throw new Error(error.message || 'Failed to confirm payment submission');
     }
 
+    // Trigger verified email receipt and in-app notification
+    try {
+      const { data: sub } = await supabaseAdmin
+        .from('payment_submissions')
+        .select('*, client:client_id(name, email, portal_user_id), invoice:invoice_id(invoice_number, currency)')
+        .eq('id', submissionId)
+        .single();
+
+      if (sub && sub.client?.email) {
+        const clientEmail = sub.client.email;
+        const clientName = sub.client.name || 'Valued Client';
+        const invoiceNum = (sub.invoice as any)?.invoice_number || 'N/A';
+        const currency = (sub.invoice as any)?.currency || 'INR';
+        const amountFormatted = `${currency} ${Number(sub.amount).toLocaleString('en-IN')}`;
+
+        await EmailService.sendPaymentConfirmation({
+          recipientEmail: clientEmail,
+          recipientName: clientName,
+          invoiceNumber: invoiceNum,
+          paymentId: sub.transaction_reference || submissionId,
+          amountFormatted,
+          currency,
+          paidAt: sub.payment_date || new Date().toISOString(),
+          receiptUrl: sub.receipt_url || undefined,
+          userId: sub.client.portal_user_id || undefined,
+          organizationId: sub.organization_id || undefined,
+        });
+
+        // In-app notification for client
+        if (sub.client.portal_user_id) {
+          await supabaseAdmin.from('notifications').insert({
+            user_id: sub.client.portal_user_id,
+            title: `Payment Confirmed: #${invoiceNum}`,
+            message: `Your payment of ${amountFormatted} for Invoice #${invoiceNum} has been verified and marked as PAID.`,
+            type: 'invoice',
+            entity_type: 'invoice',
+            entity_id: sub.invoice_id,
+            action_url: `/invoices/${sub.invoice_id}`,
+            is_read: false,
+          });
+        }
+      }
+    } catch (e: any) {
+      console.warn('[PaymentSubmission] Email/Notification post-confirmation note:', e.message);
+    }
+
     return {
       success: true,
       result: data
@@ -350,6 +397,47 @@ export class PaymentSubmissionService {
     if (error) {
       console.error('[PaymentSubmission.rejectSubmission] RPC error:', error);
       throw new Error(error.message || 'Failed to reject payment submission');
+    }
+
+    // Trigger rejection notification and email
+    try {
+      const { data: sub } = await supabaseAdmin
+        .from('payment_submissions')
+        .select('*, client:client_id(name, email, portal_user_id), invoice:invoice_id(invoice_number)')
+        .eq('id', submissionId)
+        .single();
+
+      if (sub && sub.client?.email) {
+        const clientEmail = sub.client.email;
+        const clientName = sub.client.name || 'Valued Client';
+        const invoiceNum = (sub.invoice as any)?.invoice_number || 'N/A';
+
+        await EmailService.sendReminder({
+          recipientEmail: clientEmail,
+          recipientName: clientName,
+          title: `Payment Review Update: Invoice #${invoiceNum}`,
+          details: `Your payment submission for Invoice #${invoiceNum} could not be verified. Reason: "${reason.trim()}". Please review and upload valid payment proof.`,
+          actionText: 'Resubmit Payment Proof',
+          actionUrl: `${process.env.VITE_APP_URL || 'https://coreflow-kk5480346-9617s-projects.vercel.app'}/invoices/${sub.invoice_id}`,
+          userId: sub.client.portal_user_id || undefined,
+          organizationId: sub.organization_id || undefined,
+        });
+
+        if (sub.client.portal_user_id) {
+          await supabaseAdmin.from('notifications').insert({
+            user_id: sub.client.portal_user_id,
+            title: `Payment Proof Rejected: #${invoiceNum}`,
+            message: `Payment proof for Invoice #${invoiceNum} was rejected: ${reason.trim()}`,
+            type: 'invoice',
+            entity_type: 'invoice',
+            entity_id: sub.invoice_id,
+            action_url: `/invoices/${sub.invoice_id}`,
+            is_read: false,
+          });
+        }
+      }
+    } catch (e: any) {
+      console.warn('[PaymentSubmission] Email/Notification post-rejection note:', e.message);
     }
 
     return {

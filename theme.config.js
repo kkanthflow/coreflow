@@ -38,26 +38,15 @@ const themeColors = {
   // ── Hover ────────────────────────────────────────────────────
   hover: { light: '#E85A3A', dark: '#E85A3A' },
 
-  // ── Enterprise Role Colors ───────────────────────────────────
+  // ── Role Colors ──────────────────────────────────────────────
   role_owner:          { light: '#FF6B4A', dark: '#FF6B4A' },
   role_administrator:  { light: '#F97316', dark: '#FFA86B' },
-  role_director:       { light: '#2563EB', dark: '#60A5FA' },
-  role_senior_manager: { light: '#7C3AED', dark: '#8B5CF6' },
   role_manager:        { light: '#DB2777', dark: '#EC4899' },
   role_team_lead:      { light: '#EA580C', dark: '#F97316' },
-  role_senior_employee:{ light: '#0D9488', dark: '#14B8A6' },
+  role_team_member:    { light: '#16A34A', dark: '#22C55E' },
   role_employee:       { light: '#16A34A', dark: '#22C55E' },
-  role_intern:         { light: '#64748B', dark: '#7A7A92' },
-  role_freelancer:     { light: '#D97706', dark: '#FBBF24' },
-
-  // ── Legacy Role Colors (preserved for backward compat) ───────
-  role_md:     { light: '#FF6B4A', dark: '#FF6B4A' },
-  role_ceo:    { light: '#FF6B4A', dark: '#FF6B4A' },
-  role_cto:    { light: '#2563EB', dark: '#60A5FA' },
-  role_pm:     { light: '#DB2777', dark: '#EC4899' },
-  role_hr:     { light: '#F97316', dark: '#FFA86B' },
-  role_dev:    { light: '#16A34A', dark: '#22C55E' },
-  role_member: { light: '#64748B', dark: '#7A7A92' },
+  role_guest:          { light: '#64748B', dark: '#7A7A92' },
+  role_client:         { light: '#0D9488', dark: '#14B8A6' },
 };
 
 module.exports = { themeColors };

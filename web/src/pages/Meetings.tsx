@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { hasPermission } from '../lib/permissions';
@@ -60,6 +61,18 @@ export default function Meetings() {
   }, [user]);
 
   useEffect(() => { fetchMeetings(); }, [fetchMeetings]);
+
+  // Realtime subscription for meetings and schedule changes
+  useEffect(() => {
+    if (!user) return;
+    const sub = supabase
+      .channel(`meetings:sync:${user.id}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meetings' }, fetchMeetings)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'meeting_participants' }, fetchMeetings)
+      .subscribe();
+
+    return () => { supabase.removeChannel(sub); };
+  }, [user, fetchMeetings]);
 
   const now = new Date();
   const upcomingMeetings = meetings.filter(m =>
@@ -219,11 +232,14 @@ export default function Meetings() {
             />
           ) : (
             <div className="bg-card-bg border border-divider rounded-lg divide-y divide-white/[0.03] overflow-hidden">
-              {displayed.map(meeting => {
+              {displayed.map((meeting, idx) => {
                 const isLive = meeting.status === 'active';
                 return (
-                  <div
+                  <motion.div
                     key={meeting.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.22, delay: idx * 0.04, ease: [0.16, 1, 0.3, 1] }}
                     className="p-4 hover:bg-white/[0.02] transition-colors flex items-center justify-between gap-4 group"
                   >
                     <div className="flex items-center gap-3 min-w-0">
@@ -262,7 +278,7 @@ export default function Meetings() {
                       <span>{isLive ? 'Join Live' : 'Open'}</span>
                       <ChevronRight size={12} />
                     </Link>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>

@@ -14,7 +14,7 @@ import ConfirmModal from '../components/ConfirmModal';
 import {
   PageHeader, MetricStrip, StatusSignal, type MetricItem
 } from '../components/ui/ObsidianPrimitives';
-import { FlowStepper } from '../components/ui/FlowMotion';
+import InvoiceStatusStepper from '../components/invoices/InvoiceStatusStepper';
 import { deriveInvoiceStatus } from './Invoices';
 import { paymentSubmissionApi, type PaymentSubmission } from '../lib/paymentSubmissionApi';
 import SubmitPaymentProofModal from '../components/invoices/SubmitPaymentProofModal';
@@ -163,45 +163,66 @@ export default function InvoiceDetail() {
     e.preventDefault();
     if (!invoice || !user) return;
     const amountNum = parseFloat(payAmount);
-    if (!amountNum || amountNum <= 0) return;
+    if (!amountNum || amountNum <= 0) {
+      toast.error('Please enter a valid payment amount');
+      return;
+    }
 
     setRecording(true);
     try {
-      const { data: pmt, error: pmtErr } = await supabase
-        .from('invoice_payments')
-        .insert({
-          invoice_id: invoice.id,
-          amount: amountNum,
-          payment_method: payMethod,
-          transaction_reference: txRef.trim() || null,
-          notes: payNotes.trim() || null,
-          received_by: user.id
-        })
-        .select()
+      const idempotencyKey = `pmt-${invoice.id}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+      // 1. Attempt atomic stored procedure record_invoice_payment
+      const { data: rpcRes, error: rpcErr } = await supabase.rpc('record_invoice_payment', {
+        p_invoice_id: invoice.id,
+        p_amount: amountNum,
+        p_payment_method: payMethod,
+        p_transaction_reference: txRef.trim() || null,
+        p_notes: payNotes.trim() || null,
+        p_received_by: user.id,
+        p_idempotency_key: idempotencyKey,
+      });
+
+      if (rpcErr) {
+        console.warn('RPC record_invoice_payment fallback:', rpcErr);
+        // Fallback to direct insert with idempotency key
+        const { error: pmtErr } = await supabase
+          .from('invoice_payments')
+          .insert({
+            invoice_id: invoice.id,
+            amount: amountNum,
+            payment_method: payMethod,
+            transaction_reference: txRef.trim() || null,
+            notes: payNotes.trim() || null,
+            received_by: user.id,
+            idempotency_key: idempotencyKey,
+          });
+
+        if (pmtErr) throw pmtErr;
+      }
+
+      // 2. Re-fetch authoritative invoice from single source of truth (no client-side compounding)
+      const { data: refreshedInv, error: refreshErr } = await supabase
+        .from('invoices')
+        .select(`
+          *,
+          clients:client_id(name, company_name, email, phone, gst_number, address),
+          organizations:organization_id(id, name, logo_url, gst_number, address, website),
+          owner:owner_id(id, full_name, email),
+          invoice_items(*),
+          invoice_payments(*)
+        `)
+        .eq('id', invoice.id)
         .single();
 
-      if (pmtErr) throw pmtErr;
+      if (refreshErr) throw refreshErr;
 
-      const newPaid = Number(invoice.paid_amount || 0) + amountNum;
-      const newBal = Math.max(0, Number(invoice.total_amount || 0) - newPaid);
-      const newStatus = newBal <= 0 ? 'paid' : 'partially_paid';
-
-      await supabase
-        .from('invoices')
-        .update({
-          paid_amount: newPaid,
-          balance_due: newBal,
-          status: newStatus,
-        })
-        .eq('id', invoice.id);
-
-      setInvoice((prev: any) => ({
-        ...prev,
-        paid_amount: newPaid,
-        balance_due: newBal,
-        status: newStatus,
-        invoice_payments: [...(prev.invoice_payments || []), pmt],
-      }));
+      if (refreshedInv) {
+        setInvoice(refreshedInv);
+        if (refreshedInv.balance_due != null) {
+          setPayAmount(String(refreshedInv.balance_due));
+        }
+      }
 
       setIsPayModalOpen(false);
       setTxRef('');
@@ -277,10 +298,16 @@ export default function InvoiceDetail() {
   const clientDisplay = clientObj?.company_name || clientObj?.name || 'Client';
 
   // Metrics
+  const authoritativeBalance = Number(
+    invoice.balance_due != null
+      ? invoice.balance_due
+      : Math.max(0, Number(invoice.total_amount || 0) - Number(invoice.paid_amount || 0))
+  );
+
   const metrics: MetricItem[] = [
     { label: 'TOTAL BILLED', value: fmt(invoice.total_amount, invoice.currency) },
     { label: 'COLLECTED', value: fmt(invoice.paid_amount || 0, invoice.currency), indicator: isPaid ? 'Settled' : undefined },
-    { label: 'BALANCE DUE', value: fmt(invoice.balance_due, invoice.currency), isOrange: invoice.balance_due > 0 },
+    { label: 'BALANCE DUE', value: fmt(authoritativeBalance, invoice.currency), isOrange: authoritativeBalance > 0 },
     { label: 'STATUS', value: pendingSubmission ? 'UNDER REVIEW' : derivedStatus.replace('_', ' ').toUpperCase() },
     { label: 'DUE DATE', value: invoice.due_date ? new Date(invoice.due_date).toLocaleDateString() : 'Immediate' },
     { label: 'PAYMENTS', value: `${invoice.invoice_payments?.length || 0} Recorded` },
@@ -318,7 +345,7 @@ export default function InvoiceDetail() {
               {!isClient && canManageInvoices && (
                 <button
                   onClick={() => navigate(`/invoices/${invoice.id}/edit`)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-zinc-200 border border-divider text-xs font-medium transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-main hover:text-[#FF6B4A] border border-divider text-xs font-medium transition-colors shadow-sm"
                   title="Open in Canva-style Invoice Studio"
                 >
                   <Edit3 size={13} className="text-[#FF6B4A]" />
@@ -328,7 +355,7 @@ export default function InvoiceDetail() {
 
               <button
                 onClick={handleDownloadPDF}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-zinc-200 border border-divider text-xs font-medium transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-main hover:text-[#FF6B4A] border border-divider text-xs font-medium transition-colors shadow-sm"
               >
                 <Download size={13} />
                 <span>PDF Export</span>
@@ -336,7 +363,7 @@ export default function InvoiceDetail() {
 
               <button
                 onClick={handlePrint}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-zinc-200 border border-divider text-xs font-medium transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-hover hover:bg-hover text-main hover:text-[#FF6B4A] border border-divider text-xs font-medium transition-colors shadow-sm"
                 title="Print invoice"
               >
                 <Printer size={13} />
@@ -347,14 +374,14 @@ export default function InvoiceDetail() {
               {/* Client Action: Submit Payment Proof (Phase 3) */}
               {isClient && !isPaid && (
                 pendingSubmission ? (
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-amber-500/10 border border-amber-500/25 text-amber-400 text-xs font-medium">
+                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-amber-500/10 border border-amber-500/25 text-amber-600 dark:text-amber-400 text-xs font-medium">
                     <Clock size={13} />
                     <span>Payment Under Review</span>
                   </div>
                 ) : (
                   <button
                     onClick={() => setIsSubmitProofOpen(true)}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold transition-colors shadow-sm"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold transition-colors shadow-sm"
                   >
                     <UploadCloud size={13} />
                     <span>Submit Payment Proof</span>
@@ -365,7 +392,7 @@ export default function InvoiceDetail() {
               {canRecord && !isPaid && (
                 <button
                   onClick={() => setIsPayModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold transition-colors shadow-sm"
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-white text-xs font-semibold transition-colors shadow-sm"
                 >
                   <DollarSign size={13} />
                   <span>Record Payment</span>
@@ -375,7 +402,7 @@ export default function InvoiceDetail() {
               {!isClient && canManageInvoices && (
                 <button
                   onClick={() => setIsDeleteModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 border border-red-500/20 text-xs font-medium transition-colors"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 border border-red-500/20 text-xs font-medium transition-colors"
                   title="Delete invoice from database"
                 >
                   <Trash2 size={13} />
@@ -396,17 +423,17 @@ export default function InvoiceDetail() {
       {pendingSubmission && (
         <div className="print:hidden bg-amber-500/10 border border-amber-500/30 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-500 flex items-center justify-center shrink-0">
               <Clock size={16} />
             </div>
             <div>
-              <span className="font-bold text-amber-300 font-mono text-sm block">Payment Proof Under Review</span>
-              <p className="text-zinc-300 text-[11px] mt-0.5">
+              <span className="font-bold text-amber-600 dark:text-amber-300 font-mono text-sm block">Payment Proof Under Review</span>
+              <p className="text-muted dark:text-zinc-300 text-[11px] mt-0.5">
                 Proof of <strong className="text-main">{fmt(pendingSubmission.amount, pendingSubmission.currency)}</strong> was submitted on {new Date(pendingSubmission.payment_date).toLocaleDateString()} via <span className="capitalize">{pendingSubmission.payment_method.replace('_', ' ')}</span> (Ref: <span className="font-mono text-main">{pendingSubmission.transaction_reference || 'N/A'}</span>). Our finance team is reviewing your settlement slip.
               </p>
             </div>
           </div>
-          <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 shrink-0 font-semibold">
+          <span className="text-[10px] font-mono uppercase px-2.5 py-1 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/30 shrink-0 font-semibold">
             Pending Staff Clearance
           </span>
         </div>
@@ -416,12 +443,12 @@ export default function InvoiceDetail() {
       {!pendingSubmission && latestRejectedSubmission && invoice.balance_due > 0 && (
         <div className="print:hidden bg-red-500/10 border border-red-500/30 rounded-lg p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center shrink-0">
+            <div className="w-8 h-8 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center shrink-0">
               <AlertTriangle size={16} />
             </div>
             <div>
-              <span className="font-bold text-red-300 font-mono text-sm block">Previous Payment Proof Rejected</span>
-              <p className="text-zinc-300 text-[11px] mt-0.5">
+              <span className="font-bold text-red-600 dark:text-red-300 font-mono text-sm block">Previous Payment Proof Rejected</span>
+              <p className="text-muted dark:text-zinc-300 text-[11px] mt-0.5">
                 Reason: <strong className="text-main">{latestRejectedSubmission.rejection_reason || 'Transaction could not be verified'}</strong>. Please verify your reference or re-upload a valid settlement slip.
               </p>
             </div>
@@ -437,32 +464,18 @@ export default function InvoiceDetail() {
         </div>
       )}
 
-      {/* ── Flow Motion Progress Strip ── */}
-      <div className="print:hidden bg-card-bg border border-divider rounded-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="w-full max-w-xl">
-          <FlowStepper
-            steps={[
-              { key: 'draft', label: 'Draft', subtitle: 'Prepared' },
-              {
-                key: 'sent',
-                label: 'Issued & Active',
-                subtitle: pendingSubmission
-                  ? 'Payment Under Review'
-                  : derivedStatus === 'overdue'
-                  ? 'Payment Overdue'
-                  : derivedStatus === 'partially_paid'
-                  ? 'Partially Paid'
-                  : 'Awaiting Payment'
-              },
-              { key: 'paid', label: 'Settled & Paid', subtitle: 'Reconciled' }
-            ]}
-            activeStepKey={isPaid ? 'paid' : 'sent'}
+      {/* ── Invoice Status Stepper & Progress Strip ── */}
+      <div className="print:hidden bg-card-bg border border-divider rounded-xl p-4 sm:p-5 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5 md:gap-6 shadow-sm">
+        <div className="flex-1 w-full min-w-0">
+          <InvoiceStatusStepper
+            status={derivedStatus}
+            pendingSubmission={Boolean(pendingSubmission)}
           />
         </div>
-        <div className="shrink-0 flex items-center gap-2">
-          <span className="text-[10px] font-mono text-muted uppercase">Status:</span>
+        <div className="shrink-0 flex items-center gap-3 pt-3.5 md:pt-0 border-t md:border-t-0 md:border-l border-divider md:pl-6 w-full md:w-auto justify-between md:justify-start">
+          <span className="text-[10px] font-mono text-muted uppercase tracking-wider font-semibold">Status:</span>
           {pendingSubmission ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/25">
               <Clock size={11} />
               <span>UNDER REVIEW</span>
             </span>
@@ -511,7 +524,7 @@ export default function InvoiceDetail() {
             
             <div className="text-muted text-[11px] leading-relaxed max-w-sm">
               {issuerAddress && <p>{issuerAddress}</p>}
-              {issuerGst && <p className="font-mono text-[10px] text-zinc-400">GSTIN: {issuerGst}</p>}
+              {issuerGst && <p className="font-mono text-[10px] text-muted font-medium">GSTIN: {issuerGst}</p>}
               {issuerEmail && <p>{issuerEmail}</p>}
             </div>
           </div>
@@ -545,7 +558,7 @@ export default function InvoiceDetail() {
               <span className="text-muted text-[11px] block mt-1 leading-relaxed">{clientObj.address}</span>
             )}
             {clientObj?.gst_number && (
-              <span className="text-zinc-400 font-mono text-[10px] block mt-1">GSTIN: {clientObj.gst_number}</span>
+              <span className="text-muted font-mono text-[10px] block mt-1 font-medium">GSTIN: {clientObj.gst_number}</span>
             )}
           </div>
 
@@ -569,7 +582,7 @@ export default function InvoiceDetail() {
             {invoice.bill_reference_id && (
               <div className="flex justify-between sm:justify-end gap-3">
                 <span className="text-muted">Reference:</span>
-                <span className="text-zinc-300 font-mono text-[10px]">{invoice.bill_reference_id}</span>
+                <span className="text-main font-mono text-[10px] font-semibold">{invoice.bill_reference_id}</span>
               </div>
             )}
           </div>
@@ -584,14 +597,14 @@ export default function InvoiceDetail() {
             <div className="col-span-2 text-right">Amount</div>
           </div>
 
-          <div className="divide-y divide-white/[0.03]">
+          <div className="divide-y divide-divider">
             {(invoice.invoice_items || []).length === 0 ? (
               <div className="py-6 text-center text-muted font-mono text-xs">No items listed on this invoice.</div>
             ) : (
               (invoice.invoice_items || []).map((it: any) => (
-                <div key={it.id} className="grid grid-cols-12 gap-2 px-4 py-3 items-center font-mono tabular-nums text-xs hover:bg-white/[0.01]">
+                <div key={it.id} className="grid grid-cols-12 gap-2 px-4 py-3 items-center font-mono tabular-nums text-xs hover:bg-hover/40 transition-colors">
                   <div className="col-span-6 font-sans">
-                    <span className="text-zinc-200 font-medium block">{it.description || 'Service item'}</span>
+                    <span className="text-main font-medium block">{it.description || 'Service item'}</span>
                     {it.hsn_code && <span className="text-[10px] font-mono text-muted">HSN: {it.hsn_code}</span>}
                   </div>
                   <div className="col-span-2 text-right text-muted">{it.quantity}</div>
@@ -660,7 +673,7 @@ export default function InvoiceDetail() {
 
             <div className="flex justify-between pt-1 border-t border-divider text-xs font-bold text-[#FF6B4A]">
               <span>Balance Due:</span>
-              <span>{fmt(invoice.balance_due, invoice.currency)}</span>
+              <span>{fmt(authoritativeBalance, invoice.currency)}</span>
             </div>
           </div>
         </div>
@@ -758,7 +771,7 @@ export default function InvoiceDetail() {
                 {paymentTerms && (
                   <div>
                     <span className="font-mono font-bold text-[10px] uppercase text-muted block">Payment Terms</span>
-                    <p className="text-zinc-300 leading-relaxed mt-0.5">{paymentTerms}</p>
+                    <p className="text-main leading-relaxed mt-0.5">{paymentTerms}</p>
                   </div>
                 )}
                 {customNotes && (
@@ -778,7 +791,7 @@ export default function InvoiceDetail() {
       <div className="max-w-4xl mx-auto space-y-3 print:hidden">
         <div className="flex items-center justify-between">
           <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-main flex items-center gap-2">
-            <CheckCircle2 size={14} className="text-emerald-400" />
+            <CheckCircle2 size={14} className="text-emerald-500" />
             <span>Payment History & Settlement Ledger</span>
           </h2>
           <span className="text-[10px] font-mono text-muted">
@@ -804,7 +817,7 @@ export default function InvoiceDetail() {
                     <th className="px-4 py-2.5 text-center">Status</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/[0.03]">
+                <tbody className="divide-y divide-divider">
                   {paymentsList.map((pmt: any) => (
                     <tr key={pmt.id} className="hover:bg-hover transition-colors">
                       <td className="px-4 py-3 text-muted">
@@ -812,12 +825,12 @@ export default function InvoiceDetail() {
                           ? new Date(pmt.payment_date || pmt.created_at).toLocaleDateString()
                           : '—'}
                       </td>
-                      <td className="px-4 py-3 text-zinc-200 capitalize font-sans">
+                      <td className="px-4 py-3 text-main capitalize font-sans">
                         {pmt.payment_method?.replace(/_/g, ' ') || 'Direct'}
                       </td>
                       <td className="px-4 py-3 text-muted">
                         {pmt.transaction_reference ? (
-                          <span className="bg-app px-2 py-0.5 rounded border border-divider text-[11px]">
+                          <span className="bg-app px-2 py-0.5 rounded border border-divider text-[11px] text-main">
                             {pmt.transaction_reference}
                           </span>
                         ) : (
@@ -827,11 +840,11 @@ export default function InvoiceDetail() {
                       <td className="px-4 py-3 text-muted font-sans text-[11px] max-w-xs truncate">
                         {pmt.notes || '—'}
                       </td>
-                      <td className="px-4 py-3 text-right text-emerald-400 font-bold tabular-nums">
+                      <td className="px-4 py-3 text-right text-emerald-600 dark:text-emerald-400 font-bold tabular-nums">
                         {fmt(pmt.amount, pmt.currency || invoice.currency)}
                       </td>
                       <td className="px-4 py-3 text-center">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-sans font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-sans font-medium bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                           <Check size={10} />
                           <span>Cleared</span>
                         </span>

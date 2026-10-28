@@ -271,7 +271,7 @@ export default function MeetingDetailsScreen() {
   if (!meeting) return null;
 
   const isCreator = meeting.host_id === user?.id;
-  const isAdmin = ['managing_director', 'ceo', 'cto', 'hr'].includes(user?.role || '');
+  const isAdmin = ['owner', 'administrator'].includes(user?.role || '');
   const canModify = isCreator || isAdmin;
   
   const myAttendeeRecord = meeting.attendees.find((a: any) => a.user_id === user?.id);

@@ -135,3 +135,121 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }
+
+/* ── Auvryn Restrained Enterprise Styling ── */
+.animate-auvryn-float-1,
+.animate-auvryn-float-2,
+.animate-auvryn-float-3 {
+  transform: none;
+}
+
+.animate-auvryn-glow,
+.animate-pulse-glow {
+  opacity: 0.1;
+}
+
+.animate-auvryn-card-glow {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.animate-auvryn-flow-trail {
+  stroke-dashoffset: 0;
+}
+
+.animate-auvryn-particle-1,
+.animate-auvryn-particle-2,
+.animate-auvryn-particle-3 {
+  display: none;
+}
+
+/* Reduced motion accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .animate-auvryn-float-1,
+  .animate-auvryn-float-2,
+  .animate-auvryn-float-3,
+  .animate-auvryn-glow,
+  .animate-pulse-glow,
+  .animate-auvryn-card-glow,
+  .animate-auvryn-flow-trail,
+  .animate-auvryn-particle-1,
+  .animate-auvryn-particle-2,
+  .animate-auvryn-particle-3,
+  .animate-fade-up,
+  .animate-fade-in,
+  .animate-scale-in {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* ── Universal Automatic Entrance Animation System ── */
+@keyframes auvryn-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes auvryn-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes auvryn-scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-fade-up {
+  animation: auvryn-fade-up 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-fade-in {
+  animation: auvryn-fade-in 0.35s ease-out both;
+}
+
+.animate-scale-in {
+  animation: auvryn-scale-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Stagger delay helpers for lists, grids, cards, widgets */
+.stagger-1 { animation-delay: 0.04s; }
+.stagger-2 { animation-delay: 0.08s; }
+.stagger-3 { animation-delay: 0.12s; }
+.stagger-4 { animation-delay: 0.16s; }
+.stagger-5 { animation-delay: 0.20s; }
+.stagger-6 { animation-delay: 0.24s; }
+.stagger-7 { animation-delay: 0.28s; }
+.stagger-8 { animation-delay: 0.32s; }
+
+/* ── Auvryn Static Mascot & Controlled Flourish ── */
+.animate-fox-breathe {
+  animation: none;
+  transform: none;
+}
+
+.animate-ribbon-spark {
+  animation: none;
+}
+
+.animate-pulse-ring {
+  animation: none;
+}
+
+
+

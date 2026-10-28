@@ -1,28 +1,31 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
-  Users, 
   UserPlus, 
   Search, 
-  Shield, 
   Trash2, 
-  Mail, 
   Check, 
+  X,
   Lock,
   RefreshCw,
-  AlertTriangle
+  Shield
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useWorkspace } from '../../hooks/useWorkspace';
-import { useRole } from '../../hooks/useRole';
 import { useSettings } from '../../contexts/SettingsContext';
 import { supabase } from '../../lib/supabase';
 import { toast } from '../../components/ui/Toast';
 import {
   SettingsSection,
-  SettingsRow,
   Select,
   SettingsSkeleton,
 } from '../../components/settings';
+import { 
+  ACCESS_ROLES, 
+  ASSIGNABLE_ACCESS_ROLES, 
+  formatAccessRole 
+} from '../../lib/jobTitles';
+import { JobTitleSelect } from '../../components/ui/JobTitleSelect';
 
 interface OrgMember {
   userId: string;
@@ -31,17 +34,12 @@ interface OrgMember {
   fullName: string;
   email: string;
   avatarUrl?: string;
+  jobTitle?: string;
+  careerLevel?: string;
 }
 
-const AVAILABLE_ROLES = [
-  { value: 'owner', label: 'Owner (Full Access)' },
-  { value: 'administrator', label: 'Administrator' },
-  { value: 'member', label: 'Team Member' },
-  { value: 'freelancer', label: 'Freelancer / Contractor' },
-  { value: 'client', label: 'Client (Portal Only)' },
-];
-
 export default function MembersSettings() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { orgId, orgName } = useWorkspace();
   const { canEditWorkspace } = useSettings();
@@ -53,6 +51,83 @@ export default function MembersSettings() {
   const [removingMemberId, setRemovingMemberId] = useState<string | null>(null);
   const [showInviteModal, setShowInviteModal] = useState(false);
 
+  // Pending Join Requests
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [loadingPendingRequests, setLoadingPendingRequests] = useState(false);
+  const [actingRequestId, setActingRequestId] = useState<string | null>(null);
+  const [assignedRoles, setAssignedRoles] = useState<Record<string, string>>({});
+  const [assignedJobTitles, setAssignedJobTitles] = useState<Record<string, string>>({});
+  const [updatingJobTitleId, setUpdatingJobTitleId] = useState<string | null>(null);
+
+  const fetchPendingRequests = useCallback(async () => {
+    if (!orgId) return;
+    setLoadingPendingRequests(true);
+    try {
+      const { data, error } = await supabase.rpc('get_organization_join_requests', {
+        p_org_id: orgId,
+        p_status: 'pending',
+      });
+      if (!error && data) {
+        setPendingRequests(data);
+      }
+    } catch (err) {
+      console.warn('Error fetching pending join requests:', err);
+    } finally {
+      setLoadingPendingRequests(false);
+    }
+  }, [orgId]);
+
+  useEffect(() => {
+    fetchPendingRequests();
+  }, [fetchPendingRequests]);
+
+  const handleApproveRequest = async (req: any) => {
+    const roleToAssign = assignedRoles[req.id] || 'team_member';
+    const titleToAssign = assignedJobTitles[req.id] || req.job_title || 'Team Member';
+    setActingRequestId(req.id);
+    try {
+      const { data, error } = await supabase.rpc('approve_organization_join_request', {
+        p_request_id: req.id,
+        p_assigned_role: roleToAssign,
+        p_assigned_job_title: titleToAssign,
+        p_department_id: null,
+        p_notes: null,
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.message || 'Failed to approve request');
+
+      toast.success(`Approved ${req.full_name || 'applicant'} as ${titleToAssign} (${formatAccessRole(roleToAssign)})`);
+      await fetchPendingRequests();
+      await fetchMembers();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to approve join request');
+    } finally {
+      setActingRequestId(null);
+    }
+  };
+
+  const handleRejectRequest = async (req: any) => {
+    if (!confirm(`Reject join request from ${req.full_name || 'applicant'}?`)) return;
+    setActingRequestId(req.id);
+    try {
+      const { data, error } = await supabase.rpc('reject_organization_join_request', {
+        p_request_id: req.id,
+        p_notes: null,
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.message || 'Failed to reject request');
+
+      toast.success(`Rejected join request from ${req.full_name || 'applicant'}`);
+      await fetchPendingRequests();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to reject join request');
+    } finally {
+      setActingRequestId(null);
+    }
+  };
+
   const fetchMembers = useCallback(async () => {
     if (!orgId) return;
     setLoading(true);
@@ -62,6 +137,8 @@ export default function MembersSettings() {
         .select(`
           user_id,
           role,
+          job_title,
+          career_level,
           created_at,
           users:user_id (
             id,
@@ -79,6 +156,8 @@ export default function MembersSettings() {
         return {
           userId: row.user_id,
           role: row.role || 'member',
+          jobTitle: row.job_title || undefined,
+          careerLevel: row.career_level || undefined,
           createdAt: row.created_at || new Date().toISOString(),
           fullName: u?.full_name || 'Team Member',
           email: u?.email || 'member@workspace.com',
@@ -114,22 +193,47 @@ export default function MembersSettings() {
     if (!canEditWorkspace || !orgId) return;
     setUpdatingRoleId(memberUserId);
     try {
-      const { error } = await supabase
-        .from('user_organizations')
-        .update({ role: newRole })
-        .eq('user_id', memberUserId)
-        .eq('org_id', orgId);
+      const { data, error } = await supabase.rpc('update_organization_member_role', {
+        p_org_id: orgId,
+        p_target_user_id: memberUserId,
+        p_new_role: newRole,
+      });
 
       if (error) throw error;
+      if (!data?.success) throw new Error(data?.message || 'Failed to update member role');
 
       setMembers((prev) =>
         prev.map((m) => (m.userId === memberUserId ? { ...m, role: newRole } : m))
       );
-      toast.success('Member role updated successfully');
+      toast.success(data?.message || 'Member role updated successfully');
     } catch (err: any) {
       toast.error(err.message || 'Failed to update member role');
     } finally {
       setUpdatingRoleId(null);
+    }
+  };
+
+  const handleJobTitleChange = async (memberUserId: string, newJobTitle: string) => {
+    if (!canEditWorkspace || !orgId) return;
+    setUpdatingJobTitleId(memberUserId);
+    try {
+      const { data, error } = await supabase.rpc('update_organization_member_job_title', {
+        p_org_id: orgId,
+        p_target_user_id: memberUserId,
+        p_job_title: newJobTitle,
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.message || 'Failed to update member job title');
+
+      setMembers((prev) =>
+        prev.map((m) => (m.userId === memberUserId ? { ...m, jobTitle: newJobTitle } : m))
+      );
+      toast.success(data?.message || 'Member job title updated successfully');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to update member job title');
+    } finally {
+      setUpdatingJobTitleId(null);
     }
   };
 
@@ -176,6 +280,107 @@ export default function MembersSettings() {
 
   return (
     <div className="space-y-6">
+      {/* ── Pending Join Requests Section (Authorized Management) ── */}
+      {canEditWorkspace && (
+        <SettingsSection
+          label={`Pending Join Requests (${pendingRequests.length})`}
+          description="Review self-service requests from employees who found your company by name."
+          action={
+            <button
+              type="button"
+              onClick={fetchPendingRequests}
+              disabled={loadingPendingRequests}
+              title="Refresh requests"
+              className="p-1 text-muted hover:text-text rounded-lg hover:bg-surface-2 transition-colors cursor-pointer"
+            >
+              <RefreshCw size={13} className={loadingPendingRequests ? 'animate-spin' : ''} />
+            </button>
+          }
+        >
+          {loadingPendingRequests ? (
+            <SettingsSkeleton rows={2} />
+          ) : pendingRequests.length === 0 ? (
+            <div className="p-6 text-center text-xs text-muted">
+              No pending join requests. When employees search for your company and request to join, their applications will appear here.
+            </div>
+          ) : (
+            <div className="divide-y divide-line">
+              {pendingRequests.map((req) => {
+                const isActing = actingRequestId === req.id;
+                const selectedRole = assignedRoles[req.id] || 'employee';
+
+                return (
+                  <div
+                    key={req.id}
+                    className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-surface-2/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-9 h-9 rounded-xl bg-surface-2 border border-line flex items-center justify-center font-bold text-text text-xs shrink-0">
+                        {(req.full_name || 'U').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-xs font-semibold text-text truncate flex items-center gap-2">
+                          <span>{req.full_name || 'Anonymous User'}</span>
+                          <span className="px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] font-mono">
+                            Pending
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-muted truncate">
+                          {req.email} • Requested: <span className="text-text font-medium">{req.job_title || 'Team Member'}</span>
+                        </div>
+                        <div className="text-[10px] font-mono text-zinc-500">
+                          Applied {new Date(req.created_at).toLocaleDateString()}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 flex-wrap sm:flex-nowrap">
+                      <div className="w-44">
+                        <JobTitleSelect
+                          value={assignedJobTitles[req.id] || req.job_title || 'Team Member'}
+                          onChange={(val) => setAssignedJobTitles(prev => ({ ...prev, [req.id]: val }))}
+                          placeholder="Assigned Job Title"
+                        />
+                      </div>
+
+                      <select
+                        value={selectedRole}
+                        onChange={(e) => setAssignedRoles(prev => ({ ...prev, [req.id]: e.target.value }))}
+                        className="px-2 py-1.5 bg-surface-2 border border-line rounded text-xs text-text focus:outline-none focus:border-accent"
+                      >
+                        {ASSIGNABLE_ACCESS_ROLES.map((r) => (
+                          <option key={r.value} value={r.value}>{r.label}</option>
+                        ))}
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={() => handleApproveRequest(req)}
+                        disabled={isActing}
+                        className="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                      >
+                        {isActing ? <RefreshCw size={12} className="animate-spin" /> : <Check size={12} />}
+                        <span>Approve</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRejectRequest(req)}
+                        disabled={isActing}
+                        className="px-2.5 py-1.5 rounded bg-surface-2 hover:bg-red-500/10 border border-line hover:border-red-500/30 text-muted hover:text-red-400 text-xs font-medium transition-colors cursor-pointer"
+                      >
+                        <X size={12} />
+                        <span>Reject</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </SettingsSection>
+      )}
+
       {/* ── Organization Members Table & Roster ── */}
       <SettingsSection
         label={`Organization Members (${members.length})`}
@@ -255,6 +460,11 @@ export default function MembersSettings() {
                         <span className="text-xs sm:text-sm font-semibold text-text truncate">
                           {member.fullName}
                         </span>
+                        {member.careerLevel && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-surface-2 text-muted border border-line">
+                            {member.careerLevel}
+                          </span>
+                        )}
                         {isSelf && (
                           <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-accent-soft text-accent border border-accent/20">
                             You
@@ -267,25 +477,43 @@ export default function MembersSettings() {
                         )}
                       </div>
                       <div className="text-[11px] text-muted font-mono truncate mt-0.5">
+                        {member.jobTitle && <span className="text-text font-sans font-medium mr-1.5">{member.jobTitle} ·</span>}
                         {member.email} · Joined {new Date(member.createdAt).toLocaleDateString()}
                       </div>
                     </div>
                   </div>
 
-                  {/* Right: Role Select & Removal */}
-                  <div className="flex items-center gap-2 self-start sm:self-center shrink-0 pl-13 sm:pl-0">
+                  {/* Right: Professional Job Title & Access Role & Removal */}
+                  <div className="flex items-center gap-2 self-start sm:self-center shrink-0 pl-13 sm:pl-0 flex-wrap">
                     {canEditThisMember ? (
-                      <Select
-                        value={member.role}
-                        disabled={updatingRoleId === member.userId}
-                        onChange={(e) => handleRoleChange(member.userId, e.target.value)}
-                        options={AVAILABLE_ROLES}
-                        size="sm"
-                      />
+                      <>
+                        <div className="w-44">
+                          <JobTitleSelect
+                            value={member.jobTitle || 'Team Member'}
+                            onChange={(newTitle) => handleJobTitleChange(member.userId, newTitle)}
+                            disabled={updatingJobTitleId === member.userId}
+                            placeholder="Professional Job Title"
+                          />
+                        </div>
+                        <Select
+                          value={member.role}
+                          disabled={updatingRoleId === member.userId}
+                          onChange={(e) => handleRoleChange(member.userId, e.target.value)}
+                          options={ACCESS_ROLES.map(r => ({ value: r.value, label: r.label }))}
+                          size="sm"
+                        />
+                      </>
                     ) : (
-                      <span className="px-2.5 py-1 rounded-xl text-[11px] font-mono font-semibold uppercase tracking-wider bg-surface-2 border border-line text-muted">
-                        {member.role}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {member.jobTitle && (
+                          <span className="text-xs font-medium text-text bg-surface-2 px-2.5 py-1 rounded-xl border border-line">
+                            {member.jobTitle}
+                          </span>
+                        )}
+                        <span className="px-2.5 py-1 rounded-xl text-[11px] font-mono font-semibold uppercase tracking-wider bg-surface-2 border border-line text-muted">
+                          {formatAccessRole(member.role)}
+                        </span>
+                      </div>
                     )}
 
                     {canEditThisMember && (

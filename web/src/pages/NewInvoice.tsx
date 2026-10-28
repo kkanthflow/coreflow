@@ -116,6 +116,7 @@ export default function NewInvoice() {
     new Date(Date.now() + 15 * 86400000).toISOString().split('T')[0]
   );
   const [currency, setCurrency] = useState<string>(defaultCurrency || 'USD');
+  const [existingPaidAmount, setExistingPaidAmount] = useState<number>(0);
 
   // ── Line Items State ──
   const [items, setItems] = useState<StudioLineItem[]>([
@@ -200,7 +201,7 @@ export default function NewInvoice() {
         accountNumber: '',
         ifscCode: '',
         upiId: '',
-        customNotes: 'Thank you for your business. For billing queries contact skavelontechnologies@gmail.com',
+        customNotes: 'Thank you for your business. For billing inquiries, please contact our accounts department.',
         paymentTerms: 'Net 15 Days',
         logoUrl: initialLogo,
         logoPosition: 'left',
@@ -232,7 +233,7 @@ export default function NewInvoice() {
           .eq('is_deleted', false);
 
         if (orgId) {
-          q = q.eq('organization_id', orgId);
+          q = q.or(`organization_id.eq.${orgId},and(organization_id.is.null,owner_id.eq.${user.id})`);
         } else {
           q = q.eq('owner_id', user.id);
         }
@@ -263,6 +264,7 @@ export default function NewInvoice() {
             setIssueDate(invData.issue_date || new Date().toISOString().split('T')[0]);
             setDueDate(invData.due_date || new Date().toISOString().split('T')[0]);
             setCurrency(invData.currency || defaultCurrency || 'USD');
+            setExistingPaidAmount(Number(invData.paid_amount || 0));
 
             // Format line items
             if (Array.isArray(invData.invoice_items) && invData.invoice_items.length > 0) {
@@ -727,7 +729,13 @@ export default function NewInvoice() {
       };
 
       if (routeInvoiceId) {
-        // UPDATE EXISTING INVOICE
+        const updatedBal = Math.max(0, totalAmount - existingPaidAmount);
+        const updatedStatus = updatedBal <= 0 && totalAmount > 0
+          ? 'paid'
+          : existingPaidAmount > 0
+          ? 'partially_paid'
+          : 'sent';
+
         const { error: updateError } = await supabase
           .from('invoices')
           .update({
@@ -740,7 +748,9 @@ export default function NewInvoice() {
             tax_amount: totalTax,
             discount_amount: totalDiscount,
             total_amount: totalAmount,
-            balance_due: totalAmount,
+            paid_amount: existingPaidAmount,
+            balance_due: updatedBal,
+            status: updatedStatus,
             cgst,
             sgst,
             template_style: properties.templateId,

@@ -14,38 +14,60 @@ import {
   Briefcase,
   Video,
   MessageSquare,
-  ExternalLink
+  ExternalLink,
+  Check,
+  RotateCw,
+  Clock,
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
+import { 
+  ASSIGNABLE_ACCESS_ROLES, 
+  ACCESS_ROLES, 
+  formatAccessRole 
+} from '../lib/jobTitles';
+import { JobTitleSelect } from '../components/ui/JobTitleSelect';
 
 const ROLE_RANK: Record<string, number> = {
   owner: 1,
-  ceo: 2,
-  managing_director: 3,
-  administrator: 4,
-  director: 5,
-  senior_manager: 6,
-  manager: 7,
-  team_lead: 8,
-  senior_employee: 9,
-  employee: 10,
-  intern: 11,
-  freelancer: 12
+  administrator: 2,
+  manager: 3,
+  team_member: 4,
+  guest: 5,
+  client: 6,
+  custom: 7,
 };
 
-const LEADERSHIP_ROLES = ['owner', 'ceo', 'managing_director', 'administrator', 'director', 'senior_manager', 'manager', 'team_lead'];
+const LEADERSHIP_ROLES = ['owner', 'administrator', 'manager'];
 
 export default function Employees() {
-  `  `
   const navigate = useNavigate();
   const { user, role } = useAuth();
   const { orgId, orgName } = useWorkspace();
   const canView = hasPermission(role, 'view_team_directory');
-  const canInvite = hasPermission(role, 'invite_users') || ['owner', 'administrator', 'ceo'].includes(role || '');
+  const canInvite = hasPermission(role, 'invite_users') || ['owner', 'administrator', 'manager'].includes(role?.toLowerCase() || '');
+
+  // Main Tabs: 'members' | 'requests'
+  const [activeTab, setActiveTab] = useState<'members' | 'requests'>('members');
 
   const [members, setMembers] = useState<any[]>([]);
   const [departments, setDepartments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Join Requests State
+  const [joinRequests, setJoinRequests] = useState<any[]>([]);
+  const [pendingRequestsCount, setPendingRequestsCount] = useState<number>(0);
+  const [joinRequestFilter, setJoinRequestFilter] = useState<'pending' | 'all' | 'approved' | 'rejected'>('pending');
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+
+  // Assignment selection maps per request ID
+  const [assignedRoles, setAssignedRoles] = useState<Record<string, string>>({});
+  const [assignedJobTitles, setAssignedJobTitles] = useState<Record<string, string>>({});
+  const [assignedDepts, setAssignedDepts] = useState<Record<string, string>>({});
 
   // Filters & State
   const [search, setSearch] = useState('');
@@ -72,12 +94,15 @@ export default function Employees() {
         profiles = data || [];
       } else {
         const { data: orgUsers } = await supabase.from('user_organizations')
-          .select('user_id, role, users:user_id(id, full_name, email, avatar_url, department, is_online, last_seen_at)')
+          .select('user_id, role, job_title, career_level, custom_role_id, users:user_id(id, full_name, email, avatar_url, department, is_online, last_seen_at)')
           .eq('org_id', currentOrgId);
 
         profiles = (orgUsers || []).map((ou: any) => ({
           ...ou.users,
           role: ou.role || ou.users?.role || 'employee',
+          job_title: ou.job_title || null,
+          career_level: ou.career_level || null,
+          custom_role_id: ou.custom_role_id || null,
         })).filter(Boolean);
       }
 
@@ -117,6 +142,106 @@ export default function Employees() {
 
   useEffect(() => { fetchMembers(); }, [fetchMembers]);
 
+  // Fetch join requests for authorized management
+  const fetchJoinRequests = useCallback(async () => {
+    if (!user) return;
+    setLoadingRequests(true);
+    setActionError(null);
+    try {
+      const { data: myOrgs } = await supabase
+        .from('user_organizations').select('org_id').eq('user_id', user.id);
+      const currentOrgId = orgId || myOrgs?.[0]?.org_id;
+      if (!currentOrgId) return;
+
+      const { data, error: reqErr } = await supabase.rpc('get_organization_join_requests', {
+        p_org_id: currentOrgId,
+        p_status: joinRequestFilter === 'all' ? null : joinRequestFilter,
+      });
+
+      if (reqErr) throw reqErr;
+      setJoinRequests(data || []);
+
+      if (joinRequestFilter === 'pending') {
+        setPendingRequestsCount((data || []).length);
+      } else {
+        const { data: pendingData } = await supabase.rpc('get_organization_join_requests', {
+          p_org_id: currentOrgId,
+          p_status: 'pending',
+        });
+        setPendingRequestsCount((pendingData || []).length);
+      }
+    } catch (err: any) {
+      console.warn('Error fetching join requests:', err);
+    } finally {
+      setLoadingRequests(false);
+    }
+  }, [user, orgId, joinRequestFilter]);
+
+  useEffect(() => {
+    if (canInvite) {
+      fetchJoinRequests();
+    }
+  }, [fetchJoinRequests, canInvite]);
+
+  const handleApproveRequest = async (req: any) => {
+    const roleToAssign = assignedRoles[req.id] || 'team_member';
+    const titleToAssign = assignedJobTitles[req.id] || req.job_title || 'Team Member';
+    const deptToAssign = assignedDepts[req.id] || null;
+
+    setActionLoadingId(req.id);
+    setActionError(null);
+    setActionSuccess(null);
+
+    try {
+      const { data, error: approveErr } = await supabase.rpc('approve_organization_join_request', {
+        p_request_id: req.id,
+        p_assigned_role: roleToAssign,
+        p_assigned_job_title: titleToAssign,
+        p_department_id: deptToAssign,
+        p_notes: null,
+      });
+
+      if (approveErr) throw approveErr;
+      if (!data?.success) throw new Error(data?.message || 'Failed to approve join request');
+
+      setActionSuccess(`Approved ${req.full_name || 'applicant'} as ${titleToAssign} (${formatAccessRole(roleToAssign)}).`);
+      await fetchJoinRequests();
+      await fetchMembers();
+    } catch (err: any) {
+      console.error('Approval failed:', err);
+      setActionError(err.message || 'Failed to approve request.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleRejectRequest = async (req: any) => {
+    const confirmed = window.confirm(`Are you sure you want to reject the join request from ${req.full_name || 'this applicant'}?`);
+    if (!confirmed) return;
+
+    setActionLoadingId(req.id);
+    setActionError(null);
+    setActionSuccess(null);
+
+    try {
+      const { data, error: rejectErr } = await supabase.rpc('reject_organization_join_request', {
+        p_request_id: req.id,
+        p_notes: null,
+      });
+
+      if (rejectErr) throw rejectErr;
+      if (!data?.success) throw new Error(data?.message || 'Failed to reject join request');
+
+      setActionSuccess(`Rejected join request from ${req.full_name || 'applicant'}.`);
+      await fetchJoinRequests();
+    } catch (err: any) {
+      console.error('Rejection failed:', err);
+      setActionError(err.message || 'Failed to reject request.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   // Fetch contextual deliverables when an employee is selected in the inspector
   const handleSelectMember = async (m: any) => {
     setSelectedMember(m);
@@ -148,7 +273,7 @@ export default function Employees() {
     const leadership = members.filter(m => m.isLeadership).length;
     const freelancers = members.filter(m => m.role === 'freelancer').length;
     const active = members.filter(m => m.is_online).length || total;
-    const depts = new Set(members.map(m => m.department).filter(Boolean)).size || (departments.length || 1);
+    const depts = new Set(members.map(m => m.department).filter(Boolean)).size || departments.length;
 
     return [
       { label: 'TOTAL MEMBERS', value: total < 10 ? `0${total}` : total },
@@ -172,6 +297,8 @@ export default function Employees() {
         m.full_name?.toLowerCase().includes(q) ||
         m.email?.toLowerCase().includes(q) ||
         m.department?.toLowerCase().includes(q) ||
+        m.job_title?.toLowerCase().includes(q) ||
+        m.career_level?.toLowerCase().includes(q) ||
         m.role?.toLowerCase().includes(q);
 
       const matchRole = roleFilter === 'ALL' || m.role === roleFilter;
@@ -215,12 +342,12 @@ export default function Employees() {
               Team Directory
             </h1>
             <p className="text-xs text-muted mt-0.5 font-normal">
-              {loading ? 'Synchronizing organizational roster...' : `${members.length} members · ${departments.length || 1} active departments`}
+              {loading ? 'Synchronizing organizational roster...' : `${members.length} members${departments.length > 0 ? ` · ${departments.length} active ${departments.length === 1 ? 'department' : 'departments'}` : ''}`}
             </p>
           </div>
 
-          {canInvite && (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            {canInvite && (
               <button
                 onClick={() => navigate('/employees/invite')}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-[11px] font-semibold transition-colors shadow-sm"
@@ -228,10 +355,234 @@ export default function Employees() {
                 <Plus size={13} />
                 <span>Invite Member</span>
               </button>
-            </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Tabs: Active Team Directory vs Join Requests ── */}
+        <div className="flex items-center gap-2 border-b border-divider pb-2 shrink-0">
+          <button
+            onClick={() => setActiveTab('members')}
+            className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors ${
+              activeTab === 'members'
+                ? 'bg-white/[0.08] text-main border border-white/[0.1]'
+                : 'text-muted hover:text-main'
+            }`}
+          >
+            Active Team ({members.length})
+          </button>
+
+          {canInvite && (
+            <button
+              onClick={() => setActiveTab('requests')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-colors flex items-center gap-2 ${
+                activeTab === 'requests'
+                  ? 'bg-white/[0.08] text-main border border-white/[0.1]'
+                  : 'text-muted hover:text-main'
+              }`}
+            >
+              <span>Join Requests</span>
+              {pendingRequestsCount > 0 && (
+                <span className="px-1.5 py-0.5 rounded-full text-[10px] font-mono bg-[#FF6B4A]/20 text-[#FF6B4A] border border-[#FF6B4A]/30 font-bold animate-pulse">
+                  {pendingRequestsCount}
+                </span>
+              )}
+            </button>
           )}
         </div>
 
+        {/* Action Feedback Notifications */}
+        {actionSuccess && (
+          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-400 shrink-0">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 size={15} />
+              <span>{actionSuccess}</span>
+            </div>
+            <button onClick={() => setActionSuccess(null)} className="hover:text-white">
+              <X size={13} />
+            </button>
+          </div>
+        )}
+
+        {actionError && (
+          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-between text-xs text-red-400 shrink-0">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={15} />
+              <span>{actionError}</span>
+            </div>
+            <button onClick={() => setActionError(null)} className="hover:text-white">
+              <X size={13} />
+            </button>
+          </div>
+        )}
+
+        {/* ── Sub-view: Join Requests Management ── */}
+        {activeTab === 'requests' ? (
+          <div className="space-y-4">
+            {/* Join Request Controls & Filter */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-app border border-divider p-3 rounded-lg">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-mono text-muted uppercase tracking-wider mr-1">Status:</span>
+                {(['pending', 'all', 'approved', 'rejected'] as const).map(st => (
+                  <button
+                    key={st}
+                    onClick={() => setJoinRequestFilter(st)}
+                    className={`px-2.5 py-1 rounded text-xs font-mono capitalize transition-colors ${
+                      joinRequestFilter === st
+                        ? 'bg-[#FF6B4A] text-white font-semibold'
+                        : 'bg-white/[0.04] text-muted hover:text-main hover:bg-white/[0.08]'
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={fetchJoinRequests}
+                disabled={loadingRequests}
+                className="flex items-center gap-1.5 text-xs font-mono text-muted hover:text-main px-2.5 py-1 rounded bg-white/[0.04] hover:bg-white/[0.08] transition-colors"
+              >
+                <RotateCw size={12} className={loadingRequests ? 'animate-spin' : ''} />
+                <span>Refresh Requests</span>
+              </button>
+            </div>
+
+            {/* Table / List */}
+            <div className="bg-app border border-divider rounded-lg overflow-hidden">
+              <div className="grid grid-cols-12 gap-3 px-4 py-2.5 border-b border-divider bg-app text-[9px] font-mono font-bold uppercase tracking-wider text-muted">
+                <div className="col-span-12 sm:col-span-3">Applicant</div>
+                <div className="col-span-6 sm:col-span-3">Assigned Job Title</div>
+                <div className="col-span-6 sm:col-span-3">Assigned Access Role</div>
+                <div className="col-span-12 sm:col-span-3 text-right">Decision / Status</div>
+              </div>
+
+              <div className="divide-y divide-white/[0.04]">
+                {loadingRequests ? (
+                  <div className="p-8 text-center text-xs text-muted">
+                    <RotateCw size={20} className="animate-spin text-[#FF6B4A] mx-auto mb-2" />
+                    <span>Loading join requests...</span>
+                  </div>
+                ) : joinRequests.length === 0 ? (
+                  <div className="py-16 text-center text-xs text-muted space-y-2">
+                    <Clock size={28} className="text-zinc-600 mx-auto mb-2" />
+                    <p className="text-main font-medium">No {joinRequestFilter} join requests found.</p>
+                    <p className="text-muted text-[11px]">When employees search for {orgName || 'your organization'} and request access, their applications appear here.</p>
+                  </div>
+                ) : (
+                  joinRequests.map((req) => {
+                    const isPending = req.status === 'pending';
+                    const initials = (req.full_name || 'U').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
+                    const selectedRole = assignedRoles[req.id] || 'team_member';
+                    const selectedTitle = assignedJobTitles[req.id] || req.job_title || 'Team Member';
+                    const isActing = actionLoadingId === req.id;
+
+                    return (
+                      <div
+                        key={req.id}
+                        className="grid grid-cols-12 gap-3 px-4 py-3.5 items-center hover:bg-white/[0.02] transition-colors text-xs"
+                      >
+                        {/* Applicant Column */}
+                        <div className="col-span-12 sm:col-span-3 flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-hover border border-divider flex items-center justify-center text-[10px] font-bold text-main shrink-0">
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="font-semibold text-main truncate">
+                              {req.full_name || 'Anonymous User'}
+                            </div>
+                            <div className="text-[10px] font-mono text-muted truncate">
+                              {req.email}
+                            </div>
+                            <div className="text-[9px] font-mono text-zinc-500">
+                              Requested {new Date(req.created_at).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Assigned Job Title */}
+                        <div className="col-span-6 sm:col-span-3">
+                          {isPending ? (
+                            <JobTitleSelect
+                              value={selectedTitle}
+                              onChange={(val) => setAssignedJobTitles(prev => ({ ...prev, [req.id]: val }))}
+                              placeholder="Assigned Job Title"
+                            />
+                          ) : (
+                            <span className="text-xs text-zinc-300 font-medium">
+                              {req.job_title || 'Team Member'}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Assigned Access Role */}
+                        <div className="col-span-6 sm:col-span-3">
+                          {isPending ? (
+                            <select
+                              value={selectedRole}
+                              onChange={(e) => setAssignedRoles(prev => ({ ...prev, [req.id]: e.target.value }))}
+                              className="w-full bg-[#121217] border border-divider rounded px-2.5 py-2 text-xs text-main focus:outline-none focus:border-[#FF6B4A]"
+                            >
+                              {ASSIGNABLE_ACCESS_ROLES.map((r) => (
+                                <option key={r.value} value={r.value}>{r.label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-muted text-[11px] font-mono uppercase">
+                              {formatAccessRole(req.assigned_role)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Actions / Status */}
+                        <div className="col-span-12 sm:col-span-3 flex items-center justify-end gap-2">
+                          {isPending ? (
+                            <>
+                              <button
+                                onClick={() => handleApproveRequest(req)}
+                                disabled={isActing}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-xs transition-colors cursor-pointer"
+                                title="Approve access and assign role"
+                              >
+                                {isActing ? (
+                                  <RotateCw size={12} className="animate-spin" />
+                                ) : (
+                                  <Check size={12} />
+                                )}
+                                <span>Approve</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleRejectRequest(req)}
+                                disabled={isActing}
+                                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-white/[0.04] hover:bg-red-500/20 text-zinc-400 hover:text-red-400 border border-white/[0.08] hover:border-red-500/30 disabled:opacity-50 text-xs transition-colors cursor-pointer"
+                                title="Reject join request"
+                              >
+                                <X size={12} />
+                                <span>Reject</span>
+                              </button>
+                            </>
+                          ) : req.status === 'approved' ? (
+                            <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[11px]">
+                              <CheckCircle2 size={14} />
+                              <span>Approved</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1.5 text-red-400 font-mono text-[11px]">
+                              <X size={14} />
+                              <span>Rejected</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
         {/* ── 2. Organization Overview Telemetry Strip (Continuous Strip) ── */}
         <div className="bg-card-bg border border-divider rounded-lg grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 divide-x divide-y sm:divide-y-0 divide-white/[0.05] shrink-0">
           {telemetry.map((t, idx) => (
@@ -370,12 +721,28 @@ export default function Employees() {
                         )}
                       </motion.div>
                       <div className="min-w-0">
-                        <motion.div layoutId={`name-${m.id}`} className="text-xs font-semibold text-main group-hover:text-[#FF6B4A] transition-colors truncate">
-                          {m.full_name || 'Anonymous User'}
-                        </motion.div>
-                        <div className="text-[10px] font-mono text-muted truncate">
-                          {m.email}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <motion.div layoutId={`name-${m.id}`} className="text-xs font-semibold text-main group-hover:text-[#FF6B4A] transition-colors truncate">
+                            {m.full_name || 'Anonymous User'}
+                          </motion.div>
+                          {m.career_level && (
+                            <span className="text-[9px] font-mono font-bold px-1 py-0.5 bg-white/[0.06] text-muted rounded border border-white/[0.08]">
+                              {m.career_level}
+                            </span>
+                          )}
                         </div>
+                        <div className="text-[10px] text-muted truncate">
+                          {m.job_title ? (
+                            <span className="text-zinc-300 font-medium">{m.job_title}</span>
+                          ) : (
+                            <span className="font-mono">{m.email}</span>
+                          )}
+                        </div>
+                        {m.job_title && (
+                          <div className="text-[9px] font-mono text-zinc-500 truncate">
+                            {m.email}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -394,7 +761,7 @@ export default function Employees() {
                         ? 'bg-[#FF6B4A]/10 text-[#FF6B4A] border-[#FF6B4A]/25 font-bold'
                         : 'bg-white/[0.03] text-muted border-divider'
                         }`}>
-                        {m.role?.replace(/_/g, ' ') || 'Member'}
+                        {formatAccessRole(m.role)}
                       </span>
                     </div>
 
@@ -415,6 +782,8 @@ export default function Employees() {
           </div>
 
         </div>
+        </>
+        )}
 
       </div>
 
@@ -440,7 +809,7 @@ export default function Employees() {
               </div>
               <h3 className="text-xs font-bold text-main">{selectedMember.full_name}</h3>
               <p className="text-[10px] font-mono text-muted mt-0.5">
-                {selectedMember.role?.replace(/_/g, ' ').toUpperCase()} · {selectedMember.department || 'General'}
+                {selectedMember.job_title ? `${selectedMember.job_title} · ` : ''}{formatAccessRole(selectedMember.role)}
               </p>
               <p className="text-[10px] font-mono text-zinc-600 mt-0.5">{selectedMember.email}</p>
             </div>

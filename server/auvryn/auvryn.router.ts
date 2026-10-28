@@ -104,8 +104,7 @@ export const auvrynRouter = router({
     .input(z.object({
       requestId: z.number(),
       assignedRole: z.enum([
-        'administrator', 'director', 'senior_manager', 'manager',
-        'team_lead', 'senior_employee', 'employee', 'intern', 'freelancer', 'owner'
+        'owner', 'administrator', 'manager', 'team_lead', 'team_member', 'employee'
       ]),
       reviewNotes: z.string().optional()
     }))

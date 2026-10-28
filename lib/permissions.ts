@@ -49,22 +49,12 @@ export type AppPermission =
 export type UserRole =
   | 'owner'
   | 'administrator'
-  | 'director'
-  | 'senior_manager'
   | 'manager'
   | 'team_lead'
-  | 'senior_employee'
+  | 'team_member'
   | 'employee'
-  | 'intern'
-  | 'freelancer'
-  // Legacy roles (kept for backward compat during migration)
-  | 'managing_director'
-  | 'ceo'
-  | 'cto'
-  | 'project_manager'
-  | 'hr'
-  | 'developer'
-  | 'general_member';
+  | 'guest'
+  | 'client';
 
 // ─────────────────────────────────────────────────────────────────────
 // PBAC Permission Matrix
@@ -118,48 +108,6 @@ const ROLE_PERMISSIONS: Record<string, AppPermission[]> = {
     'manage_roles',
   ],
 
-  director: [
-    // Org
-    'manage_departments', 'invite_users', 'remove_users',
-    // Projects
-    'create_projects', 'assign_projects', 'manage_projects', 'view_projects',
-    // Tasks
-    'create_tasks', 'assign_tasks', 'manage_tasks',
-    // Files
-    'upload_files', 'download_files',
-    // Communication
-    'send_messages',
-    // Invoicing
-    'create_invoices', 'approve_invoices',
-    // Reporting
-    'view_reports', 'export_reports',
-    // Legacy
-    'schedule_meetings', 'view_team_directory', 'view_invoices',
-    'edit_invoices', 'delete_invoices', 'record_payments',
-    'manage_clients', 'manage_bill_references', 'generate_invoice_pdfs',
-  ],
-
-  senior_manager: [
-    // Org
-    'invite_users',
-    // Projects
-    'create_projects', 'assign_projects', 'manage_projects', 'view_projects',
-    // Tasks
-    'create_tasks', 'assign_tasks', 'manage_tasks',
-    // Files
-    'upload_files', 'download_files',
-    // Communication
-    'send_messages',
-    // Invoicing
-    'create_invoices',
-    // Reporting
-    'view_reports',
-    // Legacy
-    'schedule_meetings', 'view_team_directory', 'view_invoices',
-    'edit_invoices', 'record_payments', 'manage_clients',
-    'manage_bill_references', 'generate_invoice_pdfs',
-  ],
-
   manager: [
     // Org
     'invite_users',
@@ -194,7 +142,7 @@ const ROLE_PERMISSIONS: Record<string, AppPermission[]> = {
     'schedule_meetings', 'view_team_directory',
   ],
 
-  senior_employee: [
+  team_member: [
     // Projects
     'view_projects',
     // Tasks
@@ -220,54 +168,14 @@ const ROLE_PERMISSIONS: Record<string, AppPermission[]> = {
     'schedule_meetings', 'view_team_directory',
   ],
 
-  intern: [
-    // Projects
-    'view_projects',
-    // Tasks
-    'manage_tasks',
-    // Files
-    'upload_files', 'download_files',
-    // Communication
-    'send_messages',
-    // Legacy
-    'schedule_meetings', 'view_team_directory',
+  guest: [
+    'view_projects', 'download_files',
   ],
 
-  // Freelancer — project-scoped only, no org chat
-  freelancer: [
-    // Projects (assigned only — enforced by DB RLS)
-    'view_projects',
-    // Tasks (own only)
-    'manage_tasks',
-    // Files (project-scoped)
-    'upload_files', 'download_files',
-    // Meetings
-    'schedule_meetings',
-    // NO send_messages org-wide — project chat only via channel membership
-    // Legacy invoice (they may submit invoices)
-    'view_invoices', 'create_invoices', 'edit_invoices',
-    'record_payments', 'manage_clients', 'manage_bill_references',
-    'generate_invoice_pdfs',
+  client: [
+    'view_projects', 'view_invoices', 'download_files',
   ],
-
-  // ── Legacy role aliases (redirect to new equivalents) ──
-  managing_director: [],  // migrated → owner
-  ceo: [],               // migrated → owner
-  cto: [],               // migrated → owner
-  project_manager: [],   // migrated → manager
-  hr: [],                // migrated → administrator
-  developer: [],         // migrated → employee
-  general_member: [],    // migrated → employee
 };
-
-// Fill legacy aliases with their new role permissions
-ROLE_PERMISSIONS.managing_director = ROLE_PERMISSIONS.owner;
-ROLE_PERMISSIONS.ceo               = ROLE_PERMISSIONS.owner;
-ROLE_PERMISSIONS.cto               = ROLE_PERMISSIONS.owner;
-ROLE_PERMISSIONS.project_manager   = ROLE_PERMISSIONS.manager;
-ROLE_PERMISSIONS.hr                = ROLE_PERMISSIONS.administrator;
-ROLE_PERMISSIONS.developer         = ROLE_PERMISSIONS.employee;
-ROLE_PERMISSIONS.general_member    = ROLE_PERMISSIONS.employee;
 
 // ─────────────────────────────────────────────────────────────────────
 // Core permission check — always use this, never compare role strings
@@ -308,23 +216,25 @@ const ROLE_WORKSPACE_PERMISSIONS: Record<string, WorkspacePermission[]> = {
     "project.view", "project.create", "project.manage", "invoice.view", "invoice.create", "invoice.manage",
     "client.view", "client.manage", "chat.view", "chat.send"
   ],
+  team_lead: [
+    "organization.view", "department.view",
+    "project.view", "project.create", "project.manage", "chat.view", "chat.send"
+  ],
+  team_member: [
+    "organization.view", "department.view",
+    "project.view", "chat.view", "chat.send"
+  ],
   employee: [
     "organization.view", "department.view",
     "project.view", "chat.view", "chat.send"
   ],
-  freelancer: [
-    "project.view", "chat.view", "chat.send", "invoice.view", "invoice.create"
+  guest: [
+    "project.view"
+  ],
+  client: [
+    "project.view", "invoice.view"
   ]
 };
-
-// Resolve legacy aliases
-ROLE_WORKSPACE_PERMISSIONS.managing_director = ROLE_WORKSPACE_PERMISSIONS.owner;
-ROLE_WORKSPACE_PERMISSIONS.ceo               = ROLE_WORKSPACE_PERMISSIONS.owner;
-ROLE_WORKSPACE_PERMISSIONS.cto               = ROLE_WORKSPACE_PERMISSIONS.owner;
-ROLE_WORKSPACE_PERMISSIONS.project_manager   = ROLE_WORKSPACE_PERMISSIONS.manager;
-ROLE_WORKSPACE_PERMISSIONS.hr                = ROLE_WORKSPACE_PERMISSIONS.administrator;
-ROLE_WORKSPACE_PERMISSIONS.developer         = ROLE_WORKSPACE_PERMISSIONS.employee;
-ROLE_WORKSPACE_PERMISSIONS.general_member    = ROLE_WORKSPACE_PERMISSIONS.employee;
 
 export function resolveWorkspacePermissions(
   workspaceType: 'organization' | 'independent' | 'external' | 'guest' | 'archived',
@@ -419,24 +329,14 @@ export function canAccessOrgChat(roleOrUser: string | { role: string; freelancer
 
 // Role hierarchy level — higher = more authority
 const ROLE_LEVEL: Record<string, number> = {
-  owner: 9,
-  administrator: 8,
-  director: 7,
-  senior_manager: 6,
-  manager: 5,
-  team_lead: 4,
-  senior_employee: 3,
-  employee: 2,
-  intern: 1,
-  freelancer: 0,
-  // Legacy aliases
-  managing_director: 9,
-  ceo: 9,
-  cto: 9,
-  project_manager: 5,
-  hr: 8,
-  developer: 2,
-  general_member: 2,
+  owner: 5,
+  administrator: 4,
+  manager: 3,
+  team_lead: 2,
+  team_member: 1,
+  employee: 1,
+  guest: 0,
+  client: 0,
 };
 
 export function getRoleLevel(role: string | undefined | null): number {
@@ -462,10 +362,10 @@ export interface ProjectScopeContext {
 
 export function resolveProjectScope(ctx: ProjectScopeContext): ProjectAccessScopeType {
   const { role, isOwner } = ctx;
-  if (isOwner || role === 'owner' || role === 'managing_director' || role === 'ceo' || role === 'cto' || role === 'administrator') {
+  if (isOwner || role === 'owner' || role === 'administrator') {
     return 'all';
   }
-  if (role === 'director' || role === 'senior_manager' || role === 'manager' || role === 'project_manager') {
+  if (role === 'manager' || role === 'team_lead') {
     return ctx.departmentId ? 'department' : 'assigned';
   }
   return 'assigned';

@@ -1,0 +1,35 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Pytest: current file",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "-c",
+        "tests_ui/pytest.ini",
+        "${file}",
+        "-q"
+      ],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env.test",
+      "justMyCode": false
+    },
+    {
+      "name": "Pytest: current test",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": [
+        "-c",
+        "tests_ui/pytest.ini",
+        "${file}::${selectedText}",
+        "-q"
+      ],
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env.test",
+      "justMyCode": false
+    }
+  ]
+}

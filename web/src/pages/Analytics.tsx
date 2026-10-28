@@ -20,8 +20,7 @@ export default function Analytics() {
   const { user, role } = useAuth();
   const { orgId } = useWorkspace();
 
-  const isManagement = ['owner', 'administrator', 'director', 'senior_manager', 'manager',
-    'ceo', 'managing_director'].includes(role || '');
+  const isManagement = ['owner', 'administrator', 'manager'].includes(role || '');
 
   const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -83,8 +82,8 @@ export default function Analytics() {
             ? supabase.from('tasks').select('id, status').eq('org_id', orgId)
             : supabase.from('tasks').select('id, status').eq('created_by', user.id),
           orgId
-            ? supabase.from('invoices').select('id, status, total_amount, amount_paid').eq('organization_id', orgId).eq('is_deleted', false)
-            : supabase.from('invoices').select('id, status, total_amount, amount_paid').eq('owner_id', user.id).eq('is_deleted', false),
+            ? supabase.from('invoices').select('id, status, total_amount, paid_amount, balance_due').or(`organization_id.eq.${orgId},and(organization_id.is.null,owner_id.eq.${user.id})`).eq('is_deleted', false)
+            : supabase.from('invoices').select('id, status, total_amount, paid_amount, balance_due').eq('owner_id', user.id).eq('is_deleted', false),
         ]);
 
         const projects = projRes.data || [];
@@ -102,12 +101,13 @@ export default function Analytics() {
         let pendingValue = 0;
 
         invoices.forEach(inv => {
+          if (inv.status === 'cancelled') return;
           const tot = Number(inv.total_amount) || 0;
-          const paid = Number(inv.amount_paid) || 0;
-          if (inv.status === 'paid') paidValue += tot;
-          else {
-            paidValue += paid;
-            pendingValue += Math.max(0, tot - paid);
+          const paid = Number(inv.paid_amount) || 0;
+          const due = Number(inv.balance_due != null ? inv.balance_due : Math.max(0, tot - paid));
+          paidValue += paid;
+          if (inv.status !== 'draft' && due > 0) {
+            pendingValue += due;
           }
         });
 
@@ -249,7 +249,7 @@ export default function Analytics() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           
           {/* Workstream Completion Trajectory */}
-          <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4">
+          <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4 animate-fade-up stagger-1">
             <div className="flex items-center justify-between pb-3 border-b border-divider">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-main flex items-center gap-2">
                 <Briefcase size={14} className="text-[#FF6B4A]" />
@@ -286,7 +286,7 @@ export default function Analytics() {
           </div>
 
           {/* Task Throughput */}
-          <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4">
+          <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4 animate-fade-up stagger-2">
             <div className="flex items-center justify-between pb-3 border-b border-divider">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-main flex items-center gap-2">
                 <CheckSquare size={14} className="text-[#FF6B4A]" />
@@ -323,7 +323,7 @@ export default function Analytics() {
           </div>
 
           {/* Revenue Realization */}
-          <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4">
+          <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4 animate-fade-up stagger-3">
             <div className="flex items-center justify-between pb-3 border-b border-divider">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-main flex items-center gap-2">
                 <DollarSign size={14} className="text-[#FF6B4A]" />
@@ -362,7 +362,7 @@ export default function Analytics() {
           </div>
 
           {/* System & Architecture Telemetry */}
-          <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4">
+          <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4 animate-fade-up stagger-4">
             <div className="flex items-center justify-between pb-3 border-b border-divider">
               <span className="text-xs font-mono font-bold uppercase tracking-wider text-main flex items-center gap-2">
                 <Activity size={14} className="text-[#FF6B4A]" />
@@ -389,7 +389,7 @@ export default function Analytics() {
 
         </div>
       ) : (
-        <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4 max-w-xl">
+        <div className="bg-card-bg border border-divider rounded-lg p-5 space-y-4 max-w-xl animate-fade-up stagger-1">
           <div className="flex items-center justify-between pb-3 border-b border-divider">
             <span className="text-xs font-mono font-bold uppercase tracking-wider text-main">Personal Milestone Progress</span>
             <span className="text-xs font-mono text-muted">{personalStats.done} of {personalStats.total} done</span>

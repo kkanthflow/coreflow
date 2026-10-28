@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { SUPPORTED_CURRENCIES, getCurrencyDetails } from '../web/src/lib/currency.ts';
+import { SUPPORTED_CURRENCIES, getCurrencyDetails } from '../web/src/lib/currency';
 
 export function runBatch5Tests() {
   console.log('--- Running Batch 5 Workspace Settings Pages Verification ---');

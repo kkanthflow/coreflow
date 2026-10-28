@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useWorkspace } from '../hooks/useWorkspace';
@@ -23,9 +24,9 @@ export function deriveInvoiceStatus(inv: {
   if (inv.status === 'draft') return 'draft';
   if (inv.status === 'cancelled') return 'cancelled';
 
-  const total = Number(inv.total_amount || 0);
-  const paid = Number(inv.paid_amount || 0);
-  const balance = Number(inv.balance_due != null ? inv.balance_due : Math.max(0, total - paid));
+  const total = Math.round(Number(inv.total_amount || 0) * 100) / 100;
+  const paid = Math.round(Number(inv.paid_amount || 0) * 100) / 100;
+  const balance = Math.round(Number(inv.balance_due != null ? inv.balance_due : Math.max(0, total - paid)) * 100) / 100;
 
   if (balance <= 0 && total > 0) return 'paid';
 
@@ -111,7 +112,7 @@ export default function Invoices() {
         // Resolve linked client IDs for this client contact
         let clientQuery = supabase.from('clients').select('id');
         if (user.email) {
-          clientQuery = clientQuery.or(`user_id.eq.${user.id},email.eq.${user.email.toLowerCase()}`);
+          clientQuery = clientQuery.or(`user_id.eq.${user.id},email.ilike.${user.email.trim()}`);
         } else {
           clientQuery = clientQuery.eq('user_id', user.id);
         }
@@ -136,7 +137,7 @@ export default function Invoices() {
           return;
         }
       } else if (orgId) {
-        query = query.eq('organization_id', orgId);
+        query = query.or(`organization_id.eq.${orgId},and(organization_id.is.null,owner_id.eq.${user.id})`);
       } else {
         query = query.eq('owner_id', user.id);
       }
@@ -217,10 +218,14 @@ export default function Invoices() {
     return filtered.slice(start, start + PAGE_SIZE);
   }, [filtered, currentPage]);
 
-  const totalInvoiced = invoices.reduce((acc, curr) => acc + Number(curr.total_amount || 0), 0);
-  const totalPaid = invoices.reduce((acc, curr) => acc + Number(curr.paid_amount || 0), 0);
-  const totalOutstanding = invoices.reduce((acc, curr) => acc + Number(curr.balance_due || 0), 0);
-  const overdueCount = invoices.filter(i => i.derivedStatus === 'overdue').length;
+  const eligibleInvoices = invoices.filter(i => i.status !== 'cancelled' && i.status !== 'draft');
+  const totalInvoiced = eligibleInvoices.reduce((acc, curr) => acc + Number(curr.total_amount || 0), 0);
+  const totalPaid = invoices.filter(i => i.status !== 'cancelled').reduce((acc, curr) => acc + Number(curr.paid_amount || 0), 0);
+  const totalOutstanding = eligibleInvoices.reduce((acc, curr) => {
+    const bal = Number(curr.balance_due != null ? curr.balance_due : Math.max(0, Number(curr.total_amount || 0) - Number(curr.paid_amount || 0)));
+    return acc + (bal > 0 ? bal : 0);
+  }, 0);
+  const overdueCount = invoices.filter(i => i.derivedStatus === 'overdue' && i.status !== 'cancelled').length;
 
   const metrics: MetricItem[] = useMemo(() => [
     { label: isClient ? 'TOTAL BILLED' : 'TOTAL INVOICED', value: formatCurrency(totalInvoiced, defaultCurrency) },
@@ -250,7 +255,7 @@ export default function Invoices() {
             {canManage && (
               <button
                 onClick={() => navigate('/invoices/new')}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-[#FF6B4A] hover:bg-[#FF552B] text-main text-xs font-semibold transition-colors shadow-sm"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all shadow-sm shadow-accent/20"
               >
                 <Plus size={14} />
                 <span>Create Invoice</span>
@@ -264,7 +269,7 @@ export default function Invoices() {
       <MetricStrip metrics={metrics} />
 
       {/* ── Filter Bar & Search ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-card-bg border border-divider rounded-lg p-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-card-bg border border-divider rounded-xl shadow-sm p-3">
         <div className="flex items-center gap-3 flex-1 min-w-[240px] max-w-sm">
           <div className="relative w-full">
             <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
@@ -273,25 +278,25 @@ export default function Invoices() {
               placeholder={isClient ? "Search by invoice # or issuing business..." : "Search invoice ID or client..."}
               value={search}
               onChange={e => { setSearch(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-8 pr-7 py-1.5 bg-app border border-divider focus:border-[#FF6B4A]/40 rounded text-xs text-main placeholder-zinc-500 focus:outline-none transition-colors"
+              className="w-full pl-8 pr-7 py-1.5 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-text placeholder-muted/60 focus:outline-none transition-colors"
             />
             {search && (
-              <button onClick={() => { setSearch(''); setCurrentPage(1); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
+              <button onClick={() => { setSearch(''); setCurrentPage(1); }} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-text">
                 <X size={12} />
               </button>
             )}
           </div>
         </div>
 
-        <div className="flex bg-app border border-divider rounded p-0.5 overflow-x-auto">
+        <div className="flex bg-surface-2 border border-line rounded-lg p-0.5 overflow-x-auto">
           {activeFilters.map(f => (
             <button
               key={f.key}
               onClick={() => { setFilter(f.key); setCurrentPage(1); }}
-              className={`px-2.5 py-1 rounded text-[11px] font-medium transition-colors whitespace-nowrap ${
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors whitespace-nowrap ${
                 filter === f.key
-                  ? 'bg-hover text-main font-semibold'
-                  : 'text-muted hover:text-zinc-200'
+                  ? 'bg-card-bg text-text font-semibold shadow-xs'
+                  : 'text-muted hover:text-text'
               }`}
             >
               {f.label}
@@ -319,8 +324,8 @@ export default function Invoices() {
       ) : (
         <div className="space-y-4">
           {/* 1. DESKTOP VIEW: Structured Tabular Grid (md and up) */}
-          <div className="hidden md:block bg-card-bg border border-divider rounded-lg overflow-hidden">
-            <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-card-bg">
+          <div className="hidden md:block bg-card-bg border border-divider rounded-xl shadow-sm overflow-hidden">
+            <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-surface-2/50">
               <div className="col-span-3">Invoice Number</div>
               <div className="col-span-3">{isClient ? 'Issuing Business' : 'Client Entity'}</div>
               <div className="col-span-2">Settlement Status</div>
@@ -328,52 +333,58 @@ export default function Invoices() {
               <div className="col-span-2 text-right">Total & Balance</div>
             </div>
 
-            <div className="divide-y divide-white/[0.03]">
-              {paginatedInvoices.map(inv => {
+            <div className="divide-y divide-divider">
+              {paginatedInvoices.map((inv, idx) => {
                 const issuingBusiness = inv.organizations?.name || inv.owner?.full_name || 'Auvryn Business';
                 const clientName = inv.clients?.company_name || inv.clients?.name || 'Unassigned Client';
 
                 return (
-                  <Link
+                  <motion.div
                     key={inv.id}
-                    to={`/invoices/${inv.id}`}
-                    className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-white/[0.02] transition-colors items-center text-xs group cursor-pointer"
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.22, delay: Math.min(idx * 0.03, 0.3), ease: [0.16, 1, 0.3, 1] }}
                   >
-                    <div className="col-span-3 min-w-0 pr-2">
-                      <div className="font-mono font-bold text-main group-hover:text-[#FF6B4A] transition-colors truncate">
-                        {inv.invoice_number}
+                    <Link
+                      to={`/invoices/${inv.id}`}
+                      className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-hover/60 transition-colors items-center text-xs group cursor-pointer"
+                    >
+                      <div className="col-span-3 min-w-0 pr-2">
+                        <div className="font-mono font-bold text-main group-hover:text-accent transition-colors truncate">
+                          {inv.invoice_number}
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="col-span-3 min-w-0 pr-2">
-                      <div className="font-semibold text-main truncate">
-                        {isClient ? issuingBusiness : clientName}
+                      <div className="col-span-3 min-w-0 pr-2">
+                        <div className="font-semibold text-main truncate">
+                          {isClient ? issuingBusiness : clientName}
+                        </div>
+                        <div className="text-muted text-[11px] truncate mt-0.5">
+                          {isClient ? (inv.organizations?.name ? 'Organization' : 'Freelancer') : (inv.clients?.company_name ? inv.clients?.name : '')}
+                        </div>
                       </div>
-                      <div className="text-muted text-[11px] truncate mt-0.5">
-                        {isClient ? (inv.organizations?.name ? 'Organization' : 'Freelancer') : (inv.clients?.company_name ? inv.clients?.name : '')}
+
+                      <div className="col-span-2">
+                        <StatusSignal status={inv.derivedStatus} />
                       </div>
-                    </div>
 
-                    <div className="col-span-2">
-                      <StatusSignal status={inv.derivedStatus} />
-                    </div>
-
-                    <div className="col-span-2 text-muted text-xs font-mono text-[11px]">
-                      <div>Issued: {new Date(inv.issue_date || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
-                      <div className="text-muted text-[10px]">Due: {inv.due_date ? new Date(inv.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Immediate'}</div>
-                    </div>
-
-                    <div className="col-span-2 text-right font-mono tabular-nums">
-                      <div className="font-bold text-main text-xs">{formatCurrency(inv.total_amount, inv.currency || defaultCurrency)}</div>
-                      <div className="text-[11px] font-mono text-muted">
-                        {inv.balance_due > 0 ? (
-                          <span className="text-[#FF6B4A]">{formatCurrency(inv.balance_due, inv.currency || defaultCurrency)} due</span>
-                        ) : (
-                          <span className="text-emerald-400">Settled</span>
-                        )}
+                      <div className="col-span-2 text-muted text-xs font-mono text-[11px]">
+                        <div>Issued: {new Date(inv.issue_date || Date.now()).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+                        <div className="text-muted text-[10px]">Due: {inv.due_date ? new Date(inv.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Immediate'}</div>
                       </div>
-                    </div>
-                  </Link>
+
+                      <div className="col-span-2 text-right font-mono tabular-nums">
+                        <div className="font-bold text-main text-xs">{formatCurrency(inv.total_amount, inv.currency || defaultCurrency)}</div>
+                        <div className="text-[11px] font-mono text-muted">
+                          {inv.balance_due > 0 ? (
+                            <span className="text-accent">{formatCurrency(inv.balance_due, inv.currency || defaultCurrency)} due</span>
+                          ) : (
+                            <span className="text-emerald-500">Settled</span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+                  </motion.div>
                 );
               })}
             </div>
@@ -381,63 +392,69 @@ export default function Invoices() {
 
           {/* 2. MOBILE VIEW: Responsive Cards (sm and down) */}
           <div className="block md:hidden space-y-3">
-            {paginatedInvoices.map(inv => {
+            {paginatedInvoices.map((inv, idx) => {
               const issuingBusiness = inv.organizations?.name || inv.owner?.full_name || 'Auvryn Business';
               const clientName = inv.clients?.company_name || inv.clients?.name || 'Unassigned Client';
 
               return (
-                <Link
+                <motion.div
                   key={inv.id}
-                  to={`/invoices/${inv.id}`}
-                  className="block bg-card-bg border border-divider rounded-lg p-4 space-y-3 hover:border-[#FF6B4A]/40 transition-colors"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.22, delay: Math.min(idx * 0.03, 0.3), ease: [0.16, 1, 0.3, 1] }}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="font-mono font-bold text-sm text-main">{inv.invoice_number}</span>
-                    <StatusSignal status={inv.derivedStatus} />
-                  </div>
-
-                  <div>
-                    <span className="text-[10px] font-mono uppercase tracking-wider text-muted block">
-                      {isClient ? 'Issuing Business' : 'Client Account'}
-                    </span>
-                    <span className="font-semibold text-main text-xs block truncate">
-                      {isClient ? issuingBusiness : clientName}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-muted bg-app p-2.5 rounded border border-divider">
-                    <div>
-                      <span className="block text-[10px] text-muted">Issued</span>
-                      <span className="text-main font-medium">{new Date(inv.issue_date || Date.now()).toLocaleDateString()}</span>
+                  <Link
+                    to={`/invoices/${inv.id}`}
+                    className="block bg-card-bg border border-divider rounded-xl shadow-sm p-4 space-y-3 hover:border-accent/40 transition-colors"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono font-bold text-sm text-main">{inv.invoice_number}</span>
+                      <StatusSignal status={inv.derivedStatus} />
                     </div>
-                    <div>
-                      <span className="block text-[10px] text-muted">Due Date</span>
-                      <span className="text-main font-medium">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : 'Immediate'}</span>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center justify-between pt-1 border-t border-divider font-mono">
                     <div>
-                      <span className="text-[10px] text-muted block uppercase">Total Billed</span>
-                      <span className="font-bold text-main text-xs">{formatCurrency(inv.total_amount, inv.currency || defaultCurrency)}</span>
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-muted block">
+                        {isClient ? 'Issuing Business' : 'Client Account'}
+                      </span>
+                      <span className="font-semibold text-main text-xs block truncate">
+                        {isClient ? issuingBusiness : clientName}
+                      </span>
                     </div>
-                    <div className="text-right">
+
+                    <div className="grid grid-cols-2 gap-2 text-[11px] font-mono text-muted bg-surface-2 p-2.5 rounded-lg border border-line">
+                      <div>
+                        <span className="block text-[10px] text-muted">Issued</span>
+                        <span className="text-main font-medium">{new Date(inv.issue_date || Date.now()).toLocaleDateString()}</span>
+                      </div>
+                      <div>
+                        <span className="block text-[10px] text-muted">Due Date</span>
+                        <span className="text-main font-medium">{inv.due_date ? new Date(inv.due_date).toLocaleDateString() : 'Immediate'}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-1 border-t border-divider font-mono">
+                      <div>
+                        <span className="text-[10px] text-muted block uppercase">Total Billed</span>
+                        <span className="font-bold text-main text-xs">{formatCurrency(inv.total_amount, inv.currency || defaultCurrency)}</span>
+                      </div>
+                      <div className="text-right">
                       <span className="text-[10px] text-muted block uppercase">Balance Due</span>
                       {inv.balance_due > 0 ? (
-                        <span className="font-bold text-[#FF6B4A] text-xs">{formatCurrency(inv.balance_due, inv.currency || defaultCurrency)}</span>
+                        <span className="font-bold text-accent text-xs">{formatCurrency(inv.balance_due, inv.currency || defaultCurrency)}</span>
                       ) : (
-                        <span className="font-bold text-emerald-400 text-xs">Settled</span>
+                        <span className="font-bold text-emerald-500 text-xs">Settled</span>
                       )}
                     </div>
                   </div>
                 </Link>
-              );
+              </motion.div>
+            );
             })}
           </div>
 
           {/* ── Pagination Controls ── */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between bg-card-bg border border-divider rounded-lg px-4 py-2 text-xs">
+            <div className="flex items-center justify-between bg-card-bg border border-divider rounded-xl shadow-sm px-4 py-2.5 text-xs">
               <span className="text-muted text-[11px] font-mono">
                 Showing {((currentPage - 1) * PAGE_SIZE) + 1} to {Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length} invoices
               </span>
@@ -446,7 +463,7 @@ export default function Invoices() {
                 <button
                   disabled={currentPage <= 1}
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  className="p-1.5 rounded hover:bg-hover disabled:opacity-30 text-muted hover:text-main border border-divider transition-colors"
+                  className="p-1.5 rounded-md hover:bg-hover disabled:opacity-30 text-muted hover:text-main border border-divider transition-colors"
                   title="Previous Page"
                 >
                   <ChevronLeft size={14} />

@@ -21,6 +21,7 @@ import { razorpayStandardRouter } from "../payments/razorpay-standard.routes";
 import { workflowsRouter } from "../workflows/workflows.routes.js";
 import { clientsRouter } from "../clients/client.routes";
 import { paymentSubmissionsRouter } from "../payments/payment-submission.routes";
+import { emailRouter } from "../email/email.routes";
 
 function createPgClient() {
   const dbUrl = process.env.DATABASE_URL;
@@ -247,6 +248,7 @@ export function createExpressApp() {
   app.use('/api/workflows', workflowsRouter);
   app.use('/api/clients', clientsRouter);
   app.use('/api/payment-submissions', paymentSubmissionsRouter);
+  app.use('/api/email', emailRouter);
   app.use('/api', razorpayStandardRouter);
 
   app.post("/api/notifications/send-push", async (req: Request, res: Response) => {
@@ -372,7 +374,12 @@ export function createExpressApp() {
 </html>`;
 
   if (process.env.NODE_ENV === "production") {
-    const distPath = path.join(process.cwd(), "dist");
+    const webDistPath = path.join(process.cwd(), "web", "dist");
+    const rootDistPath = path.join(process.cwd(), "dist");
+    const distPath = require("fs").existsSync(path.join(webDistPath, "index.html"))
+      ? webDistPath
+      : rootDistPath;
+
     // Only serve static frontend files if the dist folder exists (not present in API-only deployments)
     if (require("fs").existsSync(path.join(distPath, "index.html"))) {
       app.use(express.static(distPath));

@@ -11,25 +11,14 @@ interface RoleBadgeProps {
 }
 
 const ROLE_DISPLAY_NAMES: Record<string, string> = {
-  // Enterprise roles
-  owner:            'Owner',
-  administrator:    'Administrator',
-  director:         'Director',
-  senior_manager:   'Senior Manager',
-  manager:          'Manager',
-  team_lead:        'Team Lead',
-  senior_employee:  'Senior Employee',
-  employee:         'Employee',
-  intern:           'Intern',
-  freelancer:       'Freelancer',
-  // Legacy aliases
-  managing_director: 'Owner',
-  ceo:              'Owner',
-  cto:              'Owner',
-  project_manager:  'Manager',
-  hr:               'Administrator',
-  developer:        'Employee',
-  general_member:   'Employee',
+  owner:         'Owner',
+  administrator: 'Administrator',
+  manager:       'Manager',
+  team_lead:     'Team Lead',
+  team_member:   'Team Member',
+  employee:      'Employee',
+  guest:         'Guest',
+  client:        'Client',
 };
 
 export function RoleBadge({ role, size = 'md', variant = 'filled' }: RoleBadgeProps) {

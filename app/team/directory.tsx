@@ -140,7 +140,7 @@ export default function TeamDirectoryScreen() {
             <Ionicons name="arrow-back" size={20} color={colors.foreground} />
           </Pressable>
           <Text className="text-2xl font-bold text-foreground">
-            {['owner', 'ceo', 'managing_director', 'administrator'].includes(user?.role || '') 
+            {['owner', 'administrator'].includes(user?.role || '') 
               ? 'Employee Directory' 
               : 'Team Directory'}
           </Text>
@@ -152,7 +152,7 @@ export default function TeamDirectoryScreen() {
         >
           <Ionicons name="search" size={20} color={colors.muted} className="mr-2" />
           <TextInput
-            placeholder={['owner', 'ceo', 'managing_director', 'administrator'].includes(user?.role || '') 
+            placeholder={['owner', 'administrator'].includes(user?.role || '') 
               ? "Search employees..." 
               : "Search team members..."}
             placeholderTextColor={colors.muted}

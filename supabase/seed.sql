@@ -1,13 +1,11 @@
 -- Step 7: Create Test Data
--- Insert test users with different roles
+-- Insert test users with valid system roles
 INSERT INTO users (email, full_name, role, status, department) VALUES
-('md@coreflow.com', 'Managing Director', 'managing_director', 'active', 'Executive'),
-('ceo@coreflow.com', 'Chief Executive Officer', 'ceo', 'active', 'Executive'),
-('cto@coreflow.com', 'Chief Technology Officer', 'cto', 'active', 'Technology'),
-('pm@coreflow.com', 'Project Manager', 'project_manager', 'active', 'Operations'),
-('hr@coreflow.com', 'HR Manager', 'hr', 'active', 'Human Resources'),
-('dev@coreflow.com', 'Developer', 'developer', 'active', 'Technology'),
-('member@coreflow.com', 'General Member', 'general_member', 'active', 'Operations');
+('owner@coreflow.com', 'Organization Owner', 'owner', 'active', 'Executive'),
+('admin@coreflow.com', 'Administrator', 'administrator', 'active', 'Operations'),
+('manager@coreflow.com', 'Manager', 'manager', 'active', 'Technology'),
+('lead@coreflow.com', 'Team Lead', 'team_lead', 'active', 'Technology'),
+('member@coreflow.com', 'Team Member', 'team_member', 'active', 'Operations');
 
 -- Create a test meeting
 INSERT INTO meetings (title, description, creator_id, start_time, end_time, duration_minutes, meeting_link, meeting_link_type)
@@ -20,5 +18,5 @@ SELECT
   60,
   'https://teams.microsoft.com/l/meetup-join/19%3ameeting_abc123',
   'teams'
-FROM users WHERE email = 'pm@coreflow.com'
+FROM users WHERE email = 'manager@coreflow.com'
 LIMIT 1;

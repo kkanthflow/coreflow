@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { supabaseAdmin } from '../_core/supabase.js';
 import { razorpayService } from './razorpay.service.js';
+import { EmailService } from '../email/email.service';
 import {
   SUBSCRIPTION_PLANS,
   PlanTier,
@@ -711,6 +712,47 @@ export class SubscriptionService {
       await supabaseAdmin.from('subscription_payments').upsert(paymentRecord);
     } catch {
       fallbackPayments.set(paymentId, paymentRecord);
+    }
+
+    // Trigger verified email confirmation and in-app notification
+    try {
+      const { data: userRecord } = await supabaseAdmin
+        .from('users')
+        .select('email, full_name')
+        .eq('id', params.userId)
+        .maybeSingle();
+
+      if (userRecord?.email) {
+        const userEmail = userRecord.email;
+        const userName = userRecord.full_name || userEmail.split('@')[0];
+        const formattedAmount = `INR ${(payment.amount / 100).toLocaleString('en-IN')}`;
+
+        await EmailService.sendPaymentConfirmation({
+          recipientEmail: userEmail,
+          recipientName: userName,
+          paymentId: payment.id,
+          amountFormatted: formattedAmount,
+          currency: 'INR',
+          paidAt: new Date().toISOString(),
+          isSubscription: true,
+          planName: planConfig.plan.name,
+          userId: params.userId,
+          organizationId: targetSub.organization_id || undefined,
+        });
+
+        await supabaseAdmin.from('notifications').insert({
+          user_id: params.userId,
+          title: `Subscription Activated: ${planConfig.plan.name}`,
+          message: `Your subscription to ${planConfig.plan.name} has been activated. Thank you for your payment!`,
+          type: 'finance',
+          entity_type: 'subscription',
+          entity_id: targetSub.id,
+          action_url: '/settings?tab=billing',
+          is_read: false,
+        });
+      }
+    } catch (notifErr: any) {
+      console.warn('[SubscriptionService] Email/Notification note on activation:', notifErr.message);
     }
 
     return {

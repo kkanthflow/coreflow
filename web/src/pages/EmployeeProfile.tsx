@@ -6,16 +6,17 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { hasPermission } from '../lib/permissions';
 import {
   ArrowLeft, Mail, Phone, Building2,
-  CheckSquare, Save
+  CheckSquare, Save, Shield
 } from 'lucide-react';
 import {
   PageHeader, MetricStrip, StatusSignal, type MetricItem
 } from '../components/ui/ObsidianPrimitives';
-
-const ALL_ROLES = [
-  'owner', 'administrator', 'director', 'senior_manager',
-  'manager', 'team_lead', 'senior_employee', 'employee', 'intern', 'freelancer'
-];
+import { toast } from '../components/ui/Toast';
+import { 
+  ACCESS_ROLES, 
+  formatAccessRole 
+} from '../lib/jobTitles';
+import { JobTitleSelect } from '../components/ui/JobTitleSelect';
 
 export default function EmployeeProfile() {
   const { id } = useParams();
@@ -25,11 +26,15 @@ export default function EmployeeProfile() {
   const canManageRoles = hasPermission(currentRole, 'manage_roles');
 
   const [profile, setProfile] = useState<any>(null);
+  const [userOrg, setUserOrg] = useState<any>(null);
   const [selectedRole, setSelectedRole] = useState('');
+  const [selectedJobTitle, setSelectedJobTitle] = useState('');
   const [tasks, setTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [savingJobTitle, setSavingJobTitle] = useState(false);
+  const [savedJobTitleSuccess, setSavedJobTitleSuccess] = useState(false);
 
   const fetchProfile = useCallback(async () => {
     if (!id) return;
@@ -42,7 +47,21 @@ export default function EmployeeProfile() {
         .single();
       if (uErr) throw uErr;
       setProfile(uData);
-      setSelectedRole(uData.role || 'employee');
+
+      if (orgId) {
+        const { data: ouData } = await supabase
+          .from('user_organizations')
+          .select('job_title, career_level, custom_role_id, role, department_id')
+          .eq('org_id', orgId)
+          .eq('user_id', id)
+          .maybeSingle();
+        setUserOrg(ouData || null);
+        setSelectedRole(ouData?.role || uData.role || 'team_member');
+        setSelectedJobTitle(ouData?.job_title || uData.job_title || 'Team Member');
+      } else {
+        setSelectedRole(uData.role || 'team_member');
+        setSelectedJobTitle(uData.job_title || 'Team Member');
+      }
 
       const { data: tData } = await supabase
         .from('tasks')
@@ -60,25 +79,54 @@ export default function EmployeeProfile() {
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
   const handleUpdateRole = async () => {
-    if (!canManageRoles || !id) return;
+    if (!canManageRoles || !id || !orgId) return;
     setSaving(true);
     try {
-      await supabase.from('users').update({ role: selectedRole }).eq('id', id);
+      const { data, error } = await supabase.rpc('update_organization_member_role', {
+        p_org_id: orgId,
+        p_target_user_id: id,
+        p_new_role: selectedRole,
+      });
 
-      if (orgId) {
-        await supabase
-          .from('user_organizations')
-          .update({ role: selectedRole })
-          .eq('org_id', orgId)
-          .eq('user_id', id);
-      }
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.message || 'Failed to update member role');
 
+      setUserOrg((prev: any) => ({ ...prev, role: selectedRole }));
+      setProfile((prev: any) => ({ ...prev, role: selectedRole }));
       setSavedSuccess(true);
+      toast.success(data?.message || 'Member role updated successfully');
       setTimeout(() => setSavedSuccess(false), 2500);
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to update role:', e);
+      toast.error(e.message || 'Failed to update member role');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleUpdateJobTitle = async () => {
+    if (!canManageRoles || !id || !orgId) return;
+    setSavingJobTitle(true);
+    try {
+      const { data, error } = await supabase.rpc('update_organization_member_job_title', {
+        p_org_id: orgId,
+        p_target_user_id: id,
+        p_job_title: selectedJobTitle,
+      });
+
+      if (error) throw error;
+      if (!data?.success) throw new Error(data?.message || 'Failed to update job title');
+
+      setUserOrg((prev: any) => ({ ...prev, job_title: selectedJobTitle }));
+      setProfile((prev: any) => ({ ...prev, job_title: selectedJobTitle }));
+      setSavedJobTitleSuccess(true);
+      toast.success(data?.message || 'Member job title updated successfully');
+      setTimeout(() => setSavedJobTitleSuccess(false), 2500);
+    } catch (e: any) {
+      console.error('Failed to update job title:', e);
+      toast.error(e.message || 'Failed to update member job title');
+    } finally {
+      setSavingJobTitle(false);
     }
   };
 
@@ -105,12 +153,12 @@ export default function EmployeeProfile() {
   const activeCount = tasks.filter(t => t.status !== 'done').length;
 
   const metrics: MetricItem[] = [
-    { label: 'ROLE', value: profile.role?.toUpperCase() || 'MEMBER', isOrange: true },
-    { label: 'ACTIVE TASKS', value: activeCount < 10 ? `0${activeCount}` : activeCount },
-    { label: 'COMPLETED', value: doneCount < 10 ? `0${doneCount}` : doneCount },
+    { label: 'ROLE', value: formatAccessRole(userOrg?.role || profile.role), isOrange: true },
+    { label: 'CAREER LEVEL', value: userOrg?.career_level || 'L3' },
+    { label: 'JOB TITLE', value: userOrg?.job_title || 'Team Member' },
     { label: 'DEPARTMENT', value: profile.department || 'General Org' },
+    { label: 'ACTIVE TASKS', value: activeCount < 10 ? `0${activeCount}` : activeCount },
     { label: 'PRESENCE', value: profile.is_online ? 'Active' : 'Offline', indicator: profile.is_online ? 'Online' : undefined },
-    { label: 'STATUS', value: 'Verified' },
   ];
 
   return (
@@ -152,7 +200,17 @@ export default function EmployeeProfile() {
               )}
             </div>
             <h2 className="text-sm font-bold text-main">{profile.full_name || 'Member'}</h2>
-            <p className="text-[11px] text-muted font-mono mt-0.5">{profile.email}</p>
+            {userOrg?.job_title && (
+              <p className="text-xs text-zinc-300 font-medium mt-0.5">{userOrg.job_title}</p>
+            )}
+            <div className="flex items-center gap-1.5 justify-center mt-1">
+              <p className="text-[11px] text-muted font-mono">{profile.email}</p>
+              {userOrg?.career_level && (
+                <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 bg-white/[0.08] text-muted rounded border border-white/[0.1]">
+                  {userOrg.career_level}
+                </span>
+              )}
+            </div>
 
             <div className="w-full space-y-2 mt-4 pt-4 border-t border-divider text-left text-xs text-muted">
               <div className="flex items-center gap-2">
@@ -174,7 +232,33 @@ export default function EmployeeProfile() {
             </div>
           </div>
 
-          {/* Role Manager */}
+          {/* Professional Job Title Manager */}
+          {canManageRoles && (
+            <div className="bg-card-bg border border-divider rounded-lg p-4 space-y-3">
+              <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block">
+                Professional Job Title
+              </span>
+              <div>
+                <JobTitleSelect
+                  value={selectedJobTitle}
+                  onChange={(val) => setSelectedJobTitle(val)}
+                  placeholder="Select or enter job title..."
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleUpdateJobTitle}
+                disabled={savingJobTitle || selectedJobTitle === (userOrg?.job_title || profile.job_title)}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 text-white font-semibold text-xs rounded transition-colors shadow-sm cursor-pointer"
+              >
+                <Save size={12} />
+                <span>{savingJobTitle ? 'Saving...' : savedJobTitleSuccess ? 'Job Title Saved' : 'Update Job Title'}</span>
+              </button>
+            </div>
+          )}
+
+          {/* Access & RBAC Role Manager */}
           {canManageRoles && (
             <div className="bg-card-bg border border-divider rounded-lg p-4 space-y-3">
               <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block">
@@ -184,22 +268,34 @@ export default function EmployeeProfile() {
                 <select
                   value={selectedRole}
                   onChange={e => setSelectedRole(e.target.value)}
-                  className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main capitalize focus:outline-none"
+                  className="w-full bg-app border border-divider rounded px-2.5 py-1.5 text-xs text-main focus:outline-none"
                 >
-                  {ALL_ROLES.map(r => (
-                    <option key={r} value={r}>{r.replace('_', ' ')}</option>
+                  {ACCESS_ROLES.map(r => (
+                    <option key={r.value} value={r.value}>{r.label}</option>
                   ))}
                 </select>
               </div>
 
               <button
+                type="button"
                 onClick={handleUpdateRole}
-                disabled={saving || selectedRole === profile.role}
-                className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors shadow-sm"
+                disabled={saving || selectedRole === (userOrg?.role || profile.role)}
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 bg-[#FF6B4A] hover:bg-[#FF552B] disabled:opacity-40 text-main font-semibold text-xs rounded transition-colors shadow-sm cursor-pointer"
               >
                 <Save size={12} />
                 <span>{saving ? 'Updating...' : savedSuccess ? 'Role Saved' : 'Update Role'}</span>
               </button>
+
+              <div className="pt-2 border-t border-divider flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/roles-permissions?tab=assignments&member=${id}`)}
+                  className="flex items-center gap-1.5 text-[11px] text-[#FF6B4A] hover:underline cursor-pointer"
+                >
+                  <Shield size={12} />
+                  <span>Open Full RBAC & Seniority →</span>
+                </button>
+              </div>
             </div>
           )}
         </div>

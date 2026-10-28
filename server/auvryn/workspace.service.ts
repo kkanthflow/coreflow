@@ -30,23 +30,17 @@ export async function createOrganization(params: {
       ownerId: params.userId,
     }).returning();
 
-    // 2. Create Default Department
-    const [generalDept] = await tx.insert(departments).values({
-      organizationId: org.id,
-      name: "General",
-    }).returning();
-
-    // 3. Add user as owner and administrator
+    // 2. Add user as owner and administrator (departments are optional and user-created)
     const [membership] = await tx.insert(organizationMemberships).values({
       userId: params.userId,
       organizationId: org.id,
-      departmentId: generalDept.id,
+      departmentId: null,
       jobTitle: params.jobTitle || "Founder / Owner",
       accessRole: "administrator",
       isOwner: true,
     }).returning();
 
-    // 4. Audit Log
+    // 3. Audit Log
     await recordAuditEvent({
       actorUserId: params.userId,
       organizationId: org.id,
@@ -57,7 +51,7 @@ export async function createOrganization(params: {
       newValues: org,
     });
 
-    return { organization: org, membership, defaultDepartment: generalDept };
+    return { organization: org, membership };
   });
 }
 
@@ -67,7 +61,7 @@ export async function createOrganization(params: {
 export async function createJoinRequest(params: {
   userId: number;
   organizationId: number;
-  departmentId: number;
+  departmentId?: number | null;
   jobTitle: string;
   message?: string;
 }) {
@@ -87,7 +81,7 @@ export async function createJoinRequest(params: {
   const [request] = await db.insert(organizationJoinRequests).values({
     userId: params.userId,
     organizationId: params.organizationId,
-    departmentId: params.departmentId,
+    departmentId: params.departmentId || null,
     jobTitle: params.jobTitle,
     message: params.message || null,
     status: "pending",
@@ -99,7 +93,7 @@ export async function createJoinRequest(params: {
     actionType: "join_request_created",
     resourceType: "organization_join_request",
     resourceId: request.id,
-    departmentId: params.departmentId,
+    departmentId: params.departmentId || null,
   });
 
   return request;

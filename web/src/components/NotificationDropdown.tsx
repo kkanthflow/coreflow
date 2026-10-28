@@ -11,10 +11,14 @@ import {
 interface NotificationItem {
   id: string;
   title: string;
-  body: string;
-  type: string;
+  message?: string;
+  body?: string;
+  type?: string;
   is_read: boolean;
   created_at: string;
+  action_url?: string;
+  entity_type?: string;
+  entity_id?: string;
   data?: any;
 }
 
@@ -104,6 +108,11 @@ export default function NotificationDropdown() {
   const handleNotificationClick = (n: NotificationItem) => {
     markAsRead(n.id);
     setIsOpen(false);
+
+    if (n.action_url && n.action_url.startsWith('/')) {
+      navigate(n.action_url);
+      return;
+    }
 
     if (n.type?.includes('meeting') || n.data?.meeting_id) {
       navigate(`/meetings/${n.data?.meeting_id || ''}`);
@@ -204,9 +213,9 @@ export default function NotificationDropdown() {
                         </span>
                       </div>
 
-                      {item.body && (
+                      {(item.message || item.body) && (
                         <p className="text-[11px] text-muted line-clamp-2 leading-relaxed font-normal">
-                          {item.body}
+                          {item.message || item.body}
                         </p>
                       )}
                     </div>
@@ -220,8 +229,17 @@ export default function NotificationDropdown() {
             </div>
 
             {/* Footer */}
-            <div className="p-2.5 border-t border-divider bg-white/[0.02] text-center">
-              <span className="text-[10px] font-semibold text-muted">AUVRYN Real-Time Notifications</span>
+            <div className="p-2.5 border-t border-divider bg-white/[0.02] flex items-center justify-between px-4">
+              <span className="text-[10px] font-semibold text-muted">Real-time sync</span>
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  navigate('/notifications');
+                }}
+                className="text-[11px] font-bold text-[#FF6B4A] hover:underline flex items-center gap-1 transition-colors"
+              >
+                <span>View all notifications</span> &rarr;
+              </button>
             </div>
           </motion.div>
         )}

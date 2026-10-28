@@ -47,7 +47,7 @@ async function runScenarioVerification() {
       account_type: null,
       account_setup_completed: false,
       default_workspace_id: null,
-      role: 'general_member',
+      role: 'team_member',
     };
     assert(simulatedGoogleSignup.account_type === null, 'account_type is strictly NULL');
     assert(simulatedGoogleSignup.account_type !== 'freelancer', 'account_type is NOT freelancer');
@@ -93,7 +93,7 @@ async function runScenarioVerification() {
       return userState;
     };
 
-    const orgUser = runCreateOrg({ account_type: null, role: 'general_member' });
+    const orgUser = runCreateOrg({ account_type: null, role: 'team_member' });
     assert(!creationEvents.some(e => e.includes('freelancer')), 'Execution path must NEVER touch freelancer');
     assert(orgUser.account_type === 'organization', 'Account type is organization');
     assert(orgUser.role === 'owner', 'Role is owner');
