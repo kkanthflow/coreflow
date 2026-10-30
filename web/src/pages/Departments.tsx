@@ -412,7 +412,7 @@ export default function Departments() {
       <MetricStrip metrics={metrics} />
 
       {/* ── Search & Filter Controls ── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card-bg border border-divider rounded-xl p-3">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card-bg border border-divider rounded-xl p-3 shadow-sm">
         <div className="relative w-full sm:max-w-xs">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
           <input
@@ -420,7 +420,7 @@ export default function Departments() {
             placeholder="Search custom departments or purpose..."
             value={search}
             onChange={e => setSearch(e.target.value)}
-            className="w-full pl-8 pr-7 py-1.5 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main placeholder-muted focus:outline-none transition-colors"
+            className="w-full pl-8 pr-7 py-1.5 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-main placeholder-muted/60 focus:outline-none transition-colors"
           />
           {search && (
             <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-main">
@@ -429,7 +429,7 @@ export default function Departments() {
           )}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex bg-surface-2 border border-line rounded-lg p-0.5">
           {[
             { id: 'active', label: 'Active' },
             { id: 'archived', label: 'Archived' },
@@ -438,10 +438,10 @@ export default function Departments() {
             <button
               key={f.id}
               onClick={() => setStatusFilter(f.id as any)}
-              className={`px-3 py-1 text-[11px] font-semibold rounded-md transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-colors cursor-pointer ${
                 statusFilter === f.id
-                  ? 'bg-accent/20 text-accent border border-accent/30'
-                  : 'text-muted hover:text-main hover:bg-surface-2'
+                  ? 'bg-card-bg text-text font-semibold shadow-xs'
+                  : 'text-muted hover:text-text'
               }`}
             >
               {f.label}
@@ -477,7 +477,7 @@ export default function Departments() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.22, delay: idx * 0.03 }}
                 key={dept.id}
-                className="bg-card-bg border border-divider hover:border-white/20 rounded-xl p-4.5 space-y-4 transition-all shadow-xs flex flex-col justify-between"
+                className="bg-card-bg border border-divider hover:border-accent/40 rounded-xl p-4.5 space-y-4 transition-all shadow-xs hover:shadow-md flex flex-col justify-between group"
               >
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-3">
@@ -489,7 +489,7 @@ export default function Departments() {
                         <Building2 size={18} />
                       </div>
                       <div className="min-w-0">
-                        <span className="font-bold text-main text-xs truncate block">{dept.name}</span>
+                        <span className="font-bold text-main text-xs truncate block group-hover:text-accent transition-colors">{dept.name}</span>
                         <div className="flex items-center gap-2 mt-0.5">
                           <span className="text-[10px] font-mono text-muted flex items-center gap-1">
                             <Users size={11} />
@@ -560,10 +560,10 @@ export default function Departments() {
 
                   <Link
                     to={`/departments/${dept.id}`}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 hover:bg-hover text-main text-xs font-semibold border border-divider transition-all shrink-0 cursor-pointer shadow-xs"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 hover:bg-hover text-main text-xs font-semibold border border-divider transition-all shrink-0 cursor-pointer shadow-xs group-hover:border-accent/40 group-hover:text-accent"
                   >
                     <span>Open Workspace</span>
-                    <ChevronRight size={13} />
+                    <ChevronRight size={13} className="transition-transform group-hover:translate-x-0.5" />
                   </Link>
                 </div>
               </motion.div>

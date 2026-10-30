@@ -103,22 +103,24 @@ export function DepartmentTabs({
     }
   };
 
+  const safeTabs = tabs || [];
+
   // Keyboard navigation (ArrowLeft / ArrowRight / Home / End)
   const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
     let targetIndex = -1;
     if (e.key === 'ArrowRight') {
-      targetIndex = (index + 1) % tabs.length;
+      targetIndex = (index + 1) % safeTabs.length;
     } else if (e.key === 'ArrowLeft') {
-      targetIndex = (index - 1 + tabs.length) % tabs.length;
+      targetIndex = (index - 1 + safeTabs.length) % safeTabs.length;
     } else if (e.key === 'Home') {
       targetIndex = 0;
     } else if (e.key === 'End') {
-      targetIndex = tabs.length - 1;
+      targetIndex = safeTabs.length - 1;
     }
 
     if (targetIndex >= 0) {
       e.preventDefault();
-      const targetTab = tabs[targetIndex];
+      const targetTab = safeTabs[targetIndex];
       handleSelectTab(targetTab.id);
 
       const buttons = tabListRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
@@ -135,7 +137,7 @@ export function DepartmentTabs({
       aria-orientation="horizontal"
       className="flex bg-surface-2 border border-line rounded-lg p-0.5 overflow-x-auto scrollbar-none max-w-full select-none"
     >
-      {tabs.map((tab, idx) => {
+      {safeTabs.map((tab, idx) => {
         const isActive = activeTab === tab.id;
         const Icon = tab.icon || getTabIcon(tab.id, tab.category);
 

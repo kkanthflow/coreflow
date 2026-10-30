@@ -1161,7 +1161,7 @@ export default function DepartmentWorkspace() {
 
             <div className="flex items-center gap-1.5 overflow-x-auto text-[11px] font-mono select-none">
               <span className="text-[10px] font-mono font-bold text-muted uppercase tracking-wider mr-1">Lifecycle:</span>
-              {currentOperationalModule.workflowStages.map((stage, sIdx) => (
+              {(currentOperationalModule.workflowStages || ['New', 'In Progress', 'Completed']).map((stage, sIdx) => (
                 <span key={sIdx} className="inline-flex items-center gap-1">
                   {sIdx > 0 && <span className="text-muted/40">→</span>}
                   <span className="px-2 py-0.5 rounded-md bg-surface-2 border border-line text-muted font-semibold text-[10px]">
@@ -1250,7 +1250,7 @@ export default function DepartmentWorkspace() {
                           onChange={e => handleUpdateRecordStatus(rec.id, e.target.value)}
                           className="px-2.5 py-1 bg-surface-2 border border-line focus:border-accent rounded text-[11px] font-semibold text-accent focus:outline-none cursor-pointer"
                         >
-                          {currentOperationalModule.workflowStages.map(st => (
+                          {(currentOperationalModule.workflowStages || ['New', 'In Progress', 'Completed']).map(st => (
                             <option key={st} value={st}>{st}</option>
                           ))}
                         </select>
@@ -1756,7 +1756,7 @@ export default function DepartmentWorkspace() {
                     onChange={e => setRecordStatus(e.target.value)}
                     className="w-full px-3 py-2 bg-surface-2 border border-line rounded-lg text-xs text-main focus:outline-none"
                   >
-                    {currentOperationalModule.workflowStages.map(st => (
+                    {(currentOperationalModule.workflowStages || ['New', 'In Progress', 'Completed']).map(st => (
                       <option key={st} value={st}>{st}</option>
                     ))}
                   </select>
