@@ -113,3 +113,4 @@ export function DepartmentHeader({
     </motion.div>
   );
 }
+

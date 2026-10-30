@@ -13,7 +13,7 @@ import {
   Code,
   Target,
   Layers,
-  LucideIcon,
+  type LucideIcon,
 } from 'lucide-react';
 
 export interface TabDefinition {
@@ -174,3 +174,4 @@ export function DepartmentTabs({
     </div>
   );
 }
+

@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowRight, LucideIcon } from 'lucide-react';
+import { ArrowRight, type LucideIcon } from 'lucide-react';
 import { getTabIcon } from './DepartmentTabs';
 
 export interface ModuleCardProps {
@@ -83,3 +83,4 @@ export function ModuleCard({
     </motion.div>
   );
 }
+

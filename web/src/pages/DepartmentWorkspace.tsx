@@ -11,13 +11,23 @@ import {
   Clock, AlertCircle, Calendar, ArrowRight, UserPlus,
   Shield, CheckCircle2, ChevronRight, Download, Sliders,
   Zap, Target, Code, CreditCard, Tag, Sparkles, FolderPlus,
-  HelpCircle, Settings as SettingsIcon, Filter, Layers
+  HelpCircle, Settings as SettingsIcon, Filter, Layers,
+  LayoutDashboard, Megaphone
 } from 'lucide-react';
 import { toast } from '../components/ui/Toast';
 import ConfirmModal from '../components/ConfirmModal';
 import {
-  PageHeader, MetricStrip, EmptyState, SkeletonRow, type MetricItem
+  EmptyState, SkeletonRow, type MetricItem
 } from '../components/ui/ObsidianPrimitives';
+import {
+  DepartmentHeader,
+  DepartmentTabs,
+  ModuleCard,
+  ModuleGrid,
+  DepartmentMetricStrip,
+  type TabDefinition,
+  type DepartmentMetricItem,
+} from '../components/departments';
 import {
   CORE_MODULES,
   type OperationalModule,
@@ -133,6 +143,7 @@ export default function DepartmentWorkspace() {
 
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [loading, setLoading] = useState(true);
+  const [errorState, setErrorState] = useState<string | null>(null);
   const [dept, setDept] = useState<DepartmentDetail | null>(null);
   const [hasAccess, setHasAccess] = useState<boolean>(true);
 
@@ -201,6 +212,7 @@ export default function DepartmentWorkspace() {
   const fetchWorkspaceData = useCallback(async () => {
     if (!deptId || !user) return;
     setLoading(true);
+    setErrorState(null);
 
     try {
       // 1. Fetch Department Info
@@ -360,8 +372,9 @@ export default function DepartmentWorkspace() {
         if (uList[0]) setSelectedAddUserId(uList[0].id);
       }
 
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to load department workspace:', e);
+      setErrorState(e?.message || 'Failed to load department workspace.');
       toast.error('Failed to load department workspace.');
     } finally {
       setLoading(false);
@@ -738,18 +751,109 @@ export default function DepartmentWorkspace() {
 
   const canManageThisDept = isOwner || canManageDepartments || dept?.head_user_id === user?.id;
 
-  // Metric Strip items
-  const metricItems: MetricItem[] = useMemo(() => [
-    { label: 'MEMBERS', value: members.length },
-    { label: 'MODULES', value: enabledModulesList.length, isOrange: true },
-    { label: 'RECORDS', value: departmentRecords.length },
-    { label: 'STATUS', value: dept?.status?.toUpperCase() || 'ACTIVE' },
-  ], [members, enabledModulesList, departmentRecords, dept]);
+  // Metric Strip items (3 evenly stretched stats)
+  const metricItems: DepartmentMetricItem[] = useMemo(() => [
+    {
+      label: 'MEMBERS',
+      value: members.length < 10 ? `0${members.length}` : members.length,
+      indicator: members.length > 0 ? `${members.length} Active` : undefined,
+    },
+    {
+      label: 'ACTIVE MODULES',
+      value: enabledModulesList.length < 10 ? `0${enabledModulesList.length}` : enabledModulesList.length,
+      isOrange: true,
+      indicator: 'Operational',
+    },
+    {
+      label: 'DELIVERABLES & RECORDS',
+      value: departmentRecords.length < 10 ? `0${departmentRecords.length}` : departmentRecords.length,
+      indicator: departmentRecords.length > 0 ? `${departmentRecords.length} Total` : undefined,
+    },
+  ], [members, enabledModulesList, departmentRecords]);
 
-  if (loading) {
+  // Dynamic tab definitions for DepartmentTabs
+  const departmentTabs: TabDefinition[] = useMemo(() => {
+    const list: TabDefinition[] = [
+      { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+      { id: 'members', label: 'Members', icon: Users, count: members.length },
+      { id: 'chat', label: 'Department Chat', icon: MessageSquare },
+    ];
+
+    enabledModulesList.forEach(mod => {
+      if (['chat', 'members', 'overview', 'announcements', 'settings'].includes(mod.key)) return;
+      const count = departmentRecords.filter(r => r.module_key === mod.key).length;
+      list.push({
+        id: mod.key,
+        label: mod.name,
+        category: mod.category,
+        count,
+        isCustom: mod.isCustom,
+      });
+    });
+
+    list.push({
+      id: 'announcements',
+      label: 'Announcements',
+      icon: Megaphone,
+      count: announcements.length,
+    });
+
+    if (canManageThisDept) {
+      list.push({
+        id: 'settings',
+        label: 'Settings',
+        icon: SettingsIcon,
+      });
+    }
+
+    return list;
+  }, [members, enabledModulesList, departmentRecords, announcements, canManageThisDept]);
+
+  if (loading && !dept) {
     return (
       <div className="space-y-6 pb-12 font-sans select-none text-muted">
-        <SkeletonRow count={4} />
+        {/* Header Skeleton */}
+        <div className="border-b border-divider pb-4 space-y-2">
+          <div className="h-3 w-28 bg-surface-2/70 rounded animate-pulse" />
+          <div className="h-7 w-64 bg-surface-2/80 rounded animate-pulse" />
+          <div className="h-3.5 w-96 max-w-full bg-surface-2/60 rounded animate-pulse" />
+        </div>
+        {/* Metric Strip Skeleton */}
+        <div className="h-24 bg-surface-2/50 rounded-xl border border-line animate-pulse" />
+        {/* Tabs Skeleton */}
+        <div className="h-9 w-80 max-w-full bg-surface-2/60 rounded-lg animate-pulse" />
+        {/* Cards Skeleton */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="h-44 bg-surface-2/50 rounded-xl border border-line animate-pulse" />
+          <div className="h-44 bg-surface-2/50 rounded-xl border border-line animate-pulse" />
+          <div className="h-44 bg-surface-2/50 rounded-xl border border-line animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  if (errorState && !dept) {
+    return (
+      <div className="py-20 text-center max-w-md mx-auto space-y-4 font-sans select-none">
+        <AlertCircle size={36} className="text-red-400 mx-auto" />
+        <h2 className="text-sm font-bold text-main">Failed to Load Workspace</h2>
+        <p className="text-xs text-muted leading-relaxed">{errorState}</p>
+        <div className="flex items-center justify-center gap-2 pt-2">
+          <Link
+            to="/departments"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-surface-2 hover:bg-hover text-muted hover:text-main text-xs font-semibold border border-divider transition-colors"
+          >
+            <ChevronLeft size={13} />
+            <span>Departments</span>
+          </Link>
+          <button
+            onClick={fetchWorkspaceData}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-sm shadow-accent/20 cursor-pointer"
+          >
+            <RefreshCw size={13} />
+            <span>Retry</span>
+          </button>
+        </div>
       </div>
     );
   }
@@ -775,162 +879,71 @@ export default function DepartmentWorkspace() {
 
   return (
     <div className="flex-1 space-y-6 pb-16 font-sans select-none text-muted">
-      {/* ── Page Header ── */}
-      <PageHeader
-        title={dept?.name || 'Department Workspace'}
-        description={dept?.description || 'Dedicated organizational workspace.'}
+      {/* ── Page Header Standard ── */}
+      <DepartmentHeader
+        departmentName={dept?.name || 'Department Workspace'}
+        description={dept?.description}
         badge={dept?.status?.toUpperCase() || 'ACTIVE'}
-        breadcrumbs={[
-          { label: 'Departments', href: '/departments' },
-          { label: dept?.name || 'Workspace' },
-        ]}
-        actions={
-          <div className="flex items-center gap-2">
-            <button
-              onClick={fetchWorkspaceData}
-              className="p-2 rounded-lg bg-surface-2 hover:bg-hover text-muted hover:text-main border border-divider transition-colors cursor-pointer"
-              title="Refresh Workspace"
-            >
-              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
-            </button>
-
-            {canManageThisDept && (
-              <button
-                onClick={() => setIsAddMemberOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 hover:bg-hover text-main border border-divider text-xs font-semibold transition-all cursor-pointer shadow-xs"
-              >
-                <UserPlus size={13} />
-                <span>Add Member</span>
-              </button>
-            )}
-
-            {canManageThisDept && (
-              <button
-                onClick={() => setIsNewAnnounceOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent/10 hover:bg-accent/20 text-accent border border-accent/20 text-xs font-semibold transition-all cursor-pointer shadow-xs"
-              >
-                <Pin size={13} />
-                <span>Post Announcement</span>
-              </button>
-            )}
-          </div>
+        onRefresh={fetchWorkspaceData}
+        isRefreshing={loading}
+        primaryAction={
+          canManageThisDept
+            ? {
+                label: 'Add Member',
+                onClick: () => setIsAddMemberOpen(true),
+                icon: UserPlus,
+              }
+            : undefined
+        }
+        secondaryAction={
+          canManageThisDept
+            ? {
+                label: 'Post Announcement',
+                onClick: () => setIsNewAnnounceOpen(true),
+                icon: Megaphone,
+              }
+            : undefined
         }
       />
 
-      {/* ── Metric Strip ── */}
-      <MetricStrip metrics={metricItems} />
+      {/* ── Telemetry Metric Strip (3 Evenly Stretched Metrics) ── */}
+      <DepartmentMetricStrip metrics={metricItems} />
 
-      {/* ── Dynamic Department Navigation Tabs ── */}
-      <div className="flex items-center bg-surface-2 p-1 rounded-xl border border-divider gap-1 overflow-x-auto scrollbar-none">
-        <button
-          onClick={() => setActiveTab('overview')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'overview'
-              ? 'bg-surface text-main shadow-xs border border-divider'
-              : 'text-muted hover:text-main'
-          }`}
-        >
-          <Building2 size={13} />
-          <span>Overview</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('members')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'members'
-              ? 'bg-surface text-main shadow-xs border border-divider'
-              : 'text-muted hover:text-main'
-          }`}
-        >
-          <Users size={13} />
-          <span>Members ({members.length})</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('chat')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'chat'
-              ? 'bg-surface text-main shadow-xs border border-divider'
-              : 'text-muted hover:text-main'
-          }`}
-        >
-          <MessageSquare size={13} />
-          <span>Department Chat</span>
-        </button>
-
-        {/* Enabled Operational Modules Tabs */}
-        {enabledModulesList.map(mod => {
-          if (['chat', 'members'].includes(mod.key)) return null;
-          return (
-            <button
-              key={mod.key}
-              onClick={() => setActiveTab(mod.key)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-                activeTab === mod.key
-                  ? 'bg-surface text-main shadow-xs border border-divider'
-                  : 'text-muted hover:text-main'
-              }`}
-            >
-              <Zap size={13} className={mod.isCustom ? 'text-accent' : 'text-blue-400'} />
-              <span>{mod.name}</span>
-            </button>
-          );
-        })}
-
-        <button
-          onClick={() => setActiveTab('announcements')}
-          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-            activeTab === 'announcements'
-              ? 'bg-surface text-main shadow-xs border border-divider'
-              : 'text-muted hover:text-main'
-          }`}
-        >
-          <Bell size={13} />
-          <span>Announcements ({announcements.length})</span>
-        </button>
-
-        {canManageThisDept && (
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === 'settings'
-                ? 'bg-surface text-main shadow-xs border border-divider'
-                : 'text-muted hover:text-main'
-            }`}
-          >
-            <SettingsIcon size={13} />
-            <span>Settings</span>
-          </button>
-        )}
-      </div>
+      {/* ── Department Tabs Pill Navigation ── */}
+      <DepartmentTabs
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        tabs={departmentTabs}
+        syncWithUrl={true}
+      />
 
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
       {/* SECTION 1: DEPARTMENT OVERVIEW (UNIQUE PURPOSE & CUSTOM MODULES DASHBOARD)  */}
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'overview' && (
-        <div className="space-y-6">
-          {/* Purpose & Mandate Banner */}
-          <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-3">
+        <div className="space-y-6 animate-fade-in">
+          {/* Purpose & Operational Scope Card (14px body text, no duplicate description) */}
+          <div className="bg-card-bg border border-divider rounded-xl p-5 shadow-sm space-y-3">
             <div className="flex items-center gap-2">
-              <Sparkles size={16} className="text-accent" />
-              <h3 className="text-xs font-bold text-main uppercase font-mono tracking-wider">
+              <Sparkles size={14} className="text-accent" />
+              <h3 className="text-[10px] font-mono font-bold text-muted uppercase tracking-wider">
                 Organizational Purpose & Operational Scope
               </h3>
             </div>
-            <p className="text-sm font-semibold text-main leading-relaxed">
-              {dept?.purpose || dept?.description || 'Operational domain established for organizational workflows.'}
+            <p className="text-sm text-main font-normal leading-relaxed">
+              {dept?.purpose || 'Operational domain established for organizational workflows and team deliverables.'}
             </p>
 
             {/* Responsibilities Tags */}
             {dept?.responsibilities && Array.isArray(dept.responsibilities) && dept.responsibilities.length > 0 && (
               <div className="pt-2 border-t border-divider flex items-center gap-1.5 flex-wrap">
-                <span className="text-[10px] font-mono text-muted uppercase mr-1">Responsibilities:</span>
+                <span className="text-[10px] font-mono text-muted uppercase tracking-wider mr-1">Responsibilities:</span>
                 {dept.responsibilities.map((resp, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-accent/10 border border-accent/20 text-accent text-xs font-medium"
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-surface-2 border border-divider text-muted text-[11px] font-mono"
                   >
-                    <Tag size={10} />
+                    <Tag size={10} className="text-accent" />
                     <span>{resp}</span>
                   </span>
                 ))}
@@ -941,13 +954,13 @@ export default function DepartmentWorkspace() {
           {/* Enabled Operational Modules Grid */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-main uppercase font-mono tracking-wider">
+              <h3 className="text-[10px] font-mono font-bold text-muted uppercase tracking-wider">
                 Active Operational Modules ({enabledModulesList.length})
               </h3>
               {canManageThisDept && (
                 <button
                   onClick={() => setActiveTab('settings')}
-                  className="text-[11px] text-accent hover:underline flex items-center gap-1"
+                  className="text-[11px] text-accent hover:underline flex items-center gap-1 cursor-pointer"
                 >
                   <Sliders size={11} />
                   <span>Configure Modules</span>
@@ -955,81 +968,94 @@ export default function DepartmentWorkspace() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {enabledModulesList.map(mod => {
-                const count = departmentRecords.filter(r => r.module_key === mod.key).length;
-                return (
-                  <div
-                    key={mod.key}
-                    onClick={() => setActiveTab(mod.key)}
-                    className="bg-card-bg border border-divider hover:border-accent/40 rounded-xl p-4.5 space-y-3 transition-all cursor-pointer shadow-xs flex flex-col justify-between group"
-                  >
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-surface-2 border border-divider flex items-center justify-center text-accent group-hover:scale-105 transition-transform">
-                            <Zap size={15} />
-                          </div>
-                          <div>
-                            <span className="text-xs font-bold text-main block group-hover:text-accent transition-colors">
-                              {mod.name}
-                            </span>
-                            <span className="text-[9px] font-mono uppercase text-muted">
-                              {mod.category}
-                            </span>
-                          </div>
-                        </div>
-
-                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-surface border border-divider text-main">
-                          {count} {count === 1 ? 'record' : 'records'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted line-clamp-2">{mod.description}</p>
-                    </div>
-
-                    <div className="pt-2.5 border-t border-divider flex items-center justify-between text-[11px] text-accent font-semibold">
-                      <span>Open Module Workspace</span>
-                      <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            {enabledModulesList.length === 0 ? (
+              <EmptyState
+                icon={Briefcase}
+                title="No active operational modules"
+                description="Initialize or customize operational modules to begin tracking department workflows."
+                action={canManageThisDept ? { label: "Configure Modules", onClick: () => setActiveTab('settings') } : undefined}
+              />
+            ) : (
+              <ModuleGrid>
+                {enabledModulesList.map((mod, mIdx) => {
+                  const count = departmentRecords.filter(r => r.module_key === mod.key).length;
+                  return (
+                    <ModuleCard
+                      key={mod.key}
+                      index={mIdx}
+                      moduleKey={mod.key}
+                      name={mod.name}
+                      category={mod.category}
+                      description={mod.description}
+                      recordCount={count}
+                      onClick={() => setActiveTab(mod.key)}
+                    />
+                  );
+                })}
+              </ModuleGrid>
+            )}
           </div>
 
           {/* Leadership & Recent Activity Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-3">
-              <h4 className="text-xs font-bold text-main border-b border-divider pb-2.5">
+            <div className="bg-card-bg border border-divider rounded-xl p-5 shadow-sm space-y-3">
+              <h4 className="text-[10px] font-mono font-bold text-muted uppercase tracking-wider border-b border-divider pb-2.5">
                 Department Leadership
               </h4>
               {dept?.head_user ? (
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-accent/15 text-accent border border-accent/25 flex items-center justify-center font-bold text-sm">
+                  <div className="w-10 h-10 rounded-xl bg-accent/15 text-accent border border-accent/25 flex items-center justify-center font-bold text-sm shrink-0">
                     {dept.head_user.full_name?.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <span className="text-xs font-bold text-main block">{dept.head_user.full_name}</span>
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-main block truncate">{dept.head_user.full_name}</span>
                     <span className="text-[10px] font-mono text-accent font-semibold uppercase">DEPARTMENT HEAD</span>
-                    <p className="text-[11px] text-muted font-mono">{dept.head_user.email}</p>
+                    <p className="text-[11px] text-muted font-mono truncate">{dept.head_user.email}</p>
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-muted">No department lead currently assigned.</p>
+                <div className="py-4 text-center">
+                  <p className="text-xs text-muted mb-2">No department lead currently assigned.</p>
+                  {canManageThisDept && (
+                    <button
+                      onClick={() => setIsAddMemberOpen(true)}
+                      className="text-[11px] font-semibold text-accent hover:underline cursor-pointer"
+                    >
+                      Assign Department Lead
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
-            <div className="lg:col-span-2 bg-card-bg border border-divider rounded-xl p-5 space-y-3">
+            <div className="lg:col-span-2 bg-card-bg border border-divider rounded-xl p-5 shadow-sm space-y-3">
               <div className="flex items-center justify-between border-b border-divider pb-2.5">
-                <h4 className="text-xs font-bold text-main">Latest Operational Records</h4>
-                <span className="text-[10px] font-mono text-muted">{departmentRecords.length} total entries</span>
+                <h4 className="text-[10px] font-mono font-bold text-muted uppercase tracking-wider">
+                  Latest Operational Records
+                </h4>
+                <span className="text-[10px] font-mono text-muted tabular-nums">
+                  {departmentRecords.length < 10 ? `0${departmentRecords.length}` : departmentRecords.length} total entries
+                </span>
               </div>
               {departmentRecords.length === 0 ? (
-                <p className="text-xs text-muted py-2">No records recorded across operational modules yet.</p>
+                <div className="py-6 text-center">
+                  <p className="text-xs text-muted mb-3">No records recorded across operational modules yet.</p>
+                  {enabledModulesList.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const firstMod = enabledModulesList[0];
+                        if (firstMod) setActiveTab(firstMod.key);
+                      }}
+                      className="px-3.5 py-1.5 rounded-lg bg-surface-2 hover:bg-hover text-main border border-divider text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      Open First Module
+                    </button>
+                  )}
+                </div>
               ) : (
                 <div className="divide-y divide-divider">
                   {departmentRecords.slice(0, 4).map(rec => (
-                    <div key={rec.id} className="py-2.5 flex items-center justify-between text-xs">
+                    <div key={rec.id} className="py-2.5 flex items-center justify-between text-xs hover:bg-hover/30 px-2 rounded-lg transition-colors">
                       <div className="space-y-0.5 min-w-0 pr-3">
                         <span className="font-semibold text-main truncate block">{rec.title}</span>
                         <span className="text-[10px] font-mono text-muted uppercase">
