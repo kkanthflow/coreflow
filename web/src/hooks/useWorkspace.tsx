@@ -114,7 +114,7 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
       // 1. Try finding organization membership
       const { data: userOrg } = await supabase
         .from('user_organizations')
-        .select('org_id, role, organizations(id, name, default_currency, address, gst_number)')
+        .select('org_id, role, department_id, organizations(id, name, default_currency, address, gst_number)')
         .eq('user_id', session.user.id)
         .limit(1)
         .maybeSingle();
@@ -204,8 +204,9 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
         let resolvedDeptRole: string | null = deptMembership?.department_role || null;
 
         // If not in department_members, check user_organizations.department_id
-        if (!resolvedDeptId && userOrg?.department_id) {
-          resolvedDeptId = userOrg.department_id;
+        const fallbackDeptId = (userOrg as any)?.department_id;
+        if (!resolvedDeptId && fallbackDeptId) {
+          resolvedDeptId = fallbackDeptId;
           const { data: directDept } = await supabase
             .from('departments')
             .select('id, name, purpose, description, color, responsibilities, enabled_modules, module_configurations, head_user_id')
