@@ -58,7 +58,7 @@ export default function ProjectDetails() {
         .select(`
           *,
           owner:owner_id(full_name, email, avatar_url),
-          department:department_id(name, color),
+          department:department_id(id, name, color, module_configurations),
           organization:org_id(name),
           client:client_id(name, company_name)
         `)
@@ -135,6 +135,22 @@ export default function ProjectDetails() {
       toast.error(e.message || 'Failed to save changes.', 'Update Failed');
     } finally {
       setSavingEdit(false);
+    }
+  };
+
+  const handleWorkflowStageChange = async (newStage: string) => {
+    if (!project?.id) return;
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ workflow_stage: newStage })
+        .eq('id', project.id);
+      if (error) throw error;
+      setProject((prev: any) => ({ ...prev, workflow_stage: newStage }));
+      toast.success(`Workflow stage updated: ${newStage.replace(/_/g, ' ')}`);
+    } catch (err: any) {
+      console.error('Failed to change stage:', err);
+      toast.error(err.message || 'Stage update failed');
     }
   };
 
@@ -340,12 +356,100 @@ export default function ProjectDetails() {
           </span>
           <button
             onClick={() => navigate(`/projects/${project.id}/client-room`)}
-            className="text-[11px] font-mono px-3 py-1 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 font-bold transition-colors"
+            className="text-[11px] font-mono px-3 py-1 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 border border-blue-500/20 font-bold transition-colors cursor-pointer"
           >
             Preview Client Project Room →
           </button>
         </div>
       </div>
+
+      {/* ── Department-Specific Workflow Lifecycle Bar ── */}
+      {project.department && (
+        <div className="p-4 rounded-xl bg-card-bg border border-divider space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <span
+                className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-semibold border"
+                style={{
+                  backgroundColor: project.department.color ? `${project.department.color}15` : undefined,
+                  borderColor: project.department.color ? `${project.department.color}35` : undefined,
+                  color: project.department.color || '#FF6B4A',
+                }}
+              >
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: project.department.color || '#FF6B4A' }} />
+                {project.department.name}
+              </span>
+              <span className="font-mono text-[10px] uppercase tracking-wider px-2 py-0.5 rounded bg-surface border border-divider text-muted">
+                Type: <strong className="text-main">{(project.project_type || 'standard').replace(/_/g, ' ')}</strong>
+              </span>
+            </div>
+            <span className="text-[11px] font-mono text-muted">
+              Current Stage: <strong className="text-accent uppercase">{(project.workflow_stage || project.status || 'planning').replace(/_/g, ' ')}</strong>
+            </span>
+          </div>
+
+          {/* Workflow Stage Stepper */}
+          {(() => {
+            const stages = project.department.module_configurations?.project_configuration?.workflow_stages || [
+              { key: 'planning', label: 'Planning' },
+              { key: 'active', label: 'In Progress' },
+              { key: 'review', label: 'In Review' },
+              { key: 'completed', label: 'Completed' }
+            ];
+            const currentStageKey = project.workflow_stage || project.status || 'planning';
+            const currentIdx = stages.findIndex((s: any) => s.key === currentStageKey);
+
+            return (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-1">
+                {stages.map((st: any, idx: number) => {
+                  const isActive = st.key === currentStageKey;
+                  const isPast = currentIdx > -1 && idx < currentIdx;
+
+                  return (
+                    <button
+                      key={st.key}
+                      onClick={() => handleWorkflowStageChange(st.key)}
+                      className={`p-2 rounded-lg border text-left transition-all cursor-pointer ${
+                        isActive
+                          ? 'border-accent bg-accent/15 text-main ring-1 ring-accent/40 shadow-xs'
+                          : isPast
+                          ? 'border-emerald-500/30 bg-emerald-500/5 text-muted hover:text-main'
+                          : 'border-divider bg-surface/60 hover:bg-hover text-muted hover:text-main'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between text-[10px] font-mono text-muted mb-0.5">
+                        <span>STAGE 0{idx + 1}</span>
+                        {isActive ? (
+                          <span className="w-1.5 h-1.5 rounded-full bg-accent animate-ping" />
+                        ) : isPast ? (
+                          <span className="text-emerald-400">✓</span>
+                        ) : null}
+                      </div>
+                      <div className={`text-xs font-semibold truncate ${isActive ? 'text-accent' : ''}`}>
+                        {st.label}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
+          {/* Operational Custom Metadata */}
+          {project.department_metadata && Object.keys(project.department_metadata).length > 0 && (
+            <div className="pt-2 border-t border-divider flex flex-wrap gap-3">
+              {Object.entries(project.department_metadata).map(([k, v]) => (
+                <div key={k} className="px-2.5 py-1 rounded bg-surface border border-divider text-[11px]">
+                  <span className="font-mono text-muted uppercase text-[10px] mr-1.5">
+                    {k.replace(/_/g, ' ')}:
+                  </span>
+                  <span className="font-medium text-main">{String(v)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Interactive Causality Quick Triggers ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-card-bg p-3 rounded-lg border border-divider">

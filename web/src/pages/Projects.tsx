@@ -7,7 +7,7 @@ import { useWorkspace } from '../hooks/useWorkspace';
 import { hasPermission } from '../lib/permissions';
 import {
   Search, Plus, Briefcase, X,
-  LayoutGrid, List, RefreshCw
+  LayoutGrid, List, RefreshCw, BarChart3, Tag, Clock
 } from 'lucide-react';
 import {
   PageHeader, MetricStrip, StatusSignal, TrajectoryProgress,
@@ -25,7 +25,7 @@ const STATUS_FILTERS = [
 export default function Projects() {
   const navigate = useNavigate();
   const { user, role } = useAuth();
-  const { orgId } = useWorkspace();
+  const { orgId, hasOrgOversight, assignedDepartmentId, assignedDepartment } = useWorkspace();
 
   const isIndie = !orgId;
   const canCreate = hasPermission(role, 'create_projects');
@@ -43,14 +43,19 @@ export default function Projects() {
     try {
       let query = supabase
         .from('projects')
-        .select('id, title, description, status, priority, due_date, cover_color, owner:owner_id(full_name, email, avatar_url), department:department_id(name), tasks(id, status, title)')
+        .select(`
+          id, title, description, status, priority, due_date, cover_color,
+          project_type, workflow_stage, department_metadata,
+          owner:owner_id(full_name, email, avatar_url),
+          department:department_id(id, name, color, module_configurations),
+          tasks(id, status, title)
+        `)
         .is('deleted_at', null)
         .neq('status', 'cancelled')
         .order('created_at', { ascending: false });
 
       if (role === 'client') {
         // Supabase RLS enforces can_view_project(auth.uid(), id) via project_client_access
-        // Do not restrict by owner_id or org_id so invited projects load immediately
       } else if (isIndie) {
         query = query.eq('owner_id', user.id);
       } else if (orgId) {
@@ -116,27 +121,45 @@ export default function Projects() {
       
       {/* ── Page Header Standard ── */}
       <PageHeader
-        title="Projects & Workstreams"
-        description="Delivery governance, milestone velocity, and cross-functional engineering scopes."
+        title={
+          orgId && !hasOrgOversight && assignedDepartment
+            ? `${assignedDepartment.name} Projects`
+            : "Projects & Workstreams"
+        }
+        description={
+          orgId && !hasOrgOversight && assignedDepartment
+            ? `Operational workstreams, sprint milestones, and deliverables within ${assignedDepartment.name}.`
+            : "Delivery governance, milestone velocity, and cross-functional engineering scopes."
+        }
         actions={
-          <>
+          <div className="flex items-center gap-2">
             <button
               onClick={fetchProjects}
-              className="p-2 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider transition-colors"
+              className="p-2 rounded bg-hover hover:bg-hover text-muted hover:text-main border border-divider transition-colors cursor-pointer"
               title="Sync projects"
             >
-              <RefreshCw size={13} />
+              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             </button>
+            {hasOrgOversight && (
+              <button
+                onClick={() => navigate('/project-oversight')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded bg-surface hover:bg-hover text-muted hover:text-main border border-divider text-xs transition-colors cursor-pointer"
+                title="Cross-department leadership view"
+              >
+                <BarChart3 size={13} />
+                <span>Project Oversight</span>
+              </button>
+            )}
             {canCreate && (
               <button
                 onClick={() => navigate('/projects/new')}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all shadow-sm shadow-accent/20"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all shadow-sm shadow-accent/20 cursor-pointer"
               >
                 <Plus size={14} />
                 <span>New Project</span>
               </button>
             )}
-          </>
+          </div>
         }
       />
 
@@ -243,6 +266,11 @@ export default function Projects() {
                       <span className="font-semibold text-main group-hover:text-accent transition-colors truncate">
                         {project.title}
                       </span>
+                      {project.project_type && (
+                        <span className="shrink-0 font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface border border-divider text-muted">
+                          {project.project_type.replace(/_/g, ' ')}
+                        </span>
+                      )}
                     </div>
                     {project.description && (
                       <p className="text-[11px] text-muted truncate mt-0.5 pl-4">{project.description}</p>
@@ -250,13 +278,30 @@ export default function Projects() {
                   </div>
 
                   <div className="col-span-2 text-muted truncate">
-                    <span className="px-2 py-0.5 bg-surface-2 border border-line rounded text-[11px] font-medium text-text">
+                    <span 
+                      className="px-2 py-0.5 border rounded text-[11px] font-medium inline-flex items-center gap-1.5"
+                      style={{
+                        backgroundColor: project.department?.color ? `${project.department.color}15` : undefined,
+                        borderColor: project.department?.color ? `${project.department.color}35` : undefined,
+                        color: project.department?.color || undefined
+                      }}
+                    >
+                      {project.department?.color && (
+                        <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: project.department.color }} />
+                      )}
                       {project.department?.name || 'Workspace Core'}
                     </span>
                   </div>
 
                   <div className="col-span-2">
-                    <StatusSignal status={project.status} />
+                    <div className="flex flex-col gap-0.5">
+                      <StatusSignal status={project.status} />
+                      {project.workflow_stage && project.workflow_stage !== project.status && (
+                        <span className="text-[10px] text-muted capitalize font-medium">
+                          {project.workflow_stage.replace(/_/g, ' ')}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   <div className="col-span-3 pr-4">
@@ -290,15 +335,36 @@ export default function Projects() {
               >
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <StatusSignal status={project.status} />
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <StatusSignal status={project.status} />
+                      {project.department?.name && (
+                        <span 
+                          className="px-1.5 py-0.5 rounded text-[10px] font-medium border"
+                          style={{
+                            backgroundColor: project.department.color ? `${project.department.color}15` : undefined,
+                            borderColor: project.department.color ? `${project.department.color}35` : undefined,
+                            color: project.department.color || undefined
+                          }}
+                        >
+                          {project.department.name}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[10px] font-mono text-muted">
                       {project.due_date ? new Date(project.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'No deadline'}
                     </span>
                   </div>
 
-                  <h3 className="text-sm font-bold text-main group-hover:text-accent transition-colors truncate mb-1">
-                    {project.title}
-                  </h3>
+                  <div className="flex items-center gap-2 mb-1">
+                    <h3 className="text-sm font-bold text-main group-hover:text-accent transition-colors truncate">
+                      {project.title}
+                    </h3>
+                    {project.project_type && (
+                      <span className="shrink-0 font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-2 border border-divider text-muted">
+                        {project.project_type.replace(/_/g, ' ')}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted line-clamp-2 min-h-[32px] font-normal leading-relaxed">
                     {project.description || 'No detailed specifications provided.'}
                   </p>

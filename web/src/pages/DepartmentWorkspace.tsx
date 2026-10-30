@@ -799,6 +799,7 @@ export default function DepartmentWorkspace() {
   const departmentTabs: TabDefinition[] = useMemo(() => {
     const list: TabDefinition[] = [
       { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+      { id: 'projects', label: 'Department Projects', icon: Briefcase, count: projects.length },
       { id: 'members', label: 'Members', icon: Users, count: members.length },
       { id: 'chat', label: 'Department Chat', icon: MessageSquare },
     ];
@@ -831,7 +832,7 @@ export default function DepartmentWorkspace() {
     }
 
     return list;
-  }, [members, enabledModulesList, departmentRecords, announcements, canManageThisDept]);
+  }, [members, enabledModulesList, departmentRecords, announcements, projects, canManageThisDept]);
 
   if (loading && !dept) {
     return (
@@ -1259,6 +1260,114 @@ export default function DepartmentWorkspace() {
                   </motion.div>
                 );
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════════ */}
+      {/* SECTION 2.5: DEPARTMENT PROJECTS & WORKSTREAMS                              */}
+      {/* ═══════════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'projects' && (
+        <div className="space-y-4 animate-fade-in">
+          {/* Projects Toolbar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-card-bg border border-divider rounded-xl shadow-sm p-3">
+            <div className="flex items-center gap-3 flex-1 min-w-[240px] max-w-sm">
+              <div className="relative w-full">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  type="text"
+                  placeholder="Search department workstreams..."
+                  value={recordSearch}
+                  onChange={(e) => setRecordSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 bg-surface-2 border border-divider rounded-lg text-xs text-text placeholder:text-muted focus:outline-none focus:border-accent transition-colors"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => navigate('/projects/new')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+              >
+                <Plus size={13} />
+                <span>Initialize Workstream</span>
+              </button>
+            </div>
+          </div>
+
+          {projects.length === 0 ? (
+            <EmptyState
+              icon={Briefcase}
+              title="No department workstreams yet"
+              description={`Initialize project initiatives, milestones, and deliverable workflows for ${dept?.name || 'this department'}.`}
+              action={{
+                label: 'Initialize First Workstream',
+                onClick: () => navigate('/projects/new'),
+              }}
+            />
+          ) : (
+            <div className="bg-card-bg border border-divider rounded-xl shadow-sm overflow-hidden">
+              <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-surface-2/50">
+                <div className="col-span-5">Workstream & Scope</div>
+                <div className="col-span-3">Type & Department Stage</div>
+                <div className="col-span-2">Status</div>
+                <div className="col-span-2 text-right">Action</div>
+              </div>
+
+              <div className="divide-y divide-divider">
+                {projects
+                  .filter(p => !recordSearch || p.title.toLowerCase().includes(recordSearch.toLowerCase()))
+                  .map((p, idx) => (
+                    <div
+                      key={p.id}
+                      onClick={() => navigate(`/projects/${p.id}`)}
+                      className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-hover/60 transition-colors items-center text-xs cursor-pointer group"
+                    >
+                      <div className="col-span-5 min-w-0 pr-3">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="w-2 h-2 rounded-[2px] shrink-0"
+                            style={{ backgroundColor: p.cover_color || dept?.color || '#FF6B4A' }}
+                          />
+                          <span className="font-semibold text-main group-hover:text-accent transition-colors truncate">
+                            {p.title}
+                          </span>
+                        </div>
+                        {p.description && (
+                          <p className="text-[11px] text-muted truncate mt-0.5 pl-4">{p.description}</p>
+                        )}
+                      </div>
+
+                      <div className="col-span-3 flex items-center gap-2 flex-wrap">
+                        {p.project_type && (
+                          <span className="font-mono text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface border border-divider text-muted">
+                            {p.project_type.replace(/_/g, ' ')}
+                          </span>
+                        )}
+                        <span className="text-[11px] font-medium text-main capitalize">
+                          {(p.workflow_stage || p.status || 'planning').replace(/_/g, ' ')}
+                        </span>
+                      </div>
+
+                      <div className="col-span-2">
+                        <StatusSignal status={p.status} />
+                      </div>
+
+                      <div className="col-span-2 text-right">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/projects/${p.id}`);
+                          }}
+                          className="px-2.5 py-1 rounded bg-surface hover:bg-hover text-muted hover:text-main border border-divider text-[11px] font-medium transition-colors"
+                        >
+                          Open Center →
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+              </div>
             </div>
           )}
         </div>
