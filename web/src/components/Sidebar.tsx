@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Briefcase, CheckSquare, Calendar, Video,
   MessageSquare, Users, Building2, Building, FileText,
   CreditCard, BarChart3, Settings, ChevronLeft, ShieldCheck, Sparkles, Zap,
-  Inbox, History, Shield, Award
+  Inbox, History, Shield, Award, Activity, FolderKanban
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useRole } from '../hooks/useRole';
@@ -35,7 +35,15 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const { user, accountType } = useAuth();
   const { role, can } = useRole();
-  const { orgName, orgId, isOwner, leadershipVisibility } = useWorkspace();
+  const { 
+    orgName, 
+    orgId, 
+    isOwner, 
+    leadershipVisibility, 
+    hasOrgOversight, 
+    assignedDepartmentId, 
+    assignedDepartment 
+  } = useWorkspace();
   const location = useLocation();
   const isSettingsActive = location.pathname.startsWith('/settings');
 
@@ -92,21 +100,58 @@ export default function Sidebar() {
     }
   ];
 
-  // Specific Organization Account Navigation per Prompt Section 15
-  const ORG_NAV_GROUPS: NavGroup[] = [
+  // 1. Employee Navigation (per Section 7 & 1)
+  const EMPLOYEE_NAV_GROUPS: NavGroup[] = [
+    {
+      label: assignedDepartment?.name ? assignedDepartment.name.toUpperCase() : 'MY DEPARTMENT',
+      items: [
+        { 
+          name: 'My Department', 
+          to: assignedDepartmentId ? `/departments/${assignedDepartmentId}` : '/dashboard', 
+          icon: Building2, 
+          permission: null, 
+          shortcut: '1',
+          color: assignedDepartment?.color || '#FF6B4A'
+        },
+        { name: 'Department Projects', to: '/projects', icon: Briefcase, permission: 'view_projects', shortcut: '2' },
+        { name: 'My Tasks', to: '/tasks', icon: CheckSquare, permission: 'manage_tasks', shortcut: '3' },
+        { 
+          name: 'Department Activities', 
+          to: assignedDepartmentId ? `/departments/${assignedDepartmentId}?tab=announcements` : '/tasks', 
+          icon: Activity, 
+          permission: null,
+          shortcut: '4'
+        },
+        { 
+          name: 'Department Resources', 
+          to: assignedDepartmentId ? `/departments/${assignedDepartmentId}?tab=overview` : '/dashboard', 
+          icon: FolderKanban, 
+          permission: null,
+          shortcut: '5'
+        },
+        { name: 'Chat', to: '/chat', icon: MessageSquare, permission: 'send_messages', shortcut: '6' },
+        { name: 'Video Conferencing', to: '/meetings', icon: Video, permission: 'schedule_meetings', shortcut: '7' },
+        { name: 'Notifications', to: '/notifications', icon: Inbox, permission: null },
+        { name: 'Profile', to: '/settings?tab=profile', icon: Settings, permission: null },
+      ]
+    }
+  ];
+
+  // 2. Leadership Navigation (per Section 7 & 2)
+  const LEADERSHIP_NAV_GROUPS: NavGroup[] = [
     {
       label: 'ORGANIZATION',
       items: [
-        { name: 'Overview', to: '/dashboard', icon: LayoutDashboard, permission: null, shortcut: '1' },
-        { name: 'Leadership Team', to: '/leadership', icon: Award, permission: null, shortcut: 'L' },
-        { name: 'Members', to: '/employees', icon: Users, permission: 'view_team_directory', shortcut: '2' },
-        { name: 'Departments', to: '/departments', icon: Building2, permission: null, shortcut: 'D' },
-        { name: 'Projects', to: '/projects', icon: Briefcase, permission: 'view_projects', shortcut: '3' },
-        { name: 'Tasks', to: '/tasks', icon: CheckSquare, permission: 'manage_tasks', shortcut: '4' },
+        { name: 'Organisation Overview', to: '/dashboard', icon: LayoutDashboard, permission: null, shortcut: '1' },
+        { name: 'All Departments', to: '/departments', icon: Building2, permission: null, shortcut: 'D' },
+        { name: 'Department Projects', to: '/projects', icon: Briefcase, permission: 'view_projects', shortcut: '2' },
+        { name: 'Project Oversight', to: '/project-oversight', icon: BarChart3, permission: null, shortcut: 'P' },
+        { name: 'Organisation Activities', to: '/audit-logs', icon: ShieldCheck, permission: 'view_audit_logs', shortcut: 'A' },
+        { name: 'Reports and Analytics', to: '/analytics', icon: BarChart3, permission: 'view_reports', shortcut: 'R' },
+        { name: 'Members and Leadership', to: '/leadership', icon: Award, permission: null, shortcut: 'L' },
         { name: 'Chat', to: '/chat', icon: MessageSquare, permission: 'send_messages', shortcut: '5' },
-        { name: 'Meetings', to: '/meetings', icon: Video, permission: 'schedule_meetings', shortcut: '6' },
-        { name: 'Reports', to: '/analytics', icon: BarChart3, permission: 'view_reports', shortcut: '7' },
-        { name: 'Settings', to: '/settings', icon: Settings, permission: null },
+        { name: 'Video Conferencing', to: '/meetings', icon: Video, permission: 'schedule_meetings', shortcut: '6' },
+        { name: 'Organisation Settings', to: '/settings', icon: Settings, permission: null },
       ]
     },
     ...(departments.length > 0 ? [
@@ -122,24 +167,10 @@ export default function Sidebar() {
       }
     ] : []),
     {
-      label: 'Governance & Audit',
+      label: 'Governance & Operations',
       items: [
-        { name: 'Roles & RBAC', to: '/roles-permissions', icon: Shield, permission: null },
-        { name: 'Audit Logs', to: '/audit-logs', icon: ShieldCheck, permission: 'view_audit_logs' },
-      ]
-    },
-    {
-      label: 'Automations',
-      items: [
+        { name: 'Employees Directory', to: '/employees', icon: Users, permission: 'view_team_directory' },
         { name: 'Workflows', to: '/workflows', icon: Zap, permission: null, shortcut: 'W' },
-        { name: 'Approvals', to: '/workflows/approvals', icon: Inbox, permission: null },
-        { name: 'Execution Logs', to: '/workflows/history', icon: History, permission: null },
-      ]
-    },
-    {
-      label: 'Business & CRM',
-      items: [
-        { name: 'Clients', to: '/clients', icon: Building, permission: 'manage_clients' },
         { name: 'Invoices', to: '/invoices', icon: FileText, permission: 'view_invoices' },
         { name: 'Settlements', to: '/payments', icon: CreditCard, permission: 'record_payments' },
         { name: 'Subscription & Billing', to: '/settings/billing', icon: CreditCard, permission: null },
@@ -194,7 +225,7 @@ export default function Sidebar() {
   const activeNavGroups = isClient 
     ? CLIENT_NAV_GROUPS 
     : isOrgAccount 
-    ? ORG_NAV_GROUPS 
+    ? (hasOrgOversight ? LEADERSHIP_NAV_GROUPS : EMPLOYEE_NAV_GROUPS)
     : FREELANCER_NAV_GROUPS;
 
   const currentWorkspaceName = orgName || BRAND.company;

@@ -49,8 +49,15 @@ const DEPT_COLORS = [
 export default function Departments() {
   const navigate = useNavigate();
   const { role } = useAuth();
-  const { orgId, isOwner, canManageDepartments } = useWorkspace();
+  const { orgId, isOwner, canManageDepartments, hasOrgOversight, assignedDepartmentId } = useWorkspace();
   const canManage = isOwner || canManageDepartments || hasPermission(role, 'manage_departments');
+
+  // Ordinary employees must not see the organisation-wide department directory
+  useEffect(() => {
+    if (orgId && !hasOrgOversight && assignedDepartmentId) {
+      navigate(`/departments/${assignedDepartmentId}`, { replace: true });
+    }
+  }, [orgId, hasOrgOversight, assignedDepartmentId, navigate]);
 
   const [departments, setDepartments] = useState<Department[]>([]);
   const [members, setMembers] = useState<{ id: string; full_name: string; email: string }[]>([]);

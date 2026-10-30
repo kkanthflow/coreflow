@@ -32,11 +32,17 @@ interface MetricItem {
 
 export default function Dashboard() {
   const { user, fullName, role } = useAuth();
-  const { orgName, orgId } = useWorkspace();
+  const { orgName, orgId, hasOrgOversight, assignedDepartmentId } = useWorkspace();
   const { formatMoney } = useSettings();
   const navigate = useNavigate();
   const location = useLocation();
   const isFromAuthUnlock = location.state?.fromAuthUnlock;
+
+  useEffect(() => {
+    if (orgId && !hasOrgOversight && assignedDepartmentId) {
+      navigate(`/departments/${assignedDepartmentId}`, { replace: true });
+    }
+  }, [orgId, hasOrgOversight, assignedDepartmentId, navigate]);
 
   const isIndie = !orgId;
   const isExecutive = ['owner', 'administrator', 'manager'].includes(role || '');

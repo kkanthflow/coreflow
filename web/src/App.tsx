@@ -5,7 +5,7 @@ import { httpBatchLink } from '@trpc/client';
 import superjson from 'superjson';
 
 import { AuthProvider, useAuth } from './hooks/useAuth';
-import { WorkspaceProvider } from './hooks/useWorkspace';
+import { WorkspaceProvider, useWorkspace } from './hooks/useWorkspace';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { trpc } from './lib/trpc';
@@ -51,6 +51,7 @@ const InvoiceDetail   = lazyWithRetry(() => import('./pages/InvoiceDetail'));
 const Payments        = lazyWithRetry(() => import('./pages/Payments'));
 const Analytics       = lazyWithRetry(() => import('./pages/Analytics'));
 const Settings        = lazyWithRetry(() => import('./pages/Settings'));
+const ProjectOversight = lazyWithRetry(() => import('./pages/ProjectOversight'));
 
 const PreJoin         = lazyWithRetry(() => import('./pages/PreJoin'));
 const MeetingRoom     = lazyWithRetry(() => import('./pages/MeetingRoom'));
@@ -89,6 +90,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 // Smart root: redirect authenticated users to dashboard, client portal, or setup, else show landing
 function RootRoute() {
   const { session, loading, onboardingStatus, role } = useAuth();
+  const { orgId, hasOrgOversight, assignedDepartmentId } = useWorkspace();
   if (loading) {
     return (
       <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
@@ -106,6 +108,9 @@ function RootRoute() {
     }
     if (onboardingStatus === 'setup_required') {
       return <Navigate to="/register/setup" replace />;
+    }
+    if (orgId && !hasOrgOversight && assignedDepartmentId) {
+      return <Navigate to={`/departments/${assignedDepartmentId}`} replace />;
     }
     return <Navigate to="/dashboard" replace />;
   }
@@ -206,6 +211,7 @@ function App() {
                       <Route path="/projects/new" element={<Suspense fallback={<PageLoader />}><NewProject /></Suspense>} />
                       <Route path="/projects/:id" element={<Suspense fallback={<PageLoader />}><ProjectDetails /></Suspense>} />
                       <Route path="/projects/:id/client-room" element={<Suspense fallback={<PageLoader />}><ClientProjectRoom /></Suspense>} />
+                      <Route path="/project-oversight" element={<Suspense fallback={<PageLoader />}><ProjectOversight /></Suspense>} />
                       
                       {/* Tasks */}
                       <Route path="/tasks"     element={<Suspense fallback={<PageLoader />}><Tasks /></Suspense>} />
