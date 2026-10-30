@@ -377,3 +377,4 @@ export function generateRecommendedModules(
 
   return recommended;
 }
+
