@@ -2,6 +2,18 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from './useAuth';
 
+export interface AssignedDepartment {
+  id: string;
+  name: string;
+  purpose: string | null;
+  description: string | null;
+  color: string | null;
+  responsibilities?: string[];
+  enabled_modules?: any[];
+  module_configurations?: Record<string, any>;
+  head_user_id?: string | null;
+}
+
 type WorkspaceContextType = {
   orgId: string | null;
   orgName: string | null;
@@ -10,6 +22,11 @@ type WorkspaceContextType = {
   membershipRole: string | null;
   canManageBilling: boolean;
   isOwner: boolean;
+  isLeadership: boolean;
+  hasOrgOversight: boolean;
+  assignedDepartmentId: string | null;
+  assignedDepartment: AssignedDepartment | null;
+  userDepartmentRole: string | null;
   leadershipDesignation: string | null;
   leadershipVisibility: string | null;
   canManageLeadership: boolean;
@@ -27,6 +44,11 @@ const WorkspaceContext = createContext<WorkspaceContextType>({
   membershipRole: null,
   canManageBilling: false,
   isOwner: false,
+  isLeadership: false,
+  hasOrgOversight: false,
+  assignedDepartmentId: null,
+  assignedDepartment: null,
+  userDepartmentRole: null,
   leadershipDesignation: null,
   leadershipVisibility: null,
   canManageLeadership: false,
@@ -45,6 +67,11 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
   const [membershipRole, setMembershipRole] = useState<string | null>(null);
   const [canManageBilling, setCanManageBilling] = useState<boolean>(false);
   const [isOwner, setIsOwner] = useState<boolean>(false);
+  const [isLeadership, setIsLeadership] = useState<boolean>(false);
+  const [hasOrgOversight, setHasOrgOversight] = useState<boolean>(false);
+  const [assignedDepartmentId, setAssignedDepartmentId] = useState<string | null>(null);
+  const [assignedDepartment, setAssignedDepartment] = useState<AssignedDepartment | null>(null);
+  const [userDepartmentRole, setUserDepartmentRole] = useState<string | null>(null);
   const [leadershipDesignation, setLeadershipDesignation] = useState<string | null>(null);
   const [leadershipVisibility, setLeadershipVisibility] = useState<string | null>(null);
   const [canManageLeadership, setCanManageLeadership] = useState<boolean>(false);
@@ -61,6 +88,11 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
       setMembershipRole(null);
       setCanManageBilling(false);
       setIsOwner(false);
+      setIsLeadership(false);
+      setHasOrgOversight(false);
+      setAssignedDepartmentId(null);
+      setAssignedDepartment(null);
+      setUserDepartmentRole(null);
       setLeadershipDesignation(null);
       setLeadershipVisibility(null);
       setCanManageLeadership(false);
@@ -142,12 +174,66 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
           .eq('is_active', true)
           .maybeSingle();
 
+        // Check primary department assignment for employee immersion
+        const { data: deptMembership } = await supabase
+          .from('department_members')
+          .select(`
+            department_id,
+            department_role,
+            is_primary,
+            departments:department_id (
+              id,
+              name,
+              purpose,
+              description,
+              color,
+              responsibilities,
+              enabled_modules,
+              module_configurations,
+              head_user_id
+            )
+          `)
+          .eq('org_id', resolvedOrgId)
+          .eq('user_id', session.user.id)
+          .order('is_primary', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        let resolvedDeptId: string | null = deptMembership?.department_id || null;
+        let resolvedDept: AssignedDepartment | null = (deptMembership?.departments as any) || null;
+        let resolvedDeptRole: string | null = deptMembership?.department_role || null;
+
+        // If not in department_members, check user_organizations.department_id
+        if (!resolvedDeptId && userOrg?.department_id) {
+          resolvedDeptId = userOrg.department_id;
+          const { data: directDept } = await supabase
+            .from('departments')
+            .select('id, name, purpose, description, color, responsibilities, enabled_modules, module_configurations, head_user_id')
+            .eq('id', resolvedDeptId)
+            .maybeSingle();
+          resolvedDept = directDept as any;
+        }
+
+        const isLeadUser = resolvedIsOwner || 
+          ['founder', 'co-founder', 'administrator'].includes((resolvedRole || '').toLowerCase()) ||
+          ['full_organization', 'all_departments'].includes(leadershipData?.visibility_level || '');
+
+        const hasOversight = resolvedIsOwner || 
+          leadershipData?.visibility_level === 'full_organization' || 
+          leadershipData?.visibility_level === 'all_departments' || 
+          resolvedRole === 'administrator';
+
         setOrgId(resolvedOrgId);
         setOrgName(resolvedOrgName);
         setOrgAddress(resolvedOrgAddress);
         setOrgGst(resolvedOrgGst);
         setMembershipRole(resolvedRole);
         setIsOwner(resolvedIsOwner);
+        setIsLeadership(isLeadUser);
+        setHasOrgOversight(hasOversight);
+        setAssignedDepartmentId(resolvedDeptId);
+        setAssignedDepartment(resolvedDept);
+        setUserDepartmentRole(resolvedDeptRole);
         setCanManageBilling(resolvedIsOwner || ['administrator', 'billing_admin'].includes((resolvedRole || '').toLowerCase()));
         setDefaultCurrency(resolvedCurrency);
 
@@ -176,6 +262,11 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
       setMembershipRole(null);
       setCanManageBilling(false);
       setIsOwner(false);
+      setIsLeadership(false);
+      setHasOrgOversight(false);
+      setAssignedDepartmentId(null);
+      setAssignedDepartment(null);
+      setUserDepartmentRole(null);
       setLeadershipDesignation(null);
       setLeadershipVisibility(null);
       setCanManageLeadership(false);
@@ -187,6 +278,11 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
       setMembershipRole(null);
       setCanManageBilling(false);
       setIsOwner(false);
+      setIsLeadership(false);
+      setHasOrgOversight(false);
+      setAssignedDepartmentId(null);
+      setAssignedDepartment(null);
+      setUserDepartmentRole(null);
       setLeadershipDesignation(null);
       setLeadershipVisibility(null);
       setCanManageLeadership(false);
@@ -209,6 +305,11 @@ export const WorkspaceProvider = ({ children }: { children: React.ReactNode }) =
       membershipRole,
       canManageBilling,
       isOwner,
+      isLeadership,
+      hasOrgOversight,
+      assignedDepartmentId,
+      assignedDepartment,
+      userDepartmentRole,
       leadershipDesignation,
       leadershipVisibility,
       canManageLeadership,
