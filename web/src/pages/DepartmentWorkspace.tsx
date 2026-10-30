@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
@@ -9,19 +9,29 @@ import {
   Video, Bell, Plus, Search, Edit2, Trash2, X, Send,
   Paperclip, Pin, CornerUpLeft, ChevronLeft, RefreshCw,
   Clock, AlertCircle, Calendar, ArrowRight, UserPlus,
-  Shield, CheckCircle2, ChevronRight, Download
+  Shield, CheckCircle2, ChevronRight, Download, Sliders,
+  Zap, Target, Code, CreditCard, Tag, Sparkles, FolderPlus,
+  HelpCircle, Settings as SettingsIcon, Filter, Layers
 } from 'lucide-react';
 import { toast } from '../components/ui/Toast';
 import ConfirmModal from '../components/ConfirmModal';
 import {
   PageHeader, MetricStrip, EmptyState, SkeletonRow, type MetricItem
 } from '../components/ui/ObsidianPrimitives';
+import {
+  CORE_MODULES,
+  type OperationalModule,
+} from '../lib/departmentEngine';
 
 interface DepartmentDetail {
   id: string;
   org_id: string;
   name: string;
   description: string | null;
+  purpose: string | null;
+  responsibilities: string[] | null;
+  enabled_modules: any[] | null;
+  module_configurations: Record<string, any> | null;
   color: string | null;
   status: string;
   head_user_id: string | null;
@@ -97,13 +107,31 @@ interface DeptAnnouncement {
   author?: { id: string; full_name: string };
 }
 
+interface DepartmentRecord {
+  id: string;
+  org_id: string;
+  department_id: string;
+  module_key: string;
+  title: string;
+  description: string | null;
+  status: string;
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  assigned_to: string | null;
+  due_date: string | null;
+  metadata: Record<string, any>;
+  created_by: string | null;
+  created_at: string;
+  assigned_user?: { id: string; full_name: string; email: string } | null;
+  creator?: { id: string; full_name: string } | null;
+}
+
 export default function DepartmentWorkspace() {
   const { id: deptId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
   const { orgId, isOwner, canManageDepartments } = useWorkspace();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'members' | 'chat' | 'tasks' | 'projects' | 'meetings' | 'announcements'>('overview');
+  const [activeTab, setActiveTab] = useState<string>('overview');
   const [loading, setLoading] = useState(true);
   const [dept, setDept] = useState<DepartmentDetail | null>(null);
   const [hasAccess, setHasAccess] = useState<boolean>(true);
@@ -114,6 +142,7 @@ export default function DepartmentWorkspace() {
   const [projects, setProjects] = useState<DeptProject[]>([]);
   const [meetings, setMeetings] = useState<DeptMeeting[]>([]);
   const [announcements, setAnnouncements] = useState<DeptAnnouncement[]>([]);
+  const [departmentRecords, setDepartmentRecords] = useState<DepartmentRecord[]>([]);
 
   // Chat State
   const [channelId, setChannelId] = useState<string | null>(null);
@@ -145,6 +174,26 @@ export default function DepartmentWorkspace() {
   const [taskAssigneeId, setTaskAssigneeId] = useState('');
   const [savingTask, setSavingTask] = useState(false);
 
+  // New Operational Record Modal (for standard and custom modules)
+  const [isNewRecordOpen, setIsNewRecordOpen] = useState(false);
+  const [recordTitle, setRecordTitle] = useState('');
+  const [recordDesc, setRecordDesc] = useState('');
+  const [recordStatus, setRecordStatus] = useState('pending');
+  const [recordPriority, setRecordPriority] = useState<'low' | 'medium' | 'high' | 'urgent'>('medium');
+  const [recordAssignee, setRecordAssignee] = useState('');
+  const [recordDueDate, setRecordDueDate] = useState('');
+  const [savingRecord, setSavingRecord] = useState(false);
+
+  // Settings State
+  const [editPurpose, setEditPurpose] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editResponsibilities, setEditResponsibilities] = useState<string[]>([]);
+  const [editRespInput, setEditRespInput] = useState('');
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [showAddModuleModal, setShowAddModuleModal] = useState(false);
+  const [newModName, setNewModName] = useState('');
+  const [newModDesc, setNewModDesc] = useState('');
+
   // Delete Member Confirm
   const [removeMemberUserId, setRemoveMemberUserId] = useState<string | null>(null);
 
@@ -171,6 +220,9 @@ export default function DepartmentWorkspace() {
       }
 
       setDept(deptData);
+      setEditPurpose(deptData.purpose || '');
+      setEditDescription(deptData.description || '');
+      setEditResponsibilities(Array.isArray(deptData.responsibilities) ? deptData.responsibilities : []);
 
       // 2. Verify backend access permission via can_access_department
       const { data: accessGranted } = await supabase.rpc('can_access_department', {
@@ -204,7 +256,6 @@ export default function DepartmentWorkspace() {
         .maybeSingle();
 
       if (!channelData) {
-        // Auto-provision channel if not exists
         const { data: createdCh } = await supabase
           .from('chat_channels')
           .insert({
@@ -223,7 +274,6 @@ export default function DepartmentWorkspace() {
       if (channelData?.id) {
         setChannelId(channelData.id);
 
-        // Fetch recent messages
         const { data: msgs } = await supabase
           .from('chat_messages')
           .select(`
@@ -285,7 +335,20 @@ export default function DepartmentWorkspace() {
 
       setAnnouncements(annData || []);
 
-      // 9. Fetch all org users for member add modal
+      // 9. Fetch Department Operational Records
+      const { data: recData } = await supabase
+        .from('department_records')
+        .select(`
+          *,
+          assigned_user:assigned_to(id, full_name, email),
+          creator:created_by(id, full_name)
+        `)
+        .eq('department_id', deptId)
+        .order('created_at', { ascending: false });
+
+      setDepartmentRecords((recData as any) || []);
+
+      // 10. Fetch all org users for member add modal
       if (orgId) {
         const { data: uoData } = await supabase
           .from('user_organizations')
@@ -324,7 +387,6 @@ export default function DepartmentWorkspace() {
           filter: `channel_id=eq.${channelId}`,
         },
         async (payload) => {
-          // Fetch sender details
           const { data: sender } = await supabase
             .from('users')
             .select('id, full_name, avatar_url')
@@ -341,7 +403,6 @@ export default function DepartmentWorkspace() {
             return [...prev, incomingMsg];
           });
 
-          // Scroll to bottom
           messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
         }
       )
@@ -352,12 +413,44 @@ export default function DepartmentWorkspace() {
     };
   }, [channelId]);
 
-  // Scroll chat on messages update
   useEffect(() => {
     if (activeTab === 'chat') {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, activeTab]);
+
+  // Parse enabled modules from department record
+  const enabledModulesList: OperationalModule[] = useMemo(() => {
+    if (!dept?.enabled_modules || !Array.isArray(dept.enabled_modules)) {
+      return CORE_MODULES;
+    }
+    return dept.enabled_modules.map((m: any) => {
+      if (typeof m === 'string') {
+        const found = CORE_MODULES.find(c => c.key === m);
+        return found || {
+          key: m,
+          name: m.replace(/_/g, ' ').toUpperCase(),
+          description: 'Department operational module',
+          icon: 'FolderCheck',
+          category: 'Custom',
+          permission: 'all_members',
+          workflowStages: ['New', 'In Progress', 'Completed']
+        };
+      }
+      return m;
+    });
+  }, [dept]);
+
+  // Active module object if on an operational module tab
+  const currentOperationalModule = useMemo(() => {
+    return enabledModulesList.find(m => m.key === activeTab);
+  }, [enabledModulesList, activeTab]);
+
+  // Filter department records for current operational module
+  const currentModuleRecords = useMemo(() => {
+    if (!currentOperationalModule) return [];
+    return departmentRecords.filter(r => r.module_key === currentOperationalModule.key);
+  }, [departmentRecords, currentOperationalModule]);
 
   // Send Chat Message
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -383,7 +476,6 @@ export default function DepartmentWorkspace() {
       if (error) throw error;
       setReplyingTo(null);
 
-      // Local optimistic append if not already received via realtime
       if (data) {
         setMessages(prev => (prev.some(m => m.id === data.id) ? prev : [...prev, data]));
       }
@@ -401,30 +493,27 @@ export default function DepartmentWorkspace() {
 
     setAddingMember(true);
     try {
-      const { data, error } = await supabase.rpc('assign_department_member', {
-        p_department_id: deptId,
-        p_target_user_id: selectedAddUserId,
+      const { error } = await supabase.rpc('assign_department_member', {
+        p_dept_id: deptId,
+        p_user_id: selectedAddUserId,
         p_department_role: selectedAddRole,
         p_is_primary: true,
       });
 
       if (error) throw error;
-      if (!data?.success) throw new Error(data?.message || 'Failed to assign member');
-
-      toast.success(data?.message || 'Member assigned to department');
+      toast.success('Member assigned to department successfully.');
       setIsAddMemberOpen(false);
       fetchWorkspaceData();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to assign member');
+      toast.error(err.message || 'Failed to add department member');
     } finally {
       setAddingMember(false);
     }
   };
 
-  // Remove Member from Department
+  // Remove Member
   const handleConfirmRemoveMember = async () => {
     if (!deptId || !removeMemberUserId) return;
-
     try {
       const { error } = await supabase
         .from('department_members')
@@ -433,19 +522,12 @@ export default function DepartmentWorkspace() {
         .eq('user_id', removeMemberUserId);
 
       if (error) throw error;
-
-      // Also remove primary department pointer in user_organizations
-      await supabase
-        .from('user_organizations')
-        .update({ department_id: null })
-        .eq('department_id', deptId)
-        .eq('user_id', removeMemberUserId);
-
-      toast.success('Member removed from department');
-      setRemoveMemberUserId(null);
-      fetchWorkspaceData();
+      toast.success('Member removed from department.');
+      setMembers(prev => prev.filter(m => m.user_id !== removeMemberUserId));
     } catch (err: any) {
       toast.error(err.message || 'Failed to remove member');
+    } finally {
+      setRemoveMemberUserId(null);
     }
   };
 
@@ -456,42 +538,43 @@ export default function DepartmentWorkspace() {
 
     setSavingAnn(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('department_announcements')
         .insert({
-          org_id: dept?.org_id,
           department_id: deptId,
           author_id: user.id,
           title: annTitle.trim(),
           content: annContent.trim(),
           is_pinned: annPinned,
-        });
+        })
+        .select(`*, author:author_id(id, full_name)`)
+        .single();
 
       if (error) throw error;
       toast.success('Announcement published');
+      setAnnouncements(prev => [data, ...prev]);
       setIsNewAnnounceOpen(false);
       setAnnTitle('');
       setAnnContent('');
       setAnnPinned(false);
-      fetchWorkspaceData();
     } catch (err: any) {
-      toast.error(err.message || 'Failed to publish announcement');
+      toast.error(err.message || 'Failed to post announcement');
     } finally {
       setSavingAnn(false);
     }
   };
 
-  // Create Department Task
+  // Create Task
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!deptId || !user || !taskTitle.trim()) return;
+    if (!deptId || !orgId || !taskTitle.trim() || !user) return;
 
     setSavingTask(true);
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('tasks')
         .insert({
-          org_id: dept?.org_id,
+          org_id: orgId,
           department_id: deptId,
           title: taskTitle.trim(),
           priority: taskPriority,
@@ -499,15 +582,17 @@ export default function DepartmentWorkspace() {
           due_date: taskDueDate || null,
           assignee_id: taskAssigneeId || null,
           created_by: user.id,
-        });
+        })
+        .select(`*, assignee:assignee_id(id, full_name)`)
+        .single();
 
       if (error) throw error;
-      toast.success('Department task created');
+      toast.success('Task created successfully');
+      setTasks(prev => [data, ...prev]);
       setIsNewTaskOpen(false);
       setTaskTitle('');
       setTaskDueDate('');
       setTaskAssigneeId('');
-      fetchWorkspaceData();
     } catch (err: any) {
       toast.error(err.message || 'Failed to create task');
     } finally {
@@ -515,48 +600,185 @@ export default function DepartmentWorkspace() {
     }
   };
 
-  if (!hasAccess) {
+  // Create Operational Record for current module
+  const handleCreateOperationalRecord = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deptId || !orgId || !user || !recordTitle.trim() || !currentOperationalModule) return;
+
+    setSavingRecord(true);
+    try {
+      const initialStatus = recordStatus || currentOperationalModule.workflowStages[0] || 'pending';
+      const { data, error } = await supabase
+        .from('department_records')
+        .insert({
+          org_id: orgId,
+          department_id: deptId,
+          module_key: currentOperationalModule.key,
+          title: recordTitle.trim(),
+          description: recordDesc.trim() || null,
+          status: initialStatus,
+          priority: recordPriority,
+          assigned_to: recordAssignee || null,
+          due_date: recordDueDate || null,
+          created_by: user.id,
+        })
+        .select(`
+          *,
+          assigned_user:assigned_to(id, full_name, email),
+          creator:created_by(id, full_name)
+        `)
+        .single();
+
+      if (error) throw error;
+      toast.success(`Entry added to ${currentOperationalModule.name}`);
+      setDepartmentRecords(prev => [data as any, ...prev]);
+      setIsNewRecordOpen(false);
+      setRecordTitle('');
+      setRecordDesc('');
+      setRecordDueDate('');
+      setRecordAssignee('');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save entry');
+    } finally {
+      setSavingRecord(false);
+    }
+  };
+
+  // Update Status of an Operational Record
+  const handleUpdateRecordStatus = async (recordId: string, nextStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('department_records')
+        .update({ status: nextStatus, updated_at: new Date().toISOString() })
+        .eq('id', recordId);
+
+      if (error) throw error;
+      setDepartmentRecords(prev => prev.map(r => r.id === recordId ? { ...r, status: nextStatus } : r));
+      toast.success(`Moved to ${nextStatus}`);
+    } catch (err: any) {
+      toast.error('Failed to update stage');
+    }
+  };
+
+  // Delete Operational Record
+  const handleDeleteRecord = async (recordId: string) => {
+    try {
+      const { error } = await supabase
+        .from('department_records')
+        .delete()
+        .eq('id', recordId);
+
+      if (error) throw error;
+      setDepartmentRecords(prev => prev.filter(r => r.id !== recordId));
+      toast.success('Record removed');
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete record');
+    }
+  };
+
+  // Save Department Workspace Settings
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!deptId || !orgId) return;
+
+    setSavingSettings(true);
+    try {
+      const { error } = await supabase.rpc('update_department_configuration', {
+        p_org_id: orgId,
+        p_department_id: deptId,
+        p_purpose: editPurpose.trim() || null,
+        p_description: editDescription.trim() || null,
+        p_responsibilities: editResponsibilities,
+        p_enabled_modules: enabledModulesList,
+      });
+
+      if (error) throw error;
+      toast.success('Department workspace configuration saved.');
+      fetchWorkspaceData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save settings');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  // Add Custom Module from Settings Tab
+  const handleAddCustomModuleInSettings = async () => {
+    if (!newModName.trim() || !deptId || !orgId) return;
+    const cleanKey = newModName.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    const newMod: OperationalModule = {
+      key: cleanKey,
+      name: newModName.trim(),
+      description: newModDesc.trim() || `Custom tracking for ${newModName.trim()}`,
+      icon: 'FolderCheck',
+      category: 'Custom',
+      isCustom: true,
+      permission: 'all_members',
+      workflowStages: ['Intake', 'In Progress', 'Under Review', 'Completed'],
+    };
+
+    const updated = [...enabledModulesList, newMod];
+    try {
+      const { error } = await supabase.rpc('update_department_configuration', {
+        p_org_id: orgId,
+        p_department_id: deptId,
+        p_enabled_modules: updated,
+      });
+
+      if (error) throw error;
+      toast.success(`Custom module "${newMod.name}" activated!`);
+      setNewModName('');
+      setNewModDesc('');
+      setShowAddModuleModal(false);
+      fetchWorkspaceData();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to add custom module');
+    }
+  };
+
+  const canManageThisDept = isOwner || canManageDepartments || dept?.head_user_id === user?.id;
+
+  // Metric Strip items
+  const metricItems: MetricItem[] = useMemo(() => [
+    { label: 'MEMBERS', value: members.length },
+    { label: 'MODULES', value: enabledModulesList.length, isOrange: true },
+    { label: 'RECORDS', value: departmentRecords.length },
+    { label: 'STATUS', value: dept?.status?.toUpperCase() || 'ACTIVE' },
+  ], [members, enabledModulesList, departmentRecords, dept]);
+
+  if (loading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 text-center space-y-4">
-        <div className="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 text-red-400 flex items-center justify-center">
-          <AlertCircle size={24} />
-        </div>
-        <h2 className="text-lg font-bold text-main">Private Department Workspace</h2>
-        <p className="text-xs text-muted max-w-sm">
-          You do not have authorization to view this department workspace. Access is restricted to assigned department members and Organization Owners.
-        </p>
-        <button
-          onClick={() => navigate('/departments')}
-          className="px-4 py-2 bg-accent text-white text-xs font-semibold rounded-lg"
-        >
-          Return to Departments Directory
-        </button>
+      <div className="space-y-6 pb-12 font-sans select-none text-muted">
+        <SkeletonRow count={4} />
       </div>
     );
   }
 
-  const isHead = dept?.head_user_id === user?.id;
-  const canManageThisDept = isOwner || isHead || canManageDepartments;
-
-  const todayIso = new Date().toISOString().split('T')[0];
-  const pendingTasks = tasks.filter(t => t.status !== 'done' && t.status !== 'completed').length;
-  const overdueTasks = tasks.filter(t => t.status !== 'done' && t.status !== 'completed' && t.due_date && t.due_date < todayIso).length;
-
-  const metricItems: MetricItem[] = [
-    { label: 'DEPARTMENT MEMBERS', value: members.length, isOrange: true },
-    { label: 'ACTIVE PROJECTS', value: projects.length },
-    { label: 'PENDING TASKS', value: pendingTasks },
-    { label: 'OVERDUE TASKS', value: overdueTasks },
-    { label: 'UPCOMING SESSIONS', value: meetings.length },
-    { label: 'ANNOUNCEMENTS', value: announcements.length },
-  ];
+  if (!hasAccess) {
+    return (
+      <div className="py-20 text-center max-w-md mx-auto space-y-4 font-sans select-none">
+        <Shield size={36} className="text-red-400 mx-auto" />
+        <h2 className="text-sm font-bold text-main">Access Restricted</h2>
+        <p className="text-xs text-muted leading-relaxed">
+          You are not currently enrolled in this department workspace. Contact your Organization Owner or Department Head for membership.
+        </p>
+        <Link
+          to="/departments"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-surface-2 hover:bg-hover text-main text-xs font-semibold border border-divider transition-all"
+        >
+          <ChevronLeft size={13} />
+          <span>Back to Departments</span>
+        </Link>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex-1 space-y-6 pb-12 font-sans select-none text-muted">
+    <div className="flex-1 space-y-6 pb-16 font-sans select-none text-muted">
       {/* ── Page Header ── */}
       <PageHeader
-        title={`${dept?.name || 'Department'} Workspace`}
-        description={dept?.description || 'Dedicated organizational workspace for department collaboration, tasks, and real-time communication.'}
+        title={dept?.name || 'Department Workspace'}
+        description={dept?.description || 'Dedicated organizational workspace.'}
         badge={dept?.status?.toUpperCase() || 'ACTIVE'}
         breadcrumbs={[
           { label: 'Departments', href: '/departments' },
@@ -565,11 +787,11 @@ export default function DepartmentWorkspace() {
         actions={
           <div className="flex items-center gap-2">
             <button
-              onClick={() => navigate('/departments')}
-              className="p-1.5 rounded-lg border border-divider hover:border-white/20 hover:text-main text-muted transition-colors cursor-pointer"
-              title="Return to Directory"
+              onClick={fetchWorkspaceData}
+              className="p-2 rounded-lg bg-surface-2 hover:bg-hover text-muted hover:text-main border border-divider transition-colors cursor-pointer"
+              title="Refresh Workspace"
             >
-              <ChevronLeft size={14} />
+              <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
             </button>
 
             {canManageThisDept && (
@@ -598,211 +820,365 @@ export default function DepartmentWorkspace() {
       {/* ── Metric Strip ── */}
       <MetricStrip metrics={metricItems} />
 
-      {/* ── Sub-module Tabs ── */}
-      <div className="flex items-center bg-surface-2 p-1 rounded-xl border border-divider gap-1 overflow-x-auto">
-        {[
-          { id: 'overview', label: 'Overview', icon: Building2 },
-          { id: 'members', label: `Members (${members.length})`, icon: Users },
-          { id: 'chat', label: 'Department Chat', icon: MessageSquare },
-          { id: 'tasks', label: `Tasks (${tasks.length})`, icon: CheckSquare },
-          { id: 'projects', label: `Projects (${projects.length})`, icon: Briefcase },
-          { id: 'meetings', label: `Meetings (${meetings.length})`, icon: Video },
-          { id: 'announcements', label: `Announcements (${announcements.length})`, icon: Bell },
-        ].map(tab => (
+      {/* ── Dynamic Department Navigation Tabs ── */}
+      <div className="flex items-center bg-surface-2 p-1 rounded-xl border border-divider gap-1 overflow-x-auto scrollbar-none">
+        <button
+          onClick={() => setActiveTab('overview')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'overview'
+              ? 'bg-surface text-main shadow-xs border border-divider'
+              : 'text-muted hover:text-main'
+          }`}
+        >
+          <Building2 size={13} />
+          <span>Overview</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('members')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'members'
+              ? 'bg-surface text-main shadow-xs border border-divider'
+              : 'text-muted hover:text-main'
+          }`}
+        >
+          <Users size={13} />
+          <span>Members ({members.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('chat')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'chat'
+              ? 'bg-surface text-main shadow-xs border border-divider'
+              : 'text-muted hover:text-main'
+          }`}
+        >
+          <MessageSquare size={13} />
+          <span>Department Chat</span>
+        </button>
+
+        {/* Enabled Operational Modules Tabs */}
+        {enabledModulesList.map(mod => {
+          if (['chat', 'members'].includes(mod.key)) return null;
+          return (
+            <button
+              key={mod.key}
+              onClick={() => setActiveTab(mod.key)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                activeTab === mod.key
+                  ? 'bg-surface text-main shadow-xs border border-divider'
+                  : 'text-muted hover:text-main'
+              }`}
+            >
+              <Zap size={13} className={mod.isCustom ? 'text-accent' : 'text-blue-400'} />
+              <span>{mod.name}</span>
+            </button>
+          );
+        })}
+
+        <button
+          onClick={() => setActiveTab('announcements')}
+          className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === 'announcements'
+              ? 'bg-surface text-main shadow-xs border border-divider'
+              : 'text-muted hover:text-main'
+          }`}
+        >
+          <Bell size={13} />
+          <span>Announcements ({announcements.length})</span>
+        </button>
+
+        {canManageThisDept && (
           <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-              activeTab === tab.id
+            onClick={() => setActiveTab('settings')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+              activeTab === 'settings'
                 ? 'bg-surface text-main shadow-xs border border-divider'
                 : 'text-muted hover:text-main'
             }`}
           >
-            <tab.icon size={13} />
-            <span>{tab.label}</span>
+            <SettingsIcon size={13} />
+            <span>Settings</span>
           </button>
-        ))}
+        )}
       </div>
 
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
-      {/* SECTION A: DEPARTMENT OVERVIEW                                             */}
+      {/* SECTION 1: DEPARTMENT OVERVIEW (UNIQUE PURPOSE & CUSTOM MODULES DASHBOARD)  */}
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            {/* Announcements Highlight */}
-            {announcements.length > 0 && (
-              <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-3">
-                <div className="flex items-center justify-between border-b border-divider pb-2.5">
-                  <h3 className="text-xs font-bold text-main flex items-center gap-2">
-                    <Pin size={14} className="text-accent" />
-                    <span>Latest Announcements</span>
-                  </h3>
-                  <button onClick={() => setActiveTab('announcements')} className="text-[11px] text-accent hover:underline">
-                    View all →
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {announcements.slice(0, 2).map(ann => (
-                    <div key={ann.id} className="bg-surface-2/40 border border-divider rounded-lg p-3 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-main">{ann.title}</span>
-                        <span className="text-[10px] font-mono text-muted">
-                          {new Date(ann.created_at).toLocaleDateString()}
-                        </span>
-                      </div>
-                      <p className="text-xs text-muted/90">{ann.content}</p>
-                    </div>
-                  ))}
-                </div>
+        <div className="space-y-6">
+          {/* Purpose & Mandate Banner */}
+          <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles size={16} className="text-accent" />
+              <h3 className="text-xs font-bold text-main uppercase font-mono tracking-wider">
+                Organizational Purpose & Operational Scope
+              </h3>
+            </div>
+            <p className="text-sm font-semibold text-main leading-relaxed">
+              {dept?.purpose || dept?.description || 'Operational domain established for organizational workflows.'}
+            </p>
+
+            {/* Responsibilities Tags */}
+            {dept?.responsibilities && Array.isArray(dept.responsibilities) && dept.responsibilities.length > 0 && (
+              <div className="pt-2 border-t border-divider flex items-center gap-1.5 flex-wrap">
+                <span className="text-[10px] font-mono text-muted uppercase mr-1">Responsibilities:</span>
+                {dept.responsibilities.map((resp, i) => (
+                  <span
+                    key={i}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md bg-accent/10 border border-accent/20 text-accent text-xs font-medium"
+                  >
+                    <Tag size={10} />
+                    <span>{resp}</span>
+                  </span>
+                ))}
               </div>
             )}
+          </div>
 
-            {/* Active Initiatives / Projects */}
-            <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-3">
-              <div className="flex items-center justify-between border-b border-divider pb-2.5">
-                <h3 className="text-xs font-bold text-main flex items-center gap-2">
-                  <Briefcase size={14} className="text-blue-400" />
-                  <span>Active Department Projects</span>
-                </h3>
-                <button onClick={() => setActiveTab('projects')} className="text-[11px] text-accent hover:underline">
-                  View all ({projects.length}) →
+          {/* Enabled Operational Modules Grid */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold text-main uppercase font-mono tracking-wider">
+                Active Operational Modules ({enabledModulesList.length})
+              </h3>
+              {canManageThisDept && (
+                <button
+                  onClick={() => setActiveTab('settings')}
+                  className="text-[11px] text-accent hover:underline flex items-center gap-1"
+                >
+                  <Sliders size={11} />
+                  <span>Configure Modules</span>
                 </button>
-              </div>
-
-              {projects.length === 0 ? (
-                <p className="text-xs text-muted py-2">No projects assigned to this department yet.</p>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {projects.slice(0, 4).map(p => (
-                    <Link
-                      key={p.id}
-                      to={`/projects/${p.id}`}
-                      className="bg-surface-2/40 border border-divider hover:border-accent/40 rounded-lg p-3 space-y-1.5 transition-colors block"
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-main truncate">{p.title}</span>
-                        <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-surface border border-divider text-muted">
-                          {p.status}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-muted line-clamp-1">{p.description || 'No description'}</p>
-                    </Link>
-                  ))}
-                </div>
               )}
             </div>
 
-            {/* Pending Tasks */}
-            <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-3">
-              <div className="flex items-center justify-between border-b border-divider pb-2.5">
-                <h3 className="text-xs font-bold text-main flex items-center gap-2">
-                  <CheckSquare size={14} className="text-emerald-400" />
-                  <span>Operational Deliverables & Tasks</span>
-                </h3>
-                <button onClick={() => setActiveTab('tasks')} className="text-[11px] text-accent hover:underline">
-                  View all ({tasks.length}) →
-                </button>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {enabledModulesList.map(mod => {
+                const count = departmentRecords.filter(r => r.module_key === mod.key).length;
+                return (
+                  <div
+                    key={mod.key}
+                    onClick={() => setActiveTab(mod.key)}
+                    className="bg-card-bg border border-divider hover:border-accent/40 rounded-xl p-4.5 space-y-3 transition-all cursor-pointer shadow-xs flex flex-col justify-between group"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-lg bg-surface-2 border border-divider flex items-center justify-center text-accent group-hover:scale-105 transition-transform">
+                            <Zap size={15} />
+                          </div>
+                          <div>
+                            <span className="text-xs font-bold text-main block group-hover:text-accent transition-colors">
+                              {mod.name}
+                            </span>
+                            <span className="text-[9px] font-mono uppercase text-muted">
+                              {mod.category}
+                            </span>
+                          </div>
+                        </div>
 
-              {tasks.length === 0 ? (
-                <p className="text-xs text-muted py-2">No active tasks in this department.</p>
-              ) : (
-                <div className="divide-y divide-divider">
-                  {tasks.slice(0, 4).map(t => (
-                    <div key={t.id} className="py-2.5 flex items-center justify-between text-xs">
-                      <span className="font-medium text-main truncate max-w-sm">{t.title}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-surface-2 border border-divider text-muted">
-                          {t.priority}
-                        </span>
-                        <span className="text-[10px] font-mono text-muted">
-                          {t.due_date ? new Date(t.due_date).toLocaleDateString() : 'No date'}
+                        <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded bg-surface border border-divider text-main">
+                          {count} {count === 1 ? 'record' : 'records'}
                         </span>
                       </div>
+                      <p className="text-xs text-muted line-clamp-2">{mod.description}</p>
                     </div>
-                  ))}
-                </div>
-              )}
+
+                    <div className="pt-2.5 border-t border-divider flex items-center justify-between text-[11px] text-accent font-semibold">
+                      <span>Open Module Workspace</span>
+                      <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Department Head & Quick Info */}
-          <div className="space-y-6">
-            <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-4">
-              <h3 className="text-xs font-bold text-main border-b border-divider pb-2.5">
+          {/* Leadership & Recent Activity Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-3">
+              <h4 className="text-xs font-bold text-main border-b border-divider pb-2.5">
                 Department Leadership
-              </h3>
-
+              </h4>
               {dept?.head_user ? (
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-accent-soft border border-accent/20 text-accent flex items-center justify-center font-bold text-sm">
-                    {dept.head_user.full_name?.charAt(0).toUpperCase() || 'H'}
+                  <div className="w-10 h-10 rounded-xl bg-accent/15 text-accent border border-accent/25 flex items-center justify-center font-bold text-sm">
+                    {dept.head_user.full_name?.charAt(0).toUpperCase()}
                   </div>
                   <div>
                     <span className="text-xs font-bold text-main block">{dept.head_user.full_name}</span>
-                    <span className="text-[10px] font-mono font-bold text-accent uppercase">DEPARTMENT HEAD</span>
+                    <span className="text-[10px] font-mono text-accent font-semibold uppercase">DEPARTMENT HEAD</span>
                     <p className="text-[11px] text-muted font-mono">{dept.head_user.email}</p>
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-muted">No department head currently designated.</p>
+                <p className="text-xs text-muted">No department lead currently assigned.</p>
               )}
-
-              <div className="pt-3 border-t border-divider space-y-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">Established</span>
-                  <span className="font-mono text-main">{new Date(dept?.created_at || '').toLocaleDateString()}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted">Primary Color</span>
-                  <div className="flex items-center gap-1.5">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: dept?.color || '#60A5FA' }} />
-                    <span className="font-mono text-muted text-[11px]">{dept?.color}</span>
-                  </div>
-                </div>
-              </div>
             </div>
 
-            {/* Quick Chat Shortcut Card */}
-            <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-xs font-bold text-main flex items-center gap-2">
-                  <MessageSquare size={14} className="text-accent" />
-                  <span>Real-time Channel</span>
-                </h3>
-                <span className="text-[10px] font-mono text-emerald-400">ACTIVE</span>
+            <div className="lg:col-span-2 bg-card-bg border border-divider rounded-xl p-5 space-y-3">
+              <div className="flex items-center justify-between border-b border-divider pb-2.5">
+                <h4 className="text-xs font-bold text-main">Latest Operational Records</h4>
+                <span className="text-[10px] font-mono text-muted">{departmentRecords.length} total entries</span>
               </div>
-              <p className="text-xs text-muted">
-                Collaborate with {members.length} team members in the dedicated department group conversation.
-              </p>
-              <button
-                onClick={() => setActiveTab('chat')}
-                className="w-full flex items-center justify-center gap-1.5 py-2 rounded-lg bg-surface-2 hover:bg-hover text-main text-xs font-semibold border border-divider transition-colors cursor-pointer"
-              >
-                <span>Open Department Chat</span>
-                <ArrowRight size={13} />
-              </button>
+              {departmentRecords.length === 0 ? (
+                <p className="text-xs text-muted py-2">No records recorded across operational modules yet.</p>
+              ) : (
+                <div className="divide-y divide-divider">
+                  {departmentRecords.slice(0, 4).map(rec => (
+                    <div key={rec.id} className="py-2.5 flex items-center justify-between text-xs">
+                      <div className="space-y-0.5 min-w-0 pr-3">
+                        <span className="font-semibold text-main truncate block">{rec.title}</span>
+                        <span className="text-[10px] font-mono text-muted uppercase">
+                          Module: {rec.module_key.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-surface-2 border border-divider text-accent font-semibold">
+                          {rec.status}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
-      {/* SECTION B: DEPARTMENT MEMBERS                                              */}
+      {/* SECTION 2: DEDICATED OPERATIONAL MODULE VIEW (FOR ANY STANDARD OR CUSTOM)   */}
+      {/* ═══════════════════════════════════════════════════════════════════════════ */}
+      {currentOperationalModule && (
+        <div className="space-y-5">
+          {/* Module Header Bar */}
+          <div className="p-4 bg-card-bg border border-divider rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Zap size={16} className="text-accent" />
+                <h3 className="text-sm font-bold text-main">{currentOperationalModule.name}</h3>
+                <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded bg-surface-2 border border-divider text-accent font-semibold">
+                  {currentOperationalModule.category}
+                </span>
+              </div>
+              <p className="text-xs text-muted">{currentOperationalModule.description}</p>
+            </div>
+
+            <button
+              onClick={() => {
+                setRecordStatus(currentOperationalModule.workflowStages[0] || 'pending');
+                setIsNewRecordOpen(true);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all shadow-xs cursor-pointer shrink-0"
+            >
+              <Plus size={13} />
+              <span>Add {currentOperationalModule.name} Entry</span>
+            </button>
+          </div>
+
+          {/* Workflow Stages Kanban / Cards */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] font-mono">
+              <span className="text-muted mr-1 uppercase">Workflow Lifecycle:</span>
+              {currentOperationalModule.workflowStages.map((stage, sIdx) => (
+                <span key={sIdx} className="inline-flex items-center gap-1">
+                  {sIdx > 0 && <span className="text-muted/40">→</span>}
+                  <span className="px-2 py-0.5 rounded bg-surface-2 border border-divider text-main font-semibold">
+                    {stage}
+                  </span>
+                </span>
+              ))}
+            </div>
+
+            {currentModuleRecords.length === 0 ? (
+              <EmptyState
+                icon={FolderPlus}
+                title={`No entries in ${currentOperationalModule.name}`}
+                description="Begin tracking operational deliverables, records, and milestones for this module."
+                action={{
+                  label: `Add First Entry`,
+                  onClick: () => {
+                    setRecordStatus(currentOperationalModule.workflowStages[0] || 'pending');
+                    setIsNewRecordOpen(true);
+                  }
+                }}
+              />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {currentModuleRecords.map(rec => (
+                  <div
+                    key={rec.id}
+                    className="bg-card-bg border border-divider rounded-xl p-4 space-y-3 shadow-xs flex flex-col justify-between"
+                  >
+                    <div className="space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <span className="text-xs font-bold text-main leading-snug">{rec.title}</span>
+                        {canManageThisDept && (
+                          <button
+                            onClick={() => handleDeleteRecord(rec.id)}
+                            className="p-1 rounded text-muted hover:text-red-400 hover:bg-red-500/10 cursor-pointer"
+                            title="Delete Entry"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
+                      </div>
+
+                      {rec.description && (
+                        <p className="text-xs text-muted/90 line-clamp-3 leading-relaxed">{rec.description}</p>
+                      )}
+                    </div>
+
+                    <div className="pt-3 border-t border-divider space-y-2">
+                      <div className="flex items-center justify-between text-[10px] font-mono text-muted">
+                        <span className="uppercase">Priority: {rec.priority}</span>
+                        {rec.due_date && <span>Due: {new Date(rec.due_date).toLocaleDateString()}</span>}
+                      </div>
+
+                      {/* Status Stage Switcher */}
+                      <div className="flex items-center justify-between gap-2 pt-1">
+                        <span className="text-[10px] font-mono text-muted">Stage:</span>
+                        <select
+                          value={rec.status}
+                          onChange={e => handleUpdateRecordStatus(rec.id, e.target.value)}
+                          className="px-2 py-1 bg-surface-2 border border-divider focus:border-accent rounded text-[11px] font-semibold text-accent focus:outline-none cursor-pointer"
+                        >
+                          {currentOperationalModule.workflowStages.map(st => (
+                            <option key={st} value={st}>{st}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ═══════════════════════════════════════════════════════════════════════════ */}
+      {/* SECTION 3: MEMBERS MANAGEMENT                                               */}
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'members' && (
         <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-4">
           <div className="flex items-center justify-between border-b border-divider pb-3">
-            <h3 className="text-sm font-bold text-main flex items-center gap-2">
-              <Users size={16} className="text-accent" />
-              <span>Assigned Department Personnel ({members.length})</span>
-            </h3>
+            <div>
+              <h3 className="text-xs font-bold text-main flex items-center gap-2">
+                <Users size={14} className="text-accent" />
+                <span>Department Members ({members.length})</span>
+              </h3>
+              <p className="text-[11px] text-muted">Personnel with authorized access to this workspace.</p>
+            </div>
 
             {canManageThisDept && (
               <button
                 onClick={() => setIsAddMemberOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs"
               >
                 <UserPlus size={13} />
                 <span>Add Member</span>
@@ -810,164 +1186,90 @@ export default function DepartmentWorkspace() {
             )}
           </div>
 
-          {members.length === 0 ? (
-            <EmptyState
-              icon={<Users size={32} className="text-muted/60" />}
-              title="No personnel assigned"
-              description="Add members to this department to grant them access to department workspaces, tasks, and discussions."
-            />
-          ) : (
-            <div className="divide-y divide-divider">
-              {members.map(m => {
-                const isSelf = m.user_id === user?.id;
-                const isHeadMember = m.department_role === 'head';
-
-                return (
-                  <div key={m.id} className="py-3.5 flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-9 h-9 rounded-xl bg-surface-2 border border-divider text-main flex items-center justify-center font-bold text-xs shrink-0">
-                        {m.user?.full_name?.charAt(0).toUpperCase() || 'M'}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-main truncate">{m.user?.full_name}</span>
-                          {isSelf && (
-                            <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-accent/10 text-accent border border-accent/20">
-                              YOU
-                            </span>
-                          )}
-                          <span className={`px-1.5 py-0.2 rounded text-[9px] font-mono font-bold uppercase ${
-                            isHeadMember
-                              ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                              : 'bg-surface-2 text-muted border border-divider'
-                          }`}>
-                            {m.department_role}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-muted font-mono truncate">
-                          {m.user?.job_title && <span className="text-main font-sans font-medium mr-1">{m.user.job_title} ·</span>}
-                          {m.user?.email}
-                        </p>
-                      </div>
-                    </div>
-
-                    {canManageThisDept && !isSelf && (
-                      <button
-                        onClick={() => setRemoveMemberUserId(m.user_id)}
-                        className="p-1 rounded text-muted hover:text-red-400 hover:bg-red-500/10 transition-colors cursor-pointer"
-                        title="Remove from Department"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    )}
+          <div className="divide-y divide-divider">
+            {members.map(m => (
+              <div key={m.id} className="py-3 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-surface-2 border border-divider flex items-center justify-center font-bold text-main text-xs">
+                    {m.user?.full_name?.charAt(0) || 'U'}
                   </div>
-                );
-              })}
-            </div>
-          )}
+                  <div>
+                    <span className="font-semibold text-main block">{m.user?.full_name}</span>
+                    <span className="text-[10px] font-mono text-muted">{m.user?.email}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-surface border border-divider text-accent font-semibold">
+                    {m.department_role}
+                  </span>
+                  {canManageThisDept && m.user_id !== user?.id && (
+                    <button
+                      onClick={() => setRemoveMemberUserId(m.user_id)}
+                      className="p-1 rounded text-muted hover:text-red-400 hover:bg-red-500/10 cursor-pointer"
+                      title="Remove Member"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
-      {/* SECTION C: REAL-TIME DEPARTMENT CHAT                                      */}
+      {/* SECTION 4: REAL-TIME DEPARTMENT CHAT                                        */}
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'chat' && (
-        <div className="bg-card-bg border border-divider rounded-xl h-[620px] flex flex-col overflow-hidden shadow-xs">
-          {/* Chat Header */}
-          <div className="px-5 py-3 border-b border-divider bg-surface-2/40 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-accent/10 text-accent border border-accent/20 flex items-center justify-center font-bold text-xs">
-                <MessageSquare size={15} />
-              </div>
-              <div>
-                <span className="text-xs font-bold text-main block">{dept?.name} Collaboration</span>
-                <span className="text-[10px] font-mono text-muted">{members.length} members · Encrypted in-transit</span>
-              </div>
+        <div className="bg-card-bg border border-divider rounded-xl flex flex-col h-[600px] overflow-hidden">
+          <div className="p-3.5 border-b border-divider bg-surface flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2">
+              <MessageSquare size={15} className="text-accent" />
+              <span className="text-xs font-bold text-main">#{dept?.name?.toLowerCase().replace(/\s+/g, '-')}-general</span>
             </div>
+            <span className="text-[10px] font-mono text-muted">{messages.length} messages</span>
           </div>
 
-          {/* Messages Area */}
-          <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+          <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8 text-muted">
-                <MessageSquare size={32} className="text-muted/40 mb-2" />
-                <p className="text-xs font-medium">No messages yet in this department.</p>
-                <p className="text-[11px] text-muted/70">Start the conversation with your team.</p>
-              </div>
+              <p className="text-xs text-muted text-center py-12">No messages in department chat yet. Say hello!</p>
             ) : (
-              messages.map(msg => {
-                const isMe = msg.sender_id === user?.id;
-                return (
-                  <div key={msg.id} className={`flex gap-2.5 items-end ${isMe ? 'flex-row-reverse' : 'flex-row'}`}>
-                    {!isMe && (
-                      <div className="w-7 h-7 rounded-lg bg-surface-2 border border-divider flex items-center justify-center text-[10px] font-bold text-main shrink-0">
-                        {msg.sender?.full_name?.charAt(0).toUpperCase() || 'U'}
-                      </div>
-                    )}
-                    <div className={`max-w-[70%] flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                      {!isMe && (
-                        <span className="text-[10px] font-mono text-muted mb-0.5 ml-1">
-                          {msg.sender?.full_name || 'Member'}
-                        </span>
-                      )}
-
-                      {/* Reply preview if any */}
-                      {msg.reply_to && (
-                        <div className="text-[10px] bg-black/20 border-l-2 border-accent px-2 py-1 rounded mb-1 text-muted">
-                          <span className="font-bold text-main">{msg.reply_to.sender?.full_name}:</span> {msg.reply_to.content}
-                        </div>
-                      )}
-
-                      <div className={`rounded-xl px-3.5 py-2 text-xs leading-relaxed ${
-                        isMe
-                          ? 'bg-accent text-white shadow-xs'
-                          : 'bg-surface-2 border border-divider text-main'
-                      }`}>
-                        {msg.content}
-                      </div>
-
-                      <div className="flex items-center gap-1.5 text-[9px] font-mono text-muted/70 mt-1 px-1">
-                        <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        <button
-                          onClick={() => setReplyingTo(msg)}
-                          className="hover:text-main cursor-pointer"
-                          title="Reply"
-                        >
-                          Reply
-                        </button>
-                      </div>
-                    </div>
+              messages.map(msg => (
+                <div key={msg.id} className="flex items-start gap-2.5 text-xs">
+                  <div className="w-7 h-7 rounded-lg bg-surface-2 border border-divider text-main flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5">
+                    {msg.sender?.full_name?.charAt(0) || 'U'}
                   </div>
-                );
-              })
+                  <div className="space-y-0.5 min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-main text-[11px]">{msg.sender?.full_name || 'Member'}</span>
+                      <span className="text-[9px] font-mono text-muted">
+                        {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted/90 bg-surface-2/40 border border-divider/60 rounded-lg p-2.5 inline-block max-w-xl">
+                      {msg.content}
+                    </p>
+                  </div>
+                </div>
+              ))
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Replying Banner */}
-          {replyingTo && (
-            <div className="px-4 py-2 bg-surface-2 border-t border-divider flex items-center justify-between text-xs text-muted shrink-0">
-              <span className="truncate">Replying to <strong>{replyingTo.sender?.full_name}</strong>: "{replyingTo.content}"</span>
-              <button onClick={() => setReplyingTo(null)} className="hover:text-main p-0.5">
-                <X size={13} />
-              </button>
-            </div>
-          )}
-
-          {/* Input Box */}
           <form onSubmit={handleSendMessage} className="p-3 border-t border-divider bg-surface flex items-center gap-2 shrink-0">
             <input
               type="text"
+              placeholder={`Message #${dept?.name?.toLowerCase().replace(/\s+/g, '-')}-general...`}
               value={newMessage}
               onChange={e => setNewMessage(e.target.value)}
-              placeholder={`Message #${dept?.name || 'department'}...`}
-              className="flex-1 bg-surface-2 border border-divider rounded-lg px-3.5 py-2 text-xs text-main placeholder-muted focus:outline-none focus:border-accent"
+              className="flex-1 px-3 py-2 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main placeholder-muted focus:outline-none"
             />
             <button
               type="submit"
               disabled={sendingMsg || !newMessage.trim()}
-              className="p-2 rounded-lg bg-accent hover:bg-accent/90 disabled:opacity-50 text-white transition-all cursor-pointer shadow-xs shrink-0"
-              title="Send Message"
+              className="p-2 rounded-lg bg-accent hover:bg-accent/90 disabled:opacity-50 text-white cursor-pointer shadow-xs"
             >
               <Send size={14} />
             </button>
@@ -976,219 +1278,45 @@ export default function DepartmentWorkspace() {
       )}
 
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
-      {/* SECTION D: DEPARTMENT TASKS                                                */}
-      {/* ═══════════════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'tasks' && (
-        <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-divider pb-3">
-            <h3 className="text-sm font-bold text-main flex items-center gap-2">
-              <CheckSquare size={16} className="text-emerald-400" />
-              <span>Department Deliverables & Tasks ({tasks.length})</span>
-            </h3>
-
-            <button
-              onClick={() => setIsNewTaskOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all cursor-pointer"
-            >
-              <Plus size={13} />
-              <span>Create Task</span>
-            </button>
-          </div>
-
-          {tasks.length === 0 ? (
-            <EmptyState
-              icon={<CheckSquare size={32} className="text-muted/60" />}
-              title="No tasks recorded"
-              description="Create department-specific tasks with priorities, assignees, and deadlines."
-            />
-          ) : (
-            <div className="divide-y divide-divider">
-              {tasks.map(task => {
-                const isOverdue = task.due_date && task.due_date < todayIso && task.status !== 'done';
-                return (
-                  <div key={task.id} className="py-3 flex items-center justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-main truncate">{task.title}</span>
-                        {isOverdue && (
-                          <span className="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-red-500/10 text-red-400 border border-red-500/20">
-                            OVERDUE
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-[11px] text-muted font-mono mt-0.5">
-                        Assignee: {task.assignee?.full_name || 'Unassigned'} · Due: {task.due_date ? new Date(task.due_date).toLocaleDateString() : 'None'}
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-surface-2 border border-divider text-muted">
-                        {task.priority}
-                      </span>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-accent-soft text-accent border border-accent/20">
-                        {task.status}
-                      </span>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════════════ */}
-      {/* SECTION E: DEPARTMENT PROJECTS                                             */}
-      {/* ═══════════════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'projects' && (
-        <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-divider pb-3">
-            <h3 className="text-sm font-bold text-main flex items-center gap-2">
-              <Briefcase size={16} className="text-blue-400" />
-              <span>Department Initiatives & Workspaces ({projects.length})</span>
-            </h3>
-
-            <Link
-              to="/projects/new"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all cursor-pointer"
-            >
-              <Plus size={13} />
-              <span>New Project</span>
-            </Link>
-          </div>
-
-          {projects.length === 0 ? (
-            <EmptyState
-              icon={<Briefcase size={32} className="text-muted/60" />}
-              title="No projects linked"
-              description="Projects linked to this department will display here for cross-functional collaboration."
-            />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects.map(p => (
-                <Link
-                  key={p.id}
-                  to={`/projects/${p.id}`}
-                  className="bg-surface-2/40 border border-divider hover:border-accent/40 rounded-xl p-4 space-y-2.5 transition-all block"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-main truncate">{p.title}</span>
-                    <span className="text-[9px] font-mono uppercase px-1.5 py-0.5 rounded bg-surface border border-divider text-muted">
-                      {p.status}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted line-clamp-2">{p.description || 'No project description provided.'}</p>
-                  <div className="pt-2 border-t border-divider flex items-center justify-between text-[11px] font-mono text-muted">
-                    <span>Priority: {p.priority}</span>
-                    <span>{p.due_date ? new Date(p.due_date).toLocaleDateString() : 'Ongoing'}</span>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════════════ */}
-      {/* SECTION F: DEPARTMENT MEETINGS                                             */}
-      {/* ═══════════════════════════════════════════════════════════════════════════ */}
-      {activeTab === 'meetings' && (
-        <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-divider pb-3">
-            <h3 className="text-sm font-bold text-main flex items-center gap-2">
-              <Video size={16} className="text-purple-400" />
-              <span>Department Sessions & Standups ({meetings.length})</span>
-            </h3>
-
-            <Link
-              to="/meetings/new"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all cursor-pointer"
-            >
-              <Plus size={13} />
-              <span>Schedule Session</span>
-            </Link>
-          </div>
-
-          {meetings.length === 0 ? (
-            <EmptyState
-              icon={<Video size={32} className="text-muted/60" />}
-              title="No upcoming sessions"
-              description="Schedule standups or sync sessions for this department."
-            />
-          ) : (
-            <div className="divide-y divide-divider">
-              {meetings.map(m => (
-                <div key={m.id} className="py-3.5 flex items-center justify-between gap-3">
-                  <div>
-                    <span className="text-xs font-bold text-main block">{m.title}</span>
-                    <p className="text-[11px] text-muted font-mono mt-0.5">
-                      {new Date(m.start_time).toLocaleString()} · Hosted by {m.host?.full_name || 'Leader'}
-                    </p>
-                  </div>
-
-                  <Link
-                    to={`/meetings/${m.id}`}
-                    className="px-3 py-1.5 rounded-lg bg-surface-2 hover:bg-hover text-main border border-divider text-xs font-semibold transition-colors"
-                  >
-                    Join Room
-                  </Link>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ═══════════════════════════════════════════════════════════════════════════ */}
-      {/* SECTION G: DEPARTMENT ANNOUNCEMENTS                                        */}
+      {/* SECTION 5: ANNOUNCEMENTS                                                    */}
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'announcements' && (
-        <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-divider pb-3">
-            <h3 className="text-sm font-bold text-main flex items-center gap-2">
-              <Bell size={16} className="text-accent" />
-              <span>Department Notices & Bulletins ({announcements.length})</span>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold text-main uppercase font-mono tracking-wider">
+              Department Bulletins & Announcements
             </h3>
-
             {canManageThisDept && (
               <button
                 onClick={() => setIsNewAnnounceOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold cursor-pointer shadow-xs"
               >
                 <Plus size={13} />
-                <span>Publish Notice</span>
+                <span>New Announcement</span>
               </button>
             )}
           </div>
 
           {announcements.length === 0 ? (
             <EmptyState
-              icon={<Bell size={32} className="text-muted/60" />}
+              icon={Bell}
               title="No announcements posted"
-              description="Publish notices, policy updates, and pinned circulars to all department members."
+              description="Keep your department informed with pinned bulletins and official updates."
             />
           ) : (
             <div className="space-y-3">
               {announcements.map(ann => (
-                <div
-                  key={ann.id}
-                  className={`bg-surface-2/40 border rounded-xl p-4 space-y-2 ${
-                    ann.is_pinned ? 'border-accent/40 shadow-xs' : 'border-divider'
-                  }`}
-                >
+                <div key={ann.id} className="bg-card-bg border border-divider rounded-xl p-4.5 space-y-2 shadow-xs">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      {ann.is_pinned && <Pin size={13} className="text-accent" />}
-                      <span className="text-xs font-bold text-main">{ann.title}</span>
-                    </div>
+                    <span className="text-xs font-bold text-main flex items-center gap-1.5">
+                      {ann.is_pinned && <Pin size={12} className="text-accent" />}
+                      <span>{ann.title}</span>
+                    </span>
                     <span className="text-[10px] font-mono text-muted">
                       {new Date(ann.created_at).toLocaleDateString()}
                     </span>
                   </div>
-                  <p className="text-xs text-muted leading-relaxed whitespace-pre-wrap">{ann.content}</p>
-                  <div className="text-[10px] font-mono text-muted/70 pt-2 border-t border-divider">
-                    Posted by {ann.author?.full_name || 'Leader'}
-                  </div>
+                  <p className="text-xs text-muted/90 leading-relaxed whitespace-pre-line">{ann.content}</p>
                 </div>
               ))}
             </div>
@@ -1196,281 +1324,424 @@ export default function DepartmentWorkspace() {
         </div>
       )}
 
-      {/* ── Modal: Add Member to Department ── */}
-      <AnimatePresence>
-        {isAddMemberOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-card-bg border border-divider rounded-2xl w-full max-w-md overflow-hidden shadow-2xl"
+      {/* ═══════════════════════════════════════════════════════════════════════════ */}
+      {/* SECTION 6: WORKSPACE SETTINGS (MODULE CONFIGURATION & PURPOSE EDITOR)       */}
+      {/* ═══════════════════════════════════════════════════════════════════════════ */}
+      {activeTab === 'settings' && canManageThisDept && (
+        <div className="bg-card-bg border border-divider rounded-xl p-6 space-y-6">
+          <div className="border-b border-divider pb-3 flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-bold text-main uppercase font-mono tracking-wider">
+                Department Workspace Configuration
+              </h3>
+              <p className="text-[11px] text-muted">Customize operational scope, responsibilities and active modules.</p>
+            </div>
+            <button
+              onClick={() => setShowAddModuleModal(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 hover:bg-hover border border-divider text-xs font-semibold text-main cursor-pointer"
             >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-divider">
-                <h3 className="text-sm font-bold text-main flex items-center gap-2">
-                  <UserPlus size={16} className="text-accent" />
-                  <span>Assign Personnel to Department</span>
-                </h3>
-                <button onClick={() => setIsAddMemberOpen(false)} className="text-muted hover:text-main p-1">
-                  <X size={15} />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddMember} className="p-5 space-y-4">
-                <div>
-                  <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
-                    Select Employee
-                  </label>
-                  <select
-                    value={selectedAddUserId}
-                    onChange={e => setSelectedAddUserId(e.target.value)}
-                    required
-                    className="w-full bg-surface-2 border border-divider rounded-lg px-3 py-2 text-xs text-main focus:outline-none focus:border-accent"
-                  >
-                    {allOrgUsers
-                      .filter(u => !members.some(m => m.user_id === u.id))
-                      .map(u => (
-                        <option key={u.id} value={u.id}>
-                          {u.full_name} ({u.email})
-                        </option>
-                      ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
-                    Department Role
-                  </label>
-                  <select
-                    value={selectedAddRole}
-                    onChange={e => setSelectedAddRole(e.target.value)}
-                    className="w-full bg-surface-2 border border-divider rounded-lg px-3 py-2 text-xs text-main focus:outline-none focus:border-accent"
-                  >
-                    <option value="member">Department Member</option>
-                    <option value="lead">Team / Discipline Lead</option>
-                    <option value="head">Department Head</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-4 border-t border-divider">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddMemberOpen(false)}
-                    className="px-3 py-1.5 rounded-lg border border-divider text-xs text-muted hover:text-main cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={addingMember || !selectedAddUserId}
-                    className="px-4 py-1.5 rounded-lg bg-accent hover:bg-accent/90 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer shadow-xs"
-                  >
-                    {addingMember ? 'Assigning...' : 'Assign to Department'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
+              <Plus size={13} />
+              <span>Add Custom Module</span>
+            </button>
           </div>
-        )}
-      </AnimatePresence>
 
-      {/* ── Modal: Create Announcement ── */}
-      <AnimatePresence>
-        {isNewAnnounceOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-card-bg border border-divider rounded-2xl w-full max-w-md overflow-hidden shadow-2xl"
-            >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-divider">
-                <h3 className="text-sm font-bold text-main flex items-center gap-2">
-                  <Pin size={16} className="text-accent" />
-                  <span>Publish Department Announcement</span>
-                </h3>
-                <button onClick={() => setIsNewAnnounceOpen(false)} className="text-muted hover:text-main p-1">
-                  <X size={15} />
+          <form onSubmit={handleSaveSettings} className="space-y-5">
+            <div>
+              <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
+                Department Purpose
+              </label>
+              <input
+                type="text"
+                value={editPurpose}
+                onChange={e => setEditPurpose(e.target.value)}
+                className="w-full px-3.5 py-2 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main focus:outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
+                Description
+              </label>
+              <textarea
+                rows={2}
+                value={editDescription}
+                onChange={e => setEditDescription(e.target.value)}
+                className="w-full px-3.5 py-2 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main focus:outline-none resize-none"
+              />
+            </div>
+
+            {/* Responsibilities Tag Editor */}
+            <div>
+              <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
+                Operational Responsibilities
+              </label>
+              <div className="flex gap-2 mb-2">
+                <input
+                  type="text"
+                  placeholder="Add responsibility..."
+                  value={editRespInput}
+                  onChange={e => setEditRespInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      if (editRespInput.trim() && !editResponsibilities.includes(editRespInput.trim())) {
+                        setEditResponsibilities([...editResponsibilities, editRespInput.trim()]);
+                        setEditRespInput('');
+                      }
+                    }
+                  }}
+                  className="flex-1 px-3 py-1.5 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (editRespInput.trim() && !editResponsibilities.includes(editRespInput.trim())) {
+                      setEditResponsibilities([...editResponsibilities, editRespInput.trim()]);
+                      setEditRespInput('');
+                    }
+                  }}
+                  className="px-3 py-1.5 rounded-lg bg-surface border border-divider text-xs text-main"
+                >
+                  Add
                 </button>
               </div>
 
-              <form onSubmit={handleCreateAnnouncement} className="p-5 space-y-4">
-                <div>
-                  <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    value={annTitle}
-                    onChange={e => setAnnTitle(e.target.value)}
-                    required
-                    placeholder="e.g. Q4 Sprint Objectives & Deadlines"
-                    className="w-full bg-surface-2 border border-divider rounded-lg px-3 py-2 text-xs text-main focus:outline-none focus:border-accent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
-                    Announcement Details
-                  </label>
-                  <textarea
-                    rows={4}
-                    value={annContent}
-                    onChange={e => setAnnContent(e.target.value)}
-                    required
-                    placeholder="Provide relevant context, action items, or announcements for this department..."
-                    className="w-full bg-surface-2 border border-divider rounded-lg px-3 py-2 text-xs text-main focus:outline-none focus:border-accent resize-none"
-                  />
-                </div>
-
-                <label className="flex items-center gap-2 text-xs text-main cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={annPinned}
-                    onChange={e => setAnnPinned(e.target.checked)}
-                    className="rounded border-divider text-accent focus:ring-0"
-                  />
-                  <span>Pin this announcement to top of department workspace</span>
-                </label>
-
-                <div className="flex items-center justify-end gap-2 pt-4 border-t border-divider">
-                  <button
-                    type="button"
-                    onClick={() => setIsNewAnnounceOpen(false)}
-                    className="px-3 py-1.5 rounded-lg border border-divider text-xs text-muted hover:text-main cursor-pointer"
+              <div className="flex flex-wrap gap-1.5 p-2 bg-surface-2/40 border border-divider rounded-lg">
+                {editResponsibilities.map((resp, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-accent/10 border border-accent/25 text-accent text-xs font-medium"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingAnn || !annTitle.trim()}
-                    className="px-4 py-1.5 rounded-lg bg-accent hover:bg-accent/90 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer shadow-xs"
-                  >
-                    {savingAnn ? 'Publishing...' : 'Publish Announcement'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Modal: Create Task ── */}
-      <AnimatePresence>
-        {isNewTaskOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-card-bg border border-divider rounded-2xl w-full max-w-md overflow-hidden shadow-2xl"
-            >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-divider">
-                <h3 className="text-sm font-bold text-main flex items-center gap-2">
-                  <CheckSquare size={16} className="text-accent" />
-                  <span>Create Department Task</span>
-                </h3>
-                <button onClick={() => setIsNewTaskOpen(false)} className="text-muted hover:text-main p-1">
-                  <X size={15} />
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateTask} className="p-5 space-y-4">
-                <div>
-                  <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
-                    Task Title
-                  </label>
-                  <input
-                    type="text"
-                    value={taskTitle}
-                    onChange={e => setTaskTitle(e.target.value)}
-                    required
-                    placeholder="e.g. Audit API telemetry logs"
-                    className="w-full bg-surface-2 border border-divider rounded-lg px-3 py-2 text-xs text-main focus:outline-none focus:border-accent"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
-                      Priority
-                    </label>
-                    <select
-                      value={taskPriority}
-                      onChange={e => setTaskPriority(e.target.value)}
-                      className="w-full bg-surface-2 border border-divider rounded-lg px-3 py-2 text-xs text-main focus:outline-none focus:border-accent"
+                    <span>{resp}</span>
+                    <button
+                      type="button"
+                      onClick={() => setEditResponsibilities(editResponsibilities.filter((_, i) => i !== idx))}
+                      className="hover:text-red-400 cursor-pointer"
                     >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                    </select>
-                  </div>
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            </div>
 
-                  <div>
-                    <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
-                      Due Date
-                    </label>
-                    <input
-                      type="date"
-                      value={taskDueDate}
-                      onChange={e => setTaskDueDate(e.target.value)}
-                      className="w-full bg-surface-2 border border-divider rounded-lg px-3 py-2 text-xs text-main focus:outline-none focus:border-accent"
-                    />
-                  </div>
+            <div className="pt-4 border-t border-divider flex justify-end">
+              <button
+                type="submit"
+                disabled={savingSettings}
+                className="px-4 py-2 rounded-xl bg-accent hover:bg-accent/90 disabled:opacity-50 text-white text-xs font-bold cursor-pointer shadow-xs"
+              >
+                {savingSettings ? 'Saving...' : 'Save Workspace Settings'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* ── Modal: Add Custom Module in Settings ── */}
+      {showAddModuleModal && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-card-bg border border-divider rounded-2xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-divider">
+              <h3 className="text-xs font-bold text-main">Add Custom Operational Module</h3>
+              <button onClick={() => setShowAddModuleModal(false)} className="text-muted hover:text-main">
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="text"
+                placeholder="Module Name (e.g. Code Review, Grant Tracking, Market Intelligence)"
+                value={newModName}
+                onChange={e => setNewModName(e.target.value)}
+                className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+              />
+              <input
+                type="text"
+                placeholder="Module Description..."
+                value={newModDesc}
+                onChange={e => setNewModDesc(e.target.value)}
+                className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-divider">
+              <button
+                type="button"
+                onClick={() => setShowAddModuleModal(false)}
+                className="px-3 py-1.5 text-xs text-muted hover:text-main"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleAddCustomModuleInSettings}
+                disabled={!newModName.trim()}
+                className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold disabled:opacity-50"
+              >
+                Activate Module
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Add Operational Record Entry ── */}
+      {isNewRecordOpen && currentOperationalModule && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-card-bg border border-divider rounded-2xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-divider">
+              <h3 className="text-xs font-bold text-main flex items-center gap-2">
+                <Zap size={14} className="text-accent" />
+                <span>New {currentOperationalModule.name} Entry</span>
+              </h3>
+              <button onClick={() => setIsNewRecordOpen(false)} className="text-muted hover:text-main">
+                <X size={14} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateOperationalRecord} className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-mono text-muted uppercase mb-1">Title *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Record title..."
+                  value={recordTitle}
+                  onChange={e => setRecordTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono text-muted uppercase mb-1">Description</label>
+                <textarea
+                  rows={2}
+                  placeholder="Details and operational context..."
+                  value={recordDesc}
+                  onChange={e => setRecordDesc(e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-mono text-muted uppercase mb-1">Stage</label>
+                  <select
+                    value={recordStatus}
+                    onChange={e => setRecordStatus(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                  >
+                    {currentOperationalModule.workflowStages.map(st => (
+                      <option key={st} value={st}>{st}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
-                    Assignee
-                  </label>
+                  <label className="block text-[10px] font-mono text-muted uppercase mb-1">Priority</label>
                   <select
-                    value={taskAssigneeId}
-                    onChange={e => setTaskAssigneeId(e.target.value)}
-                    className="w-full bg-surface-2 border border-divider rounded-lg px-3 py-2 text-xs text-main focus:outline-none focus:border-accent"
+                    value={recordPriority}
+                    onChange={e => setRecordPriority(e.target.value as any)}
+                    className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="urgent">Urgent</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-mono text-muted uppercase mb-1">Assignee</label>
+                  <select
+                    value={recordAssignee}
+                    onChange={e => setRecordAssignee(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
                   >
                     <option value="">Unassigned</option>
                     {members.map(m => (
                       <option key={m.user_id} value={m.user_id}>
-                        {m.user?.full_name} ({m.user?.email})
+                        {m.user?.full_name}
                       </option>
                     ))}
                   </select>
                 </div>
 
-                <div className="flex items-center justify-end gap-2 pt-4 border-t border-divider">
-                  <button
-                    type="button"
-                    onClick={() => setIsNewTaskOpen(false)}
-                    className="px-3 py-1.5 rounded-lg border border-divider text-xs text-muted hover:text-main cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={savingTask || !taskTitle.trim()}
-                    className="px-4 py-1.5 rounded-lg bg-accent hover:bg-accent/90 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer shadow-xs"
-                  >
-                    {savingTask ? 'Creating...' : 'Create Task'}
-                  </button>
+                <div>
+                  <label className="block text-[10px] font-mono text-muted uppercase mb-1">Due Date</label>
+                  <input
+                    type="date"
+                    value={recordDueDate}
+                    onChange={e => setRecordDueDate(e.target.value)}
+                    className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                  />
                 </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+              </div>
 
-      {/* ── Modal: Confirm Remove Member ── */}
+              <div className="flex justify-end gap-2 pt-3 border-t border-divider">
+                <button
+                  type="button"
+                  onClick={() => setIsNewRecordOpen(false)}
+                  className="px-3 py-1.5 text-xs text-muted hover:text-main"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingRecord || !recordTitle.trim()}
+                  className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold disabled:opacity-50"
+                >
+                  {savingRecord ? 'Saving...' : 'Add Entry'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Add Member ── */}
+      {isAddMemberOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-card-bg border border-divider rounded-2xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-divider">
+              <h3 className="text-xs font-bold text-main">Add Member to Department</h3>
+              <button onClick={() => setIsAddMemberOpen(false)} className="text-muted hover:text-main">
+                <X size={14} />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddMember} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-mono text-muted uppercase mb-1">Select Employee</label>
+                <select
+                  value={selectedAddUserId}
+                  onChange={e => setSelectedAddUserId(e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                >
+                  {allOrgUsers.map(u => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name} ({u.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono text-muted uppercase mb-1">Department Role</label>
+                <select
+                  value={selectedAddRole}
+                  onChange={e => setSelectedAddRole(e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                >
+                  <option value="member">Member</option>
+                  <option value="lead">Lead</option>
+                  <option value="specialist">Specialist</option>
+                  <option value="contributor">Contributor</option>
+                </select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-divider">
+                <button
+                  type="button"
+                  onClick={() => setIsAddMemberOpen(false)}
+                  className="px-3 py-1.5 text-xs text-muted hover:text-main"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={addingMember}
+                  className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold"
+                >
+                  {addingMember ? 'Assigning...' : 'Assign Member'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal: Post Announcement ── */}
+      {isNewAnnounceOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-card-bg border border-divider rounded-2xl p-5 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between pb-2 border-b border-divider">
+              <h3 className="text-xs font-bold text-main">Post Department Announcement</h3>
+              <button onClick={() => setIsNewAnnounceOpen(false)} className="text-muted hover:text-main">
+                <X size={14} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateAnnouncement} className="space-y-3">
+              <div>
+                <label className="block text-[10px] font-mono text-muted uppercase mb-1">Title</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Announcement title..."
+                  value={annTitle}
+                  onChange={e => setAnnTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono text-muted uppercase mb-1">Content</label>
+                <textarea
+                  rows={4}
+                  required
+                  placeholder="Official notice or briefing..."
+                  value={annContent}
+                  onChange={e => setAnnContent(e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none resize-none"
+                />
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer text-xs text-main pt-1">
+                <input
+                  type="checkbox"
+                  checked={annPinned}
+                  onChange={e => setAnnPinned(e.target.checked)}
+                  className="accent-accent"
+                />
+                <span>Pin to top of department workspace</span>
+              </label>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-divider">
+                <button
+                  type="button"
+                  onClick={() => setIsNewAnnounceOpen(false)}
+                  className="px-3 py-1.5 text-xs text-muted hover:text-main"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingAnn}
+                  className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold"
+                >
+                  {savingAnn ? 'Publishing...' : 'Publish'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Confirm Remove Member Modal ── */}
       <ConfirmModal
         isOpen={!!removeMemberUserId}
         onClose={() => setRemoveMemberUserId(null)}
         onConfirm={handleConfirmRemoveMember}
-        title="Remove Member from Department"
-        message="Are you sure you want to remove this member from the department? Their general organization account and access to other workspaces will not be affected."
-        confirmText="Remove"
+        title="Remove Member"
+        message="Are you sure you want to remove this member from the department workspace?"
+        confirmText="Remove Member"
         variant="danger"
       />
     </div>
   );
 }
-
