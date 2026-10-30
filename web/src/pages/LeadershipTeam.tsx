@@ -475,7 +475,7 @@ export default function LeadershipTeam() {
       />
 
       {/* ── Continuous Metric Strip ── */}
-      <MetricStrip items={metricItems} />
+      <MetricStrip metrics={metricItems} />
 
       {/* ── Tab Switcher ── */}
       <div className="flex items-center bg-surface-2 p-1 rounded-xl border border-divider gap-1 w-fit">

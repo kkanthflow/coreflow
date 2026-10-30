@@ -63,10 +63,18 @@ export interface MetricItem {
   trend?: string;
 }
 
-export function MetricStrip({ metrics }: { metrics: MetricItem[] }) {
+export interface MetricStripProps {
+  metrics?: MetricItem[];
+  items?: MetricItem[];
+}
+
+export function MetricStrip({ metrics, items }: MetricStripProps) {
+  const list = metrics || items || [];
+  if (!list || list.length === 0) return null;
+
   return (
     <div className="bg-card-bg border border-divider rounded-xl shadow-sm grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 divide-x divide-y sm:divide-y-0 divide-divider select-none overflow-hidden">
-      {metrics.map((m, idx) => (
+      {list.map((m, idx) => (
         <motion.div
           key={m.label}
           initial={{ opacity: 0, y: 6 }}

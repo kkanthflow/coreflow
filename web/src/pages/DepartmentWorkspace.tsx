@@ -596,7 +596,7 @@ export default function DepartmentWorkspace() {
       />
 
       {/* ── Metric Strip ── */}
-      <MetricStrip items={metricItems} />
+      <MetricStrip metrics={metricItems} />
 
       {/* ── Sub-module Tabs ── */}
       <div className="flex items-center bg-surface-2 p-1 rounded-xl border border-divider gap-1 overflow-x-auto">

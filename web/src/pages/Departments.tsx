@@ -258,7 +258,7 @@ export default function Departments() {
       />
 
       {/* ── Metric Strip ── */}
-      <MetricStrip items={metrics} />
+      <MetricStrip metrics={metrics} />
 
       {/* ── Search & Filter Controls ── */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-card-bg border border-divider rounded-xl p-3">
