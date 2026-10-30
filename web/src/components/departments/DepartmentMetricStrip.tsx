@@ -62,3 +62,4 @@ export function DepartmentMetricStrip({ metrics }: DepartmentMetricStripProps) {
     </div>
   );
 }
+

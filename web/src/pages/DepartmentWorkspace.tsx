@@ -25,6 +25,7 @@ import {
   ModuleCard,
   ModuleGrid,
   DepartmentMetricStrip,
+  getTabIcon,
   type TabDefinition,
   type DepartmentMetricItem,
 } from '../components/departments';
@@ -149,6 +150,8 @@ export default function DepartmentWorkspace() {
 
   // Sub-modules state
   const [members, setMembers] = useState<DeptMember[]>([]);
+  const [memberSearch, setMemberSearch] = useState('');
+  const [recordSearch, setRecordSearch] = useState('');
   const [tasks, setTasks] = useState<DeptTask[]>([]);
   const [projects, setProjects] = useState<DeptProject[]>([]);
   const [meetings, setMeetings] = useState<DeptMeeting[]>([]);
@@ -462,8 +465,29 @@ export default function DepartmentWorkspace() {
   // Filter department records for current operational module
   const currentModuleRecords = useMemo(() => {
     if (!currentOperationalModule) return [];
-    return departmentRecords.filter(r => r.module_key === currentOperationalModule.key);
-  }, [departmentRecords, currentOperationalModule]);
+    let list = departmentRecords.filter(r => r.module_key === currentOperationalModule.key);
+    if (recordSearch.trim()) {
+      const q = recordSearch.toLowerCase();
+      list = list.filter(r =>
+        r.title?.toLowerCase().includes(q) ||
+        r.description?.toLowerCase().includes(q) ||
+        r.status?.toLowerCase().includes(q) ||
+        r.priority?.toLowerCase().includes(q)
+      );
+    }
+    return list;
+  }, [departmentRecords, currentOperationalModule, recordSearch]);
+
+  // Filter department personnel for Members tab
+  const filteredMembers = useMemo(() => {
+    if (!memberSearch.trim()) return members;
+    const q = memberSearch.toLowerCase();
+    return members.filter(m =>
+      m.user?.full_name?.toLowerCase().includes(q) ||
+      m.user?.email?.toLowerCase().includes(q) ||
+      m.department_role?.toLowerCase().includes(q)
+    );
+  }, [members, memberSearch]);
 
   // Send Chat Message
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -1080,98 +1104,151 @@ export default function DepartmentWorkspace() {
       {/* SECTION 2: DEDICATED OPERATIONAL MODULE VIEW (FOR ANY STANDARD OR CUSTOM)   */}
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
       {currentOperationalModule && (
-        <div className="space-y-5">
+        <div className="space-y-5 animate-fade-in">
           {/* Module Header Bar */}
-          <div className="p-4 bg-card-bg border border-divider rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Zap size={16} className="text-accent" />
-                <h3 className="text-sm font-bold text-main">{currentOperationalModule.name}</h3>
-                <span className="text-[9px] font-mono uppercase px-2 py-0.5 rounded bg-surface-2 border border-divider text-accent font-semibold">
-                  {currentOperationalModule.category}
-                </span>
+          {(() => {
+            const ModIcon = getTabIcon(currentOperationalModule.key, currentOperationalModule.category);
+            return (
+              <div className="p-4 bg-card-bg border border-divider rounded-xl shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-surface-2 border border-divider flex items-center justify-center text-accent shrink-0 shadow-2xs">
+                    <ModIcon size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-main tracking-tight">{currentOperationalModule.name}</h3>
+                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-md bg-surface-2 border border-divider text-muted">
+                        {currentOperationalModule.category}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted mt-0.5 font-normal">{currentOperationalModule.description}</p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setRecordStatus(currentOperationalModule.workflowStages[0] || 'pending');
+                    setIsNewRecordOpen(true);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all shadow-sm shadow-accent/20 cursor-pointer shrink-0"
+                >
+                  <Plus size={14} />
+                  <span>Add {currentOperationalModule.name} Entry</span>
+                </button>
               </div>
-              <p className="text-xs text-muted">{currentOperationalModule.description}</p>
+            );
+          })()}
+
+          {/* Toolbar: Search & Workflow Stages Lifecycle */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-card-bg border border-divider rounded-xl shadow-sm p-3">
+            <div className="flex items-center gap-3 flex-1 min-w-[240px] max-w-sm">
+              <div className="relative w-full">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  type="text"
+                  placeholder="Search deliverables, status, or priorities..."
+                  value={recordSearch}
+                  onChange={e => setRecordSearch(e.target.value)}
+                  className="w-full pl-8 pr-7 py-1.5 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-text placeholder-muted/60 focus:outline-none transition-colors"
+                />
+                {recordSearch && (
+                  <button onClick={() => setRecordSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-text">
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
             </div>
 
-            <button
-              onClick={() => {
-                setRecordStatus(currentOperationalModule.workflowStages[0] || 'pending');
-                setIsNewRecordOpen(true);
-              }}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all shadow-xs cursor-pointer shrink-0"
-            >
-              <Plus size={13} />
-              <span>Add {currentOperationalModule.name} Entry</span>
-            </button>
-          </div>
-
-          {/* Workflow Stages Kanban / Cards */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-[11px] font-mono">
-              <span className="text-muted mr-1 uppercase">Workflow Lifecycle:</span>
+            <div className="flex items-center gap-1.5 overflow-x-auto text-[11px] font-mono select-none">
+              <span className="text-[10px] font-mono font-bold text-muted uppercase tracking-wider mr-1">Lifecycle:</span>
               {currentOperationalModule.workflowStages.map((stage, sIdx) => (
                 <span key={sIdx} className="inline-flex items-center gap-1">
                   {sIdx > 0 && <span className="text-muted/40">→</span>}
-                  <span className="px-2 py-0.5 rounded bg-surface-2 border border-divider text-main font-semibold">
+                  <span className="px-2 py-0.5 rounded-md bg-surface-2 border border-line text-muted font-semibold text-[10px]">
                     {stage}
                   </span>
                 </span>
               ))}
             </div>
+          </div>
 
-            {currentModuleRecords.length === 0 ? (
-              <EmptyState
-                icon={FolderPlus}
-                title={`No entries in ${currentOperationalModule.name}`}
-                description="Begin tracking operational deliverables, records, and milestones for this module."
-                action={{
-                  label: `Add First Entry`,
-                  onClick: () => {
-                    setRecordStatus(currentOperationalModule.workflowStages[0] || 'pending');
-                    setIsNewRecordOpen(true);
-                  }
-                }}
-              />
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {currentModuleRecords.map(rec => (
-                  <div
+          {/* Module Records Cards */}
+          {currentModuleRecords.length === 0 ? (
+            <EmptyState
+              icon={Briefcase}
+              title={recordSearch ? 'No matching deliverables' : `No entries in ${currentOperationalModule.name}`}
+              description={
+                recordSearch
+                  ? 'No records match your query. Clear the search input to see all deliverables.'
+                  : 'Begin tracking operational deliverables, records, and milestones for this module.'
+              }
+              action={{
+                label: `Add First Entry`,
+                onClick: () => {
+                  setRecordStatus(currentOperationalModule.workflowStages[0] || 'pending');
+                  setIsNewRecordOpen(true);
+                },
+              }}
+            />
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {currentModuleRecords.map((rec, rIdx) => {
+                const priorityStyles: Record<string, string> = {
+                  low: 'bg-surface-2 text-muted border-line',
+                  medium: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/25',
+                  high: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25',
+                  urgent: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/25',
+                };
+
+                return (
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.22, delay: Math.min(rIdx * 0.03, 0.3) }}
                     key={rec.id}
-                    className="bg-card-bg border border-divider rounded-xl p-4 space-y-3 shadow-xs flex flex-col justify-between"
+                    className="bg-card-bg border border-divider hover:border-accent/40 rounded-xl p-4 space-y-3 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group"
                   >
                     <div className="space-y-2">
                       <div className="flex items-start justify-between gap-2">
-                        <span className="text-xs font-bold text-main leading-snug">{rec.title}</span>
+                        <span className="text-xs sm:text-sm font-semibold text-main leading-snug group-hover:text-accent transition-colors">
+                          {rec.title}
+                        </span>
                         {canManageThisDept && (
                           <button
                             onClick={() => handleDeleteRecord(rec.id)}
-                            className="p-1 rounded text-muted hover:text-red-400 hover:bg-red-500/10 cursor-pointer"
+                            className="p-1 rounded text-muted hover:text-red-400 hover:bg-red-500/10 cursor-pointer transition-colors"
                             title="Delete Entry"
+                            aria-label={`Delete ${rec.title}`}
                           >
-                            <Trash2 size={12} />
+                            <Trash2 size={13} />
                           </button>
                         )}
                       </div>
 
                       {rec.description && (
-                        <p className="text-xs text-muted/90 line-clamp-3 leading-relaxed">{rec.description}</p>
+                        <p className="text-xs text-muted/90 line-clamp-3 leading-relaxed font-normal">
+                          {rec.description}
+                        </p>
                       )}
                     </div>
 
-                    <div className="pt-3 border-t border-divider space-y-2">
+                    <div className="pt-3 border-t border-divider space-y-2.5">
                       <div className="flex items-center justify-between text-[10px] font-mono text-muted">
-                        <span className="uppercase">Priority: {rec.priority}</span>
-                        {rec.due_date && <span>Due: {new Date(rec.due_date).toLocaleDateString()}</span>}
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase border ${priorityStyles[rec.priority] || priorityStyles.medium}`}>
+                          {rec.priority}
+                        </span>
+                        {rec.due_date && (
+                          <span className="tabular-nums">Due: {new Date(rec.due_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>
+                        )}
                       </div>
 
                       {/* Status Stage Switcher */}
-                      <div className="flex items-center justify-between gap-2 pt-1">
-                        <span className="text-[10px] font-mono text-muted">Stage:</span>
+                      <div className="flex items-center justify-between gap-2 pt-0.5">
+                        <span className="text-[10px] font-mono font-semibold text-muted uppercase">Stage:</span>
                         <select
                           value={rec.status}
                           onChange={e => handleUpdateRecordStatus(rec.id, e.target.value)}
-                          className="px-2 py-1 bg-surface-2 border border-divider focus:border-accent rounded text-[11px] font-semibold text-accent focus:outline-none cursor-pointer"
+                          className="px-2.5 py-1 bg-surface-2 border border-line focus:border-accent rounded text-[11px] font-semibold text-accent focus:outline-none cursor-pointer"
                         >
                           {currentOperationalModule.workflowStages.map(st => (
                             <option key={st} value={st}>{st}</option>
@@ -1179,11 +1256,11 @@ export default function DepartmentWorkspace() {
                         </select>
                       </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
@@ -1191,57 +1268,117 @@ export default function DepartmentWorkspace() {
       {/* SECTION 3: MEMBERS MANAGEMENT                                               */}
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'members' && (
-        <div className="bg-card-bg border border-divider rounded-xl p-5 space-y-4">
-          <div className="flex items-center justify-between border-b border-divider pb-3">
-            <div>
-              <h3 className="text-xs font-bold text-main flex items-center gap-2">
-                <Users size={14} className="text-accent" />
-                <span>Department Members ({members.length})</span>
-              </h3>
-              <p className="text-[11px] text-muted">Personnel with authorized access to this workspace.</p>
+        <div className="space-y-4 animate-fade-in">
+          {/* Members Toolbar matching Projects standard */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-card-bg border border-divider rounded-xl shadow-sm p-3">
+            <div className="flex items-center gap-3 flex-1 min-w-[240px] max-w-sm">
+              <div className="relative w-full">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted" />
+                <input
+                  type="text"
+                  placeholder="Search roster by name, email, or role..."
+                  value={memberSearch}
+                  onChange={e => setMemberSearch(e.target.value)}
+                  className="w-full pl-8 pr-7 py-1.5 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-text placeholder-muted/60 focus:outline-none transition-colors"
+                />
+                {memberSearch && (
+                  <button onClick={() => setMemberSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-text">
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
             </div>
 
-            {canManageThisDept && (
-              <button
-                onClick={() => setIsAddMemberOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all cursor-pointer shadow-xs"
-              >
-                <UserPlus size={13} />
-                <span>Add Member</span>
-              </button>
-            )}
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-surface-2 border border-divider text-muted tabular-nums">
+                {filteredMembers.length} of {members.length} Members
+              </span>
+
+              {canManageThisDept && (
+                <button
+                  onClick={() => setIsAddMemberOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold transition-all shadow-sm shadow-accent/20 cursor-pointer"
+                >
+                  <UserPlus size={14} />
+                  <span>Add Member</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          <div className="divide-y divide-divider">
-            {members.map(m => (
-              <div key={m.id} className="py-3 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-surface-2 border border-divider flex items-center justify-center font-bold text-main text-xs">
-                    {m.user?.full_name?.charAt(0) || 'U'}
-                  </div>
-                  <div>
-                    <span className="font-semibold text-main block">{m.user?.full_name}</span>
-                    <span className="text-[10px] font-mono text-muted">{m.user?.email}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-surface border border-divider text-accent font-semibold">
-                    {m.department_role}
-                  </span>
-                  {canManageThisDept && m.user_id !== user?.id && (
-                    <button
-                      onClick={() => setRemoveMemberUserId(m.user_id)}
-                      className="p-1 rounded text-muted hover:text-red-400 hover:bg-red-500/10 cursor-pointer"
-                      title="Remove Member"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-                  )}
-                </div>
+          {/* Members Structured Table */}
+          {filteredMembers.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title={memberSearch ? 'No members match this query' : 'No department members assigned'}
+              description={
+                memberSearch
+                  ? 'Try searching by a different name, email, or department role.'
+                  : 'Assign personnel to this department to enable collaborative workspaces and role delegation.'
+              }
+              action={canManageThisDept ? { label: 'Add First Member', onClick: () => setIsAddMemberOpen(true) } : undefined}
+            />
+          ) : (
+            <div className="bg-card-bg border border-divider rounded-xl shadow-sm overflow-hidden">
+              <div className="grid grid-cols-12 gap-4 px-4 py-2.5 border-b border-divider text-[10px] font-mono font-bold text-muted uppercase tracking-wider bg-surface-2/50 select-none">
+                <div className="col-span-6 sm:col-span-5">Member Personnel</div>
+                <div className="col-span-3 sm:col-span-3">Department Role</div>
+                <div className="col-span-3 sm:col-span-3">Enrolled</div>
+                <div className="col-span-12 sm:col-span-1 text-right">Action</div>
               </div>
-            ))}
-          </div>
+
+              <div className="divide-y divide-divider">
+                {filteredMembers.map((m, mIdx) => (
+                  <motion.div
+                    initial={{ opacity: 0, x: -6 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.2, delay: Math.min(mIdx * 0.03, 0.3) }}
+                    key={m.id}
+                    className="grid grid-cols-12 gap-4 px-4 py-3 hover:bg-hover/60 transition-colors items-center text-xs group"
+                  >
+                    <div className="col-span-6 sm:col-span-5 min-w-0 pr-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-surface-2 border border-line flex items-center justify-center font-bold text-main text-xs shrink-0 shadow-2xs">
+                          {m.user?.full_name?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                        <div className="min-w-0">
+                          <span className="font-semibold text-main text-xs block truncate group-hover:text-accent transition-colors">
+                            {m.user?.full_name}
+                          </span>
+                          <span className="text-[11px] font-mono text-muted truncate block mt-0.5">
+                            {m.user?.email}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="col-span-3 sm:col-span-3">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-surface-2 border border-divider text-accent uppercase">
+                        {m.department_role}
+                      </span>
+                    </div>
+
+                    <div className="col-span-3 sm:col-span-3 text-[11px] font-mono text-muted tabular-nums">
+                      {m.joined_at ? new Date(m.joined_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Active'}
+                    </div>
+
+                    <div className="col-span-12 sm:col-span-1 text-right">
+                      {canManageThisDept && m.user_id !== user?.id && (
+                        <button
+                          onClick={() => setRemoveMemberUserId(m.user_id)}
+                          className="p-1.5 rounded text-muted hover:text-red-400 hover:bg-red-500/10 cursor-pointer transition-colors"
+                          title="Remove Member"
+                          aria-label={`Remove ${m.user?.full_name} from department`}
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -1249,32 +1386,38 @@ export default function DepartmentWorkspace() {
       {/* SECTION 4: REAL-TIME DEPARTMENT CHAT                                        */}
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'chat' && (
-        <div className="bg-card-bg border border-divider rounded-xl flex flex-col h-[600px] overflow-hidden">
-          <div className="p-3.5 border-b border-divider bg-surface flex items-center justify-between shrink-0">
+        <div className="bg-card-bg border border-divider rounded-xl flex flex-col h-[540px] sm:h-[600px] overflow-hidden shadow-sm animate-fade-in">
+          <div className="p-3.5 border-b border-divider bg-surface-2/40 flex items-center justify-between shrink-0 select-none">
             <div className="flex items-center gap-2">
-              <MessageSquare size={15} className="text-accent" />
-              <span className="text-xs font-bold text-main">#{dept?.name?.toLowerCase().replace(/\s+/g, '-')}-general</span>
+              <MessageSquare size={14} className="text-accent" />
+              <span className="text-xs font-bold font-mono text-main tracking-tight">
+                #{dept?.name?.toLowerCase().replace(/\s+/g, '-')}-general
+              </span>
             </div>
-            <span className="text-[10px] font-mono text-muted">{messages.length} messages</span>
+            <span className="text-[10px] font-mono text-muted tabular-nums">{messages.length} messages</span>
           </div>
 
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {messages.length === 0 ? (
-              <p className="text-xs text-muted text-center py-12">No messages in department chat yet. Say hello!</p>
+              <EmptyState
+                icon={MessageSquare}
+                title="No messages yet"
+                description={`Start the conversation with the ${dept?.name || 'department'} team. Messages sent here are encrypted and scoped to department personnel.`}
+              />
             ) : (
               messages.map(msg => (
                 <div key={msg.id} className="flex items-start gap-2.5 text-xs">
-                  <div className="w-7 h-7 rounded-lg bg-surface-2 border border-divider text-main flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5">
-                    {msg.sender?.full_name?.charAt(0) || 'U'}
+                  <div className="w-7 h-7 rounded-lg bg-surface-2 border border-line text-main flex items-center justify-center font-bold text-[11px] shrink-0 mt-0.5 shadow-2xs">
+                    {msg.sender?.full_name?.charAt(0).toUpperCase() || 'U'}
                   </div>
                   <div className="space-y-0.5 min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-main text-[11px]">{msg.sender?.full_name || 'Member'}</span>
-                      <span className="text-[9px] font-mono text-muted">
+                    <div className="flex items-center gap-2 select-none">
+                      <span className="font-semibold text-main text-[11px]">{msg.sender?.full_name || 'Member'}</span>
+                      <span className="text-[9px] font-mono text-muted tabular-nums">
                         {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
-                    <p className="text-xs text-muted/90 bg-surface-2/40 border border-divider/60 rounded-lg p-2.5 inline-block max-w-xl">
+                    <p className="text-xs text-main bg-surface-2/60 border border-line rounded-lg p-2.5 inline-block max-w-xl leading-relaxed font-normal">
                       {msg.content}
                     </p>
                   </div>
@@ -1284,18 +1427,20 @@ export default function DepartmentWorkspace() {
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={handleSendMessage} className="p-3 border-t border-divider bg-surface flex items-center gap-2 shrink-0">
+          <form onSubmit={handleSendMessage} className="p-3 border-t border-divider bg-surface-2/30 flex items-center gap-2 shrink-0">
             <input
               type="text"
               placeholder={`Message #${dept?.name?.toLowerCase().replace(/\s+/g, '-')}-general...`}
               value={newMessage}
               onChange={e => setNewMessage(e.target.value)}
-              className="flex-1 px-3 py-2 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main placeholder-muted focus:outline-none"
+              className="flex-1 px-3.5 py-2 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-main placeholder-muted/60 focus:outline-none transition-colors"
             />
             <button
               type="submit"
               disabled={sendingMsg || !newMessage.trim()}
-              className="p-2 rounded-lg bg-accent hover:bg-accent/90 disabled:opacity-50 text-white cursor-pointer shadow-xs"
+              className="p-2 rounded-lg bg-accent hover:bg-accent/90 disabled:opacity-50 text-white cursor-pointer shadow-sm shadow-accent/20 transition-all"
+              title="Send Message"
+              aria-label="Send Message"
             >
               <Send size={14} />
             </button>
@@ -1307,17 +1452,20 @@ export default function DepartmentWorkspace() {
       {/* SECTION 5: ANNOUNCEMENTS                                                    */}
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'announcements' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold text-main uppercase font-mono tracking-wider">
-              Department Bulletins & Announcements
-            </h3>
+        <div className="space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between bg-card-bg border border-divider rounded-xl shadow-sm p-3 select-none">
+            <div>
+              <h3 className="text-[10px] font-mono font-bold text-muted uppercase tracking-wider">
+                Department Bulletins & Official Notices
+              </h3>
+              <p className="text-[11px] text-muted font-normal mt-0.5">Direct official broadcasts for department staff.</p>
+            </div>
             {canManageThisDept && (
               <button
                 onClick={() => setIsNewAnnounceOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold cursor-pointer shadow-xs"
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-sm shadow-accent/20 cursor-pointer transition-all"
               >
-                <Plus size={13} />
+                <Plus size={14} />
                 <span>New Announcement</span>
               </button>
             )}
@@ -1325,25 +1473,39 @@ export default function DepartmentWorkspace() {
 
           {announcements.length === 0 ? (
             <EmptyState
-              icon={Bell}
+              icon={Megaphone}
               title="No announcements posted"
-              description="Keep your department informed with pinned bulletins and official updates."
+              description="Keep your department informed with pinned bulletins, operational directives, and official updates."
+              action={canManageThisDept ? { label: 'Post First Announcement', onClick: () => setIsNewAnnounceOpen(true) } : undefined}
             />
           ) : (
             <div className="space-y-3">
-              {announcements.map(ann => (
-                <div key={ann.id} className="bg-card-bg border border-divider rounded-xl p-4.5 space-y-2 shadow-xs">
+              {announcements.map((ann, aIdx) => (
+                <motion.div
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.22, delay: Math.min(aIdx * 0.04, 0.3) }}
+                  key={ann.id}
+                  className="bg-card-bg border border-divider hover:border-accent/40 rounded-xl p-4.5 space-y-2.5 shadow-sm transition-all group"
+                >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-main flex items-center gap-1.5">
-                      {ann.is_pinned && <Pin size={12} className="text-accent" />}
+                    <span className="text-sm font-bold text-main flex items-center gap-2 group-hover:text-accent transition-colors tracking-tight">
+                      {ann.is_pinned && (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-accent/10 border border-accent/25 text-accent text-[10px] font-mono font-semibold">
+                          <Pin size={10} />
+                          <span>PINNED</span>
+                        </span>
+                      )}
                       <span>{ann.title}</span>
                     </span>
-                    <span className="text-[10px] font-mono text-muted">
-                      {new Date(ann.created_at).toLocaleDateString()}
+                    <span className="text-[10px] font-mono text-muted tabular-nums">
+                      {new Date(ann.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
                   </div>
-                  <p className="text-xs text-muted/90 leading-relaxed whitespace-pre-line">{ann.content}</p>
-                </div>
+                  <p className="text-xs text-muted/90 leading-relaxed font-normal whitespace-pre-line">
+                    {ann.content}
+                  </p>
+                </motion.div>
               ))}
             </div>
           )}
@@ -1354,17 +1516,17 @@ export default function DepartmentWorkspace() {
       {/* SECTION 6: WORKSPACE SETTINGS (MODULE CONFIGURATION & PURPOSE EDITOR)       */}
       {/* ═══════════════════════════════════════════════════════════════════════════ */}
       {activeTab === 'settings' && canManageThisDept && (
-        <div className="bg-card-bg border border-divider rounded-xl p-6 space-y-6">
-          <div className="border-b border-divider pb-3 flex items-center justify-between">
+        <div className="bg-card-bg border border-divider rounded-xl p-6 shadow-sm space-y-6 animate-fade-in">
+          <div className="border-b border-divider pb-3.5 flex items-center justify-between select-none">
             <div>
               <h3 className="text-xs font-bold text-main uppercase font-mono tracking-wider">
                 Department Workspace Configuration
               </h3>
-              <p className="text-[11px] text-muted">Customize operational scope, responsibilities and active modules.</p>
+              <p className="text-[11px] text-muted font-normal mt-0.5">Customize operational scope, responsibilities and active modules.</p>
             </div>
             <button
               onClick={() => setShowAddModuleModal(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 hover:bg-hover border border-divider text-xs font-semibold text-main cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-2 hover:bg-hover border border-divider text-xs font-semibold text-muted hover:text-main cursor-pointer transition-colors"
             >
               <Plus size={13} />
               <span>Add Custom Module</span>
@@ -1373,38 +1535,40 @@ export default function DepartmentWorkspace() {
 
           <form onSubmit={handleSaveSettings} className="space-y-5">
             <div>
-              <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
+              <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1.5">
                 Department Purpose
               </label>
               <input
                 type="text"
                 value={editPurpose}
                 onChange={e => setEditPurpose(e.target.value)}
-                className="w-full px-3.5 py-2 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main focus:outline-none"
+                placeholder="Operational purpose of this department..."
+                className="w-full px-3.5 py-2 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-main focus:outline-none transition-colors"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
+              <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1.5">
                 Description
               </label>
               <textarea
                 rows={2}
                 value={editDescription}
                 onChange={e => setEditDescription(e.target.value)}
-                className="w-full px-3.5 py-2 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main focus:outline-none resize-none"
+                placeholder="Summary description of department operations..."
+                className="w-full px-3.5 py-2 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-main focus:outline-none resize-none transition-colors"
               />
             </div>
 
             {/* Responsibilities Tag Editor */}
             <div>
-              <label className="block text-[11px] font-mono text-muted uppercase tracking-wider mb-1">
+              <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1.5">
                 Operational Responsibilities
               </label>
               <div className="flex gap-2 mb-2">
                 <input
                   type="text"
-                  placeholder="Add responsibility..."
+                  placeholder="Add responsibility and press Enter..."
                   value={editRespInput}
                   onChange={e => setEditRespInput(e.target.value)}
                   onKeyDown={e => {
@@ -1416,7 +1580,7 @@ export default function DepartmentWorkspace() {
                       }
                     }
                   }}
-                  className="flex-1 px-3 py-1.5 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main focus:outline-none"
+                  className="flex-1 px-3.5 py-1.5 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-main focus:outline-none transition-colors"
                 />
                 <button
                   type="button"
@@ -1426,28 +1590,34 @@ export default function DepartmentWorkspace() {
                       setEditRespInput('');
                     }
                   }}
-                  className="px-3 py-1.5 rounded-lg bg-surface border border-divider text-xs text-main"
+                  className="px-3.5 py-1.5 rounded-lg bg-surface-2 hover:bg-hover border border-divider text-xs font-semibold text-main transition-colors cursor-pointer"
                 >
                   Add
                 </button>
               </div>
 
-              <div className="flex flex-wrap gap-1.5 p-2 bg-surface-2/40 border border-divider rounded-lg">
-                {editResponsibilities.map((resp, idx) => (
-                  <span
-                    key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-accent/10 border border-accent/25 text-accent text-xs font-medium"
-                  >
-                    <span>{resp}</span>
-                    <button
-                      type="button"
-                      onClick={() => setEditResponsibilities(editResponsibilities.filter((_, i) => i !== idx))}
-                      className="hover:text-red-400 cursor-pointer"
+              <div className="flex flex-wrap gap-1.5 p-2.5 bg-surface-2/40 border border-line rounded-lg min-h-[44px]">
+                {editResponsibilities.length === 0 ? (
+                  <span className="text-[11px] text-muted/60 font-mono py-1">No responsibilities added yet.</span>
+                ) : (
+                  editResponsibilities.map((resp, idx) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-2 border border-divider text-muted text-[11px] font-mono"
                     >
-                      <X size={12} />
-                    </button>
-                  </span>
-                ))}
+                      <Tag size={10} className="text-accent" />
+                      <span>{resp}</span>
+                      <button
+                        type="button"
+                        onClick={() => setEditResponsibilities(editResponsibilities.filter((_, i) => i !== idx))}
+                        className="hover:text-red-400 cursor-pointer transition-colors"
+                        aria-label={`Remove responsibility ${resp}`}
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))
+                )}
               </div>
             </div>
 
@@ -1455,7 +1625,7 @@ export default function DepartmentWorkspace() {
               <button
                 type="submit"
                 disabled={savingSettings}
-                className="px-4 py-2 rounded-xl bg-accent hover:bg-accent/90 disabled:opacity-50 text-white text-xs font-bold cursor-pointer shadow-xs"
+                className="px-4 py-2 rounded-xl bg-accent hover:bg-accent/90 disabled:opacity-50 text-white text-xs font-semibold cursor-pointer shadow-sm shadow-accent/20 transition-all"
               >
                 {savingSettings ? 'Saving...' : 'Save Workspace Settings'}
               </button>
@@ -1466,37 +1636,54 @@ export default function DepartmentWorkspace() {
 
       {/* ── Modal: Add Custom Module in Settings ── */}
       {showAddModuleModal && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-card-bg border border-divider rounded-2xl p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-divider">
-              <h3 className="text-xs font-bold text-main">Add Custom Operational Module</h3>
-              <button onClick={() => setShowAddModuleModal(false)} className="text-muted hover:text-main">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-card-bg border border-divider rounded-2xl p-5 shadow-2xl space-y-4 font-sans select-none my-8 animate-scale-in">
+            <div className="flex items-center justify-between pb-2.5 border-b border-divider">
+              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-main">
+                Add Custom Operational Module
+              </h3>
+              <button
+                onClick={() => setShowAddModuleModal(false)}
+                className="p-1 rounded text-muted hover:text-main hover:bg-hover transition-colors cursor-pointer"
+                aria-label="Close"
+              >
                 <X size={14} />
               </button>
             </div>
 
             <div className="space-y-3">
-              <input
-                type="text"
-                placeholder="Module Name (e.g. Code Review, Grant Tracking, Market Intelligence)"
-                value={newModName}
-                onChange={e => setNewModName(e.target.value)}
-                className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
-              />
-              <input
-                type="text"
-                placeholder="Module Description..."
-                value={newModDesc}
-                onChange={e => setNewModDesc(e.target.value)}
-                className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
-              />
+              <div>
+                <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1">
+                  Module Name *
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Code Review, Grant Tracking, Market Intelligence"
+                  value={newModName}
+                  onChange={e => setNewModName(e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-main focus:outline-none transition-colors"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1">
+                  Module Description
+                </label>
+                <input
+                  type="text"
+                  placeholder="Operational purpose and scope..."
+                  value={newModDesc}
+                  onChange={e => setNewModDesc(e.target.value)}
+                  className="w-full px-3 py-2 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-main focus:outline-none transition-colors"
+                />
+              </div>
             </div>
 
             <div className="flex justify-end gap-2 pt-2 border-t border-divider">
               <button
                 type="button"
                 onClick={() => setShowAddModuleModal(false)}
-                className="px-3 py-1.5 text-xs text-muted hover:text-main"
+                className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-muted hover:text-main hover:bg-hover transition-colors cursor-pointer"
               >
                 Cancel
               </button>
@@ -1504,7 +1691,7 @@ export default function DepartmentWorkspace() {
                 type="button"
                 onClick={handleAddCustomModuleInSettings}
                 disabled={!newModName.trim()}
-                className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold disabled:opacity-50"
+                className="px-4 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-sm shadow-accent/20 disabled:opacity-50 transition-all cursor-pointer"
               >
                 Activate Module
               </button>
@@ -1515,49 +1702,59 @@ export default function DepartmentWorkspace() {
 
       {/* ── Modal: Add Operational Record Entry ── */}
       {isNewRecordOpen && currentOperationalModule && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-card-bg border border-divider rounded-2xl p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-divider">
-              <h3 className="text-xs font-bold text-main flex items-center gap-2">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-card-bg border border-divider rounded-2xl p-5 shadow-2xl space-y-4 font-sans select-none my-8 animate-scale-in">
+            <div className="flex items-center justify-between pb-2.5 border-b border-divider">
+              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-main flex items-center gap-2">
                 <Zap size={14} className="text-accent" />
                 <span>New {currentOperationalModule.name} Entry</span>
               </h3>
-              <button onClick={() => setIsNewRecordOpen(false)} className="text-muted hover:text-main">
+              <button
+                onClick={() => setIsNewRecordOpen(false)}
+                className="p-1 rounded text-muted hover:text-main hover:bg-hover transition-colors cursor-pointer"
+                aria-label="Close"
+              >
                 <X size={14} />
               </button>
             </div>
 
             <form onSubmit={handleCreateOperationalRecord} className="space-y-3">
               <div>
-                <label className="block text-[10px] font-mono text-muted uppercase mb-1">Title *</label>
+                <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1">
+                  Title *
+                </label>
                 <input
                   type="text"
                   required
-                  placeholder="Record title..."
+                  placeholder="Record or deliverable title..."
                   value={recordTitle}
                   onChange={e => setRecordTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main focus:outline-none"
+                  className="w-full px-3 py-2 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-main focus:outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono text-muted uppercase mb-1">Description</label>
+                <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1">
+                  Description
+                </label>
                 <textarea
                   rows={2}
                   placeholder="Details and operational context..."
                   value={recordDesc}
                   onChange={e => setRecordDesc(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-2 border border-divider focus:border-accent rounded-lg text-xs text-main focus:outline-none resize-none"
+                  className="w-full px-3 py-2 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-main focus:outline-none resize-none transition-colors"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-mono text-muted uppercase mb-1">Stage</label>
+                  <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1">
+                    Stage
+                  </label>
                   <select
                     value={recordStatus}
                     onChange={e => setRecordStatus(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                    className="w-full px-3 py-2 bg-surface-2 border border-line rounded-lg text-xs text-main focus:outline-none"
                   >
                     {currentOperationalModule.workflowStages.map(st => (
                       <option key={st} value={st}>{st}</option>
@@ -1566,11 +1763,13 @@ export default function DepartmentWorkspace() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono text-muted uppercase mb-1">Priority</label>
+                  <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1">
+                    Priority
+                  </label>
                   <select
                     value={recordPriority}
                     onChange={e => setRecordPriority(e.target.value as any)}
-                    className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                    className="w-full px-3 py-2 bg-surface-2 border border-line rounded-lg text-xs text-main focus:outline-none"
                   >
                     <option value="low">Low</option>
                     <option value="medium">Medium</option>
@@ -1582,11 +1781,13 @@ export default function DepartmentWorkspace() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-mono text-muted uppercase mb-1">Assignee</label>
+                  <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1">
+                    Assignee
+                  </label>
                   <select
                     value={recordAssignee}
                     onChange={e => setRecordAssignee(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                    className="w-full px-3 py-2 bg-surface-2 border border-line rounded-lg text-xs text-main focus:outline-none"
                   >
                     <option value="">Unassigned</option>
                     {members.map(m => (
@@ -1598,12 +1799,14 @@ export default function DepartmentWorkspace() {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono text-muted uppercase mb-1">Due Date</label>
+                  <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1">
+                    Due Date
+                  </label>
                   <input
                     type="date"
                     value={recordDueDate}
                     onChange={e => setRecordDueDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                    className="w-full px-3 py-2 bg-surface-2 border border-line rounded-lg text-xs text-main focus:outline-none"
                   />
                 </div>
               </div>
@@ -1612,14 +1815,14 @@ export default function DepartmentWorkspace() {
                 <button
                   type="button"
                   onClick={() => setIsNewRecordOpen(false)}
-                  className="px-3 py-1.5 text-xs text-muted hover:text-main"
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-muted hover:text-main hover:bg-hover transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingRecord || !recordTitle.trim()}
-                  className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold disabled:opacity-50"
+                  className="px-4 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-sm shadow-accent/20 disabled:opacity-50 transition-all cursor-pointer"
                 >
                   {savingRecord ? 'Saving...' : 'Add Entry'}
                 </button>
@@ -1631,22 +1834,30 @@ export default function DepartmentWorkspace() {
 
       {/* ── Modal: Add Member ── */}
       {isAddMemberOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-card-bg border border-divider rounded-2xl p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-divider">
-              <h3 className="text-xs font-bold text-main">Add Member to Department</h3>
-              <button onClick={() => setIsAddMemberOpen(false)} className="text-muted hover:text-main">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-card-bg border border-divider rounded-2xl p-5 shadow-2xl space-y-4 font-sans select-none my-8 animate-scale-in">
+            <div className="flex items-center justify-between pb-2.5 border-b border-divider">
+              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-main">
+                Add Member to Department
+              </h3>
+              <button
+                onClick={() => setIsAddMemberOpen(false)}
+                className="p-1 rounded text-muted hover:text-main hover:bg-hover transition-colors cursor-pointer"
+                aria-label="Close"
+              >
                 <X size={14} />
               </button>
             </div>
 
             <form onSubmit={handleAddMember} className="space-y-4">
               <div>
-                <label className="block text-[10px] font-mono text-muted uppercase mb-1">Select Employee</label>
+                <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1">
+                  Select Employee
+                </label>
                 <select
                   value={selectedAddUserId}
                   onChange={e => setSelectedAddUserId(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                  className="w-full px-3 py-2 bg-surface-2 border border-line rounded-lg text-xs text-main focus:outline-none"
                 >
                   {allOrgUsers.map(u => (
                     <option key={u.id} value={u.id}>
@@ -1657,11 +1868,13 @@ export default function DepartmentWorkspace() {
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono text-muted uppercase mb-1">Department Role</label>
+                <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1">
+                  Department Role
+                </label>
                 <select
                   value={selectedAddRole}
                   onChange={e => setSelectedAddRole(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                  className="w-full px-3 py-2 bg-surface-2 border border-line rounded-lg text-xs text-main focus:outline-none"
                 >
                   <option value="member">Member</option>
                   <option value="lead">Lead</option>
@@ -1674,14 +1887,14 @@ export default function DepartmentWorkspace() {
                 <button
                   type="button"
                   onClick={() => setIsAddMemberOpen(false)}
-                  className="px-3 py-1.5 text-xs text-muted hover:text-main"
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-muted hover:text-main hover:bg-hover transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={addingMember}
-                  className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold"
+                  className="px-4 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-sm shadow-accent/20 transition-all cursor-pointer"
                 >
                   {addingMember ? 'Assigning...' : 'Assign Member'}
                 </button>
@@ -1693,37 +1906,47 @@ export default function DepartmentWorkspace() {
 
       {/* ── Modal: Post Announcement ── */}
       {isNewAnnounceOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-card-bg border border-divider rounded-2xl p-5 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between pb-2 border-b border-divider">
-              <h3 className="text-xs font-bold text-main">Post Department Announcement</h3>
-              <button onClick={() => setIsNewAnnounceOpen(false)} className="text-muted hover:text-main">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+          <div className="w-full max-w-md bg-card-bg border border-divider rounded-2xl p-5 shadow-2xl space-y-4 font-sans select-none my-8 animate-scale-in">
+            <div className="flex items-center justify-between pb-2.5 border-b border-divider">
+              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-main">
+                Post Department Announcement
+              </h3>
+              <button
+                onClick={() => setIsNewAnnounceOpen(false)}
+                className="p-1 rounded text-muted hover:text-main hover:bg-hover transition-colors cursor-pointer"
+                aria-label="Close"
+              >
                 <X size={14} />
               </button>
             </div>
 
             <form onSubmit={handleCreateAnnouncement} className="space-y-3">
               <div>
-                <label className="block text-[10px] font-mono text-muted uppercase mb-1">Title</label>
+                <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1">
+                  Title *
+                </label>
                 <input
                   type="text"
                   required
                   placeholder="Announcement title..."
                   value={annTitle}
                   onChange={e => setAnnTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none"
+                  className="w-full px-3 py-2 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-main focus:outline-none transition-colors"
                 />
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono text-muted uppercase mb-1">Content</label>
+                <label className="block text-[10px] font-mono font-bold text-muted uppercase tracking-wider mb-1">
+                  Content *
+                </label>
                 <textarea
                   rows={4}
                   required
                   placeholder="Official notice or briefing..."
                   value={annContent}
                   onChange={e => setAnnContent(e.target.value)}
-                  className="w-full px-3 py-2 bg-surface-2 border border-divider rounded-lg text-xs text-main focus:outline-none resize-none"
+                  className="w-full px-3 py-2 bg-surface-2 border border-line focus:border-accent/40 rounded-lg text-xs text-main focus:outline-none resize-none transition-colors"
                 />
               </div>
 
@@ -1741,14 +1964,14 @@ export default function DepartmentWorkspace() {
                 <button
                   type="button"
                   onClick={() => setIsNewAnnounceOpen(false)}
-                  className="px-3 py-1.5 text-xs text-muted hover:text-main"
+                  className="px-3.5 py-1.5 rounded-lg text-xs font-medium text-muted hover:text-main hover:bg-hover transition-colors cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={savingAnn}
-                  className="px-4 py-1.5 rounded-lg bg-accent text-white text-xs font-semibold"
+                  className="px-4 py-1.5 rounded-lg bg-accent hover:bg-accent/90 text-white text-xs font-semibold shadow-sm shadow-accent/20 transition-all cursor-pointer"
                 >
                   {savingAnn ? 'Publishing...' : 'Publish'}
                 </button>
