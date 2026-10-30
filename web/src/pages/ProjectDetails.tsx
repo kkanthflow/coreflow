@@ -390,14 +390,16 @@ export default function ProjectDetails() {
 
           {/* Workflow Stage Stepper */}
           {(() => {
-            const stages = project.department.module_configurations?.project_configuration?.workflow_stages || [
-              { key: 'planning', label: 'Planning' },
-              { key: 'active', label: 'In Progress' },
-              { key: 'review', label: 'In Review' },
-              { key: 'completed', label: 'Completed' }
+            const rawStages = project.department.module_configurations?.project_configuration?.workflow_stages || [
+              'Planning', 'In Progress', 'In Review', 'Completed'
             ];
-            const currentStageKey = project.workflow_stage || project.status || 'planning';
-            const currentIdx = stages.findIndex((s: any) => s.key === currentStageKey);
+            const stages = rawStages.map((st: any) =>
+              typeof st === 'string'
+                ? { key: st.toLowerCase().replace(/[^a-z0-9]+/g, '_'), label: st }
+                : st
+            );
+            const currentStageKey = (project.workflow_stage || project.status || 'planning').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+            const currentIdx = stages.findIndex((s: any) => s.key === currentStageKey || s.label.toLowerCase() === currentStageKey);
 
             return (
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 pt-1">

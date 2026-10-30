@@ -87,18 +87,37 @@ export default function NewProject() {
     return selectedDept?.module_configurations?.project_configuration || null;
   }, [selectedDept]);
 
+  // Robustly normalize project types and workflow stages whether stored as string arrays or object arrays
+  const normalizedTypes = useMemo(() => {
+    if (!deptConfig?.project_types) return [];
+    return deptConfig.project_types.map((pt: any) =>
+      typeof pt === 'string'
+        ? { key: pt.toLowerCase().replace(/[^a-z0-9]+/g, '_'), label: pt }
+        : pt
+    );
+  }, [deptConfig]);
+
+  const normalizedStages = useMemo(() => {
+    if (!deptConfig?.workflow_stages) return [];
+    return deptConfig.workflow_stages.map((st: any) =>
+      typeof st === 'string'
+        ? { key: st.toLowerCase().replace(/[^a-z0-9]+/g, '_'), label: st }
+        : st
+    );
+  }, [deptConfig]);
+
   // Auto-update project types and workflow stages when selected department changes
   useEffect(() => {
-    if (deptConfig?.project_types && deptConfig.project_types.length > 0) {
-      const firstType = deptConfig.project_types[0];
+    if (normalizedTypes.length > 0) {
+      const firstType = normalizedTypes[0];
       setProjectType(firstType.key);
-      setWorkflowStage(firstType.default_stage || deptConfig.workflow_stages?.[0]?.key || 'planning');
+      setWorkflowStage(firstType.default_stage || normalizedStages[0]?.key || 'planning');
     } else {
       setProjectType('standard');
       setWorkflowStage('planning');
     }
     setCustomMetadata({});
-  }, [deptConfig]);
+  }, [normalizedTypes, normalizedStages]);
 
   const handleMetadataChange = (key: string, val: any) => {
     setCustomMetadata(prev => ({ ...prev, [key]: val }));
@@ -266,14 +285,14 @@ export default function NewProject() {
         </div>
 
         {/* Department-Specific Project Type */}
-        {deptConfig?.project_types && deptConfig.project_types.length > 0 && (
+        {normalizedTypes.length > 0 && (
           <div>
             <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1.5 flex items-center gap-1.5">
               <Layers size={12} className="text-muted" />
               <span>Department Project Type</span>
             </label>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {deptConfig.project_types.map(pt => (
+              {normalizedTypes.map(pt => (
                 <div
                   key={pt.key}
                   onClick={() => {
@@ -297,7 +316,7 @@ export default function NewProject() {
         )}
 
         {/* Department-Specific Workflow Stage */}
-        {deptConfig?.workflow_stages && deptConfig.workflow_stages.length > 0 && (
+        {normalizedStages.length > 0 && (
           <div>
             <label className="text-[10px] font-mono font-bold uppercase tracking-wider text-muted block mb-1.5 flex items-center gap-1.5">
               <Clock size={12} className="text-muted" />
@@ -308,7 +327,7 @@ export default function NewProject() {
               onChange={e => setWorkflowStage(e.target.value)}
               className="w-full bg-app border border-divider focus:border-[#FF6B4A]/50 rounded px-3 py-2 text-xs text-main focus:outline-none transition-colors capitalize"
             >
-              {deptConfig.workflow_stages.map(st => (
+              {normalizedStages.map(st => (
                 <option key={st.key} value={st.key}>{st.label}</option>
               ))}
             </select>
