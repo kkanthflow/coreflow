@@ -123,6 +123,8 @@ $$;
 -- ------------------------------------------------------------------------------
 -- 3. UPDATE UPDATE_ORGANIZATION_MEMBER_ROLE WITH OPTIONAL JOB TITLE UPDATE
 -- ------------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.update_organization_member_role(uuid, uuid, text);
+
 CREATE OR REPLACE FUNCTION public.update_organization_member_role(
   p_org_id uuid,
   p_target_user_id uuid,
@@ -271,6 +273,8 @@ $$;
 -- ------------------------------------------------------------------------------
 -- 4. UPDATE APPROVE_ORGANIZATION_JOIN_REQUEST TO SUPPORT ASSIGNED JOB TITLE
 -- ------------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.approve_organization_join_request(uuid, text, uuid, text);
+
 CREATE OR REPLACE FUNCTION public.approve_organization_join_request(
   p_request_id uuid,
   p_assigned_role text DEFAULT 'team_member'::text,

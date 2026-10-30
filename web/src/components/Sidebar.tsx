@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { BRAND } from '../brand';
@@ -6,10 +6,12 @@ import {
   LayoutDashboard, Briefcase, CheckSquare, Calendar, Video,
   MessageSquare, Users, Building2, Building, FileText,
   CreditCard, BarChart3, Settings, ChevronLeft, ShieldCheck, Sparkles, Zap,
-  Inbox, History, Shield
+  Inbox, History, Shield, Award
 } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 import { useRole } from '../hooks/useRole';
 import { useWorkspace } from '../hooks/useWorkspace';
+import { supabase } from '../lib/supabase';
 import AuvrynLogo from './AuvrynLogo';
 
 function cn(...classes: (string | false | null | undefined)[]) {
@@ -25,15 +27,60 @@ interface NavGroup {
     permission: any;
     shortcut?: string;
     badgeCount?: number;
+    color?: string;
   }[];
 }
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const { user, accountType } = useAuth();
   const { role, can } = useRole();
-  const { orgName, orgId } = useWorkspace();
+  const { orgName, orgId, isOwner, leadershipVisibility } = useWorkspace();
   const location = useLocation();
   const isSettingsActive = location.pathname.startsWith('/settings');
+
+  const [departments, setDepartments] = useState<{ id: string; name: string; color: string | null }[]>([]);
+
+  const isFreelancer = accountType === 'freelancer';
+  const isClient = role === 'client';
+  const isOrgAccount = accountType === 'organization' || (!!orgId && !isFreelancer && !isClient);
+
+  useEffect(() => {
+    if (!orgId || isFreelancer || isClient) {
+      setDepartments([]);
+      return;
+    }
+
+    async function loadAuthorizedDepts() {
+      try {
+        if (isOwner || leadershipVisibility === 'full_organization' || leadershipVisibility === 'all_departments') {
+          const { data } = await supabase
+            .from('departments')
+            .select('id, name, color')
+            .eq('org_id', orgId)
+            .eq('is_deleted', false)
+            .eq('status', 'active')
+            .order('name');
+          setDepartments(data || []);
+        } else {
+          // Check member's departments
+          const { data: dm } = await supabase
+            .from('department_members')
+            .select('departments:department_id(id, name, color, is_deleted, status)')
+            .eq('org_id', orgId)
+            .eq('user_id', user?.id);
+
+          const list = (dm || [])
+            .map((item: any) => item.departments)
+            .filter((d: any) => d && !d.is_deleted && d.status !== 'archived');
+          setDepartments(list);
+        }
+      } catch (e) {
+        console.error('Failed to load sidebar departments:', e);
+      }
+    }
+    loadAuthorizedDepts();
+  }, [orgId, isOwner, leadershipVisibility, user?.id, isFreelancer, isClient]);
 
   const CLIENT_NAV_GROUPS: NavGroup[] = [
     {
@@ -45,7 +92,63 @@ export default function Sidebar() {
     }
   ];
 
-  const NAV_GROUPS: NavGroup[] = [
+  // Specific Organization Account Navigation per Prompt Section 15
+  const ORG_NAV_GROUPS: NavGroup[] = [
+    {
+      label: 'ORGANIZATION',
+      items: [
+        { name: 'Overview', to: '/dashboard', icon: LayoutDashboard, permission: null, shortcut: '1' },
+        { name: 'Leadership Team', to: '/leadership', icon: Award, permission: null, shortcut: 'L' },
+        { name: 'Members', to: '/employees', icon: Users, permission: 'view_team_directory', shortcut: '2' },
+        { name: 'Departments', to: '/departments', icon: Building2, permission: null, shortcut: 'D' },
+        { name: 'Projects', to: '/projects', icon: Briefcase, permission: 'view_projects', shortcut: '3' },
+        { name: 'Tasks', to: '/tasks', icon: CheckSquare, permission: 'manage_tasks', shortcut: '4' },
+        { name: 'Chat', to: '/chat', icon: MessageSquare, permission: 'send_messages', shortcut: '5' },
+        { name: 'Meetings', to: '/meetings', icon: Video, permission: 'schedule_meetings', shortcut: '6' },
+        { name: 'Reports', to: '/analytics', icon: BarChart3, permission: 'view_reports', shortcut: '7' },
+        { name: 'Settings', to: '/settings', icon: Settings, permission: null },
+      ]
+    },
+    ...(departments.length > 0 ? [
+      {
+        label: 'DEPARTMENTS',
+        items: departments.map(d => ({
+          name: d.name,
+          to: `/departments/${d.id}`,
+          icon: Building2,
+          permission: null,
+          color: d.color || '#60A5FA',
+        }))
+      }
+    ] : []),
+    {
+      label: 'Governance & Audit',
+      items: [
+        { name: 'Roles & RBAC', to: '/roles-permissions', icon: Shield, permission: null },
+        { name: 'Audit Logs', to: '/audit-logs', icon: ShieldCheck, permission: 'view_audit_logs' },
+      ]
+    },
+    {
+      label: 'Automations',
+      items: [
+        { name: 'Workflows', to: '/workflows', icon: Zap, permission: null, shortcut: 'W' },
+        { name: 'Approvals', to: '/workflows/approvals', icon: Inbox, permission: null },
+        { name: 'Execution Logs', to: '/workflows/history', icon: History, permission: null },
+      ]
+    },
+    {
+      label: 'Business & CRM',
+      items: [
+        { name: 'Clients', to: '/clients', icon: Building, permission: 'manage_clients' },
+        { name: 'Invoices', to: '/invoices', icon: FileText, permission: 'view_invoices' },
+        { name: 'Settlements', to: '/payments', icon: CreditCard, permission: 'record_payments' },
+        { name: 'Subscription & Billing', to: '/settings/billing', icon: CreditCard, permission: null },
+      ]
+    }
+  ];
+
+  // Freelancer / Solo Navigation (Untouched and Isolated)
+  const FREELANCER_NAV_GROUPS: NavGroup[] = [
     {
       label: 'Workspace',
       items: [
@@ -70,17 +173,6 @@ export default function Sidebar() {
         { name: 'Chat', to: '/chat', icon: MessageSquare, permission: 'send_messages', shortcut: '6' },
       ]
     },
-    ...(orgId ? [
-      {
-        label: 'Organization',
-        items: [
-          { name: 'Employees', to: '/employees', icon: Users, permission: 'view_team_directory' },
-          { name: 'Departments', to: '/departments', icon: Building2, permission: 'manage_departments' },
-          { name: 'Roles & RBAC', to: '/roles-permissions', icon: Shield, permission: null },
-          { name: 'Audit Logs', to: '/audit-logs', icon: ShieldCheck, permission: 'view_audit_logs' },
-        ]
-      }
-    ] : []),
     {
       label: 'Business & CRM',
       items: [
@@ -99,7 +191,12 @@ export default function Sidebar() {
     }
   ];
 
-  const activeNavGroups = role === 'client' ? CLIENT_NAV_GROUPS : NAV_GROUPS;
+  const activeNavGroups = isClient 
+    ? CLIENT_NAV_GROUPS 
+    : isOrgAccount 
+    ? ORG_NAV_GROUPS 
+    : FREELANCER_NAV_GROUPS;
+
   const currentWorkspaceName = orgName || BRAND.company;
 
   return (
@@ -113,7 +210,7 @@ export default function Sidebar() {
         {collapsed ? (
           <button 
             onClick={() => setCollapsed(false)}
-            className="w-7 h-7 rounded-lg bg-surface-2 border border-line flex items-center justify-center text-text mx-auto hover:border-accent/50 hover:bg-surface transition-all shadow-xs"
+            className="w-7 h-7 rounded-lg bg-surface-2 border border-line flex items-center justify-center text-text mx-auto hover:border-accent/50 hover:bg-surface transition-all shadow-xs cursor-pointer"
             title="Expand Navigation"
           >
             <AuvrynLogo size={14} />
@@ -132,7 +229,7 @@ export default function Sidebar() {
             </div>
             <button
               onClick={() => setCollapsed(true)}
-              className="p-1.5 text-muted hover:text-text rounded-md hover:bg-surface-2 transition-colors"
+              className="p-1.5 text-muted hover:text-text rounded-md hover:bg-surface-2 transition-colors cursor-pointer"
               title="Collapse Rail"
             >
               <ChevronLeft size={13} />
@@ -169,7 +266,6 @@ export default function Sidebar() {
                 >
                   {({ isActive }) => (
                     <>
-                      {/* Active Signature Flow Shift Continuous Indicator */}
                       {isActive && (
                         <motion.div
                           layoutId="active-nav-indicator"
@@ -182,13 +278,20 @@ export default function Sidebar() {
                       )}
 
                       <div className={cn('flex items-center gap-2.5 min-w-0', collapsed ? 'justify-center' : '')}>
-                        <item.icon
-                          size={15}
-                          className={cn(
-                            "shrink-0 transition-all duration-150 group-hover:translate-x-0.5",
-                            isActive ? "text-accent" : "text-muted group-hover:text-text"
-                          )}
-                        />
+                        {item.color ? (
+                          <div 
+                            className="w-2.5 h-2.5 rounded-full shrink-0 border border-black/20" 
+                            style={{ backgroundColor: item.color }} 
+                          />
+                        ) : (
+                          <item.icon
+                            size={15}
+                            className={cn(
+                              "shrink-0 transition-all duration-150 group-hover:translate-x-0.5",
+                              isActive ? "text-accent" : "text-muted group-hover:text-text"
+                            )}
+                          />
+                        )}
                         {!collapsed && (
                           <span className="truncate tracking-tight text-[12px]">{item.name}</span>
                         )}

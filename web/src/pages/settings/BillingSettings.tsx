@@ -1,13 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  CreditCard, 
   Sparkles, 
-  Clock, 
   RefreshCw, 
   ArrowUpRight, 
-  CheckCircle2, 
-  AlertCircle, 
   FileText, 
   Download,
   Users,
@@ -17,15 +13,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useWorkspace } from '../../hooks/useWorkspace';
-import { useRole } from '../../hooks/useRole';
 import { supabase } from '../../lib/supabase';
-import { toast } from '../../components/ui/Toast';
-import {
-  SettingsSection,
-  SettingsRow,
-  SettingsSkeleton,
-  EmptyState,
-} from '../../components/settings';
+import { SettingsSection } from '../../components/settings';
 
 interface SubscriptionData {
   planId?: string;
@@ -57,8 +46,7 @@ interface PaymentRecord {
 
 export default function BillingSettings() {
   const { user } = useAuth();
-  const { orgId, orgName } = useWorkspace();
-  const { can } = useRole();
+  const { orgId } = useWorkspace();
   const navigate = useNavigate();
 
   const [loading, setLoading] = useState(true);

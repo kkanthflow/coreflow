@@ -41,7 +41,9 @@ const Chat            = lazyWithRetry(() => import('./pages/Chat'));
 const ChatRoom        = lazyWithRetry(() => import('./pages/ChatRoom'));
 const Employees       = lazyWithRetry(() => import('./pages/Employees'));
 const EmployeeProfile = lazyWithRetry(() => import('./pages/EmployeeProfile'));
+const LeadershipTeam  = lazyWithRetry(() => import('./pages/LeadershipTeam'));
 const Departments     = lazyWithRetry(() => import('./pages/Departments'));
+const DepartmentWorkspace = lazyWithRetry(() => import('./pages/DepartmentWorkspace'));
 const Clients         = lazyWithRetry(() => import('./pages/Clients'));
 const Invoices        = lazyWithRetry(() => import('./pages/Invoices'));
 const NewInvoice      = lazyWithRetry(() => import('./pages/NewInvoice'));
@@ -77,61 +79,61 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-    if (!session?.user?.id) return <Navigate to="/" replace />;
+  if (!session?.user?.id) return <Navigate to="/" replace />;
+  if (onboardingStatus === 'setup_required') {
+    return <Navigate to="/register/setup" replace />;
+  }
+  return <>{children}</>;
+}
+
+// Smart root: redirect authenticated users to dashboard, client portal, or setup, else show landing
+function RootRoute() {
+  const { session, loading, onboardingStatus, role } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
+        <AuvrynFoxLoader size="lg" text="Loading..." />
+      </div>
+    );
+  }
+  const pendingToken = getStoredInviteToken();
+  if (pendingToken) {
+    return <Navigate to={`/invite/client?token=${encodeURIComponent(pendingToken)}`} replace />;
+  }
+  if (session?.user?.id) {
+    if (role === 'client') {
+      return <Navigate to="/projects" replace />;
+    }
     if (onboardingStatus === 'setup_required') {
       return <Navigate to="/register/setup" replace />;
     }
-    return <>{children}</>;
+    return <Navigate to="/dashboard" replace />;
   }
+  return <Landing />;
+}
 
-  // Smart root: redirect authenticated users to dashboard, client portal, or setup, else show landing
-  function RootRoute() {
-    const { session, loading, onboardingStatus, role } = useAuth();
-    if (loading) {
-      return (
-        <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
-          <AuvrynFoxLoader size="lg" text="Loading..." />
-        </div>
-      );
-    }
-    const pendingToken = getStoredInviteToken();
+// Redirect already-logged-in users away from auth pages
+function GuestRoute({ children }: { children: React.ReactNode }) {
+  const { session, loading, onboardingStatus } = useAuth();
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
+        <AuvrynFoxLoader size="md" />
+      </div>
+    );
+  }
+  const pendingToken = getStoredInviteToken();
+  if (session?.user?.id) {
     if (pendingToken) {
       return <Navigate to={`/invite/client?token=${encodeURIComponent(pendingToken)}`} replace />;
     }
-    if (session?.user?.id) {
-      if (role === 'client') {
-        return <Navigate to="/projects" replace />;
-      }
-      if (onboardingStatus === 'setup_required') {
-        return <Navigate to="/register/setup" replace />;
-      }
-      return <Navigate to="/dashboard" replace />;
+    if (onboardingStatus === 'setup_required') {
+      return <Navigate to="/register/setup" replace />;
     }
-    return <Landing />;
+    return <Navigate to="/dashboard" replace />;
   }
-
-  // Redirect already-logged-in users away from auth pages
-  function GuestRoute({ children }: { children: React.ReactNode }) {
-    const { session, loading, onboardingStatus } = useAuth();
-    if (loading) {
-      return (
-        <div className="min-h-screen bg-app flex flex-col items-center justify-center text-main">
-          <AuvrynFoxLoader size="md" />
-        </div>
-      );
-    }
-    const pendingToken = getStoredInviteToken();
-    if (session?.user?.id) {
-      if (pendingToken) {
-        return <Navigate to={`/invite/client?token=${encodeURIComponent(pendingToken)}`} replace />;
-      }
-      if (onboardingStatus === 'setup_required') {
-        return <Navigate to="/register/setup" replace />;
-      }
-      return <Navigate to="/dashboard" replace />;
-    }
-    return <>{children}</>;
-  }
+  return <>{children}</>;
+}
 
 import { ToastProvider } from './components/ui/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -225,8 +227,14 @@ function App() {
                       <Route path="/employees" element={<Suspense fallback={<PageLoader />}><Employees /></Suspense>} />
                       <Route path="/employees/:id" element={<Suspense fallback={<PageLoader />}><EmployeeProfile /></Suspense>} />
                       
-                      {/* Departments & Clients */}
+                      {/* Leadership Team */}
+                      <Route path="/leadership" element={<Suspense fallback={<PageLoader />}><LeadershipTeam /></Suspense>} />
+                      <Route path="/leadership-team" element={<Navigate to="/leadership" replace />} />
+
+                      {/* Departments & Dedicated Department Workspaces */}
                       <Route path="/departments" element={<Suspense fallback={<PageLoader />}><Departments /></Suspense>} />
+                      <Route path="/departments/:id" element={<Suspense fallback={<PageLoader />}><DepartmentWorkspace /></Suspense>} />
+                      
                       <Route path="/clients"   element={<Suspense fallback={<PageLoader />}><Clients /></Suspense>} />
                       
                       {/* Roles & RBAC */}
