@@ -8,7 +8,9 @@ import { hasPermission } from '../lib/permissions';
 import {
   Building2, Plus, Search, Edit2, X, RefreshCw,
   Archive, CheckCircle2, Users, Target, Code,
-  ArrowRight, Sparkles, Layers, Compass, GitFork
+  ArrowRight, Sparkles, Layers, Compass, GitFork,
+  LayoutGrid, List, Check, DollarSign, Briefcase,
+  UserCheck, Shield, ChevronRight, Eye, AlertCircle
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import {
@@ -67,7 +69,15 @@ export default function Departments() {
   const navigate = useNavigate();
   const { role } = useAuth();
   const { orgId, isOwner, canManageDepartments, hasOrgOversight, assignedDepartmentId } = useWorkspace();
-  const canManage = isOwner || canManageDepartments || hasPermission(role, 'manage_departments');
+
+  // Owners, administrators, leaders with oversight, and authorized managers can manage departments
+  const canManage = isOwner ||
+    canManageDepartments ||
+    hasOrgOversight ||
+    role === 'owner' ||
+    role === 'administrator' ||
+    role === 'admin' ||
+    hasPermission(role, 'manage_departments');
 
   // Ordinary employees without org oversight are guided straight to their authorized department workspace
   useEffect(() => {
@@ -81,6 +91,8 @@ export default function Departments() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'archived'>('active');
+  const [parentFilter, setParentFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [archiveDeptId, setArchiveDeptId] = useState<string | null>(null);
 
   // ── 6-Step Dynamic Creation & Edit Wizard State ──
@@ -93,16 +105,16 @@ export default function Departments() {
   const [description, setDescription] = useState('');
   const [color, setColor] = useState(DEPT_COLORS[0]);
   const [parentDeptId, setParentDeptId] = useState<string>('');
-  const [objectives, setObjectives] = useState<string[]>([]);
-  const [objectiveInput, setObjectiveInput] = useState('');
 
-  // Step 2: Responsibilities
+  // Step 2: Responsibilities & Objectives
   const [responsibilities, setResponsibilities] = useState<string[]>([]);
   const [respInput, setRespInput] = useState('');
+  const [objectives, setObjectives] = useState<string[]>([]);
+  const [objectiveInput, setObjectiveInput] = useState('');
   const [operationalRequirements, setOperationalRequirements] = useState('');
   const [expectedOutcomes, setExpectedOutcomes] = useState('');
 
-  // Step 3: Capability Selection (13 Domains)
+  // Step 3: Capability Selection
   const [selectedCapabilityKeys, setSelectedCapabilityKeys] = useState<string[]>([]);
   const [capabilitySearch, setCapabilitySearch] = useState('');
   const [selectedDomainFilter, setSelectedDomainFilter] = useState<string>('all');
@@ -168,7 +180,7 @@ export default function Departments() {
 
       setDepartments(processedDepts);
 
-      // Org users
+      // Org users for assignment
       const { data: uData } = await supabase
         .from('user_organizations')
         .select('users:user_id(id, full_name, email)')
@@ -264,18 +276,39 @@ export default function Departments() {
   };
 
   // Responsibility handlers
-  const handleAddResponsibility = () => {
-    const trimmed = respInput.trim();
+  const handleAddResponsibility = (val?: string) => {
+    const trimmed = (val !== undefined ? val : respInput).trim();
     if (!trimmed) return;
     if (!responsibilities.includes(trimmed)) {
       setResponsibilities([...responsibilities, trimmed]);
     }
-    setRespInput('');
+    if (val === undefined) setRespInput('');
   };
 
   const handleRemoveResponsibility = (idx: number) => {
     setResponsibilities(responsibilities.filter((_, i) => i !== idx));
   };
+
+  // Smart Responsibility suggestions based on Department Name
+  const suggestedResponsibilities = useMemo(() => {
+    const n = name.toLowerCase();
+    if (n.includes('finance') || n.includes('account') || n.includes('treasury')) {
+      return ['Budget Allocation', 'Financial Forecasting', 'Accounts Payable & Receivable', 'Expense Approvals', 'Tax & Audit Compliance'];
+    }
+    if (n.includes('engineer') || n.includes('software') || n.includes('tech') || n.includes('dev')) {
+      return ['Sprint Execution & Velocity', 'System Architecture & RFCs', 'Code Reviews & CI/CD', 'Bug Triage & QA Regression', 'Production Deployments'];
+    }
+    if (n.includes('sale') || n.includes('market') || n.includes('growth')) {
+      return ['Lead Pipeline Management', 'Client Proposal Delivery', 'Multi-channel Advertising', 'Customer Acquisition Metrics', 'Revenue Retention'];
+    }
+    if (n.includes('hr') || n.includes('human') || n.includes('people') || n.includes('talent')) {
+      return ['Talent Acquisition & ATS', 'Employee Onboarding & Contracts', 'Leave & Attendance Approvals', 'Performance Reviews & OKRs', 'Company Culture & Policies'];
+    }
+    if (n.includes('operat') || n.includes('procure') || n.includes('vendor') || n.includes('logist')) {
+      return ['SOP Library & Governance', 'Vendor Agreements & Performance', 'Procurement Approvals', 'Asset & Inventory Tracking', 'Facilities & Equipment'];
+    }
+    return ['Workflow Coordination', 'Department Documentation', 'Project Milestone Delivery', 'Cross-team Alignment', 'Performance Tracking'];
+  }, [name]);
 
   // Capability toggling
   const handleToggleCapability = (key: string) => {
@@ -286,6 +319,35 @@ export default function Departments() {
         return [...prev, key];
       }
     });
+  };
+
+  // Smart Capability Suggestions based on Name & Responsibilities
+  const recommendedCapabilities = useMemo(() => {
+    const text = (name + ' ' + responsibilities.join(' ')).toLowerCase();
+    const suggested: string[] = [];
+
+    if (text.includes('finance') || text.includes('budget') || text.includes('expense') || text.includes('account')) {
+      suggested.push('budget_planning', 'expense_management', 'invoice_management', 'payment_management', 'accounts_payable', 'accounts_receivable', 'financial_reporting');
+    }
+    if (text.includes('software') || text.includes('engineer') || text.includes('dev') || text.includes('sprint') || text.includes('code')) {
+      suggested.push('software_development', 'technical_project_management', 'sprint_management', 'bug_tracking', 'quality_assurance', 'release_management');
+    }
+    if (text.includes('sale') || text.includes('lead') || text.includes('deal') || text.includes('pipeline') || text.includes('market') || text.includes('campaign')) {
+      suggested.push('lead_generation', 'sales_pipeline', 'customer_acquisition', 'campaign_management', 'content_planning', 'marketing_analytics');
+    }
+    if (text.includes('hr') || text.includes('people') || text.includes('talent') || text.includes('recruit') || text.includes('leave')) {
+      suggested.push('recruitment', 'employee_management', 'attendance', 'leave_management', 'performance_management', 'training_development');
+    }
+    if (text.includes('operat') || text.includes('vendor') || text.includes('procure') || text.includes('sop') || text.includes('asset')) {
+      suggested.push('daily_operations', 'resource_allocation', 'process_management', 'vendor_management', 'procurement', 'inventory_management');
+    }
+
+    return Array.from(new Set(suggested));
+  }, [name, responsibilities]);
+
+  const handleApplyRecommendedCapabilities = () => {
+    setSelectedCapabilityKeys(prev => Array.from(new Set([...prev, ...recommendedCapabilities])));
+    toast.success(`Applied ${recommendedCapabilities.length} suggested capabilities!`);
   };
 
   // Member management inside wizard
@@ -317,7 +379,6 @@ export default function Departments() {
           is_primary: role === 'head' ? true : m.is_primary,
         };
       }
-      // If setting a new head, downgrade previous head
       if (role === 'head' && m.role === 'head') {
         return { ...m, role: 'manager', can_manage: true };
       }
@@ -329,6 +390,28 @@ export default function Departments() {
   const activePreviewModules = useMemo(() => {
     return getActiveModulesForCapabilities(selectedCapabilityKeys);
   }, [selectedCapabilityKeys]);
+
+  // Determine workspace domain preview for Step 4 & Step 6
+  const previewDomain = useMemo(() => {
+    const n = name.toLowerCase();
+    const caps = selectedCapabilityKeys;
+    if (caps.some(c => c.includes('budget') || c.includes('expense') || c.includes('invoice') || c.includes('payable')) || n.includes('finance')) {
+      return { type: 'Finance & Treasury', color: 'emerald', desc: 'Fiscal balances, budget allocations, expenses, invoices, accounts payable and audits.' };
+    }
+    if (caps.some(c => c.includes('sprint') || c.includes('bug') || c.includes('release') || c.includes('software')) || n.includes('engineer') || n.includes('dev')) {
+      return { type: 'Engineering & Technology', color: 'cyan', desc: 'Agile sprint boards, bug and defect tracker, development epics, QA checklists and deployments.' };
+    }
+    if (caps.some(c => c.includes('lead') || c.includes('pipeline') || c.includes('campaign')) || n.includes('sale') || n.includes('market')) {
+      return { type: 'Sales & Marketing', color: 'amber', desc: 'Prospect funnels, deal pipeline, advertising campaigns, and revenue acquisition analytics.' };
+    }
+    if (caps.some(c => c.includes('recruit') || c.includes('leave') || c.includes('attendance')) || n.includes('hr') || n.includes('people')) {
+      return { type: 'Human Resources & Talent', color: 'indigo', desc: 'Candidate recruitment ATS, employee directory, leave approvals, and performance appraisals.' };
+    }
+    if (caps.some(c => c.includes('sop') || c.includes('vendor') || c.includes('procurement')) || n.includes('operat')) {
+      return { type: 'Operations & Procurement', color: 'blue', desc: 'Standard operating procedures, vendor contracts, procurement orders, and asset tracking.' };
+    }
+    return { type: 'Custom Capability Workspace', color: 'accent', desc: 'Dynamically generated operational hub based on your enabled capability modules.' };
+  }, [name, selectedCapabilityKeys]);
 
   // Submit and Activate Department
   const handleSaveDepartment = async () => {
@@ -412,18 +495,27 @@ export default function Departments() {
     }
   };
 
-  // Filtered department list
+  // Filtered department list (status, search, parent structure)
   const filteredDepartments = useMemo(() => {
     return departments.filter(d => {
       const matchesSearch = d.name.toLowerCase().includes(search.toLowerCase()) ||
-        (d.description && d.description.toLowerCase().includes(search.toLowerCase()));
+        (d.description && d.description.toLowerCase().includes(search.toLowerCase())) ||
+        (d.head_user && d.head_user.full_name?.toLowerCase().includes(search.toLowerCase())) ||
+        (Array.isArray(d.objectives) && d.objectives.some(o => o.toLowerCase().includes(search.toLowerCase())));
 
       const isArchived = d.is_archived || d.status === 'archived';
-      if (statusFilter === 'active') return matchesSearch && !isArchived;
-      if (statusFilter === 'archived') return matchesSearch && isArchived;
+      if (statusFilter === 'active' && isArchived) return false;
+      if (statusFilter === 'archived' && !isArchived) return false;
+
+      if (parentFilter === 'top_level' && d.parent_department_id) return false;
+      if (parentFilter === 'sub_departments' && !d.parent_department_id) return false;
+      if (parentFilter !== 'all' && parentFilter !== 'top_level' && parentFilter !== 'sub_departments' && d.parent_department_id !== parentFilter) {
+        return false;
+      }
+
       return matchesSearch;
     });
-  }, [departments, search, statusFilter]);
+  }, [departments, search, statusFilter, parentFilter]);
 
   // Filtered capabilities for wizard step 3
   const filteredCapabilityDomains = useMemo(() => {
@@ -445,13 +537,13 @@ export default function Departments() {
     <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
       {/* Page Header */}
       <PageHeader
-        title="Organization Departments"
+        title="Departments"
         description="Configure capability-driven departmental workspaces, leadership oversight, and sub-department hierarchies."
         badge={`${departments.filter(d => !d.is_archived && d.status !== 'archived').length} Active`}
         badgeVariant="success"
         action={
           canManage ? {
-            label: 'New Department',
+            label: '+ Add Department',
             icon: Plus,
             onClick: openCreateWizard,
             variant: 'primary',
@@ -470,25 +562,27 @@ export default function Departments() {
       />
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between bg-surface-1 border border-border-subtle p-3 rounded-xl shadow-xs">
-        <div className="relative w-full sm:w-80">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
-          <input
-            type="text"
-            placeholder="Search departments or objectives..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-surface-2 border border-border-subtle rounded-lg text-sm text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent"
-          />
-        </div>
+      <div className="flex flex-col lg:flex-row gap-3 items-center justify-between bg-surface-1 border border-border-subtle p-3 rounded-xl shadow-xs">
+        <div className="flex flex-col sm:flex-row items-center gap-2.5 w-full lg:w-auto flex-1">
+          {/* Search Input */}
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
+            <input
+              type="text"
+              placeholder="Search departments, heads, goals..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 bg-surface-2 border border-border-subtle rounded-lg text-xs text-text-primary placeholder:text-text-muted focus:outline-none focus:ring-1 focus:ring-accent"
+            />
+          </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="flex bg-surface-2 p-1 rounded-lg border border-border-subtle text-xs">
+          {/* Status Filter */}
+          <div className="flex bg-surface-2 p-1 rounded-lg border border-border-subtle text-xs w-full sm:w-auto">
             {(['active', 'archived', 'all'] as const).map(tab => (
               <button
                 key={tab}
                 onClick={() => setStatusFilter(tab)}
-                className={`px-3 py-1.5 rounded-md font-medium capitalize transition-colors ${
+                className={`px-3 py-1.5 rounded-md font-medium capitalize transition-colors flex-1 sm:flex-initial ${
                   statusFilter === tab
                     ? 'bg-surface-1 text-text-primary shadow-xs'
                     : 'text-text-muted hover:text-text-primary'
@@ -497,6 +591,46 @@ export default function Departments() {
                 {tab}
               </button>
             ))}
+          </div>
+
+          {/* Hierarchy Filter */}
+          <div className="w-full sm:w-auto">
+            <select
+              value={parentFilter}
+              onChange={e => setParentFilter(e.target.value)}
+              className="w-full sm:w-auto bg-surface-2 border border-border-subtle rounded-lg px-3 py-2 text-xs text-text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+            >
+              <option value="all">All Structures</option>
+              <option value="top_level">Top-Level Departments Only</option>
+              <option value="sub_departments">Sub-Departments Only</option>
+              {departments.filter(d => !d.parent_department_id).map(p => (
+                <option key={p.id} value={p.id}>Child of: {p.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* View Toggle & Refresh */}
+        <div className="flex items-center gap-2 self-end lg:self-auto">
+          <div className="flex bg-surface-2 p-1 rounded-lg border border-border-subtle text-xs">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === 'grid' ? 'bg-surface-1 text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
+              }`}
+              title="Cards View"
+            >
+              <LayoutGrid className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              className={`p-1.5 rounded-md transition-colors ${
+                viewMode === 'table' ? 'bg-surface-1 text-text-primary shadow-xs' : 'text-text-muted hover:text-text-primary'
+              }`}
+              title="List View"
+            >
+              <List className="w-4 h-4" />
+            </button>
           </div>
 
           <button
@@ -509,7 +643,7 @@ export default function Departments() {
         </div>
       </div>
 
-      {/* Departments Grid */}
+      {/* Departments View */}
       {loading ? (
         <div className="space-y-3">
           <SkeletonRow count={4} />
@@ -520,17 +654,18 @@ export default function Departments() {
           title={search ? 'No matching departments' : 'No departments configured'}
           description={
             search
-              ? 'Try adjusting your search criteria.'
+              ? 'Try adjusting your search criteria or clear your filters.'
               : 'Create your organization\'s first department using the 6-step capability wizard.'
           }
           action={
             canManage && !search ? {
-              label: 'Launch Department Wizard',
+              label: '+ Add Department',
               onClick: openCreateWizard,
             } : undefined
           }
         />
-      ) : (
+      ) : viewMode === 'grid' ? (
+        /* ── GRID CARDS VIEW ── */
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredDepartments.map(dept => {
             const isArchived = dept.is_archived || dept.status === 'archived';
@@ -606,7 +741,7 @@ export default function Departments() {
                   {/* Active Capabilities Badge Strip */}
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="text-[11px] font-medium text-text-muted">
-                      {dept.capabilities_count || 0} Capabilities Active
+                      {dept.capabilities_count || 0} Capabilities:
                     </span>
                     {(dept.active_capabilities || []).slice(0, 3).map(capKey => {
                       const cap = ALL_CAPABILITIES_MAP.get(capKey);
@@ -645,7 +780,7 @@ export default function Departments() {
                         <button
                           onClick={() => openEditWizard(dept)}
                           className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 rounded-md transition-colors"
-                          title="Edit Configuration"
+                          title="Edit Department"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
@@ -674,12 +809,123 @@ export default function Departments() {
             );
           })}
         </div>
+      ) : (
+        /* ── PROFESSIONAL TABLE LIST VIEW ── */
+        <div className="bg-surface-1 border border-border-subtle rounded-xl overflow-hidden shadow-xs">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-surface-2 text-text-muted uppercase tracking-wider font-semibold border-b border-border-subtle">
+                <tr>
+                  <th className="py-3 px-4">Department</th>
+                  <th className="py-3 px-4">Structure</th>
+                  <th className="py-3 px-4">Department Head</th>
+                  <th className="py-3 px-4">Members</th>
+                  <th className="py-3 px-4">Capabilities</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-subtle">
+                {filteredDepartments.map(dept => {
+                  const isArchived = dept.is_archived || dept.status === 'archived';
+                  return (
+                    <tr key={dept.id} className="hover:bg-surface-2/50 transition-colors">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: dept.color || '#FF6B4A' }} />
+                          <div>
+                            <div className="font-semibold text-text-primary text-sm">{dept.name}</div>
+                            <div className="text-[11px] text-text-muted line-clamp-1">{dept.description || 'No description'}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-text-muted">
+                        {dept.parent_department ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-surface-2 text-text-primary border border-border-subtle">
+                            <GitFork className="w-3 h-3" /> {dept.parent_department.name}
+                          </span>
+                        ) : (
+                          <span className="text-[11px] text-text-muted">Top-Level</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
+                        {dept.head_user ? (
+                          <div className="font-medium text-text-primary">{dept.head_user.full_name}</div>
+                        ) : (
+                          <span className="text-text-muted italic">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 font-mono font-medium text-text-primary">
+                        {dept.member_count || 0}
+                      </td>
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-1 flex-wrap max-w-xs">
+                          <span className="font-bold text-accent font-mono text-[11px]">{dept.capabilities_count || 0} active</span>
+                          {(dept.active_capabilities || []).slice(0, 2).map(ck => {
+                            const c = ALL_CAPABILITIES_MAP.get(ck);
+                            return c ? (
+                              <span key={ck} className="px-1.5 py-0.5 text-[10px] rounded bg-surface-2 text-text-muted border border-border-subtle">
+                                {c.name}
+                              </span>
+                            ) : null;
+                          })}
+                        </div>
+                      </td>
+                      <td className="py-3 px-4">
+                        {isArchived ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                            Archived
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Active
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          {canManage && (
+                            <>
+                              <button
+                                onClick={() => openEditWizard(dept)}
+                                className="p-1.5 text-text-muted hover:text-text-primary hover:bg-surface-2 rounded-md transition-colors"
+                                title="Edit Department"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              {!isArchived && (
+                                <button
+                                  onClick={() => setArchiveDeptId(dept.id)}
+                                  className="p-1.5 text-text-muted hover:text-rose-400 hover:bg-rose-500/10 rounded-md transition-colors"
+                                  title="Archive Department"
+                                >
+                                  <Archive className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </>
+                          )}
+                          <Link
+                            to={`/departments/${dept.id}`}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-accent/10 hover:bg-accent/20 text-accent font-medium rounded-lg transition-colors text-xs ml-1"
+                          >
+                            <span>Open</span>
+                            <ArrowRight className="w-3 h-3" />
+                          </Link>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* ── 6-STEP CREATION & CONFIGURATION WIZARD MODAL ── */}
       <AnimatePresence>
         {isWizardOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -691,11 +937,11 @@ export default function Departments() {
                 <div>
                   <h2 className="text-lg font-semibold text-text-primary flex items-center gap-2">
                     <Sparkles className="w-5 h-5 text-accent" />
-                    <span>{editingDept ? `Configure ${editingDept.name}` : 'New Department Wizard'}</span>
+                    <span>{editingDept ? `Edit Department: ${editingDept.name}` : 'Add New Department'}</span>
                   </h2>
                   <p className="text-xs text-text-muted mt-0.5">
                     Step {wizardStep} of 6 — {
-                      wizardStep === 1 ? 'Department Information' :
+                      wizardStep === 1 ? 'Department Details' :
                       wizardStep === 2 ? 'Responsibilities & Expected Outcomes' :
                       wizardStep === 3 ? 'Functional Capability Selection' :
                       wizardStep === 4 ? 'Workspace Modules Preview' :
@@ -717,24 +963,29 @@ export default function Departments() {
               <div className="grid grid-cols-6 border-b border-border-subtle bg-surface-1 text-center text-xs">
                 {[
                   { step: 1, label: 'Identity' },
-                  { step: 2, label: 'Scope' },
+                  { step: 2, label: 'Responsibilities' },
                   { step: 3, label: 'Capabilities' },
-                  { step: 4, label: 'Modules' },
+                  { step: 4, label: 'Preview' },
                   { step: 5, label: 'Members' },
-                  { step: 6, label: 'Confirm' },
+                  { step: 6, label: 'Review' },
                 ].map(item => (
-                  <div
+                  <button
                     key={item.step}
+                    type="button"
+                    onClick={() => {
+                      if (item.step < wizardStep) setWizardStep(item.step as any);
+                    }}
+                    disabled={item.step > wizardStep}
                     className={`py-2.5 font-medium border-b-2 transition-colors ${
                       wizardStep === item.step
                         ? 'border-accent text-accent bg-accent/5'
                         : wizardStep > item.step
-                        ? 'border-emerald-500 text-emerald-400'
-                        : 'border-transparent text-text-muted'
+                        ? 'border-emerald-500 text-emerald-400 cursor-pointer hover:bg-surface-2'
+                        : 'border-transparent text-text-muted opacity-60 cursor-not-allowed'
                     }`}
                   >
                     <span className="hidden sm:inline">{item.step}. </span>{item.label}
-                  </div>
+                  </button>
                 ))}
               </div>
 
@@ -742,30 +993,31 @@ export default function Departments() {
               <div className="p-6 overflow-y-auto space-y-6 flex-1">
                 {/* STEP 1: Department Information */}
                 {wizardStep === 1 && (
-                  <div className="space-y-5">
+                  <div className="space-y-5 animate-fade-in">
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">
                         Department Name *
                       </label>
                       <input
                         type="text"
-                        placeholder="e.g. Software Development, Financial Operations, Growth & Strategy"
+                        placeholder="e.g. Finance & Treasury, Software Development, Growth & Marketing, Operations"
                         value={name}
                         onChange={e => setName(e.target.value)}
                         className="w-full px-4 py-2.5 bg-surface-2 border border-border-subtle rounded-xl text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+                        autoFocus
                       />
                       <p className="text-[11px] text-text-muted mt-1">
-                        Private to your organization. Multiple organizations can use identical department names without conflicts.
+                        Isolated to your organization. Multiple organizations can safely create identical department names.
                       </p>
                     </div>
 
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">
-                        Description
+                        Description & Mission
                       </label>
                       <textarea
                         rows={2}
-                        placeholder="Brief overview of what this department accomplishes..."
+                        placeholder="Brief overview of what this department accomplishes and its core mission..."
                         value={description}
                         onChange={e => setDescription(e.target.value)}
                         className="w-full px-4 py-2 bg-surface-2 border border-border-subtle rounded-xl text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent"
@@ -778,7 +1030,7 @@ export default function Departments() {
                         <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-2">
                           Accent Color
                         </label>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           {DEPT_COLORS.map(c => (
                             <button
                               key={c}
@@ -795,7 +1047,7 @@ export default function Departments() {
 
                       <div>
                         <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">
-                          Parent Department (MNC Sub-departments)
+                          Optional Parent Department (Sub-Departments)
                         </label>
                         <select
                           value={parentDeptId}
@@ -813,57 +1065,50 @@ export default function Departments() {
                         </select>
                       </div>
                     </div>
-
-                    {/* Department Strategic Objectives */}
-                    <div className="space-y-2">
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted">
-                        Strategic Objectives & Targets
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          placeholder="e.g. Deliver Q4 enterprise security certification"
-                          value={objectiveInput}
-                          onChange={e => setObjectiveInput(e.target.value)}
-                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddObjective(); }}}
-                          className="flex-1 px-4 py-2 bg-surface-2 border border-border-subtle rounded-xl text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleAddObjective}
-                          className="px-4 py-2 bg-surface-3 hover:bg-surface-2 border border-border-subtle text-text-primary text-xs font-semibold rounded-xl"
-                        >
-                          Add
-                        </button>
-                      </div>
-
-                      {objectives.length > 0 && (
-                        <div className="space-y-1.5 mt-2">
-                          {objectives.map((obj, i) => (
-                            <div key={i} className="flex items-center justify-between bg-surface-2 px-3 py-1.5 rounded-lg border border-border-subtle text-xs">
-                              <span className="text-text-primary truncate">• {obj}</span>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveObjective(i)}
-                                className="text-text-muted hover:text-rose-400 ml-2"
-                              >
-                                <X className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
                   </div>
                 )}
 
                 {/* STEP 2: Responsibilities & Operational Scope */}
                 {wizardStep === 2 && (
-                  <div className="space-y-5">
+                  <div className="space-y-5 animate-fade-in">
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">
-                        Key Responsibilities
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                          Key Responsibilities
+                        </label>
+                        <span className="text-[11px] text-text-muted">Select or add custom tags</span>
+                      </div>
+
+                      {/* Smart Suggestions */}
+                      {suggestedResponsibilities.length > 0 && (
+                        <div className="mb-2.5 p-2.5 bg-surface-2 rounded-xl border border-border-subtle">
+                          <span className="text-[10px] uppercase font-bold text-accent tracking-wider block mb-1.5">
+                            Suggested for {name || 'Department'}:
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {suggestedResponsibilities.map((sug, i) => {
+                              const alreadyAdded = responsibilities.includes(sug);
+                              return (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onClick={() => handleAddResponsibility(sug)}
+                                  disabled={alreadyAdded}
+                                  className={`px-2.5 py-1 text-xs rounded-lg border transition-colors flex items-center gap-1 ${
+                                    alreadyAdded
+                                      ? 'bg-surface-3 text-text-muted border-border-subtle cursor-default opacity-60'
+                                      : 'bg-surface-1 hover:bg-accent/10 border-border-subtle hover:border-accent text-text-primary'
+                                  }`}
+                                >
+                                  <span>{alreadyAdded ? '✓' : '+'}</span>
+                                  <span>{sug}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="flex gap-2">
                         <input
                           type="text"
@@ -875,7 +1120,7 @@ export default function Departments() {
                         />
                         <button
                           type="button"
-                          onClick={handleAddResponsibility}
+                          onClick={() => handleAddResponsibility()}
                           className="px-4 py-2 bg-surface-3 hover:bg-surface-2 border border-border-subtle text-text-primary text-xs font-semibold rounded-xl"
                         >
                           Add Tag
@@ -903,13 +1148,54 @@ export default function Departments() {
                       )}
                     </div>
 
+                    {/* Department Strategic Objectives */}
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted">
+                        Strategic Objectives & Targets
+                      </label>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="e.g. Deliver Q4 enterprise security certification"
+                          value={objectiveInput}
+                          onChange={e => setObjectiveInput(e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); handleAddObjective(); }}}
+                          className="flex-1 px-4 py-2 bg-surface-2 border border-border-subtle rounded-xl text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddObjective}
+                          className="px-4 py-2 bg-surface-3 hover:bg-surface-2 border border-border-subtle text-text-primary text-xs font-semibold rounded-xl"
+                        >
+                          Add Goal
+                        </button>
+                      </div>
+
+                      {objectives.length > 0 && (
+                        <div className="space-y-1.5 mt-2">
+                          {objectives.map((obj, i) => (
+                            <div key={i} className="flex items-center justify-between bg-surface-2 px-3 py-1.5 rounded-lg border border-border-subtle text-xs">
+                              <span className="text-text-primary truncate">• {obj}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveObjective(i)}
+                                className="text-text-muted hover:text-rose-400 ml-2"
+                              >
+                                <X className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wider text-text-muted mb-1.5">
                         Expected Business Outcomes
                       </label>
                       <textarea
                         rows={2}
-                        placeholder="What specific measurable results should this department deliver?"
+                        placeholder="What specific measurable results or milestones should this department deliver?"
                         value={expectedOutcomes}
                         onChange={e => setExpectedOutcomes(e.target.value)}
                         className="w-full px-4 py-2 bg-surface-2 border border-border-subtle rounded-xl text-sm text-text-primary focus:outline-none focus:ring-1 focus:ring-accent"
@@ -933,7 +1219,26 @@ export default function Departments() {
 
                 {/* STEP 3: Functional Capability Selection */}
                 {wizardStep === 3 && (
-                  <div className="space-y-4">
+                  <div className="space-y-4 animate-fade-in">
+                    {/* Recommendation Banner */}
+                    {recommendedCapabilities.length > 0 && (
+                      <div className="bg-accent/10 border border-accent/30 rounded-xl p-3 flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-4 h-4 text-accent flex-shrink-0" />
+                          <div className="text-xs text-text-primary">
+                            <strong>{recommendedCapabilities.length} capabilities</strong> recommended based on your department scope.
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleApplyRecommendedCapabilities}
+                          className="px-3 py-1 bg-accent text-white text-xs font-semibold rounded-lg hover:bg-accent-hover transition-colors whitespace-nowrap shadow-xs"
+                        >
+                          Select Recommended
+                        </button>
+                      </div>
+                    )}
+
                     <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
                       <div className="relative w-full sm:w-72">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-text-muted" />
@@ -963,11 +1268,11 @@ export default function Departments() {
 
                     <div className="text-xs text-text-muted">
                       Selected: <strong className="text-accent">{selectedCapabilityKeys.length} capabilities</strong> across domains.
-                      Capabilities govern what modules and workflows are activated in the workspace.
+                      Capabilities dynamically determine which operational modules and workflows are activated.
                     </div>
 
                     {/* Domain Capability Cards */}
-                    <div className="space-y-5 max-h-[460px] overflow-y-auto pr-1">
+                    <div className="space-y-5 max-h-[440px] overflow-y-auto pr-1">
                       {filteredCapabilityDomains.map(domain => (
                         <div key={domain.category} className="bg-surface-2/40 border border-border-subtle rounded-xl p-4 space-y-3">
                           <div className="flex items-center justify-between">
@@ -992,7 +1297,7 @@ export default function Departments() {
                                   onClick={() => handleToggleCapability(cap.key)}
                                   className={`p-3 rounded-lg border text-left transition-all flex flex-col justify-between ${
                                     isSelected
-                                      ? 'bg-accent/10 border-accent text-text-primary shadow-xs'
+                                      ? 'bg-accent/10 border-accent text-text-primary shadow-xs ring-1 ring-accent'
                                       : 'bg-surface-1 border-border-subtle hover:border-border-strong text-text-muted hover:text-text-primary'
                                   }`}
                                 >
@@ -1013,59 +1318,142 @@ export default function Departments() {
                   </div>
                 )}
 
-                {/* STEP 4: Workspace Modules Configuration Preview */}
+                {/* STEP 4: Workspace Modules Configuration & Live Preview */}
                 {wizardStep === 4 && (
-                  <div className="space-y-5">
+                  <div className="space-y-5 animate-fade-in">
                     <div className="bg-surface-2 p-4 rounded-xl border border-border-subtle">
-                      <h4 className="text-sm font-semibold text-text-primary flex items-center gap-2">
-                        <Compass className="w-4 h-4 text-accent" />
-                        <span>Dynamic Workspace Preview</span>
-                      </h4>
-                      <p className="text-xs text-text-muted mt-1">
-                        Based on your selected capabilities, the following operational modules will automatically be provisioned in the workspace.
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Compass className="w-5 h-5 text-accent" />
+                          <h4 className="text-sm font-semibold text-text-primary">Workspace Architecture Preview</h4>
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded text-xs font-bold uppercase tracking-wider bg-accent/15 text-accent border border-accent/20">
+                          {previewDomain.type}
+                        </span>
+                      </div>
+                      <p className="text-xs text-text-muted mt-1.5">
+                        {previewDomain.desc}
                       </p>
                     </div>
 
-                    {activePreviewModules.length === 0 ? (
-                      <div className="p-8 text-center text-text-muted text-xs border border-dashed border-border-subtle rounded-xl">
-                        No custom capabilities selected yet. Standard collaboration modules (Overview, Work & Tasks, Members, Settings) will be activated by default.
+                    {/* Simulated Workspace Header Preview */}
+                    <div className="p-4 bg-surface-1 border border-border-subtle rounded-xl space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: color }} />
+                          <span className="text-base font-bold text-text-primary">{name || 'Department'}</span>
+                          <span className="text-[11px] text-text-muted">· {selectedCapabilityKeys.length} Capabilities</span>
+                        </div>
+                        <span className="text-[11px] text-emerald-400 font-semibold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                          Live Preview
+                        </span>
                       </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {activePreviewModules.map(mod => (
-                          <div
-                            key={mod.id}
-                            className="bg-surface-2 border border-border-subtle rounded-xl p-3.5 flex items-start gap-3"
-                          >
-                            <div className="p-2 rounded-lg bg-surface-3 text-accent flex-shrink-0">
-                              <Layers className="w-4 h-4" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2">
-                                <h5 className="text-xs font-semibold text-text-primary">{mod.name}</h5>
-                                <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-surface-1 text-text-muted">
-                                  {mod.category}
-                                </span>
+
+                      {/* Simulated Navigation Bar */}
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs border-b border-border-subtle">
+                        <span className="px-3 py-1.5 rounded-lg bg-surface-2 text-text-primary font-semibold border-b-2 border-accent">
+                          Overview
+                        </span>
+                        {previewDomain.type.includes('Finance') && (
+                          <>
+                            <span className="px-3 py-1.5 text-text-muted">Budgets</span>
+                            <span className="px-3 py-1.5 text-text-muted">Expenses</span>
+                            <span className="px-3 py-1.5 text-text-muted">Invoices</span>
+                            <span className="px-3 py-1.5 text-text-muted">Payables</span>
+                          </>
+                        )}
+                        {previewDomain.type.includes('Engineering') && (
+                          <>
+                            <span className="px-3 py-1.5 text-text-muted">Sprints</span>
+                            <span className="px-3 py-1.5 text-text-muted">Bug Tracker</span>
+                            <span className="px-3 py-1.5 text-text-muted">Epics & Projects</span>
+                            <span className="px-3 py-1.5 text-text-muted">QA & Releases</span>
+                          </>
+                        )}
+                        {previewDomain.type.includes('Sales') && (
+                          <>
+                            <span className="px-3 py-1.5 text-text-muted">Deal Pipeline</span>
+                            <span className="px-3 py-1.5 text-text-muted">Leads</span>
+                            <span className="px-3 py-1.5 text-text-muted">Campaigns</span>
+                          </>
+                        )}
+                        {previewDomain.type.includes('Human Resources') && (
+                          <>
+                            <span className="px-3 py-1.5 text-text-muted">Recruitment ATS</span>
+                            <span className="px-3 py-1.5 text-text-muted">Leave Approvals</span>
+                            <span className="px-3 py-1.5 text-text-muted">Performance</span>
+                          </>
+                        )}
+                        {previewDomain.type.includes('Operations') && (
+                          <>
+                            <span className="px-3 py-1.5 text-text-muted">SOPs & Runbooks</span>
+                            <span className="px-3 py-1.5 text-text-muted">Vendors</span>
+                            <span className="px-3 py-1.5 text-text-muted">Procurement</span>
+                            <span className="px-3 py-1.5 text-text-muted">Assets</span>
+                          </>
+                        )}
+                        <span className="px-3 py-1.5 text-text-muted">Members</span>
+                        <span className="px-3 py-1.5 text-text-muted">Settings</span>
+                      </div>
+                    </div>
+
+                    {/* Operational Modules Preview */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+                          Provisioned Operational Tools ({activePreviewModules.length})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setWizardStep(3)}
+                          className="text-xs text-accent hover:underline flex items-center gap-1"
+                        >
+                          <span>Adjust Capabilities</span>
+                          <ArrowRight className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      {activePreviewModules.length === 0 ? (
+                        <div className="p-8 text-center text-text-muted text-xs border border-dashed border-border-subtle rounded-xl">
+                          No capabilities selected. Return to Step 3 to enable functional tools.
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-72 overflow-y-auto">
+                          {activePreviewModules.map(mod => (
+                            <div
+                              key={mod.id}
+                              className="bg-surface-2 border border-border-subtle rounded-xl p-3.5 flex items-start gap-3"
+                            >
+                              <div className="p-2 rounded-lg bg-surface-3 text-accent flex-shrink-0">
+                                <Layers className="w-4 h-4" />
                               </div>
-                              <p className="text-[11px] text-text-muted mt-0.5">{mod.description}</p>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <h5 className="text-xs font-semibold text-text-primary">{mod.name}</h5>
+                                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-surface-1 text-text-muted">
+                                    {mod.category}
+                                  </span>
+                                </div>
+                                <p className="text-[11px] text-text-muted mt-0.5">{mod.description}</p>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
 
                 {/* STEP 5: Member Assignment */}
                 {wizardStep === 5 && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
+                  <div className="space-y-4 animate-fade-in">
+                    <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center justify-between">
                       <div>
                         <h4 className="text-sm font-semibold text-text-primary">Assign Organization Members</h4>
                         <p className="text-xs text-text-muted">Designate Department Head, Managers, and assigned Team Members.</p>
                       </div>
 
-                      <div className="w-64">
+                      <div className="w-full sm:w-64">
                         <input
                           type="text"
                           placeholder="Search members..."
@@ -1133,7 +1521,7 @@ export default function Departments() {
 
                 {/* STEP 6: Confirmation & Activation */}
                 {wizardStep === 6 && (
-                  <div className="space-y-5">
+                  <div className="space-y-5 animate-fade-in">
                     <div className="bg-surface-2 p-4 rounded-xl border border-border-subtle space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
@@ -1147,7 +1535,11 @@ export default function Departments() {
                       <p className="text-xs text-text-muted">{description || 'No description provided.'}</p>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                      <div className="bg-surface-2 p-3 rounded-lg border border-border-subtle">
+                        <span className="text-[11px] text-text-muted uppercase tracking-wider block">Workspace Type</span>
+                        <strong className="text-xs font-bold text-accent">{previewDomain.type}</strong>
+                      </div>
                       <div className="bg-surface-2 p-3 rounded-lg border border-border-subtle">
                         <span className="text-[11px] text-text-muted uppercase tracking-wider block">Objectives</span>
                         <strong className="text-sm text-text-primary">{objectives.length} targets</strong>
@@ -1157,10 +1549,24 @@ export default function Departments() {
                         <strong className="text-sm text-text-primary">{selectedCapabilityKeys.length} enabled</strong>
                       </div>
                       <div className="bg-surface-2 p-3 rounded-lg border border-border-subtle">
-                        <span className="text-[11px] text-text-muted uppercase tracking-wider block">Team Roster</span>
-                        <strong className="text-sm text-text-primary">{assignedMembers.length} assigned</strong>
+                        <span className="text-[11px] text-text-muted uppercase tracking-wider block">Assigned Team</span>
+                        <strong className="text-sm text-text-primary">{assignedMembers.length} members</strong>
                       </div>
                     </div>
+
+                    {/* Scope Review */}
+                    {responsibilities.length > 0 && (
+                      <div className="space-y-1.5">
+                        <span className="text-xs font-semibold uppercase tracking-wider text-text-muted">Responsibilities</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {responsibilities.map((r, i) => (
+                            <span key={i} className="px-2.5 py-1 text-xs bg-surface-2 text-text-primary rounded-lg border border-border-subtle">
+                              {r}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Capabilities List Summary */}
                     {selectedCapabilityKeys.length > 0 && (
@@ -1246,12 +1652,12 @@ export default function Departments() {
       {/* Confirmation Modal for Safe Archiving */}
       <ConfirmModal
         isOpen={!!archiveDeptId}
-        onClose={() => setArchiveDeptId(null)}
+        onCancel={() => setArchiveDeptId(null)}
         onConfirm={handleArchiveDepartment}
         title="Archive Department Workspace"
         message="Are you sure you want to archive this department? All historical projects, tasks, invoices, and documents will remain fully preserved in your organization records."
         confirmText="Archive Department"
-        variant="warning"
+        isDestructive={false}
       />
     </div>
   );
