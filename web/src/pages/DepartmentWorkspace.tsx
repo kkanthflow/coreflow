@@ -19,6 +19,14 @@ import {
   type TabDefinition,
 } from '../components/departments';
 import {
+  FinanceWorkspace,
+  EngineeringWorkspace,
+  SalesWorkspace,
+  HRWorkspace,
+  OperationsWorkspace,
+  CustomWorkspace,
+} from '../components/departments/workspaces';
+import {
   getActiveModulesForCapabilities,
 } from '../lib/capabilityEngine';
 import { ModuleDetailView } from '../components/departments/modules/ModuleDetailView';
@@ -333,6 +341,93 @@ export default function DepartmentWorkspace() {
     return getActiveModulesForCapabilities(activeCapabilities);
   }, [activeCapabilities]);
 
+  // Determine Primary Department Operational Domain
+  const departmentDomain = useMemo(() => {
+    const nameLower = (department?.name || '').toLowerCase();
+    const activeCapsList = activeCapabilities || [];
+
+    // 1. Finance & Accounting
+    const isFinanceCaps = activeCapsList.some((c: string) => 
+      c.includes('budget') || c.includes('expense') || c.includes('invoice') || c.includes('payroll') || c.includes('financial') || c.includes('tax')
+    );
+    if (
+      isFinanceCaps ||
+      nameLower.includes('finance') ||
+      nameLower.includes('accounting') ||
+      nameLower.includes('treasury') ||
+      nameLower.includes('fiscal') ||
+      nameLower.includes('billing')
+    ) {
+      return 'finance';
+    }
+
+    // 2. Engineering & Software Development
+    const isEngCaps = activeCapsList.some((c: string) => 
+      c.includes('sprint') || c.includes('defect') || c.includes('bug') || c.includes('git') || c.includes('code') || c.includes('release') || c.includes('qa')
+    );
+    if (
+      isEngCaps ||
+      nameLower.includes('software') ||
+      nameLower.includes('engineering') ||
+      nameLower.includes('development') ||
+      nameLower.includes('tech') ||
+      nameLower.includes('dev') ||
+      nameLower.includes('qa') ||
+      nameLower.includes('testing')
+    ) {
+      return 'engineering';
+    }
+
+    // 3. Sales & Marketing
+    const isSalesCaps = activeCapsList.some((c: string) => 
+      c.includes('lead') || c.includes('deal') || c.includes('campaign') || c.includes('pipeline') || c.includes('crm')
+    );
+    if (
+      isSalesCaps ||
+      nameLower.includes('sales') ||
+      nameLower.includes('marketing') ||
+      nameLower.includes('growth') ||
+      nameLower.includes('acquisition') ||
+      nameLower.includes('commercial')
+    ) {
+      return 'sales';
+    }
+
+    // 4. Human Resources & People
+    const isHRCaps = activeCapsList.some((c: string) => 
+      c.includes('recruitment') || c.includes('ats') || c.includes('leave') || c.includes('attendance') || c.includes('people') || c.includes('talent')
+    );
+    if (
+      isHRCaps ||
+      nameLower.includes('hr') ||
+      nameLower.includes('human resource') ||
+      nameLower.includes('people') ||
+      nameLower.includes('talent') ||
+      nameLower.includes('recruiting') ||
+      nameLower.includes('personnel')
+    ) {
+      return 'hr';
+    }
+
+    // 5. Operations & Logistics
+    const isOpsCaps = activeCapsList.some((c: string) => 
+      c.includes('sop') || c.includes('procurement') || c.includes('vendor') || c.includes('asset') || c.includes('logistics') || c.includes('facility')
+    );
+    if (
+      isOpsCaps ||
+      nameLower.includes('operation') ||
+      nameLower.includes('logistics') ||
+      nameLower.includes('facility') ||
+      nameLower.includes('supply') ||
+      nameLower.includes('procurement')
+    ) {
+      return 'operations';
+    }
+
+    // 6. Custom / Hybrid Domain
+    return 'custom';
+  }, [department, activeCapabilities]);
+
   // Dynamic Tabs Configuration
   const tabs: TabDefinition[] = useMemo(() => {
     const list: TabDefinition[] = [
@@ -587,579 +682,107 @@ export default function DepartmentWorkspace() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
-      {/* Department Header */}
-      <DepartmentHeader
-        departmentName={department?.name || 'Department Workspace'}
-        description={department?.description}
-        badge={department?.is_archived ? 'ARCHIVED' : `${activeCapabilities.length} CAPABILITIES`}
-        onRefresh={fetchWorkspaceData}
-        isRefreshing={loading}
-        primaryAction={
-          canAdminWorkspace ? {
-            label: 'New Task',
-            icon: Plus,
-            onClick: () => setIsTaskModalOpen(true),
-          } : undefined
-        }
-        secondaryAction={
-          canAdminWorkspace ? {
-            label: 'Cross-Dept Request',
-            icon: ArrowLeftRight,
-            onClick: () => setIsCollabModalOpen(true),
-          } : undefined
-        }
-        extraActions={
-          department?.parent_department ? (
-            <div className="flex items-center gap-1.5 px-3 py-1 bg-surface-2 border border-border-subtle rounded-lg text-xs text-text-muted">
-              <GitFork className="w-3.5 h-3.5 text-accent" />
-              <span>Sub-department of <strong className="text-text-primary">{department.parent_department.name}</strong></span>
-            </div>
-          ) : undefined
-        }
-      />
-
-      {/* Telemetry Strip */}
-      <DepartmentMetricStrip
-        metrics={[
-          { label: 'Active Tasks', value: tasks.filter(t => t.status !== 'done').length, indicator: `${tasks.filter(t => t.status === 'in_progress').length} In Progress` },
-          { label: 'Department Projects', value: projects.length, isOrange: true, indicator: `${projects.filter(p => p.status === 'active').length} Active` },
-          { label: 'Team Members', value: members.length, trend: department?.head_user ? `Head: ${department.head_user.full_name}` : 'Unassigned Head' },
-        ]}
-      />
-
-      {/* Dynamic Workspace Tabs */}
-      <DepartmentTabs
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        tabs={tabs}
-      />
-
-      {/* ── TAB 1: OVERVIEW ── */}
-      {activeTab === 'overview' && (
-        <div className="space-y-6 animate-fade-in">
-          {/* Identity & Strategic Objectives */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-6">
-              {/* Objectives Board */}
-              <div className="bg-surface-1 border border-border-subtle rounded-xl p-5 shadow-xs space-y-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
-                    <Target className="w-4 h-4 text-accent" />
-                    <span>Strategic Objectives & Targets</span>
-                  </h3>
-                  <span className="text-xs text-text-muted">
-                    {(department?.objectives || []).length} Objectives Defined
-                  </span>
-                </div>
-
-                {(department?.objectives || []).length === 0 ? (
-                  <p className="text-xs text-text-muted">No strategic objectives defined yet. Authorized managers can add objectives in Settings.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {(department?.objectives || []).map((obj, i) => (
-                      <div key={i} className="flex items-start gap-2.5 p-3 rounded-lg bg-surface-2 border border-border-subtle text-xs">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 flex-shrink-0" />
-                        <span className="text-text-primary leading-relaxed">{obj}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Responsibilities & Operational Scope */}
-              <div className="bg-surface-1 border border-border-subtle rounded-xl p-5 shadow-xs space-y-4">
-                <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
-                  <Briefcase className="w-4 h-4 text-accent" />
-                  <span>Key Responsibilities & Operational Scope</span>
-                </h3>
-
-                {(department?.responsibilities || []).length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {(department?.responsibilities || []).map((resp, i) => (
-                      <span key={i} className="px-3 py-1 bg-surface-2 border border-border-subtle rounded-lg text-xs text-text-primary font-medium">
-                        {resp}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {department?.expected_outcomes && (
-                  <div className="text-xs bg-surface-2 p-3 rounded-lg border border-border-subtle space-y-1">
-                    <strong className="text-text-primary block font-semibold">Expected Business Outcomes:</strong>
-                    <p className="text-text-muted leading-relaxed">{department.expected_outcomes}</p>
-                  </div>
-                )}
-
-                {department?.operational_requirements && (
-                  <div className="text-xs bg-surface-2 p-3 rounded-lg border border-border-subtle space-y-1">
-                    <strong className="text-text-primary block font-semibold">Operational Requirements & Governance:</strong>
-                    <p className="text-text-muted leading-relaxed">{department.operational_requirements}</p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Right Column: Leadership & Quick Navigation */}
-            <div className="space-y-6">
-              {/* Department Leadership Profile */}
-              <div className="bg-surface-1 border border-border-subtle rounded-xl p-5 shadow-xs space-y-4">
-                <h3 className="text-sm font-semibold text-text-primary flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-accent" />
-                  <span>Leadership Oversight</span>
-                </h3>
-
-                {department?.head_user ? (
-                  <div className="flex items-center gap-3 p-3 bg-surface-2 rounded-xl border border-border-subtle">
-                    <div className="w-10 h-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center font-bold text-accent text-sm">
-                      {department.head_user.full_name?.charAt(0) || 'H'}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-xs font-bold text-text-primary truncate">{department.head_user.full_name}</div>
-                      <div className="text-[11px] text-text-muted truncate">{department.head_user.email}</div>
-                      <span className="inline-block px-1.5 py-0.2 rounded text-[10px] font-semibold uppercase tracking-wider bg-accent/15 text-accent mt-1">
-                        Department Head
-                      </span>
-                    </div>
-                  </div>
-                ) : (
-                  <p className="text-xs text-text-muted">No Department Head appointed yet.</p>
-                )}
-
-                <div className="pt-2 border-t border-border-subtle flex items-center justify-between text-xs text-text-muted">
-                  <span>Assigned Managers:</span>
-                  <strong className="text-text-primary">
-                    {members.filter(m => m.can_manage || m.department_role === 'manager').length}
-                  </strong>
-                </div>
-              </div>
-
-              {/* Centralized Communication Shortcuts (Phase One Non-Negotiable) */}
-              <div className="bg-surface-1 border border-border-subtle rounded-xl p-5 shadow-xs space-y-3">
-                <h3 className="text-sm font-semibold text-text-primary">Organization Communications</h3>
-                <p className="text-xs text-text-muted">
-                  Official messaging and video meetings are centralized across the organization.
-                </p>
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <Link
-                    to="/chat"
-                    className="p-3 bg-surface-2 hover:bg-surface-3 rounded-lg border border-border-subtle text-center text-xs font-semibold text-text-primary transition-colors block"
-                  >
-                    Open Chat
-                  </Link>
-                  <Link
-                    to="/meetings"
-                    className="p-3 bg-surface-2 hover:bg-surface-3 rounded-lg border border-border-subtle text-center text-xs font-semibold text-text-primary transition-colors block"
-                  >
-                    Video Calls
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── TAB 2: WORK & TASKS ── */}
-      {activeTab === 'tasks' && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-semibold text-text-primary">Department Tasks & Execution Board</h3>
-            {canAdminWorkspace && (
-              <button
-                onClick={() => setIsTaskModalOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-semibold rounded-lg shadow-xs"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add Task</span>
-              </button>
-            )}
-          </div>
-
-          {tasks.length === 0 ? (
-            <EmptyState
-              icon={CheckSquare}
-              title="No department tasks"
-              description="Create the first task deliverable for this department."
-              action={canAdminWorkspace ? { label: 'New Task', onClick: () => setIsTaskModalOpen(true) } : undefined}
+      {/* Department-Specific Dynamic Operational Workspaces */}
+      {activeTab !== 'settings' && (
+        <>
+          {departmentDomain === 'finance' && (
+            <FinanceWorkspace
+              department={department}
+              deptId={deptId!}
+              orgId={orgId!}
+              members={members}
+              canAdminWorkspace={canAdminWorkspace}
+              isOwner={isOwner}
+              hasOrgOversight={hasOrgOversight}
+              onRefresh={fetchWorkspaceData}
             />
-          ) : (
-            <div className="space-y-2">
-              {tasks.map(t => (
-                <div
-                  key={t.id}
-                  className="bg-surface-1 border border-border-subtle hover:border-border-strong rounded-xl p-4 flex items-center justify-between shadow-xs transition-colors"
-                >
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 rounded-lg bg-surface-2 text-accent mt-0.5">
-                      <CheckSquare className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <h4 className="text-xs font-bold text-text-primary">{t.title}</h4>
-                      {t.description && <p className="text-[11px] text-text-muted mt-0.5 line-clamp-1">{t.description}</p>}
-                      <div className="flex items-center gap-2 mt-2 text-[10px] text-text-muted">
-                        <span className="uppercase font-semibold px-1.5 py-0.5 rounded bg-surface-2 text-text-primary">
-                          {t.priority}
-                        </span>
-                        {t.assignee && (
-                          <span>Assigned to: <strong className="text-text-primary">{t.assignee.full_name}</strong></span>
-                        )}
-                        {t.due_date && <span>Due: {new Date(t.due_date).toLocaleDateString()}</span>}
-                      </div>
-                    </div>
-                  </div>
-
-                  <span className={`px-2.5 py-1 text-xs font-semibold rounded-lg uppercase tracking-wider ${
-                    t.status === 'done' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                    t.status === 'in_progress' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
-                    'bg-surface-2 text-text-muted'
-                  }`}>
-                    {t.status.replace('_', ' ')}
-                  </span>
-                </div>
-              ))}
-            </div>
           )}
-        </div>
-      )}
 
-      {/* ── TAB 3: PROJECTS ── */}
-      {activeTab === 'projects' && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-text-primary">Department Projects & Workflows</h3>
-              <p className="text-xs text-text-muted">Specialized initiatives tailored to this department's operational identity.</p>
-            </div>
-            {canAdminWorkspace && (
-              <button
-                onClick={() => navigate('/projects/new')}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-semibold rounded-lg shadow-xs"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>New Project</span>
-              </button>
-            )}
-          </div>
-
-          {projects.length === 0 ? (
-            <EmptyState
-              icon={Briefcase}
-              title="No department projects"
-              description="Start a department-specific project or initiative."
-              action={canAdminWorkspace ? { label: 'Create Project', onClick: () => navigate('/projects/new') } : undefined}
+          {departmentDomain === 'engineering' && (
+            <EngineeringWorkspace
+              department={department}
+              deptId={deptId!}
+              orgId={orgId!}
+              members={members}
+              canAdminWorkspace={canAdminWorkspace}
+              isOwner={isOwner}
+              hasOrgOversight={hasOrgOversight}
+              onRefresh={fetchWorkspaceData}
             />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {projects.map(p => (
-                <div
-                  key={p.id}
-                  onClick={() => navigate(`/projects/${p.id}`)}
-                  className="bg-surface-1 border border-border-subtle hover:border-border-strong rounded-xl p-4 shadow-xs cursor-pointer transition-all flex flex-col justify-between group"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-surface-2 text-accent">
-                        {p.project_type || 'STANDARD'}
-                      </span>
-                      <span className="text-[10px] uppercase font-semibold px-2 py-0.5 rounded bg-surface-2 text-text-muted">
-                        {p.status}
-                      </span>
-                    </div>
-
-                    <h4 className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors line-clamp-1">
-                      {p.title}
-                    </h4>
-                    <p className="text-xs text-text-muted line-clamp-2">
-                      {p.description || 'No description provided.'}
-                    </p>
-                  </div>
-
-                  <div className="mt-4 pt-3 border-t border-border-subtle flex items-center justify-between text-xs text-text-muted">
-                    <span>Stage: <strong className="text-text-primary capitalize">{p.workflow_stage?.replace('_', ' ') || 'Planning'}</strong></span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </div>
-              ))}
-            </div>
           )}
-        </div>
+
+          {departmentDomain === 'sales' && (
+            <SalesWorkspace
+              department={department}
+              deptId={deptId!}
+              orgId={orgId!}
+              members={members}
+              canAdminWorkspace={canAdminWorkspace}
+              isOwner={isOwner}
+              hasOrgOversight={hasOrgOversight}
+              onRefresh={fetchWorkspaceData}
+            />
+          )}
+
+          {departmentDomain === 'hr' && (
+            <HRWorkspace
+              department={department}
+              deptId={deptId!}
+              orgId={orgId!}
+              members={members}
+              canAdminWorkspace={canAdminWorkspace}
+              isOwner={isOwner}
+              hasOrgOversight={hasOrgOversight}
+              onRefresh={fetchWorkspaceData}
+            />
+          )}
+
+          {departmentDomain === 'operations' && (
+            <OperationsWorkspace
+              department={department}
+              deptId={deptId!}
+              orgId={orgId!}
+              members={members}
+              canAdminWorkspace={canAdminWorkspace}
+              isOwner={isOwner}
+              hasOrgOversight={hasOrgOversight}
+              onRefresh={fetchWorkspaceData}
+            />
+          )}
+
+          {departmentDomain === 'custom' && (
+            <CustomWorkspace
+              department={department}
+              deptId={deptId!}
+              orgId={orgId!}
+              members={members}
+              canAdminWorkspace={canAdminWorkspace}
+              isOwner={isOwner}
+              hasOrgOversight={hasOrgOversight}
+              activeCapabilities={activeCapabilities.map((k: string) => ({ key: k, name: k }))}
+              onRefresh={fetchWorkspaceData}
+              onOpenSettings={() => setActiveTab('settings')}
+            />
+          )}
+        </>
       )}
 
-      {/* ── TAB 4: CAPABILITY-SPECIFIC MODULES ── */}
-      {activeTab === 'modules' && (
-        selectedModuleId && activeModules.find(m => m.id === selectedModuleId) ? (
-          <ModuleDetailView
-            module={activeModules.find(m => m.id === selectedModuleId)!}
-            deptId={deptId!}
-            orgId={orgId!}
-            deptName={department?.name || 'Department'}
-            members={members}
-            canManage={canAdminWorkspace}
-            onBack={() => setSelectedModuleId(null)}
-          />
-        ) : (
-          <div className="space-y-6 animate-fade-in">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div>
-                <h3 className="text-sm font-semibold text-text-primary">Dynamic Capability Modules</h3>
-                <p className="text-xs text-text-muted">
-                  These operational modules were dynamically provisioned from the {activeCapabilities.length} configured capabilities. Click any module to open its working operational workspace.
-                </p>
-              </div>
-              <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-md bg-surface-2 border border-border-subtle text-text-muted">
-                {activeModules.length} Active {activeModules.length === 1 ? 'Module' : 'Modules'}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {activeModules.map(mod => (
-                <div
-                  key={mod.id}
-                  onClick={() => setSelectedModuleId(mod.id)}
-                  tabIndex={0}
-                  role="button"
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      setSelectedModuleId(mod.id);
-                    }
-                  }}
-                  className="bg-surface-1 border border-border-subtle hover:border-accent/40 rounded-xl p-5 shadow-xs space-y-3 flex flex-col justify-between group cursor-pointer transition-all hover:shadow-md select-none"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="p-2.5 rounded-xl bg-accent/10 border border-accent/20 text-accent group-hover:scale-105 transition-transform">
-                        <Layers className="w-5 h-5" />
-                      </div>
-                      <span className="text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded bg-surface-2 text-text-muted">
-                        {mod.category}
-                      </span>
-                    </div>
-
-                    <h4 className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors">
-                      {mod.name}
-                    </h4>
-                    <p className="text-xs text-text-muted line-clamp-2">{mod.description}</p>
-                  </div>
-
-                  <div className="pt-3 border-t border-border-subtle flex items-center justify-between text-xs text-accent font-semibold group-hover:underline">
-                    <span className="flex items-center gap-1.5 text-emerald-400">
-                      <CheckCircle className="w-3.5 h-3.5" />
-                      <span>Active Workspace</span>
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <span>Open Module</span>
-                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )
-      )}
-
-      {/* ── TAB 5: MEMBERS & LEADERSHIP ── */}
-      {activeTab === 'members' && (
-        <div className="space-y-4 animate-fade-in">
-          <div className="flex items-center justify-between">
+      {/* ── SETTINGS VIEW ── */}
+      {activeTab === 'settings' && canAdminWorkspace && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between pb-4 border-b border-border-subtle">
             <div>
-              <h3 className="text-sm font-semibold text-text-primary">Department Members & Roles</h3>
-              <p className="text-xs text-text-muted">Staff assigned to this department with departmental authorities.</p>
-            </div>
-            {canAdminWorkspace && (
-              <button
-                onClick={() => setIsAddMemberOpen(true)}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-semibold rounded-lg shadow-xs"
-              >
-                <UserPlus className="w-3.5 h-3.5" />
-                <span>Assign Member</span>
-              </button>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {members.map(m => {
-              const isHead = m.department_role === 'head' || department?.head_user_id === m.user_id;
-              const isManager = isHead || m.can_manage || m.department_role === 'manager';
-
-              return (
-                <div
-                  key={m.id}
-                  className="bg-surface-1 border border-border-subtle rounded-xl p-4 shadow-xs flex items-center gap-3.5"
-                >
-                  <div className="w-10 h-10 rounded-full bg-accent/10 border border-accent/20 flex items-center justify-center font-bold text-accent text-sm">
-                    {m.user?.full_name?.charAt(0) || 'M'}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-1">
-                      <h4 className="text-xs font-bold text-text-primary truncate">{m.user?.full_name || 'Member'}</h4>
-                      <span className={`text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded ${
-                        isHead ? 'bg-accent/15 text-accent' :
-                        isManager ? 'bg-indigo-500/10 text-indigo-400' :
-                        'bg-surface-2 text-text-muted'
-                      }`}>
-                        {isHead ? 'Head' : isManager ? 'Manager' : 'Member'}
-                      </span>
-                    </div>
-                    <div className="text-[11px] text-text-muted truncate">{m.user?.email}</div>
-                    {m.user?.job_title && (
-                      <div className="text-[10px] text-accent mt-0.5 truncate">{m.user.job_title}</div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── TAB 6: CROSS-DEPARTMENT COLLABORATION ── */}
-      {activeTab === 'collaboration' && (
-        <div className="space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-sm font-semibold text-text-primary">Cross-Department Collaboration & Approvals</h3>
-              <p className="text-xs text-text-muted">Controlled inter-department workflows, task requests, and approval sign-offs.</p>
+              <h2 className="text-lg font-bold text-text-primary">Department Settings & Capabilities</h2>
+              <p className="text-xs text-text-muted">Configure identity, objectives, and capability engine</p>
             </div>
             <button
-              onClick={() => setIsCollabModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-accent text-white text-xs font-semibold rounded-lg shadow-xs"
+              onClick={() => setActiveTab('overview')}
+              className="px-3 py-1.5 text-xs bg-surface-2 hover:bg-surface-3 text-text-primary rounded-lg border border-border-subtle cursor-pointer"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>Dispatch Request</span>
+              Back to Workspace
             </button>
           </div>
 
-          {collabRequests.length === 0 ? (
-            <EmptyState
-              icon={ArrowLeftRight}
-              title="No collaboration requests"
-              description="Cross-department approval or task requests will be tracked here without exposing entire workspaces."
-              action={{ label: 'Dispatch Request', onClick: () => setIsCollabModalOpen(true) }}
-            />
-          ) : (
-            <div className="space-y-3">
-              {collabRequests.map(req => {
-                const isInbound = req.target_department_id === deptId;
-                const isPending = req.status === 'pending';
-
-                return (
-                  <div
-                    key={req.id}
-                    className="bg-surface-1 border border-border-subtle rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-xs"
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded ${
-                          isInbound ? 'bg-indigo-500/10 text-indigo-400' : 'bg-surface-2 text-text-muted'
-                        }`}>
-                          {isInbound ? 'Inbound Request' : 'Outbound Request'}
-                        </span>
-                        <span className="text-xs font-bold text-text-primary">{req.title}</span>
-                      </div>
-                      <p className="text-xs text-text-muted">{req.description || 'No description provided.'}</p>
-                      <div className="flex items-center gap-2 text-[10px] text-text-muted pt-1">
-                        <span>From: <strong>{req.requesting_department?.name || 'Department'}</strong></span>
-                        <span>➔ To: <strong>{req.target_department?.name || 'Department'}</strong></span>
-                        <span>• Requester: {req.requester?.full_name}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2.5 py-1 text-xs font-semibold rounded-lg uppercase tracking-wider ${
-                        req.status === 'approved' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' :
-                        req.status === 'rejected' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' :
-                        'bg-amber-500/10 text-amber-400 border border-amber-500/20'
-                      }`}>
-                        {req.status}
-                      </span>
-
-                      {isInbound && isPending && canAdminWorkspace && (
-                        <div className="flex items-center gap-1.5 ml-2">
-                          <button
-                            onClick={() => handleResolveCollab(req.id, 'approved')}
-                            className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-xs"
-                          >
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleResolveCollab(req.id, 'rejected')}
-                            className="px-3 py-1 bg-surface-2 hover:bg-rose-500/10 hover:text-rose-400 text-text-muted text-xs font-semibold rounded-lg border border-border-subtle"
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Department Activities Audit Log */}
-          <div className="bg-surface-1 border border-border-subtle rounded-xl p-5 shadow-xs space-y-3 mt-8">
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-text-muted flex items-center gap-2">
-              <Clock className="w-3.5 h-3.5 text-accent" />
-              <span>Department Activity Log</span>
-            </h4>
-            {activities.length === 0 ? (
-              <p className="text-xs text-text-muted">No activity records recorded yet.</p>
-            ) : (
-              <div className="space-y-2 max-h-60 overflow-y-auto">
-                {activities.map(act => (
-                  <div key={act.id} className="flex items-center justify-between text-xs py-1.5 border-b border-border-subtle/50 last:border-0">
-                    <span className="text-text-primary truncate">{act.title}</span>
-                    <span className="text-[10px] text-text-muted ml-2 shrink-0">
-                      {new Date(act.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* ── TAB 7: ANALYTICS ── */}
-      {activeTab === 'analytics' && (
-        <div className="space-y-6 animate-fade-in">
-          <div>
-            <h3 className="text-sm font-semibold text-text-primary">Department Operational Telemetry</h3>
-            <p className="text-xs text-text-muted">Performance KPIs, task velocity, and team distribution.</p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="bg-surface-1 border border-border-subtle rounded-xl p-5 shadow-xs space-y-2">
-              <span className="text-xs text-text-muted uppercase tracking-wider block font-semibold">Task Velocity</span>
-              <strong className="text-2xl font-bold text-text-primary">
-                {tasks.length > 0 ? Math.round((tasks.filter(t => t.status === 'done').length / tasks.length) * 100) : 0}%
-              </strong>
-              <p className="text-[11px] text-emerald-400">Completion rate of assigned deliverables</p>
-            </div>
-
-            <div className="bg-surface-1 border border-border-subtle rounded-xl p-5 shadow-xs space-y-2">
-              <span className="text-xs text-text-muted uppercase tracking-wider block font-semibold">Active Projects</span>
-              <strong className="text-2xl font-bold text-accent">
-                {projects.filter(p => p.status === 'active').length}
-              </strong>
-              <p className="text-[11px] text-text-muted">Ongoing department initiatives</p>
-            </div>
-
-            <div className="bg-surface-1 border border-border-subtle rounded-xl p-5 shadow-xs space-y-2">
-              <span className="text-xs text-text-muted uppercase tracking-wider block font-semibold">Collaboration Velocity</span>
-              <strong className="text-2xl font-bold text-indigo-400">
-                {collabRequests.filter(r => r.status === 'approved').length}
-              </strong>
-              <p className="text-[11px] text-text-muted">Approved cross-department workflows</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ── TAB 8: SETTINGS ── */}
-      {activeTab === 'settings' && canAdminWorkspace && (
         <form onSubmit={handleSaveSettings} className="space-y-6 max-w-3xl animate-fade-in">
           <div className="bg-surface-1 border border-border-subtle rounded-xl p-6 shadow-xs space-y-5">
             <h3 className="text-sm font-semibold text-text-primary">Workspace Configuration</h3>
@@ -1298,6 +921,7 @@ export default function DepartmentWorkspace() {
             </div>
           </div>
         </form>
+        </div>
       )}
 
       {/* ── CREATE TASK MODAL ── */}

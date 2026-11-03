@@ -18,9 +18,11 @@ import {
 } from 'lucide-react';
 
 export interface TabDefinition {
-  id: string;
+  id?: string;
+  key?: string;
   label: string;
   count?: number;
+  badge?: number | string;
   icon?: LucideIcon;
   category?: string;
   isCustom?: boolean;
@@ -28,7 +30,8 @@ export interface TabDefinition {
 
 export interface DepartmentTabsProps {
   activeTab: string;
-  onTabChange: (tabId: string) => void;
+  onTabChange?: (tabId: string) => void;
+  onChange?: (tabId: string) => void;
   tabs: TabDefinition[];
   syncWithUrl?: boolean;
 }
@@ -81,23 +84,29 @@ export function getTabIcon(tabId: string, category?: string): LucideIcon {
 export function DepartmentTabs({
   activeTab,
   onTabChange,
+  onChange,
   tabs,
   syncWithUrl = true,
 }: DepartmentTabsProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const tabListRef = useRef<HTMLDivElement>(null);
 
+  const handleCallback = (tabId: string) => {
+    if (onTabChange) onTabChange(tabId);
+    if (onChange) onChange(tabId);
+  };
+
   // Sync active tab from URL param if available
   useEffect(() => {
     if (!syncWithUrl) return;
     const urlTab = searchParams.get('tab');
-    if (urlTab && tabs.some(t => t.id === urlTab) && urlTab !== activeTab) {
-      onTabChange(urlTab);
+    if (urlTab && tabs.some(t => (t.id || t.key) === urlTab) && urlTab !== activeTab) {
+      handleCallback(urlTab);
     }
-  }, [searchParams, syncWithUrl, tabs, activeTab, onTabChange]);
+  }, [searchParams, syncWithUrl, tabs, activeTab]);
 
   const handleSelectTab = (tabId: string) => {
-    onTabChange(tabId);
+    handleCallback(tabId);
     if (syncWithUrl) {
       setSearchParams(prev => {
         const next = new URLSearchParams(prev);
@@ -129,7 +138,8 @@ export function DepartmentTabs({
     if (targetIndex >= 0) {
       e.preventDefault();
       const targetTab = safeTabs[targetIndex];
-      handleSelectTab(targetTab.id);
+      const tid = targetTab.id || targetTab.key || '';
+      handleSelectTab(tid);
 
       const buttons = tabListRef.current?.querySelectorAll<HTMLButtonElement>('[role="tab"]');
       if (buttons && buttons[targetIndex]) {
@@ -146,18 +156,20 @@ export function DepartmentTabs({
       className="flex bg-surface-2 border border-line rounded-lg p-0.5 overflow-x-auto scrollbar-none max-w-full select-none"
     >
       {safeTabs.map((tab, idx) => {
-        const isActive = activeTab === tab.id;
-        const Icon = tab.icon || getTabIcon(tab.id, tab.category);
+        const tabKey = tab.id || tab.key || `tab-${idx}`;
+        const isActive = activeTab === tabKey;
+        const Icon = tab.icon || getTabIcon(tabKey, tab.category);
+        const badgeCount = tab.badge !== undefined ? tab.badge : tab.count;
 
         return (
           <button
-            key={tab.id}
-            id={`tab-${tab.id}`}
+            key={tabKey}
+            id={`tab-${tabKey}`}
             role="tab"
             aria-selected={isActive}
-            aria-controls={`panel-${tab.id}`}
+            aria-controls={`panel-${tabKey}`}
             tabIndex={isActive ? 0 : -1}
-            onClick={() => handleSelectTab(tab.id)}
+            onClick={() => handleSelectTab(tabKey)}
             onKeyDown={e => handleKeyDown(e, idx)}
             className={`px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
               isActive
@@ -167,7 +179,7 @@ export function DepartmentTabs({
           >
             <Icon size={14} className={isActive ? 'text-accent' : 'text-text-muted'} />
             <span>{tab.label}</span>
-            {typeof tab.count === 'number' && (
+            {badgeCount !== undefined && badgeCount !== null && (
               <span
                 className={`text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded ${
                   isActive
@@ -175,7 +187,7 @@ export function DepartmentTabs({
                     : 'text-text-muted'
                 }`}
               >
-                {tab.count}
+                {badgeCount}
               </span>
             )}
           </button>

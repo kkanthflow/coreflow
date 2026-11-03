@@ -4,7 +4,17 @@ import { motion } from 'motion/react';
 import { RefreshCw } from 'lucide-react';
 
 export interface DepartmentHeaderProps {
-  departmentName: string;
+  departmentName?: string;
+  name?: string;
+  department?: any;
+  deptId?: string;
+  canAdminWorkspace?: boolean;
+  isOwner?: boolean;
+  hasOrgOversight?: boolean;
+  primaryDomain?: string;
+  color?: string;
+  headUser?: any;
+  parentDepartmentName?: string;
   description?: string | null;
   badge?: string;
   onRefresh?: () => void;
@@ -24,6 +34,16 @@ export interface DepartmentHeaderProps {
 
 export function DepartmentHeader({
   departmentName,
+  name,
+  department,
+  deptId,
+  canAdminWorkspace,
+  isOwner,
+  hasOrgOversight,
+  primaryDomain,
+  color,
+  headUser,
+  parentDepartmentName,
   description,
   badge = 'ACTIVE',
   onRefresh,
@@ -32,6 +52,12 @@ export function DepartmentHeader({
   secondaryAction,
   extraActions,
 }: DepartmentHeaderProps) {
+  const displayName = departmentName || name || department?.name || 'Department Workspace';
+  const displayDescription = description || department?.description;
+  const displayBadge = badge || primaryDomain || 'ACTIVE';
+  const displayParent = parentDepartmentName || department?.parent_department?.name;
+  const displayHead = headUser || department?.head_user;
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -6 }}
@@ -50,26 +76,26 @@ export function DepartmentHeader({
           </Link>
           <span className="text-muted/40">/</span>
           <span className="text-muted font-semibold truncate max-w-[200px] sm:max-w-xs">
-            {departmentName.toUpperCase()}
+            {displayName.toUpperCase()}
           </span>
         </div>
 
         {/* Title + Single Status Badge */}
         <div className="flex items-center gap-2.5 flex-wrap">
           <h1 className="text-xl sm:text-2xl font-bold text-main tracking-tight animate-fade-up">
-            {departmentName}
+            {displayName}
           </h1>
-          {badge && (
+          {displayBadge && (
             <span className="text-[10px] font-mono font-semibold px-2 py-0.5 rounded-md bg-surface-2 border border-divider text-muted animate-scale-in">
-              {badge}
+              {displayBadge}
             </span>
           )}
         </div>
 
         {/* One-line clamped description */}
-        {description && (
+        {displayDescription && (
           <p className="text-xs text-muted mt-0.5 font-normal truncate max-w-2xl animate-fade-in stagger-1">
-            {description}
+            {displayDescription}
           </p>
         )}
       </div>
