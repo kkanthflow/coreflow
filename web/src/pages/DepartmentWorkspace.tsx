@@ -4,20 +4,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useWorkspace } from '../hooks/useWorkspace';
-import {
-  CheckSquare, Briefcase, Plus, X, Clock, ArrowRight,
-  UserPlus, Shield, CheckCircle2, Target, Layers, ArrowLeftRight,
-  GitFork, Archive, ShieldCheck, CheckCircle
-} from 'lucide-react';
+import { X, Shield, ArrowLeftRight } from 'lucide-react';
 import { toast } from '../components/ui/Toast';
 import ConfirmModal from '../components/ConfirmModal';
-import { EmptyState } from '../components/ui/ObsidianPrimitives';
-import {
-  DepartmentHeader,
-  DepartmentTabs,
-  DepartmentMetricStrip,
-  type TabDefinition,
-} from '../components/departments';
 import {
   FinanceWorkspace,
   EngineeringWorkspace,
@@ -26,10 +15,6 @@ import {
   OperationsWorkspace,
   CustomWorkspace,
 } from '../components/departments/workspaces';
-import {
-  getActiveModulesForCapabilities,
-} from '../lib/capabilityEngine';
-import { ModuleDetailView } from '../components/departments/modules/ModuleDetailView';
 
 interface DepartmentDetail {
   id: string;
@@ -100,16 +85,6 @@ interface CollabRequest {
   target_department?: { id: string; name: string };
 }
 
-interface DeptActivity {
-  id: string;
-  actor_id: string;
-  activity_type: string;
-  title: string;
-  details: any;
-  created_at: string;
-  actor?: { id: string; full_name: string };
-}
-
 const DEPT_COLORS = [
   '#FF6B4A', '#60A5FA', '#34D399', '#FBBF24',
   '#A78BFA', '#F472B6', '#22D3EE', '#FB923C'
@@ -127,14 +102,12 @@ export default function DepartmentWorkspace() {
   const [tasks, setTasks] = useState<DeptTask[]>([]);
   const [projects, setProjects] = useState<DeptProject[]>([]);
   const [collabRequests, setCollabRequests] = useState<CollabRequest[]>([]);
-  const [activities, setActivities] = useState<DeptActivity[]>([]);
   const [allOrgDepartments, setAllOrgDepartments] = useState<{ id: string; name: string }[]>([]);
   const [availableOrgMembers, setAvailableOrgMembers] = useState<{ id: string; full_name: string; email: string }[]>([]);
 
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
-  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
 
   // Permissions in this workspace
   const userMemberRecord = useMemo(() => {
@@ -143,7 +116,7 @@ export default function DepartmentWorkspace() {
 
   const isDeptHead = userMemberRecord?.department_role === 'head' || department?.head_user_id === user?.id;
   const isDeptManager = isDeptHead || userMemberRecord?.can_manage || userMemberRecord?.department_role === 'manager';
-  const canAdminWorkspace = isOwner || hasOrgOversight || isDeptManager;
+  const canAdminWorkspace = isOwner || hasOrgOversight || canManageDepartments || isDeptManager;
 
   // Modals
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
@@ -177,8 +150,6 @@ export default function DepartmentWorkspace() {
   const [editParentId, setEditParentId] = useState('');
   const [editObjectives, setEditObjectives] = useState<string[]>([]);
   const [newObjInput, setNewObjInput] = useState('');
-  const [editResponsibilities, setEditResponsibilities] = useState<string[]>([]);
-  const [newRespInput, setNewRespInput] = useState('');
   const [editOutcomes, setEditOutcomes] = useState('');
   const [editRequirements, setEditRequirements] = useState('');
   const [savingSettings, setSavingSettings] = useState(false);
@@ -291,20 +262,7 @@ export default function DepartmentWorkspace() {
 
       setCollabRequests((collabData as any) || []);
 
-      // 8. Fetch Activities Audit Log
-      const { data: actData } = await supabase
-        .from('department_activities')
-        .select(`
-          *,
-          actor:actor_id(id, full_name)
-        `)
-        .eq('department_id', deptId)
-        .order('created_at', { ascending: false })
-        .limit(25);
-
-      setActivities((actData as any) || []);
-
-      // 9. Fetch other org departments for parent selection & collaboration
+      // 8. Fetch other org departments for parent selection & collaboration
       const { data: deptsList } = await supabase
         .from('departments')
         .select('id, name')
@@ -335,11 +293,6 @@ export default function DepartmentWorkspace() {
   useEffect(() => {
     fetchWorkspaceData();
   }, [fetchWorkspaceData]);
-
-  // Compute Active Modules
-  const activeModules = useMemo(() => {
-    return getActiveModulesForCapabilities(activeCapabilities);
-  }, [activeCapabilities]);
 
   // Determine Primary Department Operational Domain
   const departmentDomain = useMemo(() => {
@@ -428,24 +381,6 @@ export default function DepartmentWorkspace() {
     return 'custom';
   }, [department, activeCapabilities]);
 
-  // Dynamic Tabs Configuration
-  const tabs: TabDefinition[] = useMemo(() => {
-    const list: TabDefinition[] = [
-      { id: 'overview', label: 'Overview' },
-      { id: 'tasks', label: 'Work & Tasks', count: tasks.filter(t => t.status !== 'done').length },
-      { id: 'projects', label: 'Projects', count: projects.length },
-      { id: 'modules', label: 'Capability Modules', count: activeModules.length },
-      { id: 'members', label: 'Team & Leadership', count: members.length },
-      { id: 'collaboration', label: 'Cross-Dept Collab', count: collabRequests.filter(r => r.status === 'pending' && r.target_department_id === deptId).length },
-      { id: 'analytics', label: 'Analytics' },
-    ];
-
-    if (canAdminWorkspace) {
-      list.push({ id: 'settings', label: 'Settings' });
-    }
-    return list;
-  }, [tasks, projects, activeModules, members, collabRequests, deptId, canAdminWorkspace]);
-
   // Create Task Handler
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -510,24 +445,6 @@ export default function DepartmentWorkspace() {
       toast.error(err.message || 'Failed to send collaboration request.');
     } finally {
       setSavingCollab(false);
-    }
-  };
-
-  // Resolve Collaboration Request Handler
-  const handleResolveCollab = async (requestId: string, status: 'approved' | 'rejected' | 'in_progress' | 'completed') => {
-    if (!orgId) return;
-    try {
-      const { error } = await supabase.rpc('resolve_collaboration_request', {
-        p_org_id: orgId,
-        p_request_id: requestId,
-        p_status: status,
-      });
-
-      if (error) throw error;
-      toast.success(`Request marked as ${status}.`);
-      fetchWorkspaceData();
-    } catch (err: any) {
-      toast.error(err.message || 'Failed to update request.');
     }
   };
 
@@ -647,6 +564,15 @@ export default function DepartmentWorkspace() {
       toast.error(err.message || 'Failed to archive department.');
     }
   };
+
+  // Loading Spinner
+  if (loading && !department) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-6 h-6 border-2 border-accent border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   // Access Denied Screen
   if (hasAccess === false) {
@@ -1252,12 +1178,12 @@ export default function DepartmentWorkspace() {
       {/* Confirmation Modal for Safe Archiving */}
       <ConfirmModal
         isOpen={isArchiveConfirmOpen}
-        onClose={() => setIsArchiveConfirmOpen(false)}
+        onCancel={() => setIsArchiveConfirmOpen(false)}
         onConfirm={handleArchiveDepartment}
         title="Archive Department Workspace"
         message="Are you sure you want to archive this department? All historical projects, tasks, invoices, and documents will remain fully preserved in your organization records."
         confirmText="Archive Department"
-        variant="warning"
+        isDestructive={true}
       />
     </div>
   );
