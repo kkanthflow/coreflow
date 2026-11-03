@@ -67,14 +67,15 @@ export function SalesWorkspace({
         `)
         .eq('department_id', deptId);
 
-      if (error) throw error;
-
-      const allRecords = data || [];
-      setLeads(allRecords.filter(r => r.module_key === 'leads'));
-      setCampaigns(allRecords.filter(r => r.module_key === 'campaigns'));
+      if (error) {
+        console.warn('Error loading sales department_records:', error);
+      } else {
+        const allRecords = data || [];
+        setLeads(allRecords.filter(r => r.module_key === 'leads'));
+        setCampaigns(allRecords.filter(r => r.module_key === 'campaigns'));
+      }
     } catch (err: any) {
       console.error('Error loading sales workspace data:', err);
-      toast.error('Failed to load sales records.');
     } finally {
       setLoading(false);
     }

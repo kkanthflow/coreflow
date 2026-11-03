@@ -71,12 +71,14 @@ export function FinanceWorkspace({
         `)
         .eq('department_id', deptId);
 
-      if (recordsErr) throw recordsErr;
-
-      const allRecords = recordsData || [];
-      setBudgets(allRecords.filter(r => r.module_key === 'budgets'));
-      setExpenses(allRecords.filter(r => r.module_key === 'expenses'));
-      setPayables(allRecords.filter(r => r.module_key === 'payables'));
+      if (recordsErr) {
+        console.warn('Error loading finance department_records:', recordsErr);
+      } else {
+        const allRecords = recordsData || [];
+        setBudgets(allRecords.filter(r => r.module_key === 'budgets'));
+        setExpenses(allRecords.filter(r => r.module_key === 'expenses'));
+        setPayables(allRecords.filter(r => r.module_key === 'payables'));
+      }
 
       // 2. Load organization invoices from public.invoices
       const { data: invData, error: invErr } = await supabase
@@ -89,11 +91,13 @@ export function FinanceWorkspace({
         .eq('is_deleted', false)
         .order('created_at', { ascending: false });
 
-      if (invErr) throw invErr;
-      setInvoices(invData || []);
+      if (invErr) {
+        console.warn('Error loading invoices:', invErr);
+      } else {
+        setInvoices(invData || []);
+      }
     } catch (err: any) {
       console.error('Error loading finance workspace data:', err);
-      toast.error('Failed to load financial records.');
     } finally {
       setLoading(false);
     }

@@ -133,12 +133,14 @@ export function ModuleDetailView({
           .eq('module_key', module.id)
           .order('created_at', { ascending: false });
 
-        if (error) throw error;
-        setRecords(data || []);
+        if (error) {
+          console.warn('Error loading module records:', error);
+        } else {
+          setRecords(data || []);
+        }
       }
     } catch (err: any) {
       console.error('Failed to load module records:', err);
-      toast.error(err.message || 'Failed to load records.');
     } finally {
       setLoading(false);
     }

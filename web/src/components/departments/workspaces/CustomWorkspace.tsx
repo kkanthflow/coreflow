@@ -56,11 +56,13 @@ export function CustomWorkspace({
         .eq('department_id', deptId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setRecords(data || []);
+      if (error) {
+        console.warn('Error fetching custom department_records:', error);
+      } else {
+        setRecords(data || []);
+      }
     } catch (err: any) {
       console.error('Error fetching custom department data:', err);
-      toast.error('Failed to load department records.');
     } finally {
       setLoading(false);
     }

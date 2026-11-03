@@ -65,14 +65,15 @@ export function HRWorkspace({
         `)
         .eq('department_id', deptId);
 
-      if (error) throw error;
-
-      const allRecords = data || [];
-      setCandidates(allRecords.filter(r => r.module_key === 'recruitment'));
-      setLeaveRequests(allRecords.filter(r => r.module_key === 'leave_approvals'));
+      if (error) {
+        console.warn('Error loading HR department_records:', error);
+      } else {
+        const allRecords = data || [];
+        setCandidates(allRecords.filter(r => r.module_key === 'recruitment'));
+        setLeaveRequests(allRecords.filter(r => r.module_key === 'leave_approvals'));
+      }
     } catch (err: any) {
       console.error('Error loading HR data:', err);
-      toast.error('Failed to load HR records.');
     } finally {
       setLoading(false);
     }

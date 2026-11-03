@@ -70,20 +70,25 @@ export function EngineeringWorkspace({
         `)
         .eq('department_id', deptId);
 
-      if (recordsErr) throw recordsErr;
-
-      const allRecords = recordsData || [];
-      setSprints(allRecords.filter(r => r.module_key === 'sprint_board'));
-      setBugs(allRecords.filter(r => r.module_key === 'bug_tracker'));
+      if (recordsErr) {
+        console.warn('Error loading department_records:', recordsErr);
+      } else {
+        const allRecords = recordsData || [];
+        setSprints(allRecords.filter(r => r.module_key === 'sprint_board'));
+        setBugs(allRecords.filter(r => r.module_key === 'bug_tracker'));
+      }
 
       // 2. Load department projects from public.projects
       const { data: projData, error: projErr } = await supabase
         .from('projects')
-        .select('id, name, description, status, project_type, workflow_stage, created_at')
+        .select('id, title, description, status, project_type, workflow_stage, created_at')
         .eq('department_id', deptId);
 
-      if (projErr) throw projErr;
-      setProjects(projData || []);
+      if (projErr) {
+        console.warn('Error loading projects:', projErr);
+      } else {
+        setProjects((projData || []).map(p => ({ ...p, name: p.title || p.name })));
+      }
 
       // 3. Load department tasks
       const { data: taskData, error: taskErr } = await supabase
@@ -91,11 +96,13 @@ export function EngineeringWorkspace({
         .select('id, title, status, priority, due_date')
         .eq('department_id', deptId);
 
-      if (taskErr) throw taskErr;
-      setTasks(taskData || []);
+      if (taskErr) {
+        console.warn('Error loading tasks:', taskErr);
+      } else {
+        setTasks(taskData || []);
+      }
     } catch (err: any) {
       console.error('Error loading engineering workspace data:', err);
-      toast.error('Failed to load engineering records.');
     } finally {
       setLoading(false);
     }
@@ -577,7 +584,7 @@ export function EngineeringWorkspace({
             {projects.map(p => (
               <div key={p.id} className="bg-surface-1 border border-border-subtle rounded-xl p-5 shadow-xs space-y-2">
                 <div className="flex justify-between items-start">
-                  <h4 className="text-sm font-bold text-text-primary">{p.name}</h4>
+                  <h4 className="text-sm font-bold text-text-primary">{p.title || p.name}</h4>
                   <span className="px-2 py-0.5 rounded text-[10px] uppercase font-bold bg-cyan-500/10 text-cyan-400">
                     {p.workflow_stage || p.status}
                   </span>

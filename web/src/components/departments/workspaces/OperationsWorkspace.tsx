@@ -84,16 +84,17 @@ export function OperationsWorkspace({
         .eq('department_id', deptId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-
-      const allRecords = data || [];
-      setSops(allRecords.filter((r) => r.module_key === 'sops' || r.module_key === 'runbooks' || r.record_type === 'sop'));
-      setVendors(allRecords.filter((r) => r.module_key === 'vendors' || r.record_type === 'vendor'));
-      setProcurements(allRecords.filter((r) => r.module_key === 'procurement' || r.module_key === 'purchase_orders' || r.record_type === 'procurement'));
-      setAssets(allRecords.filter((r) => r.module_key === 'assets' || r.module_key === 'inventory' || r.record_type === 'asset'));
+      if (error) {
+        console.warn('Error fetching operations department_records:', error);
+      } else {
+        const allRecords = data || [];
+        setSops(allRecords.filter((r) => r.module_key === 'sops' || r.module_key === 'runbooks' || r.record_type === 'sop'));
+        setVendors(allRecords.filter((r) => r.module_key === 'vendors' || r.record_type === 'vendor'));
+        setProcurements(allRecords.filter((r) => r.module_key === 'procurement' || r.module_key === 'purchase_orders' || r.record_type === 'procurement'));
+        setAssets(allRecords.filter((r) => r.module_key === 'assets' || r.module_key === 'inventory' || r.record_type === 'asset'));
+      }
     } catch (err: any) {
       console.error('Error fetching operations data:', err);
-      toast.error('Failed to load operations workspace data.');
     } finally {
       setLoading(false);
     }
