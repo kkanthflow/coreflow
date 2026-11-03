@@ -21,6 +21,7 @@ import {
 import {
   getActiveModulesForCapabilities,
 } from '../lib/capabilityEngine';
+import { ModuleDetailView } from '../components/departments/modules/ModuleDetailView';
 
 interface DepartmentDetail {
   id: string;
@@ -125,6 +126,7 @@ export default function DepartmentWorkspace() {
   const [loading, setLoading] = useState(true);
   const [hasAccess, setHasAccess] = useState<boolean | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
 
   // Permissions in this workspace
   const userMemberRecord = useMemo(() => {
@@ -885,45 +887,76 @@ export default function DepartmentWorkspace() {
 
       {/* ── TAB 4: CAPABILITY-SPECIFIC MODULES ── */}
       {activeTab === 'modules' && (
-        <div className="space-y-6 animate-fade-in">
-          <div>
-            <h3 className="text-sm font-semibold text-text-primary">Dynamic Capability Modules</h3>
-            <p className="text-xs text-text-muted">
-              These operational modules were dynamically provisioned from the {activeCapabilities.length} configured capabilities.
-            </p>
-          </div>
+        selectedModuleId && activeModules.find(m => m.id === selectedModuleId) ? (
+          <ModuleDetailView
+            module={activeModules.find(m => m.id === selectedModuleId)!}
+            deptId={deptId!}
+            orgId={orgId!}
+            deptName={department?.name || 'Department'}
+            members={members}
+            canManage={canAdminWorkspace}
+            onBack={() => setSelectedModuleId(null)}
+          />
+        ) : (
+          <div className="space-y-6 animate-fade-in">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div>
+                <h3 className="text-sm font-semibold text-text-primary">Dynamic Capability Modules</h3>
+                <p className="text-xs text-text-muted">
+                  These operational modules were dynamically provisioned from the {activeCapabilities.length} configured capabilities. Click any module to open its working operational workspace.
+                </p>
+              </div>
+              <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-md bg-surface-2 border border-border-subtle text-text-muted">
+                {activeModules.length} Active {activeModules.length === 1 ? 'Module' : 'Modules'}
+              </span>
+            </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {activeModules.map(mod => (
-              <div
-                key={mod.id}
-                className="bg-surface-1 border border-border-subtle rounded-xl p-5 shadow-xs space-y-3 flex flex-col justify-between"
-              >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <div className="p-2.5 rounded-xl bg-accent/10 border border-accent/20 text-accent">
-                      <Layers className="w-5 h-5" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {activeModules.map(mod => (
+                <div
+                  key={mod.id}
+                  onClick={() => setSelectedModuleId(mod.id)}
+                  tabIndex={0}
+                  role="button"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setSelectedModuleId(mod.id);
+                    }
+                  }}
+                  className="bg-surface-1 border border-border-subtle hover:border-accent/40 rounded-xl p-5 shadow-xs space-y-3 flex flex-col justify-between group cursor-pointer transition-all hover:shadow-md select-none"
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="p-2.5 rounded-xl bg-accent/10 border border-accent/20 text-accent group-hover:scale-105 transition-transform">
+                        <Layers className="w-5 h-5" />
+                      </div>
+                      <span className="text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded bg-surface-2 text-text-muted">
+                        {mod.category}
+                      </span>
                     </div>
-                    <span className="text-[10px] uppercase font-semibold tracking-wider px-2 py-0.5 rounded bg-surface-2 text-text-muted">
-                      {mod.category}
-                    </span>
+
+                    <h4 className="text-sm font-bold text-text-primary group-hover:text-accent transition-colors">
+                      {mod.name}
+                    </h4>
+                    <p className="text-xs text-text-muted line-clamp-2">{mod.description}</p>
                   </div>
 
-                  <h4 className="text-sm font-bold text-text-primary">{mod.name}</h4>
-                  <p className="text-xs text-text-muted line-clamp-2">{mod.description}</p>
+                  <div className="pt-3 border-t border-border-subtle flex items-center justify-between text-xs text-accent font-semibold group-hover:underline">
+                    <span className="flex items-center gap-1.5 text-emerald-400">
+                      <CheckCircle className="w-3.5 h-3.5" />
+                      <span>Active Workspace</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <span>Open Module</span>
+                      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </span>
+                  </div>
                 </div>
-
-                <div className="pt-3 border-t border-border-subtle flex items-center justify-between">
-                  <span className="text-[11px] font-semibold text-emerald-400 flex items-center gap-1">
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    <span>Active Module</span>
-                  </span>
-                  <span className="text-[10px] text-text-muted">Domain Configured</span>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        )
       )}
 
       {/* ── TAB 5: MEMBERS & LEADERSHIP ── */}
