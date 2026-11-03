@@ -23,9 +23,9 @@ async function runVerification() {
     `);
     const depts = deptsRes.rows;
 
-    const softwareDept = depts.find(d => d.name.toLowerCase().includes('software'));
-    const marketingDept = depts.find(d => d.name.toLowerCase().includes('marketing') || d.name.toLowerCase().includes('sales'));
-    const financeDept = depts.find(d => d.name.toLowerCase().includes('finance'));
+    const softwareDept = depts.find(d => d.name.toLowerCase().includes('software') && d.module_configurations?.project_configuration) || depts.find(d => d.name.toLowerCase().includes('software'));
+    const marketingDept = depts.find(d => (d.name.toLowerCase().includes('marketing') || d.name.toLowerCase().includes('sales')) && d.module_configurations?.project_configuration) || depts.find(d => d.name.toLowerCase().includes('marketing') || d.name.toLowerCase().includes('sales'));
+    const financeDept = depts.find(d => d.name.toLowerCase().includes('finance') && d.module_configurations?.project_configuration) || depts.find(d => d.name.toLowerCase().includes('finance'));
 
     // -------------------------------------------------------------
     // Scenario 1: Software Development Employee Workspace Configuration

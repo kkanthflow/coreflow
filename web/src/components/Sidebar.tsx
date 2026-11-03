@@ -68,19 +68,20 @@ export default function Sidebar() {
             .eq('org_id', orgId)
             .eq('is_deleted', false)
             .eq('status', 'active')
+            .eq('is_archived', false)
             .order('name');
           setDepartments(data || []);
         } else {
           // Check member's departments
           const { data: dm } = await supabase
             .from('department_members')
-            .select('departments:department_id(id, name, color, is_deleted, status)')
+            .select('departments:department_id(id, name, color, is_deleted, status, is_archived)')
             .eq('org_id', orgId)
             .eq('user_id', user?.id);
 
           const list = (dm || [])
             .map((item: any) => item.departments)
-            .filter((d: any) => d && !d.is_deleted && d.status !== 'archived');
+            .filter((d: any) => d && !d.is_deleted && d.status !== 'archived' && !d.is_archived);
           setDepartments(list);
         }
       } catch (e) {
@@ -117,14 +118,14 @@ export default function Sidebar() {
         { name: 'My Tasks', to: '/tasks', icon: CheckSquare, permission: 'manage_tasks', shortcut: '3' },
         { 
           name: 'Department Activities', 
-          to: assignedDepartmentId ? `/departments/${assignedDepartmentId}?tab=announcements` : '/tasks', 
+          to: assignedDepartmentId ? `/departments/${assignedDepartmentId}?tab=collaboration` : '/tasks', 
           icon: Activity, 
           permission: null,
           shortcut: '4'
         },
         { 
-          name: 'Department Resources', 
-          to: assignedDepartmentId ? `/departments/${assignedDepartmentId}?tab=overview` : '/dashboard', 
+          name: 'Department Modules', 
+          to: assignedDepartmentId ? `/departments/${assignedDepartmentId}?tab=modules` : '/dashboard', 
           icon: FolderKanban, 
           permission: null,
           shortcut: '5'

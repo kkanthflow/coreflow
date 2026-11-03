@@ -3,16 +3,17 @@ import { useSearchParams } from 'react-router-dom';
 import {
   LayoutDashboard,
   Users,
-  MessageSquare,
   CheckSquare,
   Briefcase,
-  Video,
-  Megaphone,
+  Layers,
+  FileText,
+  BarChart3,
+  ArrowLeftRight,
   Settings as SettingsIcon,
+  Target,
+  Shield,
   CreditCard,
   Code,
-  Target,
-  Layers,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -33,7 +34,7 @@ export interface DepartmentTabsProps {
 }
 
 /**
- * Resolves a semantic Lucide icon for any standard or user-defined tab.
+ * Resolves a semantic Lucide icon for any dynamic capability tab.
  */
 export function getTabIcon(tabId: string, category?: string): LucideIcon {
   const normalizedId = tabId.toLowerCase();
@@ -42,29 +43,36 @@ export function getTabIcon(tabId: string, category?: string): LucideIcon {
   switch (normalizedId) {
     case 'overview':
       return LayoutDashboard;
-    case 'members':
-      return Users;
-    case 'chat':
-      return MessageSquare;
     case 'tasks':
       return CheckSquare;
     case 'projects':
       return Briefcase;
-    case 'meetings':
-      return Video;
-    case 'announcements':
-      return Megaphone;
+    case 'modules':
+      return Layers;
+    case 'members':
+      return Users;
+    case 'documents':
+      return FileText;
+    case 'analytics':
+    case 'reports':
+      return BarChart3;
+    case 'collaboration':
+    case 'approvals':
+      return ArrowLeftRight;
     case 'settings':
       return SettingsIcon;
     default:
-      if (normalizedCat.includes('finance') || normalizedCat.includes('account') || normalizedCat.includes('budget') || normalizedId.includes('invoice') || normalizedId.includes('expense')) {
+      if (normalizedCat.includes('finance') || normalizedCat.includes('budget') || normalizedId.includes('invoice') || normalizedId.includes('expense')) {
         return CreditCard;
       }
-      if (normalizedCat.includes('engineering') || normalizedCat.includes('software') || normalizedCat.includes('dev') || normalizedId.includes('sprint') || normalizedId.includes('bug')) {
+      if (normalizedCat.includes('engineering') || normalizedCat.includes('software') || normalizedCat.includes('tech') || normalizedId.includes('sprint') || normalizedId.includes('bug')) {
         return Code;
       }
-      if (normalizedCat.includes('growth') || normalizedCat.includes('sales') || normalizedCat.includes('lead') || normalizedCat.includes('market')) {
+      if (normalizedCat.includes('growth') || normalizedCat.includes('sales') || normalizedCat.includes('market') || normalizedCat.includes('campaign')) {
         return Target;
+      }
+      if (normalizedCat.includes('security') || normalizedCat.includes('legal') || normalizedCat.includes('compliance')) {
+        return Shield;
       }
       return Layers;
   }
@@ -151,20 +159,20 @@ export function DepartmentTabs({
             tabIndex={isActive ? 0 : -1}
             onClick={() => handleSelectTab(tab.id)}
             onKeyDown={e => handleKeyDown(e, idx)}
-            className={`px-2.5 py-1 rounded-md text-[11px] flex items-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
+            className={`px-3 py-1.5 rounded-md text-xs flex items-center gap-1.5 whitespace-nowrap transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent ${
               isActive
-                ? 'bg-card-bg text-text font-semibold shadow-xs'
-                : 'text-muted hover:text-text font-medium'
+                ? 'bg-surface-1 text-text-primary font-semibold shadow-xs'
+                : 'text-text-muted hover:text-text-primary font-medium'
             }`}
           >
-            <Icon size={13} className={isActive ? 'text-accent' : 'text-muted'} />
+            <Icon size={14} className={isActive ? 'text-accent' : 'text-text-muted'} />
             <span>{tab.label}</span>
             {typeof tab.count === 'number' && (
               <span
-                className={`text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded ${
+                className={`text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded ${
                   isActive
-                    ? 'bg-surface-2 text-main border border-divider'
-                    : 'text-muted/80'
+                    ? 'bg-surface-2 text-text-primary border border-border-subtle'
+                    : 'text-text-muted'
                 }`}
               >
                 {tab.count}
@@ -176,4 +184,3 @@ export function DepartmentTabs({
     </div>
   );
 }
-
