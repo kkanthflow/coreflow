@@ -189,7 +189,6 @@ export default function DepartmentWorkspace() {
       setEditColor(deptData.color || DEPT_COLORS[0]);
       setEditParentId(deptData.parent_department_id || '');
       setEditObjectives(Array.isArray(deptData.objectives) ? deptData.objectives : []);
-      setEditResponsibilities(Array.isArray(deptData.responsibilities) ? deptData.responsibilities : []);
       setEditOutcomes(deptData.expected_outcomes || '');
       setEditRequirements(deptData.operational_requirements || '');
 
