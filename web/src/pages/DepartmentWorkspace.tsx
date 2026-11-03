@@ -5,32 +5,21 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../hooks/useAuth';
 import { useWorkspace } from '../hooks/useWorkspace';
 import {
-  Building2, Users, CheckSquare, Briefcase, Plus, Search,
-  Edit2, Trash2, X, RefreshCw, Clock, AlertCircle, Calendar,
-  ArrowRight, UserPlus, Shield, CheckCircle2, ChevronRight,
-  Sliders, Zap, Target, Code, CreditCard, Tag, Sparkles,
-  Layers, ArrowLeftRight, FileText, BarChart3, Settings as SettingsIcon,
-  Filter, Check, GitFork, Send, HelpCircle, AlertTriangle,
-  FolderPlus, ExternalLink, Archive, ShieldCheck, PieChart,
-  Megaphone, Truck, Lock, UserCheck, CheckCircle
+  CheckSquare, Briefcase, Plus, X, Clock, ArrowRight,
+  UserPlus, Shield, CheckCircle2, Target, Layers, ArrowLeftRight,
+  GitFork, Archive, ShieldCheck, CheckCircle
 } from 'lucide-react';
 import { toast } from '../components/ui/Toast';
 import ConfirmModal from '../components/ConfirmModal';
-import {
-  PageHeader, MetricStrip, EmptyState, SkeletonRow, type MetricItem
-} from '../components/ui/ObsidianPrimitives';
+import { EmptyState } from '../components/ui/ObsidianPrimitives';
 import {
   DepartmentHeader,
   DepartmentTabs,
   DepartmentMetricStrip,
   type TabDefinition,
-  type DepartmentMetricItem,
 } from '../components/departments';
 import {
-  CAPABILITY_DOMAINS,
-  ALL_CAPABILITIES_MAP,
   getActiveModulesForCapabilities,
-  type CapabilityItem,
 } from '../lib/capabilityEngine';
 
 interface DepartmentDetail {
@@ -445,19 +434,63 @@ export default function DepartmentWorkspace() {
     }
   };
 
-  // Assign Member via atomic RPC
+  // Assign Member via atomic RPC with multi-tier fallback
   const handleAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!deptId || !selectedAddUserId) return;
 
     setAddingMember(true);
     try {
-      const { error } = await supabase.rpc('assign_department_member', {
+      // 1. Primary RPC signature
+      let { error } = await supabase.rpc('assign_department_member', {
         p_dept_id: deptId,
         p_user_id: selectedAddUserId,
         p_department_role: selectedAddRole,
         p_is_primary: selectedAddIsPrimary,
       });
+
+      // 2. Fallback to legacy parameter names if schema cache or signature mismatch
+      if (error && (error.message?.includes('schema cache') || error.code === 'PGRST202')) {
+        const legacyRes = await supabase.rpc('assign_department_member', {
+          p_department_id: deptId,
+          p_target_user_id: selectedAddUserId,
+          p_department_role: selectedAddRole,
+          p_is_primary: selectedAddIsPrimary,
+        });
+        error = legacyRes.error;
+      }
+
+      // 3. Resilient fallback to direct table upsert if RPC is unavailable in schema cache
+      if (error && (error.message?.includes('schema cache') || error.code === 'PGRST202')) {
+        const { error: upsertErr } = await supabase
+          .from('department_members')
+          .upsert({
+            department_id: deptId,
+            user_id: selectedAddUserId,
+            org_id: orgId,
+            department_role: selectedAddRole,
+            is_primary: selectedAddIsPrimary,
+            assigned_by: user?.id,
+          }, { onConflict: 'department_id,user_id' });
+
+        if (upsertErr) throw upsertErr;
+
+        if (selectedAddIsPrimary && orgId) {
+          await supabase
+            .from('user_organizations')
+            .update({ department_id: deptId })
+            .eq('org_id', orgId)
+            .eq('user_id', selectedAddUserId);
+
+          if (department?.name) {
+            await supabase
+              .from('users')
+              .update({ department: department.name })
+              .eq('id', selectedAddUserId);
+          }
+        }
+        error = null;
+      }
 
       if (error) throw error;
       toast.success('Member assigned to department successfully.');

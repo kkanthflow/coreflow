@@ -541,3 +541,4 @@ GRANT EXECUTE ON FUNCTION public.create_collaboration_request(uuid, uuid, uuid, 
 GRANT EXECUTE ON FUNCTION public.resolve_collaboration_request(uuid, uuid, text, text, uuid) TO authenticated, anon, service_role;
 
 NOTIFY pgrst, 'reload schema';
+

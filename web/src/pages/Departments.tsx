@@ -6,23 +6,19 @@ import { useAuth } from '../hooks/useAuth';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { hasPermission } from '../lib/permissions';
 import {
-  Building2, Plus, Search, Edit2, X, RefreshCw, ChevronRight,
-  Archive, CheckCircle2, Users, Briefcase, Target, Code,
-  CreditCard, ArrowRight, ArrowLeft, Check, Sparkles, Sliders,
-  HelpCircle, FolderPlus, Tag, Shield, Clock, Zap, Layers,
-  Compass, Award, ChevronDown, CheckSquare, Trash2, Eye, ShieldCheck,
-  Building, GitFork, UserPlus
+  Building2, Plus, Search, Edit2, X, RefreshCw,
+  Archive, CheckCircle2, Users, Target, Code,
+  ArrowRight, Sparkles, Layers, Compass, GitFork
 } from 'lucide-react';
 import ConfirmModal from '../components/ConfirmModal';
 import {
-  PageHeader, MetricStrip, EmptyState, SkeletonRow, type MetricItem
+  PageHeader, MetricStrip, EmptyState, SkeletonRow
 } from '../components/ui/ObsidianPrimitives';
 import { toast } from '../components/ui/Toast';
 import {
   CAPABILITY_DOMAINS,
   ALL_CAPABILITIES_MAP,
   getActiveModulesForCapabilities,
-  type CapabilityItem,
 } from '../lib/capabilityEngine';
 
 interface Department {

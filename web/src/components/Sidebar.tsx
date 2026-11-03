@@ -6,7 +6,7 @@ import {
   LayoutDashboard, Briefcase, CheckSquare, Calendar, Video,
   MessageSquare, Users, Building2, Building, FileText,
   CreditCard, BarChart3, Settings, ChevronLeft, ShieldCheck, Sparkles, Zap,
-  Inbox, History, Shield, Award, Activity, FolderKanban
+  Inbox, History, Award, Activity, FolderKanban
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { useRole } from '../hooks/useRole';

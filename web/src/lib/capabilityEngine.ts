@@ -242,3 +242,4 @@ export function getActiveModulesForCapabilities(capabilityKeys: string[]): {
 
   return modules;
 }
+
